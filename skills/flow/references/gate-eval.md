@@ -303,24 +303,28 @@ Mutually exclusive with live eval or replay (`flow.sh eval --diff <old_results> 
 Zero model calls, zero new runtime dependencies, deterministic.
 
 If multiple batches exist in an input results file, `--diff` compares the latest complete batch
-(falling back to the latest batch `run_id` present). Per fixture:
+(falling back to the latest batch `run_id` present). Fixture expectations are resolved from each
+row's own `expected` field, falling back to `$EVAL_MANIFEST` (field 4).
 
-| Old Verdict | New Verdict | Classification | Description |
-|-------------|-------------|----------------|-------------|
-| PASS | PASS | `UNCHANGED` | Passing floor holds |
-| PASS | non-PASS (FLAG/INVALID/UNRELIABLE) | `REGRESSED` | Previously sound/passing fixture failed or eroded |
-| non-PASS | PASS | `IMPROVED` | Previously failing or unparseable fixture now passes |
-| non-PASS | non-PASS | `SATURATED` | Neither run passed (e.g. FLAG→FLAG, FLAG→INVALID, INVALID→FLAG) |
+Classification is correctness-relative (`correct = verdict == expected`):
+
+| Old State | New State | Classification | Description |
+|-----------|-----------|----------------|-------------|
+| Correct (`old == expected`) | Correct (`new == expected`) | `UNCHANGED` | Intended verdict preserved (PASS→PASS on sound, FLAG→FLAG on hollow) |
+| Correct (`old == expected`) | Incorrect (`new != expected`) | `REGRESSED` | Previously correct fixture eroded (e.g. PASS→FLAG on sound, FLAG→PASS on hollow) |
+| Incorrect (`old != expected`) | Correct (`new == expected`) | `IMPROVED` | Previously failing/misclassified fixture now matches expected |
+| Incorrect (`old != expected`) | Incorrect (`new != expected`) | `SATURATED` | Neither run reached expected verdict (e.g. PASS→PASS on hollow, FLAG→INVALID) |
 | present | absent | `removed` | Fixture present only in old results |
 | absent | present | `added` | Fixture present only in new results |
+| unknown expected | any | `unknown` | Fixture missing expected verdict in both records and manifest |
 
-An `INVALID` or `UNRELIABLE` verdict is an infra/parse failure, never a `PASS`. Transitions from `PASS` to `INVALID` are classified as `REGRESSED`; transitions from `INVALID` to `PASS` are classified as `IMPROVED`.
+An `INVALID` or `UNRELIABLE` verdict represents an infra/parse/timeout failure and never matches an expected `PASS` or `FLAG`. An `INVALID` outcome on a previously correct fixture is always classified as `REGRESSED`. Unknown fixtures (`expected` unresolvable) show `unknown` and never flip the exit code.
 
 ### Output and exit codes
 
-Prints a compact aligned table (`id`, `old`, `new`, `classification`) followed by summary counts:
+Prints a compact aligned table (`id`, `expected`, `old`, `new`, `classification`) followed by summary counts:
 `N regressed, M improved, K saturated, U unchanged`.
 
 - Exit `0`: clean comparison (0 regressed).
 - Exit `1`: regression detected (≥1 fixture classified as `REGRESSED`).
-- Exit `2`: missing, unreadable, or invalid results file argument.
+- Exit `2`: missing, unreadable, or containing no fixture records.

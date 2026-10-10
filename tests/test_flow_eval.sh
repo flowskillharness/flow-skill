@@ -1051,12 +1051,12 @@ clean
 echo "DF-A) eval --diff: regressed case exits 1 with REGRESSED row present"
 newsb
 cat << 'EOF' > "$SB/old.jsonl"
-{"fixture":"f01a","verdict":"PASS"}
-{"fixture":"fcda","verdict":"PASS"}
+{"fixture":"f01a","expected":"PASS","verdict":"PASS"}
+{"fixture":"fcda","expected":"PASS","verdict":"PASS"}
 EOF
 cat << 'EOF' > "$SB/new.jsonl"
-{"fixture":"f01a","verdict":"FLAG"}
-{"fixture":"fcda","verdict":"PASS"}
+{"fixture":"f01a","expected":"PASS","verdict":"FLAG"}
+{"fixture":"fcda","expected":"PASS","verdict":"PASS"}
 EOF
 out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
 ck 1 "$rc" "eval --diff exits 1 on regressed fixture"
@@ -1068,12 +1068,12 @@ clean
 echo "DF-B) eval --diff: clean case exits 0"
 newsb
 cat << 'EOF' > "$SB/old.jsonl"
-{"fixture":"f01a","verdict":"PASS"}
-{"fixture":"fcda","verdict":"PASS"}
+{"fixture":"f01a","expected":"PASS","verdict":"PASS"}
+{"fixture":"fcda","expected":"PASS","verdict":"PASS"}
 EOF
 cat << 'EOF' > "$SB/new.jsonl"
-{"fixture":"f01a","verdict":"PASS"}
-{"fixture":"fcda","verdict":"PASS"}
+{"fixture":"f01a","expected":"PASS","verdict":"PASS"}
+{"fixture":"fcda","expected":"PASS","verdict":"PASS"}
 EOF
 out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
 ck 0 "$rc" "clean comparison exits 0"
@@ -1085,24 +1085,24 @@ clean
 echo "DF-C) eval --diff: improved, saturated, removed, added, and INVALID rows classify correctly"
 newsb
 cat << 'EOF' > "$SB/old.jsonl"
-{"fixture":"f01a","verdict":"FLAG"}
-{"fixture":"f01b","verdict":"FLAG"}
-{"fixture":"f02a","verdict":"INVALID"}
-{"fixture":"f02b","verdict":"PASS"}
-{"fixture":"f05a","verdict":"PASS"}
+{"fixture":"f01a","expected":"PASS","verdict":"FLAG"}
+{"fixture":"f01b","expected":"FLAG","verdict":"PASS"}
+{"fixture":"f02a","expected":"PASS","verdict":"INVALID"}
+{"fixture":"f02b","expected":"FLAG","verdict":"FLAG"}
+{"fixture":"f05a","expected":"PASS","verdict":"PASS"}
 EOF
 cat << 'EOF' > "$SB/new.jsonl"
-{"fixture":"f01a","verdict":"PASS"}
-{"fixture":"f01b","verdict":"FLAG"}
-{"fixture":"f02a","verdict":"PASS"}
-{"fixture":"f02b","verdict":"INVALID"}
-{"fixture":"fcdb","verdict":"FLAG"}
+{"fixture":"f01a","expected":"PASS","verdict":"PASS"}
+{"fixture":"f01b","expected":"FLAG","verdict":"PASS"}
+{"fixture":"f02a","expected":"PASS","verdict":"PASS"}
+{"fixture":"f02b","expected":"FLAG","verdict":"INVALID"}
+{"fixture":"fcdb","expected":"FLAG","verdict":"FLAG"}
 EOF
 out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
-ck 1 "$rc" "PASS->INVALID regression exits 1"
-has "$out" "IMPROVED" "IMPROVED row present"
-has "$out" "SATURATED" "SATURATED row present"
-has "$out" "REGRESSED" "REGRESSED row present for INVALID non-PASS regression"
+ck 1 "$rc" "FLAG->INVALID regression exits 1"
+has "$out" "IMPROVED" "IMPROVED row present (FLAG->PASS and INVALID->PASS on sound)"
+has "$out" "SATURATED" "SATURATED row present (PASS->PASS on hollow)"
+has "$out" "REGRESSED" "REGRESSED row present for FLAG->INVALID on hollow"
 has "$out" "removed" "removed row present for f05a"
 has "$out" "added" "added row present for fcdb"
 has "$out" "1 regressed, 2 improved, 1 saturated, 0 unchanged" "summary line counts match"
@@ -1128,20 +1128,88 @@ echo "DF-E) eval --diff: multi-batch selection uses latest complete batch"
 newsb
 cat << 'EOF' > "$SB/old.jsonl"
 {"ts":"t","epoch_s":1,"run_id":"r1","batch":"start","n":1}
-{"ts":"t","epoch_s":1,"run_id":"r1","fixture":"fcda","verdict":"FLAG"}
+{"ts":"t","epoch_s":1,"run_id":"r1","fixture":"fcda","expected":"PASS","verdict":"FLAG"}
 {"ts":"t","epoch_s":1,"run_id":"r1","batch":"done","n":1}
 {"ts":"t","epoch_s":2,"run_id":"r2","batch":"start","n":1}
-{"ts":"t","epoch_s":2,"run_id":"r2","fixture":"fcda","verdict":"PASS"}
+{"ts":"t","epoch_s":2,"run_id":"r2","fixture":"fcda","expected":"PASS","verdict":"PASS"}
 {"ts":"t","epoch_s":2,"run_id":"r2","batch":"done","n":1}
 EOF
 cat << 'EOF' > "$SB/new.jsonl"
 {"ts":"t","epoch_s":3,"run_id":"r3","batch":"start","n":1}
-{"ts":"t","epoch_s":3,"run_id":"r3","fixture":"fcda","verdict":"PASS"}
+{"ts":"t","epoch_s":3,"run_id":"r3","fixture":"fcda","expected":"PASS","verdict":"PASS"}
 {"ts":"t","epoch_s":3,"run_id":"r3","batch":"done","n":1}
 EOF
 out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
 ck 0 "$rc" "latest batch r2 (PASS) vs r3 (PASS) exits 0"
 has "$out" "UNCHANGED" "fcda compared as PASS vs PASS (UNCHANGED)"
+clean
+
+echo "DF-F) eval --diff: flag-expecting fixtures (hollow/injected)"
+newsb
+# (a) flag-expecting FLAG->PASS => REGRESSED, exit 1
+cat << 'EOF' > "$SB/f_old.jsonl"
+{"fixture":"f01b","expected":"FLAG","verdict":"FLAG"}
+EOF
+cat << 'EOF' > "$SB/f_new.jsonl"
+{"fixture":"f01b","expected":"FLAG","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/f_old.jsonl" "$SB/f_new.jsonl" 2>&1)"; rc=$?
+ck 1 "$rc" "flag-expecting FLAG->PASS regressed exits 1"
+has "$out" "REGRESSED" "row classified as REGRESSED"
+has "$out" "1 regressed, 0 improved, 0 saturated, 0 unchanged" "1 regressed summary count"
+
+# (b) flag-expecting FLAG->FLAG => UNCHANGED, exit 0
+cat << 'EOF' > "$SB/f_new2.jsonl"
+{"fixture":"f01b","expected":"FLAG","verdict":"FLAG"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/f_old.jsonl" "$SB/f_new2.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "flag-expecting FLAG->FLAG exits 0"
+no  "$out" "REGRESSED" "no REGRESSED row"
+has "$out" "UNCHANGED" "row classified as UNCHANGED"
+has "$out" "0 regressed, 0 improved, 0 saturated, 1 unchanged" "1 unchanged summary count"
+
+# (c) flag-expecting PASS->FLAG => IMPROVED, exit 0
+cat << 'EOF' > "$SB/f_old_pass.jsonl"
+{"fixture":"f01b","expected":"FLAG","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/f_old_pass.jsonl" "$SB/f_new2.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "flag-expecting PASS->FLAG exits 0"
+has "$out" "IMPROVED" "row classified as IMPROVED"
+has "$out" "0 regressed, 1 improved, 0 saturated, 0 unchanged" "1 improved summary count"
+clean
+
+echo "DF-G) eval --diff: unknown fixture shows unknown and never flips exit code"
+newsb
+cat << 'EOF' > "$SB/u_old.jsonl"
+{"fixture":"custom_unknown_fixture_xyz","verdict":"PASS"}
+EOF
+cat << 'EOF' > "$SB/u_new.jsonl"
+{"fixture":"custom_unknown_fixture_xyz","verdict":"FLAG"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/u_old.jsonl" "$SB/u_new.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "unknown fixture comparison exits 0"
+has "$out" "unknown" "classification column shows unknown"
+has "$out" "0 regressed, 0 improved, 0 saturated, 0 unchanged" "summary line has 0 regressed"
+clean
+
+echo "DF-H) eval --diff: fail-closed on empty/garbage files (exit 2)"
+newsb
+touch "$SB/empty.jsonl"
+cat << 'EOF' > "$SB/valid.jsonl"
+{"fixture":"fcda","expected":"PASS","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/empty.jsonl" "$SB/valid.jsonl" 2>&1)"; rc=$?
+ck 2 "$rc" "empty old file exits 2"
+has "$out" "no fixture records found in $SB/empty.jsonl" "names offending empty old file"
+
+out="$(bash "$RUN" eval --diff "$SB/valid.jsonl" "$SB/empty.jsonl" 2>&1)"; rc=$?
+ck 2 "$rc" "empty new file exits 2"
+has "$out" "no fixture records found in $SB/empty.jsonl" "names offending empty new file"
+
+printf "not json at all\n{\"some_key\":\"some_value\"}\n" > "$SB/garbage.jsonl"
+out="$(bash "$RUN" eval --diff "$SB/garbage.jsonl" "$SB/valid.jsonl" 2>&1)"; rc=$?
+ck 2 "$rc" "garbage old file exits 2"
+has "$out" "no fixture records found in $SB/garbage.jsonl" "names offending garbage file"
 clean
 
 echo "UM) grep -cF unmeasured phrase == 3 in flow.sh"

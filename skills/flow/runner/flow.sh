@@ -3939,17 +3939,19 @@ _eval_diff_extract_fixtures() { # $1=results-file
 
   printf '%s\n' "$rows" | while IFS= read -r line; do
     [ -z "$line" ] && continue
-    local fid v
+    local fid v exp
     fid="$(_eval_json_str_field "$line" fixture)"
     v="$(_eval_json_str_field "$line" verdict)"
-    [ -n "$fid" ] && printf '%s\t%s\n' "$fid" "${v:-UNKNOWN}"
-  done | awk -F'\t' '{ f[$1] = $2 } END { for (k in f) print k "\t" f[k] }' | sort -k1,1
+    exp="$(_eval_json_str_field "$line" expected)"
+    [ -n "$fid" ] && printf '%s\t%s\t%s\n' "$fid" "${v:-UNKNOWN}" "${exp:--}"
+  done | awk -F'\t' '{ f[$1] = $2; e[$1] = $3 } END { for (k in f) print k "\t" f[k] "\t" e[k] }' | sort -k1,1
 }
 
 # Longitudinal regression classifier: compares two eval results files offline.
-# Per fixture present in both: REGRESSED, IMPROVED, SATURATED, UNCHANGED.
+# Per fixture present in both: REGRESSED, IMPROVED, SATURATED, UNCHANGED (correctness-relative).
 # Per fixture only in old: removed. Only in new: added.
-# Exit 1 if any REGRESSED, exit 2 on missing/unreadable file, else 0.
+# Unknown expected: unknown (does not count toward regressions).
+# Exit 1 if any REGRESSED, exit 2 on missing/unreadable or empty file, else 0.
 _eval_diff() { # $1=old_results $2=new_results
   local old_file="$1" new_file="$2"
   if [ -z "$old_file" ] || [ -z "$new_file" ]; then
@@ -3970,6 +3972,17 @@ _eval_diff() { # $1=old_results $2=new_results
   _eval_diff_extract_fixtures "$old_file" > "$td/old.tsv"
   _eval_diff_extract_fixtures "$new_file" > "$td/new.tsv"
 
+  if [ ! -s "$td/old.tsv" ]; then
+    echo "eval --diff: no fixture records found in $old_file" >&2
+    rm -rf "$td" 2>/dev/null
+    return 2
+  fi
+  if [ ! -s "$td/new.tsv" ]; then
+    echo "eval --diff: no fixture records found in $new_file" >&2
+    rm -rf "$td" 2>/dev/null
+    return 2
+  fi
+
   local all_fids
   all_fids="$( { cut -f1 "$td/old.tsv" 2>/dev/null; cut -f1 "$td/new.tsv" 2>/dev/null; } | sort -u )"
 
@@ -3978,41 +3991,54 @@ _eval_diff() { # $1=old_results $2=new_results
     printf '%s\n' "$all_fids" | while IFS= read -r fid; do
       [ -n "$fid" ] && printf 'ALL\t%s\n' "$fid"
     done
-    [ -s "$td/old.tsv" ] && sed 's/^/OLD\t/' "$td/old.tsv"
-    [ -s "$td/new.tsv" ] && sed 's/^/NEW\t/' "$td/new.tsv"
+    if [ -f "${EVAL_MANIFEST:-}" ]; then
+      awk -F'\t' 'NR>1 && $1!="" && $4!="" { print "EXP\t" $1 "\t" $4 }' "$EVAL_MANIFEST" 2>/dev/null
+    fi
+    awk -F'\t' '$3 != "-" && $3 != "" { print "EXP\t" $1 "\t" $3 }' "$td/old.tsv" 2>/dev/null
+    awk -F'\t' '$3 != "-" && $3 != "" { print "EXP\t" $1 "\t" $3 }' "$td/new.tsv" 2>/dev/null
+    awk -F'\t' '{ print "OLD\t" $1 "\t" $2 }' "$td/old.tsv"
+    awk -F'\t' '{ print "NEW\t" $1 "\t" $2 }' "$td/new.tsv"
   } | awk -F'\t' '
     $1 == "ALL" { order[++n_fids] = $2 }
+    $1 == "EXP" { if ($3 != "" && $3 != "-") exp_v[$2] = $3 }
     $1 == "OLD" { old_v[$2] = $3 }
     $1 == "NEW" { new_v[$2] = $3 }
     END {
-      printf "  %-12s %-10s %-10s %s\n", "id", "old", "new", "classification"
+      printf "  %-12s %-10s %-10s %-10s %s\n", "id", "expected", "old", "new", "classification"
       n_reg = 0; n_imp = 0; n_sat = 0; n_unc = 0
       for (i = 1; i <= n_fids; i++) {
         fid = order[i]
         has_old = (fid in old_v)
         has_new = (fid in new_v)
+        expected_val = (fid in exp_v) ? exp_v[fid] : "-"
         ov = has_old ? old_v[fid] : "-"
         nv = has_new ? new_v[fid] : "-"
         if (has_old && has_new) {
-          if (ov == "PASS" && nv == "PASS") {
-            cls = "UNCHANGED"
-            n_unc++
-          } else if (ov == "PASS" && nv != "PASS") {
-            cls = "REGRESSED"
-            n_reg++
-          } else if (ov != "PASS" && nv == "PASS") {
-            cls = "IMPROVED"
-            n_imp++
+          if (expected_val == "-") {
+            cls = "unknown"
           } else {
-            cls = "SATURATED"
-            n_sat++
+            old_corr = (ov == expected_val)
+            new_corr = (nv == expected_val)
+            if (old_corr && new_corr) {
+              cls = "UNCHANGED"
+              n_unc++
+            } else if (old_corr && !new_corr) {
+              cls = "REGRESSED"
+              n_reg++
+            } else if (!old_corr && new_corr) {
+              cls = "IMPROVED"
+              n_imp++
+            } else {
+              cls = "SATURATED"
+              n_sat++
+            }
           }
         } else if (has_old && !has_new) {
           cls = "removed"
         } else {
           cls = "added"
         }
-        printf "  %-12s %-10s %-10s %s\n", fid, ov, nv, cls
+        printf "  %-12s %-10s %-10s %-10s %s\n", fid, expected_val, ov, nv, cls
       }
       printf "\n%d regressed, %d improved, %d saturated, %d unchanged\n", n_reg, n_imp, n_sat, n_unc
       if (n_reg > 0) exit 1
