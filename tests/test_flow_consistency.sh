@@ -431,6 +431,26 @@ ck 0 "$rc" "exact /v1/config.max -> exit 0"
 has "$out" "1 endpoint(s), 1 covered, 0 uncovered" "literal dot path covered"
 rm -rf "$SB"
 
+# (e) closing brace is path continuation: /api/users} must not cover /api/users
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /api/users | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Callback hits /api/users}
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "'/api/users}' is path continuation -> exit 1"
+has "$out" "GET /api/users" "/api/users flagged uncovered (trailing } continues path)"
+rm -rf "$SB"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
