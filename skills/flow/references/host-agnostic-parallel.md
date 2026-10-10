@@ -52,3 +52,22 @@ evidence. No hook install into `~/.claude` or `~/.omp`. No long-lived socket sub
 
 Own-runtime / own-PTY / own-wait is a successor ADR plus a separate product,
 not a card in this skill.
+
+## workspace port
+
+Deterministic per-card port allocator for parallel worktree web verification (`flow workspace port <C-NNN>`).
+
+- **Formula:** `port = FLOW_WORKSPACE_BASEPORT + card_number` (where `card_number` is integer $NNN$). Same card always derives the same port.
+- **Wrap Rule:** If the computed port exceeds $65535$, it wraps modulo the usable range:
+  `port = FLOW_WORKSPACE_BASEPORT + (card_number % (65536 - FLOW_WORKSPACE_BASEPORT))`
+  and states the wrapping formula in output.
+- **Environment Override:** `FLOW_WORKSPACE_BASEPORT` (defaults to `3000`).
+- **Target File Contract:** Writes/overwrites strictly `<worktree>/.env.flow.local` inside the card's registered workspace root with:
+  ```sh
+  PORT=<port>
+  FLOW_CARD=<C-NNN>
+  ```
+  Mutates only this single file; zero locks needed beyond standard workspace mechanics.
+- **Exit Codes:**
+  - `0`: Workspace resolved, port computed, `.env.flow.local` written.
+  - `2`: Card argument invalid shape or card has no registered workspace in `.flow/workspaces.jsonl` (never creates worktrees implicitly).

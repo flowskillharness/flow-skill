@@ -3153,16 +3153,91 @@ cmd_converge() { # [--file <payload>]  append-only remainder cards from a flow-c
   echo "  These are remainder stubs with [FILL] Verify/Done-evidence - build them via /flow ready + /flow check."
   return 0
 }
+_ws_port() { # <C-NNN>
+  local card="${1:-}"
+  if [ $# -ne 1 ]; then
+    echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+    return 2
+  fi
+  case "$card" in
+    C-[0-9]*)
+      local num="${card#C-}"
+      case "$num" in
+        ''|*[!0-9]*)
+          echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+          return 2
+          ;;
+      esac
+      ;;
+    *)
+      echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+      return 2
+      ;;
+  esac
+
+  local rec="" r c wt
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    c="$(_ws_get "$r" card_id)"
+    if [ "$c" = "$card" ]; then
+      rec="$r"
+      break
+    fi
+  done <<EOF
+$(_ws_active_records)
+EOF
+
+  if [ -z "$rec" ]; then
+    echo "workspace port: FAIL - card '$card' has no registered workspace (run '/flow workspace add <branch> --card $card' first)" >&2
+    return 2
+  fi
+
+  wt="$(_ws_get "$rec" worktree_path)"
+  if [ -z "$wt" ] || [ ! -d "$wt" ]; then
+    echo "workspace port: FAIL - workspace directory for '$card' not found at '${wt:-<empty>}'" >&2
+    return 2
+  fi
+
+  local card_int
+  card_int=$(( 10#$num ))
+
+  local baseport="${FLOW_WORKSPACE_BASEPORT:-3000}"
+  case "$baseport" in ''|*[!0-9]*) baseport=3000 ;; esac
+
+  local raw_port port note=""
+  raw_port=$(( baseport + card_int ))
+  if [ "$raw_port" -le 65535 ]; then
+    port="$raw_port"
+  else
+    local span=$(( 65536 - baseport ))
+    if [ "$span" -le 0 ]; then
+      span=65535
+      port=$(( 1024 + (card_int % (65535 - 1024 + 1)) ))
+      note=" (wrapped >65535: baseport=$baseport invalid; wrapped to $port)"
+    else
+      port=$(( baseport + (card_int % span) ))
+      note=" (wrapped >65535: $baseport + ($card_int % $span) = $port)"
+    fi
+  fi
+
+  local env_file="$wt/.env.flow.local"
+  printf 'PORT=%s\nFLOW_CARD=%s\n' "$port" "$card" > "$env_file" || {
+    echo "workspace port: FAIL - cannot write to '$env_file'" >&2
+    return 1
+  }
+  echo "$card -> port $port$note (written to $env_file)"
+  return 0
+}
 
 cmd_workspace() {
   local sub="${1:-}"; shift 2>/dev/null || true
   case "$sub" in
-    add|list|enter|remove|check|doctor) : ;;
-    *) echo "usage: /flow workspace add|list|enter|remove|check|doctor"; return 1 ;;
+    add|list|enter|remove|check|doctor|port) : ;;
+    *) echo "usage: /flow workspace add|list|enter|remove|check|doctor|port"; return 1 ;;
   esac
   if ! command -v git >/dev/null 2>&1; then
     echo "workspace: git not found - worktree isolation unavailable (serial builds still work)."
-    case "$sub" in add|remove) return 1 ;; *) return 0 ;; esac
+    case "$sub" in add|remove) return 1 ;; port) return 2 ;; *) return 0 ;; esac
   fi
   case "$sub" in
     add)    _ws_add "$@" ;;
@@ -3171,6 +3246,7 @@ cmd_workspace() {
     remove) _ws_remove "$@" ;;
     check)  _ws_check "$@" ;;
     doctor) _ws_doctor ;;
+    port)   _ws_port "$@" ;;
   esac
 }
 
@@ -5154,7 +5230,7 @@ usage: bash flow.sh <command> [args]
   project-type [t]  Show or set project type (web|cli|library|skill); adapts done-evidence
   skip <stage> --reason  Advance past a gate that has a matching open DEBT (non-security only)
   ready             List buildable todo cards + parallel-safety hint
-  workspace <verb>  Multi-agent worktree isolation: add|list|enter|remove|check|doctor (one worktree per agent)
+  workspace <verb>  Multi-agent worktree isolation: add|list|enter|remove|check|doctor|port (one worktree per agent)
   loop-prep <card>  Plumbing for ck-loop: isolated worktree + numeric Verify command + param block (thin wrapper; ck-loop is the engine)
   loop-log <card>   Record a finished ck-loop run (iterations/start/end/outcome) into usage-log telemetry
   auto [stop]        Activate attested auto (risk + Stage 05 receipt) or stop

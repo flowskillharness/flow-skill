@@ -40,7 +40,7 @@ is no fragment loader (ADR-0001).
 | `/flow mode teach` | `bash <skill>/runner/flow.sh mode teach` | Confirm; host gatekeeps, operator authors. |
 | `/flow mode work` | `bash <skill>/runner/flow.sh mode work` | Interview once, draft 00-05, pause for scope sign-off; same gates. See `references/mode-work.md`. |
 | `/flow ready` | `bash <skill>/runner/flow.sh ready` | Relay buildable cards; operator dispatches. Confirm allowed-files don't overlap. |
-| `/flow workspace <verb>` | `bash <skill>/runner/flow.sh workspace add\|list\|enter\|remove\|check\|doctor [...]` | Relay worktree isolation output; don't auto-`--force` a `remove`. Advisory. |
+| `/flow workspace <verb>` | `bash <skill>/runner/flow.sh workspace add\|list\|enter\|remove\|check\|doctor\|port [...]` | Relay worktree isolation output; don't auto-`--force` a `remove`. `workspace port` allocates deterministic per-card port (`references/host-agnostic-parallel.md`). Advisory. |
 | `/flow auto` | `bash <skill>/runner/flow.sh auto` | Load `references/auto-run.md`. |
 | `/flow auto stop` | `bash <skill>/runner/flow.sh auto stop` | Clear auto policy; return to warning-only manual path. |
 | `/flow attest …` | `bash <skill>/runner/flow.sh attest semantic\|live-verify\|status\|recover …` | Mint/inspect receipts (`references/attestations.md`). Must-ask before mint/recover. |
