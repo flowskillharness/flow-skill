@@ -3310,30 +3310,32 @@ EOF
   fi
 
   local baseport="${FLOW_WORKSPACE_BASEPORT:-3000}"
-  case "$baseport" in ''|*[!0-9]*) baseport=3000 ;; esac
+  case "$baseport" in
+    ''|*[!0-9]*)
+      baseport=3000
+      ;;
+    *)
+      if [ "$baseport" -lt 1 ] || [ "$baseport" -gt 65535 ]; then
+        echo "workspace port: FLOW_WORKSPACE_BASEPORT=$baseport out of range (1..65535)" >&2
+        return 2
+      fi
+      ;;
+  esac
 
-  local raw_port port note=""
+  local raw_port port
   raw_port=$(( baseport + offset ))
-  if [ "$raw_port" -le 65535 ]; then
-    port="$raw_port"
-  else
-    local span=$(( 65536 - baseport ))
-    if [ "$span" -le 0 ]; then
-      span=65535
-      port=$(( 1024 + (offset % (65535 - 1024 + 1)) ))
-      note=" (wrapped >65535: baseport=$baseport invalid; wrapped to $port)"
-    else
-      port=$(( baseport + (offset % span) ))
-      note=" (wrapped >65535: $baseport + ($offset % $span) = $port)"
-    fi
+  if [ "$raw_port" -gt 65535 ]; then
+    echo "workspace port: FAIL - port range exhausted for '$card' (baseport $baseport + offset $offset = $raw_port > 65535); lower FLOW_WORKSPACE_BASEPORT" >&2
+    return 2
   fi
+  port="$raw_port"
 
   local env_file="$wt/.env.flow.local"
   printf 'PORT=%s\nFLOW_CARD=%s\n' "$port" "$card" > "$env_file" || {
     echo "workspace port: FAIL - cannot write to '$env_file'" >&2
     return 1
   }
-  echo "$card -> port $port$note (written to $env_file)"
+  echo "$card -> port $port (written to $env_file)"
   return 0
 }
 

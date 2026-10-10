@@ -58,10 +58,8 @@ not a card in this skill.
 Deterministic per-card port allocator for parallel worktree web verification (`flow workspace port <C-NNN>`).
 
 - **Formula:** `port = FLOW_WORKSPACE_BASEPORT + port_offset` (where `port_offset` is the registered worktree offset from `.flow/workspaces.jsonl`). Stable per registration and matches `workspace enter`.
-- **Wrap Rule:** If the computed port exceeds $65535$, it wraps modulo the usable range:
-  `port = FLOW_WORKSPACE_BASEPORT + (port_offset % (65536 - FLOW_WORKSPACE_BASEPORT))`
-  and states the wrapping formula in output.
-- **Environment Override:** `FLOW_WORKSPACE_BASEPORT` (defaults to `3000`).
+- **Port Bounds & Fail-Loud:** If `port = FLOW_WORKSPACE_BASEPORT + port_offset > 65535`, `workspace port` fails loudly with exit 2 (`FAIL - port range exhausted for '<card>' (baseport <b> + offset <o> = <raw> > 65535); lower FLOW_WORKSPACE_BASEPORT`) rather than wrapping or aliasing.
+- **Environment Override:** `FLOW_WORKSPACE_BASEPORT` (defaults to `3000`; valid numeric range is `1..65535`). Out-of-range baseport exits 2.
 - **Target File Contract:** Writes/overwrites strictly `<worktree>/.env.flow.local` inside the card's registered workspace root with:
   ```sh
   PORT=<port>
@@ -70,4 +68,4 @@ Deterministic per-card port allocator for parallel worktree web verification (`f
   Mutates only this single file; zero locks needed beyond standard workspace mechanics.
 - **Exit Codes:**
   - `0`: Workspace resolved, port computed, `.env.flow.local` written.
-  - `2`: Card argument invalid shape, no registered workspace in `.flow/workspaces.jsonl`, or missing `port_offset` (never creates worktrees implicitly).
+  - `2`: Card argument invalid shape, no registered workspace in `.flow/workspaces.jsonl`, missing `port_offset`, baseport out of range, or port range exhausted > 65535 (never creates worktrees implicitly).

@@ -248,11 +248,30 @@ has "$out_e3" "usage:" "missing card id prints usage"
 has "$(cat "$wt1/.env.flow.local")" "PORT=" ".env.flow.local contains PORT assignment"
 has "$(cat "$wt1/.env.flow.local")" "FLOW_CARD=C-001" ".env.flow.local contains FLOW_CARD"
 
-# wrap modulo rule when port > 65535
-out_wrap="$(FLOW_WORKSPACE_BASEPORT=65535 bash "$RUN" workspace port C-002 2>&1)"; rc_wrap=$?
-ck 0 "$rc_wrap" "wrapped port exit 0"
-has "$out_wrap" "wrapped >65535" "states wrap formula in output"
-has "$out_wrap" "65535 + (1 % 1) = 65535" "wrap formula values stated"
+# (a) BASEPORT=65534 with two registered worktrees (offsets 0,1): C-001 port 65534 ok; C-002 port 65535 ok; register a third (offset 2) => port C-003 exit 2 with exhaustion message
+out_o0="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-001 2>&1)"; rc_o0=$?
+ck 0 "$rc_o0" "BASEPORT=65534 offset 0 exit 0"
+has "$out_o0" "C-001 -> port 65534" "port 65534 assigned"
+
+out_o1="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-002 2>&1)"; rc_o1=$?
+ck 0 "$rc_o1" "BASEPORT=65534 offset 1 exit 0"
+has "$out_o1" "C-002 -> port 65535" "port 65535 assigned"
+
+bash "$RUN" workspace add feat-c3 --card C-003 >/dev/null 2>&1
+out_o2="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-003 2>&1)"; rc_o2=$?
+ck 2 "$rc_o2" "BASEPORT=65534 offset 2 exhausted exit 2"
+has "$out_o2" "port range exhausted for 'C-003'" "exhaustion message printed"
+has "$out_o2" "baseport 65534 + offset 2 = 65536 > 65535" "exhaustion details stated"
+
+# (b) FLOW_WORKSPACE_BASEPORT=70000 => exit 2 with range message
+out_oor="$(FLOW_WORKSPACE_BASEPORT=70000 bash "$RUN" workspace port C-001 2>&1)"; rc_oor=$?
+ck 2 "$rc_oor" "FLOW_WORKSPACE_BASEPORT=70000 exit 2"
+has "$out_oor" "FLOW_WORKSPACE_BASEPORT=70000 out of range (1..65535)" "out of range message printed"
+
+# (c) BASEPORT=65535 + offset 0 => 65535 ok
+out_max="$(FLOW_WORKSPACE_BASEPORT=65535 bash "$RUN" workspace port C-001 2>&1)"; rc_max=$?
+ck 0 "$rc_max" "BASEPORT=65535 offset 0 exit 0"
+has "$out_max" "C-001 -> port 65535" "port 65535 assigned"
 clean
 
 echo
