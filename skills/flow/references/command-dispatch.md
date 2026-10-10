@@ -10,7 +10,7 @@ is no fragment loader (ADR-0001).
 | User input | Runner call | Host duties after |
 |---|---|---|
 | `/flow` | `bash <skill>/runner/flow.sh status` | Relay prose `NEXT ->`, dwell, and (past 10 cards) the compact summary; nothing to author. Optional `status --json` prints one `flow_context/v1` object (`v,stage,gate,next_verb,card,dwell,load`) — **display-only**. Hosts MUST NOT dispatch `next_verb` (`next`/`card`/`card-start`/`check`/`fix-gate`/`auto`/`skip`). Default `/flow` stays prose status. |
-| `/flow resume` | `bash <skill>/runner/flow.sh resume` | Read-only session-story; no lock. Optional `resume --json` same closed schema as status; display-only, never exec `next_verb`. FAIL/PASS/Never: SKILL.md STOP + Dispatch. |
+| `/flow resume` | `bash <skill>/runner/flow.sh resume` | Read-only session-story; no lock. Optional `resume --budget` caps in-flight cards at 5 with count line; `resume --json` same closed schema as status; display-only, never exec `next_verb`. FAIL/PASS/Never: SKILL.md STOP + Dispatch. |
 | `/flow next` | `bash <skill>/runner/flow.sh next` | After PASS, compare to `gate-examples.md` (not a second always-on load). FAIL/Never: SKILL.md STOP + Dispatch. |
 | `/flow assess` | `bash <skill>/runner/flow.sh assess` | Fill `flow/00-inspect.md` from EVIDENCE; Brownfield challenge in `gate-rules.md`. |
 | `/flow card` | `bash <skill>/runner/flow.sh card` | Fill per `law/CLAUDE.md`; before coding, `law/CODING.md`. |

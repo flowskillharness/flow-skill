@@ -998,10 +998,14 @@ _resume_valid_lines() {
 }
 
 cmd_resume() {
+  local budget=0
   if [ "${1:-}" = "--json" ]; then
     if [ -n "${2:-}" ]; then usage; exit 2; fi
     _emit_context_json
     return 0
+  elif [ "${1:-}" = "--budget" ]; then
+    if [ -n "${2:-}" ]; then usage; exit 2; fi
+    budget=1
   elif [ -n "${1:-}" ]; then
     usage
     exit 2
@@ -1102,7 +1106,12 @@ cmd_resume() {
   fi
 
   # ---- IN FLIGHT ----
-  local infl_out; infl_out="$(inflight_display)"
+  local infl_out
+  if [ "$budget" -eq 1 ]; then
+    infl_out="$(inflight_display 5)"
+  else
+    infl_out="$(inflight_display)"
+  fi
   if [ -n "$infl_out" ]; then
     echo "in flight:"
     printf '%s\n' "$infl_out"
@@ -1251,15 +1260,24 @@ _elapsed_human() { # $1=start-epoch -> "Xm"/"Xh"/"Xd" (integer; GNU/BSD-portable
 }
 
 inflight_display() { # emit a line per todo card still marked in flight (stale ids self-skip)
-  local infl id ts f; infl="$(_inflight_file)"
+  local max="${1:-0}"
+  local infl id ts f count=0 hidden=0; infl="$(_inflight_file)"
   [ -f "$infl" ] || return 0
   while read -r id ts; do
     [ -n "$id" ] || continue
     f="$(resolve_card_file "$id" 2>/dev/null)"
     [ -n "$f" ] && [ -f "$f" ] || continue                   # card gone -> stale, skip
     [ "$(card_status "$f")" = "todo" ] || continue            # only todo cards are "in flight"
-    printf '    %s (in flight, started %s ago)\n' "$id" "$(_elapsed_human "$ts")"
+    count=$((count + 1))
+    if [ "$max" -gt 0 ] && [ "$count" -gt "$max" ]; then
+      hidden=$((hidden + 1))
+    else
+      printf '    %s (in flight, started %s ago)\n' "$id" "$(_elapsed_human "$ts")"
+    fi
   done < "$infl"
+  if [ "$hidden" -gt 0 ]; then
+    printf "    +%s more in flight - see 'flow card'\n" "$hidden"
+  fi
 }
 
 # Single source of truth for "what should I do next" - used by BOTH `status` (Phase 3) and

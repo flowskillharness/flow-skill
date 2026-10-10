@@ -119,6 +119,72 @@ out="$(FLOW_SESSION_ID="ppid:testhost:22222" bash "$RUN" resume 2>&1)"; rc=$?
 ck 0 "$rc" "resume with a fresh (no own-row) session + old foreign ppid: row exits 0"
 has "$out" "last session" "F9 fix: wall-clock anchor correctly reads a 20-min-old foreign ppid: row as a genuine last session, not recent activity"
 clean
+echo "H) --budget with >5 in-flight cards: caps at 5, appends count summary line, total <= 35 lines"
+newsb
+clean_stage 00-idea; clean_stage 01-research; clean_stage 02-scope
+clean_stage 03-prd; clean_stage 04-adr; clean_stage 05-contract
+for i in 1 2 3 4 5 6 7 8; do
+  cid="$(printf 'C-%03d' "$i")"
+  printf '# %s — test\nstatus: todo\ndeps: none\n## Scope\none thing\n## Allowed files\ninfra/\n## Verify (run these before done)\n- [ ] ok\n## Done-evidence (world-state proof)\nurl\n## Evidence (paste actual proof when done)\n(empty until done)\n' "$cid" > "$SB/cards/$cid.md"
+  FLOW_SESSION_ID=SESSION_A bash "$RUN" card start "$cid" >/dev/null 2>&1
+done
+out="$(FLOW_SESSION_ID=SESSION_B bash "$RUN" resume --budget 2>&1)"; rc=$?
+ck 0 "$rc" "resume --budget with >5 in-flight cards exits 0"
+has "$out" "in flight:" "in flight section present"
+n_infl="$(count_lines "$out" "in flight, started")"
+ck 5 "$n_infl" "exactly 5 in-flight cards listed"
+has "$out" "+3 more in flight - see 'flow card'" "summary count line present for the 3 hidden cards"
+n_more="$(count_lines "$out" "more in flight")"
+ck 1 "$n_more" "exactly one '+M more in flight' line"
+has "$out" "NEXT -> continue C-001" "NEXT-> recommendation intact"
+n_next="$(count_lines "$out" '^NEXT ->')"
+ck 1 "$n_next" "exactly one NEXT-> line"
+total_lines="$(printf '%s\n' "$out" | wc -l | tr -d '[:space:]')"
+if [ "$total_lines" -le 35 ]; then
+  echo "  ok   [output lines $total_lines <= 35 ceiling]"
+  pass=$((pass+1))
+else
+  echo "  FAIL [output lines $total_lines > 35 ceiling]"
+  fail=$((fail+1))
+fi
+clean
+
+echo "I) --budget with <=5 in-flight cards: byte-identical to default output (no truncation)"
+newsb
+clean_stage 00-idea; clean_stage 01-research; clean_stage 02-scope
+clean_stage 03-prd; clean_stage 04-adr; clean_stage 05-contract
+for i in 1 2 3; do
+  cid="$(printf 'C-%03d' "$i")"
+  printf '# %s — test\nstatus: todo\ndeps: none\n## Scope\none thing\n## Allowed files\ninfra/\n## Verify (run these before done)\n- [ ] ok\n## Done-evidence (world-state proof)\nurl\n## Evidence (paste actual proof when done)\n(empty until done)\n' "$cid" > "$SB/cards/$cid.md"
+  FLOW_SESSION_ID=SESSION_A bash "$RUN" card start "$cid" >/dev/null 2>&1
+done
+out_def="$(FLOW_SESSION_ID=SESSION_B bash "$RUN" resume 2>&1)"; rc_def=$?
+out_bud="$(FLOW_SESSION_ID=SESSION_B bash "$RUN" resume --budget 2>&1)"; rc_bud=$?
+ck 0 "$rc_def" "default resume exits 0"
+ck 0 "$rc_bud" "resume --budget exits 0"
+ck "$out_def" "$out_bud" "--budget with <=5 cards produces byte-identical output to default"
+no "$out_bud" "more in flight" "no summary line emitted when <=5 cards"
+clean
+
+echo "J) default (no flag) behavior with >5 in-flight cards: lists all cards, unchanged pre-flag behavior"
+newsb
+clean_stage 00-idea; clean_stage 01-research; clean_stage 02-scope
+clean_stage 03-prd; clean_stage 04-adr; clean_stage 05-contract
+for i in 1 2 3 4 5 6 7 8; do
+  cid="$(printf 'C-%03d' "$i")"
+  printf '# %s — test\nstatus: todo\ndeps: none\n## Scope\none thing\n## Allowed files\ninfra/\n## Verify (run these before done)\n- [ ] ok\n## Done-evidence (world-state proof)\nurl\n## Evidence (paste actual proof when done)\n(empty until done)\n' "$cid" > "$SB/cards/$cid.md"
+  FLOW_SESSION_ID=SESSION_A bash "$RUN" card start "$cid" >/dev/null 2>&1
+done
+out_def="$(FLOW_SESSION_ID=SESSION_B bash "$RUN" resume 2>&1)"; rc=$?
+ck 0 "$rc" "default resume exits 0 with >5 in-flight cards"
+n_all="$(count_lines "$out_def" "in flight, started")"
+ck 8 "$n_all" "default invocation lists all 8 in-flight cards"
+no "$out_def" "more in flight" "default invocation never emits a '+M more' summary line"
+bash "$RUN" resume --budget extra >/dev/null 2>&1; rc_extra=$?
+ck 2 "$rc_extra" "resume --budget with extra arg exits 2"
+bash "$RUN" resume --bogus >/dev/null 2>&1; rc_bogus=$?
+ck 2 "$rc_bogus" "resume with unknown flag exits 2"
+clean
 
 echo
 echo "RESULT: $pass passed, $fail failed"
