@@ -3175,7 +3175,7 @@ _ws_port() { # <C-NNN>
       ;;
   esac
 
-  local rec="" r c wt
+  local rec="" r c wt offset
   while IFS= read -r r; do
     [ -n "$r" ] || continue
     c="$(_ws_get "$r" card_id)"
@@ -3198,25 +3198,28 @@ EOF
     return 2
   fi
 
-  local card_int
-  card_int=$(( 10#$num ))
+  offset="$(_ws_get_num "$rec" port_offset)"
+  if [ -z "$offset" ]; then
+    echo "workspace port: FAIL - workspace record for '$card' has no port_offset" >&2
+    return 2
+  fi
 
   local baseport="${FLOW_WORKSPACE_BASEPORT:-3000}"
   case "$baseport" in ''|*[!0-9]*) baseport=3000 ;; esac
 
   local raw_port port note=""
-  raw_port=$(( baseport + card_int ))
+  raw_port=$(( baseport + offset ))
   if [ "$raw_port" -le 65535 ]; then
     port="$raw_port"
   else
     local span=$(( 65536 - baseport ))
     if [ "$span" -le 0 ]; then
       span=65535
-      port=$(( 1024 + (card_int % (65535 - 1024 + 1)) ))
+      port=$(( 1024 + (offset % (65535 - 1024 + 1)) ))
       note=" (wrapped >65535: baseport=$baseport invalid; wrapped to $port)"
     else
-      port=$(( baseport + (card_int % span) ))
-      note=" (wrapped >65535: $baseport + ($card_int % $span) = $port)"
+      port=$(( baseport + (offset % span) ))
+      note=" (wrapped >65535: $baseport + ($offset % $span) = $port)"
     fi
   fi
 

@@ -195,26 +195,35 @@ wt2="$(dirname "$SB")/$(basename "$SB")-feat-c2"
 # (a) same card twice -> same port, file content stable
 out1="$(bash "$RUN" workspace port C-001 2>&1)"; rc1=$?
 ck 0 "$rc1" "port C-001 first run exit 0"
-has "$out1" "C-001 -> port 3001" "first run port 3001"
+has "$out1" "C-001 -> port 3000" "first run port 3000"
 has "$out1" "(written to $wt1/.env.flow.local)" "first run prints written path"
 content1="$(cat "$wt1/.env.flow.local")"
 
 out2="$(bash "$RUN" workspace port C-001 2>&1)"; rc2=$?
 ck 0 "$rc2" "port C-001 second run exit 0"
-has "$out2" "C-001 -> port 3001" "second run same port 3001"
+has "$out2" "C-001 -> port 3000" "second run same port 3000"
 content2="$(cat "$wt1/.env.flow.local")"
 ck "$content1" "$content2" "file content stable across runs"
 
 # (b) two cards -> distinct ports (base+N distinct)
 out_b="$(bash "$RUN" workspace port C-002 2>&1)"; rc_b=$?
 ck 0 "$rc_b" "port C-002 exit 0"
-has "$out_b" "C-002 -> port 3002" "C-002 gets distinct port 3002"
+has "$out_b" "C-002 -> port 3001" "C-002 gets distinct port 3001"
+
+# consistency check: port matches workspace enter for each card, and they differ
+p1="$(printf '%s\n' "$out1" | sed -nE 's/.*-> port ([0-9]+).*/\1/p')"
+e1="$(bash "$RUN" workspace enter feat-c1 2>&1 | sed -nE 's/.*# = ([0-9]+).*/\1/p')"
+ck "$e1" "$p1" "C-001 port matches workspace enter port"
+p2="$(printf '%s\n' "$out_b" | sed -nE 's/.*-> port ([0-9]+).*/\1/p')"
+e2="$(bash "$RUN" workspace enter feat-c2 2>&1 | sed -nE 's/.*# = ([0-9]+).*/\1/p')"
+ck "$e2" "$p2" "C-002 port matches workspace enter port"
+ck 0 "$([ "$p1" != "$p2" ] && echo 0 || echo 1)" "C-001 and C-002 ports differ"
 
 # (c) FLOW_WORKSPACE_BASEPORT override respected
 out_c="$(FLOW_WORKSPACE_BASEPORT=5000 bash "$RUN" workspace port C-001 2>&1)"; rc_c=$?
 ck 0 "$rc_c" "port C-001 with BASEPORT=5000 exit 0"
-has "$out_c" "C-001 -> port 5001" "BASEPORT=5000 gives 5001"
-has "$(cat "$wt1/.env.flow.local")" "PORT=5001" ".env.flow.local reflects overridden port"
+has "$out_c" "C-001 -> port 5000" "BASEPORT=5000 gives 5000"
+has "$(cat "$wt1/.env.flow.local")" "PORT=5000" ".env.flow.local reflects overridden port"
 
 # (d) card without workspace -> exit 2 with loud message
 out_d="$(bash "$RUN" workspace port C-999 2>&1)"; rc_d=$?
@@ -240,10 +249,10 @@ has "$(cat "$wt1/.env.flow.local")" "PORT=" ".env.flow.local contains PORT assig
 has "$(cat "$wt1/.env.flow.local")" "FLOW_CARD=C-001" ".env.flow.local contains FLOW_CARD"
 
 # wrap modulo rule when port > 65535
-out_wrap="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-002 2>&1)"; rc_wrap=$?
+out_wrap="$(FLOW_WORKSPACE_BASEPORT=65535 bash "$RUN" workspace port C-002 2>&1)"; rc_wrap=$?
 ck 0 "$rc_wrap" "wrapped port exit 0"
 has "$out_wrap" "wrapped >65535" "states wrap formula in output"
-has "$out_wrap" "65534 + (2 % 2) = 65534" "wrap formula values stated"
+has "$out_wrap" "65535 + (1 % 1) = 65535" "wrap formula values stated"
 clean
 
 echo
