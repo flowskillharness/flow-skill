@@ -2397,8 +2397,113 @@ prd_declares_fr() { # true if the PRD uses the FRn traceability convention (driv
   # keep it loose so the tip reliably shows in the common case. Do not "tighten" to match consistency.
   [ -f "$FLOW_DIR/03-prd.md" ] && grep -qE 'FR[0-9]+' "$FLOW_DIR/03-prd.md" 2>/dev/null
 }
+_consistency_contract() {
+  local contract="$FLOW_DIR/05-contract.md"
+  if [ ! -f "$contract" ]; then
+    echo "consistency --contract: no flow/05-contract.md found - skipped."
+    return 0
+  fi
+
+  local td; td="$(mktemp -d)"; _register_td "$td"
+  trap 'rm -rf "${td:-}" 2>/dev/null' RETURN
+
+  # 1. Extract endpoint rows from 05-contract.md
+  # Grounded in _templates/05-contract.md: table columns "| Method/Interface | Path/Name | ..."
+  # Tolerates swapped Method/Path column order based on header row inspection.
+  awk -F'|' '
+    /^[[:space:]]*\|/ {
+      line = $0
+      gsub(/^[[:space:]]*\||\|[[:space:]]*$/, "", line)
+      if (tolower(line) ~ /method/ && tolower(line) ~ /path/) {
+        n = split(line, cols, "|")
+        for (i = 1; i <= n; i++) {
+          c = tolower(cols[i])
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+          if (c ~ /method/) m_col = i
+          if (c ~ /path/) p_col = i
+        }
+        in_table = 1
+        next
+      }
+      if (in_table) {
+        if (line ~ /^[[:space:]]*-+/) next
+        n = split(line, cols, "|")
+        m = cols[m_col]; p = cols[p_col]
+        gsub(/^[[:space:]]+|[[:space:]]+$|[`"]/, "", m)
+        gsub(/^[[:space:]]+|[[:space:]]+$|[`"]/, "", p)
+        if (m ~ /^\[FILL/ || p ~ /^\[FILL/ || m == "" || p == "") next
+        print m "\t" p
+      }
+    }
+    !/^[[:space:]]*\|/ { in_table = 0 }
+  ' "$contract" > "$td/endpoints" 2>/dev/null
+
+  local n_ep
+  n_ep="$(grep -c . "$td/endpoints" 2>/dev/null || echo 0)"
+  if [ "$n_ep" -eq 0 ]; then
+    echo "consistency --contract: no endpoint table found in flow/05-contract.md - skipped."
+    rm -rf "$td" 2>/dev/null
+    return 0
+  fi
+
+  # 2. Extract ## Scope content from all cards/C-*.md
+  : > "$td/cards_scope"
+  if [ -d "$CARDS_DIR" ]; then
+    local cf
+    for cf in "$CARDS_DIR"/C-*.md; do
+      [ -f "$cf" ] || continue
+      awk '/^##[[:space:]]+[Ss]cope/{f=1;next} /^##[[:space:]]/{f=0} f' "$cf" 2>/dev/null
+    done > "$td/cards_scope"
+  fi
+
+  # 3. Match each endpoint path against cards Scope content
+  echo "contract-to-card endpoint coverage audit (flow/05-contract.md vs cards/C-*.md ## Scope)"
+  echo "  (matching rule: literal path token substring in cards/C-*.md '## Scope')"
+  local m p n_cov=0 n_uncov=0
+  : > "$td/uncovered"
+  while IFS="$(printf '\t')" read -r m p; do
+    [ -n "$p" ] || continue
+    if grep -qF "$p" "$td/cards_scope" 2>/dev/null; then
+      n_cov=$((n_cov + 1))
+    else
+      n_uncov=$((n_uncov + 1))
+      printf '        %s %s\n' "$m" "$p" >> "$td/uncovered"
+    fi
+  done < "$td/endpoints"
+
+  if [ "$n_uncov" -gt 0 ]; then
+    echo "  [!] uncovered contract endpoint(s) (no card references path in ## Scope):"
+    cat "$td/uncovered"
+    echo "  coverage: $n_ep endpoint(s), $n_cov covered, $n_uncov uncovered."
+    trap - RETURN
+    rm -rf "$td" 2>/dev/null
+    echo "FLAGGED: contract endpoint(s) have no card covering them in ## Scope."
+    return 1
+  fi
+
+  echo "  coverage: $n_ep endpoint(s), $n_cov covered, $n_uncov uncovered."
+  echo "  PASS: all $n_ep endpoint(s) covered across cards/ scope."
+  trap - RETURN
+  rm -rf "$td" 2>/dev/null
+  return 0
+}
 
 cmd_consistency() {
+  case "${1:-}" in
+    "") : ;;
+    --contract)
+      if [ $# -gt 1 ]; then
+        echo "usage: /flow consistency [--contract]" >&2
+        return 1
+      fi
+      _consistency_contract
+      return $?
+      ;;
+    *)
+      echo "usage: /flow consistency [--contract]" >&2
+      return 1
+      ;;
+  esac
   # Cross-artifact coverage + contradiction audit - the MECHANICAL complement to the human
   # traceability challenges in gate-rules.md (03/05). The other probes each cover one axis:
   # coherence=version drift, contract=URL-prefix drift, tokens=design-token drift. THIS axis is
@@ -2409,7 +2514,7 @@ cmd_consistency() {
   # Traceability anchors (see _templates): PRD 'Features' entries tagged 'FRn:' (functional
   # requirement id); cards declare 'implements: FR1, FR2' (or 'infra'/'none' for non-feature
   # cards); 05-contract 'Feature -> interface map' references each 'FRn'.
-  local prd="$FLOW_DIR/03-prd.md" contract="$FLOW_DIR/05-contract.md"
+  local prd="$FLOW_DIR/03-prd.md" contract="$FLOW_DIR/05-contract.md" td=""
   if [ ! -f "$prd" ]; then echo "consistency: no flow/03-prd.md yet - planning incomplete (skipped)."; return 0; fi
   local td; td="$(mktemp -d)"; _register_td "$td"
   trap 'rm -rf "$td" 2>/dev/null' RETURN
@@ -5262,7 +5367,7 @@ usage: bash flow.sh <command> [args]
   contract          Check client base-URL vs served-path prefixes (path-resolution drift; web)
   tokens            Check DESIGN.md declared tokens vs CSS usage (design-system drift)
   coherence         Flag version drift across declared version fields (doc-vs-code coherence)
-  consistency       Audit cross-artifact coverage (PRD features <-> cards <-> contract; FR ids)
+  consistency [--contract] Audit cross-artifact coverage (PRD FR ids or --contract endpoint audit)
   constitution      Check operator-authored per-project invariants in flow/constitution.md (advisory; not a next-gate)
   clarify           List leftover ## Open decisions bullets on scope/PRD/contract (advisory; not a next-gate)
   converge [--file] Append-only remainder cards from a flow-converge/v1 payload (plan vs present code)
@@ -5473,7 +5578,7 @@ case "$cmd" in
   contract)       cmd_contract ;;
   tokens)         cmd_tokens ;;
   coherence)      cmd_coherence ;;
-  consistency)    cmd_consistency ;;
+  consistency)    cmd_consistency "$@" ;;
   constitution)   cmd_constitution ;;
   clarify)        cmd_clarify ;;
   converge)       cmd_converge "$@" ;;

@@ -21,7 +21,7 @@ is no fragment loader (ADR-0001).
 | `/flow contract` | `bash <skill>/runner/flow.sh contract` | Advisory client base-URL vs served-path drift; confirm on the running app. |
 | `/flow tokens` | `bash <skill>/runner/flow.sh tokens` | Advisory DESIGN.md token unused/mismatch; dated amendment if intentional. |
 | `/flow coherence` | `bash <skill>/runner/flow.sh coherence` | Advisory version-field drift; semantic contradictions stay a human challenge. |
-| `/flow consistency` | `bash <skill>/runner/flow.sh consistency` | Advisory PRD FRn coverage; then `gate-rules.md` cross-artifact passes. |
+| `/flow consistency` | `bash <skill>/runner/flow.sh consistency [--contract]` | Advisory PRD FRn coverage or contract endpoint audit (`--contract`); see `references/gate-consistency.md`. |
 | `/flow constitution` | `bash <skill>/runner/flow.sh constitution` | Advisory constitution form + markers; then `gate-rules.md`. Not a `next` gate. |
 | `/flow clarify` | `bash <skill>/runner/flow.sh clarify` | List leftover Open-decision boxes; write-back `references/clarify.md`. Not a `next` gate. |
 | `/flow converge` | `bash <skill>/runner/flow.sh converge [--file <payload>]` | Assess vs plan per `references/converge.md`; present the findings table first. |
