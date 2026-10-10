@@ -147,7 +147,7 @@ jobs:
 - **Build Minute Consumption**: Daily cron runs ~1 min/day (~30 min/month), negligible against GitHub free tier (2,000 min).
 - **Raw GitHub CDN Caching**: `raw.githubusercontent.com` caches responses for ~300s (5 min). Instant dispatch builds within 5 min of push may fetch the previous version if not delayed by ~60s or cache-busted with a query param.
 - **Open Questions**:
-  1. *Deploy Method*: Cloudflare Pages uses Git integration with `website/**` watch path. Automatic builds require either a Cloudflare Deploy Hook URL invoked via curl in GHA, or switching to Direct Upload / Wrangler in CI.
+  1. *Deploy Method*: RESOLVED 2026-10-11: flow-website is a Direct Upload project (Git Provider: No, verified via wrangler). Deploy = wrangler pages deploy in GHA (wrangler-action) once CLOUDFLARE_API_TOKEN/ACCOUNT_ID secrets are set; master pushes alone do NOT deploy.
   2. *Dispatch Auth*: Default `github.token` cannot trigger downstream workflows in some repository configurations; a fine-grained PAT or repo secret (`WEBSITE_DISPATCH_TOKEN`) may be required.
 
 ## 7. Sources
