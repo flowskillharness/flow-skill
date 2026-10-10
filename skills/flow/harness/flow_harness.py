@@ -694,7 +694,7 @@ def cmd_promote_suggest(con, a):
                     "min_id": g["min_id"],
                     "title": f"Reduce repeated friction: {_short_title(g['representative'])}",
                     "condition": f"{g['count']} traces recorded similar friction: {g['representative']}",
-                    "suggested": "Update the relevant docs, templates, or guidance for this friction pattern.",
+                    "recorded": g["representative"],
                 })
 
     # 2. Repeated interventions (>=2 occurrences)
@@ -732,7 +732,7 @@ def cmd_promote_suggest(con, a):
                     "min_id": g["min_id"],
                     "title": f"Address repeated intervention: {_short_title(g['representative'])}",
                     "condition": f"{g['count']} interventions share the pattern: {g['representative']}",
-                    "suggested": "Clarify the operating rule or gate that would have caught this earlier.",
+                    "recorded": g["representative"],
                 })
 
     # 3. Recurring audit findings (>=2 findings)
@@ -756,7 +756,7 @@ def cmd_promote_suggest(con, a):
                     "min_id": min_id if min_id != 999999 else 0,
                     "title": f"Clean up {label}",
                     "condition": f"Audit found {count} {label}.",
-                    "suggested": "Resolve the listed audit findings or record why they are intentionally retained.",
+                    "recorded": f"Audit found {count} {label}.",
                 })
 
     if not patterns:
@@ -785,8 +785,9 @@ def cmd_promote_suggest(con, a):
         print("## When to use this")
         print(p["condition"])
         print()
-        print("## Suggested action")
-        print(p["suggested"])
+        print(f"## Suggested action (from {p['count']} recorded occurrences)")
+        print(f"Revisit: {p['recorded']}")
+        print(f"Recorded {p['count']} time(s) — review the instances before acting.")
         print("```")
         print()
     return 0

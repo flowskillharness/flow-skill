@@ -110,6 +110,9 @@ if [ -n "$PY" ]; then
   # (a) 2-occurrence pattern appears
   has "$out_p" "Reduce repeated friction" "2-occurrence pattern draft title present"
   has "$out_p" "docker layer cache stale" "2-occurrence pattern text present"
+  has "$out_p" "## Suggested action (from 2 recorded occurrences)" "derived action header with count present"
+  has "$out_p" "Recorded 2 time(s) — review the instances before acting." "recorded-count final line present"
+  no "$out_p" "Resolve the listed audit findings or record why they are intentionally retained." "generic audit advice absent"
   # (b) 1-occurrence pattern absent
   no "$out_p" "rare one off network timeout" "1-occurrence pattern absent"
   # (e) output includes review/save instruction
@@ -129,7 +132,7 @@ if [ -n "$PY" ]; then
   rm -rf "$SB"
 fi
 
-# read-only promote --suggest: no harness init -> no-patterns message, zero filesystem side effects
+# read-only promote --suggest: no harness init -> no-patterns message, no harness DB/WAL/schema side effects
 if [ -n "$PY" ]; then
   newsb
   out_ro="$(bash "$RUN" promote --suggest 2>&1)"; rc_ro=$?
