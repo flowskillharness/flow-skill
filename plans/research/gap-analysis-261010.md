@@ -224,6 +224,7 @@ Grounded in repository tracking documents:
 - **Repo Surfaces Touched:** `skills/flow/eval/fixtures/`, `skills/flow/eval/manifest.tsv`, `tests/test_flow_eval.sh`.
 - **ADR-0001 Compatibility:** 100% compliant. Adds test data to the eval harness per the fixture-pair rule (`AGENTS.md`).
 - **Rough Effort:** Low.
+- **Status (2026-10-10):** fixture pair landed (f06_sound PASS / f06_injected FLAG + manifest rows). Validated by the mocked-engine suite only (219/0) — this proves fixture/manifest plumbing, NOT that a live semantic judge resists the injected instructions; live-model validation requires a permitted billable run (none performed).
 
 #### Candidate 4: Deterministic Port Allocator for Worktrees (`flow workspace port`)
 - **Problem:** Parallel workers running web builds in separate git worktrees collide on default ports (`3000`, `8080`) during live verification.

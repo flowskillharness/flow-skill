@@ -42,8 +42,8 @@ Candidates defined in `plans/research/gap-analysis-261010.md` §6:
 | Candidate | Trend Anchor | Surface | Effort | Status |
 |---|---|---|---|---|
 | **C1: Eval regression diff (`eval --diff`)** | `trends-agent-evals-benchmarks` | `runner/flow.sh`, `refs/gate-eval.md` | Med | Wave 2 |
-| **C2: Bounded context handoff (`resume --budget`)** | `trends-context-engineering` | `runner/flow.sh`, `docs/doc-budgets.txt` | Low | Wave 1 — rescoped 2026-10-10: in-flight cap (see §6 C2) |
-| **C3: Adversarial injection fixtures** | `trends-agent-security-hooks` | `eval/fixtures/`, `eval/manifest.tsv` | Low | Wave 2 |
+| **C2: Bounded context handoff (`resume --budget`)** | `trends-context-engineering` | `runner/flow.sh`, `docs/doc-budgets.txt` | Low | Wave 1 — shipped on branch (rescoped: in-flight cap; see §6 C2) |
+| **C3: Adversarial injection fixtures** | `trends-agent-security-hooks` | `eval/fixtures/`, `eval/manifest.tsv` | Low | Wave 2 — shipped on branch (fixtures f06_*; mocked-suite validated; live-model untested) |
 | **C4: Worktree port allocator (`workspace port`)** | `trends-multi-agent-orchestration` | `runner/flow.sh`, `refs/host-agnostic-parallel` | Low-Med | Wave 3 — trend anchor low-confidence (justification is repo-internal, see §6 C4) |
 | **C5: Runner self-integrity verification** | `trends-agent-security-hooks` | `runner/flow.sh` (`cmd_doctor`) | Med | Wave 1 — blocked: manifest lacks hash (see §6 C5) |
 | **C6: Contract-to-card coverage (`consistency`)** | `trends-spec-driven-dev` | `runner/flow.sh` (`cmd_consistency`) | Med | Wave 4 |
