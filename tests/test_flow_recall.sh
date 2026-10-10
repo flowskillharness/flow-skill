@@ -129,6 +129,29 @@ if [ -n "$PY" ]; then
   rm -rf "$SB"
 fi
 
+# read-only promote --suggest: no harness init -> no-patterns message, zero filesystem side effects
+if [ -n "$PY" ]; then
+  newsb
+  out_ro="$(bash "$RUN" promote --suggest 2>&1)"; rc_ro=$?
+  ck 0 "$rc_ro" "promote --suggest exit 0 without harness init"
+  has "$out_ro" "no patterns meet the >=2 occurrence bar yet" "no-patterns message shown without DB"
+  db_exists="$("$PY" -c "
+import importlib.util, os, sys
+spec = importlib.util.spec_from_file_location('fdb', r'$HERE/../skills/flow/harness/_db.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+p = m.default_db_path(r'$SB')
+print('db:' + str(os.path.isfile(p)))
+print('wal:' + str(os.path.isfile(p + '-wal') or os.path.isfile(p + '-shm')))
+d = os.path.join(r'$SB', '.flow')
+print('flow-only:' + str(not os.path.isdir(d) or all(f in ('events.jsonl', 'cycle_id') for f in os.listdir(d))))
+")"
+  has "$db_exists" "db:False" "no DB file minted by read-only suggest"
+  has "$db_exists" "wal:False" "no DB wal/shm minted by read-only suggest"
+  has "$db_exists" "flow-only:True" ".flow holds only runner telemetry (no harness artifacts)"
+  rm -rf "$SB"
+fi
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

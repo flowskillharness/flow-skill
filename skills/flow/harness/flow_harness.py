@@ -736,27 +736,28 @@ def cmd_promote_suggest(con, a):
                 })
 
     # 3. Recurring audit findings (>=2 findings)
-    findings, _score = _audit(con)
-    for key, (label, _sql) in _AUDIT_QUERIES.items():
-        arows = findings.get(key, [])
-        if len(arows) >= 2:
-            count = len(arows)
-            min_id = 999999
-            for r in arows:
-                try:
-                    rid = int(r["id"])
-                    if rid < min_id:
-                        min_id = rid
-                except (ValueError, TypeError, KeyError):
-                    pass
-            patterns.append({
-                "count": count,
-                "oldest_created_at": "",
-                "min_id": min_id if min_id != 999999 else 0,
-                "title": f"Clean up {label}",
-                "condition": f"Audit found {count} {label}.",
-                "suggested": "Resolve the listed audit findings or record why they are intentionally retained.",
-            })
+    if _db._table_exists(con, "story"):
+        findings, _score = _audit(con)
+        for key, (label, _sql) in _AUDIT_QUERIES.items():
+            arows = findings.get(key, [])
+            if len(arows) >= 2:
+                count = len(arows)
+                min_id = 999999
+                for r in arows:
+                    try:
+                        rid = int(r["id"])
+                        if rid < min_id:
+                            min_id = rid
+                    except (ValueError, TypeError, KeyError):
+                        pass
+                patterns.append({
+                    "count": count,
+                    "oldest_created_at": "",
+                    "min_id": min_id if min_id != 999999 else 0,
+                    "title": f"Clean up {label}",
+                    "condition": f"Audit found {count} {label}.",
+                    "suggested": "Resolve the listed audit findings or record why they are intentionally retained.",
+                })
 
     if not patterns:
         print("no patterns meet the >=2 occurrence bar yet")
@@ -1438,6 +1439,19 @@ def main(argv):
         # lint touches no table: skip connect() so CI/linting never mints a DB
         # (or runs migrations) in the working tree.
         return G.cmd_graph_lint(None, a) or 0
+    if a.cmd == "promote-suggest":
+        path = getattr(a, "db", None) or _db.default_db_path()
+        if not path or not os.path.isfile(path) or os.path.getsize(path) == 0:
+            print("no patterns meet the >=2 occurrence bar yet")
+            return 0
+        con = sqlite3.connect(f"file:{os.path.abspath(path)}?mode=ro", uri=True)
+        con.row_factory = sqlite3.Row
+        con.execute("PRAGMA busy_timeout = 5000")
+        a._db_path = path
+        try:
+            return cmd_promote_suggest(con, a) or 0
+        finally:
+            con.close()
     con = _db.connect(db_path=a.db)
     a._db_path = a.db or _db.default_db_path()
     dispatch = {
