@@ -101,6 +101,10 @@ hand-edit it. `scripts/pack-rehearsal.sh` recomputes the packaged runner's hash 
 rehearsal on mismatch; `scripts/check-release-coherence.sh` re-checks checkout bytes the same way.
 At runtime `flow doctor` compares the live runner against the manifest hash and fails loudly on
 drift (older installs without the `hashes` field print an informational skip line instead).
+The same hash also ships as a receipt (`skills/flow/manifest-hashes.json`) inside the bundled
+skill — written by `sync.mjs` at prepack, since repo-root `portable-manifest.json` is not in the
+npm `files:` allowlist — and `doctor` prefers it on installs; `pack-rehearsal.sh` exercises
+`doctor` on the installed artifact, including tamper detection.
 
 ## npm installer release (e.g. 0.1.0-next.N or 0.1.0)
 

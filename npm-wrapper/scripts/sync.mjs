@@ -62,7 +62,10 @@ function compareTrees(extracted, repo) {
     return 1;
   }
 
-  const extractedFiles = listFiles(extracted).sort();
+  // The bundled-only receipt (written by this script at pack time, after the copy) is expected
+  // extra in the extracted tree; its contents are verified in pack-rehearsal.sh.
+  const RECEIPT = 'manifest-hashes.json';
+  const extractedFiles = listFiles(extracted).sort().filter((f) => f !== RECEIPT);
   const repoFiles = listFiles(repo).sort();
   if (extractedFiles.length === 0) {
     console.error(`FAIL: extracted tree has zero shouldShip files: ${extracted}`);
@@ -200,5 +203,15 @@ manifest.hashes[runnerRel] = createHash('sha256')
   .update(readFileSync(join(src, 'runner', 'flow.sh')))
   .digest('hex');
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
+// C5 receipt — also write the hash INSIDE the bundled skill so real npm installs can verify:
+// package.json `files:` does not ship repo-root portable-manifest.json, but skills/ is
+// allowlisted, so this receipt travels with the install and `doctor` prefers it. Computed from
+// the bundled copy (identical to source after the parity check above). Deterministic: no
+// timestamps, fixed shape.
+writeFileSync(
+  join(dst, 'manifest-hashes.json'),
+  JSON.stringify({ [runnerRel]: manifest.hashes[runnerRel] }, null, 2) + '\n'
+);
 
 console.log(`sync OK: ${dstFiles.length} files, skills-manifest.json emitted, runner hash ${manifest.hashes[runnerRel].slice(0, 8)}...`);

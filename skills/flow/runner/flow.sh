@@ -2691,11 +2691,12 @@ cmd_doctor() {
     esac
   fi
   echo
-  # Runner integrity (pack-time reference hash in portable-manifest.json). The manifest lives at
-  # the repo root in a dev checkout (runner = <root>/skills/flow/runner) or next to the skill in
-  # other layouts. No manifest / no hashes entry (older installs) => informational skip only.
+  # Runner integrity (pack-time reference hash). Preferred source is the receipt sync.mjs writes
+  # INSIDE the bundled skill (skills/flow/manifest-hashes.json) - present on real npm installs;
+  # portable-manifest.json only exists in dev checkouts. First existing file wins; no file / no
+  # hashes entry (older installs) => informational skip only.
   local mf="" _mf
-  for _mf in "$SCRIPT_DIR/../../../portable-manifest.json" "$SCRIPT_DIR/../../portable-manifest.json"; do
+  for _mf in "$SCRIPT_DIR/../manifest-hashes.json" "$SCRIPT_DIR/../../../portable-manifest.json" "$SCRIPT_DIR/../../portable-manifest.json"; do
     if [ -f "$_mf" ]; then mf="$_mf"; break; fi
   done
   local want=""
