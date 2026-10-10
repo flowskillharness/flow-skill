@@ -28,6 +28,7 @@ is no fragment loader (ADR-0001).
 | `/flow eval [--stage 01\|02\|05\|card] [--fixture <id>] [--n 3] [--timeout <s>]` | `bash <skill>/runner/flow.sh eval [...]` | Billable; live mode skips if `claude` absent. `--replay` does not inherit that SKIP. See `references/gate-eval.md`. |
 | `/flow eval --report` | `bash <skill>/runner/flow.sh eval --report` | Offline; relay last complete batch + drift. See `references/gate-eval.md`. |
 | `/flow eval --replay` | `bash <skill>/runner/flow.sh eval --replay` | Keyless replay; missing/stale fixtures exit 1. Verdicts never count toward the eval floor. |
+| `/flow eval --diff <old> <new>` | `bash <skill>/runner/flow.sh eval --diff <old> <new>` | Offline; fixture regression classifier vs baseline. See `references/gate-eval.md`. |
 | `/flow project-type <web\|cli\|library\|skill>` | `bash <skill>/runner/flow.sh project-type [t]` | Set/read type per `references/project-types.md`. Confirm before planning. |
 | `/flow usage [--global\|--prune]` | `bash <skill>/runner/flow.sh usage [...]` | Relay local JSONL analytics; `--prune` caps the log. Nothing to author. |
 | `/flow skip <stage> --reason ...` | `bash <skill>/runner/flow.sh skip <stage> --reason ...` | Advance only with matching `DEBT.md`. Security-class: operator-only HALT. |

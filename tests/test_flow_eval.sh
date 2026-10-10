@@ -1048,6 +1048,102 @@ has "$promptcontent" "GATE-EVAL-testnonce123: GAP" "verdict marker uses the GAP/
 has "$promptcontent" "def create_task" "allow-listed source file was inlined"
 clean
 
+echo "DF-A) eval --diff: regressed case exits 1 with REGRESSED row present"
+newsb
+cat << 'EOF' > "$SB/old.jsonl"
+{"fixture":"f01a","verdict":"PASS"}
+{"fixture":"fcda","verdict":"PASS"}
+EOF
+cat << 'EOF' > "$SB/new.jsonl"
+{"fixture":"f01a","verdict":"FLAG"}
+{"fixture":"fcda","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
+ck 1 "$rc" "eval --diff exits 1 on regressed fixture"
+has "$out" "REGRESSED" "REGRESSED row present"
+has "$out" "f01a" "regressed fixture id present"
+has "$out" "1 regressed, 0 improved, 0 saturated, 1 unchanged" "summary line reflects 1 regressed"
+clean
+
+echo "DF-B) eval --diff: clean case exits 0"
+newsb
+cat << 'EOF' > "$SB/old.jsonl"
+{"fixture":"f01a","verdict":"PASS"}
+{"fixture":"fcda","verdict":"PASS"}
+EOF
+cat << 'EOF' > "$SB/new.jsonl"
+{"fixture":"f01a","verdict":"PASS"}
+{"fixture":"fcda","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "clean comparison exits 0"
+no  "$out" "REGRESSED" "no REGRESSED row present in clean comparison"
+has "$out" "UNCHANGED" "UNCHANGED row present"
+has "$out" "0 regressed, 0 improved, 0 saturated, 2 unchanged" "summary line reflects 0 regressed"
+clean
+
+echo "DF-C) eval --diff: improved, saturated, removed, added, and INVALID rows classify correctly"
+newsb
+cat << 'EOF' > "$SB/old.jsonl"
+{"fixture":"f01a","verdict":"FLAG"}
+{"fixture":"f01b","verdict":"FLAG"}
+{"fixture":"f02a","verdict":"INVALID"}
+{"fixture":"f02b","verdict":"PASS"}
+{"fixture":"f05a","verdict":"PASS"}
+EOF
+cat << 'EOF' > "$SB/new.jsonl"
+{"fixture":"f01a","verdict":"PASS"}
+{"fixture":"f01b","verdict":"FLAG"}
+{"fixture":"f02a","verdict":"PASS"}
+{"fixture":"f02b","verdict":"INVALID"}
+{"fixture":"fcdb","verdict":"FLAG"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
+ck 1 "$rc" "PASS->INVALID regression exits 1"
+has "$out" "IMPROVED" "IMPROVED row present"
+has "$out" "SATURATED" "SATURATED row present"
+has "$out" "REGRESSED" "REGRESSED row present for INVALID non-PASS regression"
+has "$out" "removed" "removed row present for f05a"
+has "$out" "added" "added row present for fcdb"
+has "$out" "1 regressed, 2 improved, 1 saturated, 0 unchanged" "summary line counts match"
+clean
+
+echo "DF-D) eval --diff: missing or unreadable file exits 2"
+newsb
+touch "$SB/exists.jsonl"
+out="$(bash "$RUN" eval --diff "$SB/nonexistent.jsonl" "$SB/exists.jsonl" 2>&1)"; rc=$?
+ck 2 "$rc" "missing first file exits 2"
+has "$out" "not found" "loud error on missing first file"
+
+out="$(bash "$RUN" eval --diff "$SB/exists.jsonl" "$SB/nonexistent.jsonl" 2>&1)"; rc=$?
+ck 2 "$rc" "missing second file exits 2"
+has "$out" "not found" "loud error on missing second file"
+
+out="$(bash "$RUN" eval --diff 2>&1)"; rc=$?
+ck 2 "$rc" "missing arguments exits 2"
+has "$out" "requires two file arguments" "loud error on missing arguments"
+clean
+
+echo "DF-E) eval --diff: multi-batch selection uses latest complete batch"
+newsb
+cat << 'EOF' > "$SB/old.jsonl"
+{"ts":"t","epoch_s":1,"run_id":"r1","batch":"start","n":1}
+{"ts":"t","epoch_s":1,"run_id":"r1","fixture":"fcda","verdict":"FLAG"}
+{"ts":"t","epoch_s":1,"run_id":"r1","batch":"done","n":1}
+{"ts":"t","epoch_s":2,"run_id":"r2","batch":"start","n":1}
+{"ts":"t","epoch_s":2,"run_id":"r2","fixture":"fcda","verdict":"PASS"}
+{"ts":"t","epoch_s":2,"run_id":"r2","batch":"done","n":1}
+EOF
+cat << 'EOF' > "$SB/new.jsonl"
+{"ts":"t","epoch_s":3,"run_id":"r3","batch":"start","n":1}
+{"ts":"t","epoch_s":3,"run_id":"r3","fixture":"fcda","verdict":"PASS"}
+{"ts":"t","epoch_s":3,"run_id":"r3","batch":"done","n":1}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/old.jsonl" "$SB/new.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "latest batch r2 (PASS) vs r3 (PASS) exits 0"
+has "$out" "UNCHANGED" "fcda compared as PASS vs PASS (UNCHANGED)"
+clean
+
 echo "UM) grep -cF unmeasured phrase == 3 in flow.sh"
 n="$(grep -cF 'semantic layer unmeasured on this host' "$RUN")"
 ck "3" "$n" "unmeasured phrase appears exactly 3 times in flow.sh"

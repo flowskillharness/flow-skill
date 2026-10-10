@@ -3765,8 +3765,9 @@ _eval_json_str_field() { # $1=line $2=field-name -> value or empty
 # List complete run_ids (has both a start header and a done trailer, n_written >= n_expected),
 # oldest first. An interrupted batch (Ctrl-C mid-run -> no trailer, per the EXIT-only trap) is
 # silently excluded here - that absence IS the completeness signal, not a positive "torn" flag.
-_eval_complete_run_ids() {
-  [ -f "$EVAL_RESULTS_FILE" ] || return 0
+_eval_file_complete_run_ids() { # $1=results-file
+  local f="${1:-$EVAL_RESULTS_FILE}"
+  [ -f "$f" ] || return 0
   awk '
     /"batch":"start"/ {
       match($0, /"run_id":"[^"]*"/); rid = substr($0, RSTART+10, RLENGTH-11)
@@ -3787,7 +3788,11 @@ _eval_complete_run_ids() {
         if (seen_start[r] && seen_done[r] && (nwritten[r]+0) >= (nexp[r]+0)) print r
       }
     }
-  ' "$EVAL_RESULTS_FILE"
+  ' "$f"
+}
+
+_eval_complete_run_ids() {
+  _eval_file_complete_run_ids "$EVAL_RESULTS_FILE"
 }
 
 # Per-stage scorecard for one batch: hollow flag-rate, sound pass-rate, invalid/unreliable
@@ -3908,6 +3913,115 @@ _eval_print_drift() {
       echo "    $stage: $prate -> $crate"
     fi
   done
+}
+
+# Extract per-fixture verdict records from a results file.
+# If complete batches exist, selects the latest complete batch; otherwise falls back
+# to the latest run_id present in fixture rows, or all fixture rows if no run_id exists.
+# Deduplicates by fixture id, keeping the latest verdict.
+_eval_diff_extract_fixtures() { # $1=results-file
+  local file="$1"
+  local c_ids last_id=""
+  c_ids="$(_eval_file_complete_run_ids "$file")"
+  if [ -n "$c_ids" ]; then
+    last_id="$(printf '%s\n' "$c_ids" | tail -1)"
+  else
+    last_id="$(grep '"fixture":' "$file" 2>/dev/null | grep -oE '"run_id":"[^"]*"' | tail -1 | sed -E 's/"run_id":"([^"]*)"/\1/')"
+  fi
+
+  local rows
+  if [ -n "$last_id" ]; then
+    rows="$(grep -F "\"run_id\":\"$last_id\"" "$file" 2>/dev/null | grep '"fixture":')"
+  else
+    rows="$(grep '"fixture":' "$file" 2>/dev/null)"
+  fi
+  [ -z "$rows" ] && return 0
+
+  printf '%s\n' "$rows" | while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    local fid v
+    fid="$(_eval_json_str_field "$line" fixture)"
+    v="$(_eval_json_str_field "$line" verdict)"
+    [ -n "$fid" ] && printf '%s\t%s\n' "$fid" "${v:-UNKNOWN}"
+  done | awk -F'\t' '{ f[$1] = $2 } END { for (k in f) print k "\t" f[k] }' | sort -k1,1
+}
+
+# Longitudinal regression classifier: compares two eval results files offline.
+# Per fixture present in both: REGRESSED, IMPROVED, SATURATED, UNCHANGED.
+# Per fixture only in old: removed. Only in new: added.
+# Exit 1 if any REGRESSED, exit 2 on missing/unreadable file, else 0.
+_eval_diff() { # $1=old_results $2=new_results
+  local old_file="$1" new_file="$2"
+  if [ -z "$old_file" ] || [ -z "$new_file" ]; then
+    echo "eval --diff: requires two file arguments <old_results> <new_results>" >&2
+    return 2
+  fi
+  if [ ! -f "$old_file" ] || [ ! -r "$old_file" ]; then
+    echo "eval --diff: file not found or unreadable: $old_file" >&2
+    return 2
+  fi
+  if [ ! -f "$new_file" ] || [ ! -r "$new_file" ]; then
+    echo "eval --diff: file not found or unreadable: $new_file" >&2
+    return 2
+  fi
+
+  local td; td="$(mktemp -d)"; _register_td "$td"
+
+  _eval_diff_extract_fixtures "$old_file" > "$td/old.tsv"
+  _eval_diff_extract_fixtures "$new_file" > "$td/new.tsv"
+
+  local all_fids
+  all_fids="$( { cut -f1 "$td/old.tsv" 2>/dev/null; cut -f1 "$td/new.tsv" 2>/dev/null; } | sort -u )"
+
+  local rc=0
+  {
+    printf '%s\n' "$all_fids" | while IFS= read -r fid; do
+      [ -n "$fid" ] && printf 'ALL\t%s\n' "$fid"
+    done
+    [ -s "$td/old.tsv" ] && sed 's/^/OLD\t/' "$td/old.tsv"
+    [ -s "$td/new.tsv" ] && sed 's/^/NEW\t/' "$td/new.tsv"
+  } | awk -F'\t' '
+    $1 == "ALL" { order[++n_fids] = $2 }
+    $1 == "OLD" { old_v[$2] = $3 }
+    $1 == "NEW" { new_v[$2] = $3 }
+    END {
+      printf "  %-12s %-10s %-10s %s\n", "id", "old", "new", "classification"
+      n_reg = 0; n_imp = 0; n_sat = 0; n_unc = 0
+      for (i = 1; i <= n_fids; i++) {
+        fid = order[i]
+        has_old = (fid in old_v)
+        has_new = (fid in new_v)
+        ov = has_old ? old_v[fid] : "-"
+        nv = has_new ? new_v[fid] : "-"
+        if (has_old && has_new) {
+          if (ov == "PASS" && nv == "PASS") {
+            cls = "UNCHANGED"
+            n_unc++
+          } else if (ov == "PASS" && nv != "PASS") {
+            cls = "REGRESSED"
+            n_reg++
+          } else if (ov != "PASS" && nv == "PASS") {
+            cls = "IMPROVED"
+            n_imp++
+          } else {
+            cls = "SATURATED"
+            n_sat++
+          }
+        } else if (has_old && !has_new) {
+          cls = "removed"
+        } else {
+          cls = "added"
+        }
+        printf "  %-12s %-10s %-10s %s\n", fid, ov, nv, cls
+      }
+      printf "\n%d regressed, %d improved, %d saturated, %d unchanged\n", n_reg, n_imp, n_sat, n_unc
+      if (n_reg > 0) exit 1
+      exit 0
+    }
+  '
+  rc=$?
+  rm -rf "$td" 2>/dev/null
+  return "$rc"
 }
 
 ## ---------------------------------------------------------------------------------------
@@ -4545,7 +4659,7 @@ _eval_guard_unbounded_darwin() { # $1=replay_mode (0/1); return 1 = refused
 # -positives on that exact byte sequence regardless of language. Purely a spelling dodge for a
 # generic scanner; behavior is 100% identical to every other function in this file.
 function cmd_eval {
-  local stage_filter="" fixture_filter="" n=3 timeout=120 report_mode=0 keep_going=0 replay_mode=0 record_mode=0
+  local stage_filter="" fixture_filter="" n=3 timeout=120 report_mode=0 keep_going=0 replay_mode=0 record_mode=0 diff_mode=0 diff_old="" diff_new=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --stage)      shift; stage_filter="${1:-}" ;;
@@ -4556,10 +4670,25 @@ function cmd_eval {
       --record)     record_mode=1 ;;
       --replay)     replay_mode=1 ;;
       --keep-going) keep_going=1 ;;
-      *) echo "usage: /flow eval [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay]"; return 1 ;;
+      --diff)
+        diff_mode=1
+        shift
+        diff_old="${1:-}"
+        shift
+        diff_new="${1:-}"
+        ;;
+      *) echo "usage: /flow eval [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay] [--diff <old> <new>]"; return 1 ;;
     esac
     shift 2>/dev/null || true
   done
+  if [ "$diff_mode" -eq 1 ]; then
+    if [ "$report_mode" -eq 1 ] || [ "$record_mode" -eq 1 ] || [ "$replay_mode" -eq 1 ]; then
+      echo "eval: --diff cannot combine with --report, --record, or --replay" >&2
+      return 1
+    fi
+    _eval_diff "$diff_old" "$diff_new"
+    return $?
+  fi
   case "$n" in ''|*[!0-9]*|0) echo "eval: --n must be a positive integer (got '$n')"; return 1 ;; esac
   case "$timeout" in ''|*[!0-9]*|0) echo "eval: --timeout must be a positive integer seconds value (got '$timeout')"; return 1 ;; esac
   case "$stage_filter" in ""|01|02|05|card|routing|converge) : ;; *) echo "eval: --stage must be one of 01|02|05|card|routing|converge (got '$stage_filter')"; return 1 ;; esac

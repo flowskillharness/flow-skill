@@ -295,3 +295,32 @@ guard so an in-flight or in-postmortem run's dir cannot be pruned under the oper
 3. If the storm was rate-limit: wait past the window (typically minutes), then rerun.
 4. If persistent: capture the `.err` line in a comment, escalate — this is when a throttled
    `rate_limit_info` sample would land in the corpus and let `rate_limited` become authoritative.
+
+## eval --diff
+
+Offline longitudinal regression classifier across eval batches or model bumps.
+Mutually exclusive with live eval or replay (`flow.sh eval --diff <old_results> <new_results>`).
+Zero model calls, zero new runtime dependencies, deterministic.
+
+If multiple batches exist in an input results file, `--diff` compares the latest complete batch
+(falling back to the latest batch `run_id` present). Per fixture:
+
+| Old Verdict | New Verdict | Classification | Description |
+|-------------|-------------|----------------|-------------|
+| PASS | PASS | `UNCHANGED` | Passing floor holds |
+| PASS | non-PASS (FLAG/INVALID/UNRELIABLE) | `REGRESSED` | Previously sound/passing fixture failed or eroded |
+| non-PASS | PASS | `IMPROVED` | Previously failing or unparseable fixture now passes |
+| non-PASS | non-PASS | `SATURATED` | Neither run passed (e.g. FLAG→FLAG, FLAG→INVALID, INVALID→FLAG) |
+| present | absent | `removed` | Fixture present only in old results |
+| absent | present | `added` | Fixture present only in new results |
+
+An `INVALID` or `UNRELIABLE` verdict is an infra/parse failure, never a `PASS`. Transitions from `PASS` to `INVALID` are classified as `REGRESSED`; transitions from `INVALID` to `PASS` are classified as `IMPROVED`.
+
+### Output and exit codes
+
+Prints a compact aligned table (`id`, `old`, `new`, `classification`) followed by summary counts:
+`N regressed, M improved, K saturated, U unchanged`.
+
+- Exit `0`: clean comparison (0 regressed).
+- Exit `1`: regression detected (≥1 fixture classified as `REGRESSED`).
+- Exit `2`: missing, unreadable, or invalid results file argument.
