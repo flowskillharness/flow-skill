@@ -1212,6 +1212,21 @@ ck 2 "$rc" "garbage old file exits 2"
 has "$out" "no fixture records found in $SB/garbage.jsonl" "names offending garbage file"
 clean
 
+echo "DF-I) eval --diff: expectation-changed when fixture expected verdict drifts across runs"
+newsb
+cat << 'EOF' > "$SB/exp_old.jsonl"
+{"fixture":"f01b","expected":"FLAG","verdict":"FLAG"}
+EOF
+cat << 'EOF' > "$SB/exp_new.jsonl"
+{"fixture":"f01b","expected":"PASS","verdict":"PASS"}
+EOF
+out="$(bash "$RUN" eval --diff "$SB/exp_old.jsonl" "$SB/exp_new.jsonl" 2>&1)"; rc=$?
+ck 0 "$rc" "expectation-changed case exits 0"
+has "$out" "expectation-changed" "classification column shows expectation-changed"
+has "$out" "FLAG→PASS" "expected column shows FLAG→PASS drift"
+has "$out" "0 regressed, 0 improved, 0 saturated, 0 unchanged, 1 expectation-changed" "summary reflects 1 expectation-changed and 0 regressions"
+clean
+
 echo "UM) grep -cF unmeasured phrase == 3 in flow.sh"
 n="$(grep -cF 'semantic layer unmeasured on this host' "$RUN")"
 ck "3" "$n" "unmeasured phrase appears exactly 3 times in flow.sh"

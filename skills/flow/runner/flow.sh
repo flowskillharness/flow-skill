@@ -4068,55 +4068,71 @@ _eval_diff() { # $1=old_results $2=new_results
       [ -n "$fid" ] && printf 'ALL\t%s\n' "$fid"
     done
     if [ -f "${EVAL_MANIFEST:-}" ]; then
-      awk -F'\t' 'NR>1 && $1!="" && $4!="" { print "EXP\t" $1 "\t" $4 }' "$EVAL_MANIFEST" 2>/dev/null
+      awk -F'\t' 'NR>1 && $1!="" && $4!="" { print "MAN\t" $1 "\t" $4 }' "$EVAL_MANIFEST" 2>/dev/null
     fi
-    awk -F'\t' '$3 != "-" && $3 != "" { print "EXP\t" $1 "\t" $3 }' "$td/old.tsv" 2>/dev/null
-    awk -F'\t' '$3 != "-" && $3 != "" { print "EXP\t" $1 "\t" $3 }' "$td/new.tsv" 2>/dev/null
-    awk -F'\t' '{ print "OLD\t" $1 "\t" $2 }' "$td/old.tsv"
-    awk -F'\t' '{ print "NEW\t" $1 "\t" $2 }' "$td/new.tsv"
+    awk -F'\t' '{ print "OLD\t" $1 "\t" $2 "\t" $3 }' "$td/old.tsv"
+    awk -F'\t' '{ print "NEW\t" $1 "\t" $2 "\t" $3 }' "$td/new.tsv"
   } | awk -F'\t' '
     $1 == "ALL" { order[++n_fids] = $2 }
-    $1 == "EXP" { if ($3 != "" && $3 != "-") exp_v[$2] = $3 }
-    $1 == "OLD" { old_v[$2] = $3 }
-    $1 == "NEW" { new_v[$2] = $3 }
+    $1 == "MAN" { if ($3 != "" && $3 != "-") exp_man[$2] = $3 }
+    $1 == "OLD" {
+      old_v[$2] = $3
+      if ($4 != "" && $4 != "-") exp_old_row[$2] = $4
+    }
+    $1 == "NEW" {
+      new_v[$2] = $3
+      if ($4 != "" && $4 != "-") exp_new_row[$2] = $4
+    }
     END {
-      printf "  %-12s %-10s %-10s %-10s %s\n", "id", "expected", "old", "new", "classification"
-      n_reg = 0; n_imp = 0; n_sat = 0; n_unc = 0
+      printf "  %-12s %-12s %-10s %-10s %s\n", "id", "expected", "old", "new", "classification"
+      n_reg = 0; n_imp = 0; n_sat = 0; n_unc = 0; n_expchg = 0
       for (i = 1; i <= n_fids; i++) {
         fid = order[i]
         has_old = (fid in old_v)
         has_new = (fid in new_v)
-        expected_val = (fid in exp_v) ? exp_v[fid] : "-"
+        eo = (fid in exp_old_row) ? exp_old_row[fid] : ((fid in exp_man) ? exp_man[fid] : "-")
+        en = (fid in exp_new_row) ? exp_new_row[fid] : ((fid in exp_man) ? exp_man[fid] : "-")
         ov = has_old ? old_v[fid] : "-"
         nv = has_new ? new_v[fid] : "-"
+        expected_disp = "-"
         if (has_old && has_new) {
-          if (expected_val == "-") {
-            cls = "unknown"
+          if (eo != "-" && en != "-" && eo != en) {
+            cls = "expectation-changed"
+            n_expchg++
+            expected_disp = eo "→" en
           } else {
-            old_corr = (ov == expected_val)
-            new_corr = (nv == expected_val)
-            if (old_corr && new_corr) {
-              cls = "UNCHANGED"
-              n_unc++
-            } else if (old_corr && !new_corr) {
-              cls = "REGRESSED"
-              n_reg++
-            } else if (!old_corr && new_corr) {
-              cls = "IMPROVED"
-              n_imp++
+            expected_val = (en != "-") ? en : eo
+            expected_disp = expected_val
+            if (expected_val == "-") {
+              cls = "unknown"
             } else {
-              cls = "SATURATED"
-              n_sat++
+              old_corr = (ov == expected_val)
+              new_corr = (nv == expected_val)
+              if (old_corr && new_corr) {
+                cls = "UNCHANGED"
+                n_unc++
+              } else if (old_corr && !new_corr) {
+                cls = "REGRESSED"
+                n_reg++
+              } else if (!old_corr && new_corr) {
+                cls = "IMPROVED"
+                n_imp++
+              } else {
+                cls = "SATURATED"
+                n_sat++
+              }
             }
           }
         } else if (has_old && !has_new) {
           cls = "removed"
+          expected_disp = (eo != "-") ? eo : en
         } else {
           cls = "added"
+          expected_disp = (en != "-") ? en : eo
         }
-        printf "  %-12s %-10s %-10s %-10s %s\n", fid, expected_val, ov, nv, cls
+        printf "  %-12s %-12s %-10s %-10s %s\n", fid, expected_disp, ov, nv, cls
       }
-      printf "\n%d regressed, %d improved, %d saturated, %d unchanged\n", n_reg, n_imp, n_sat, n_unc
+      printf "\n%d regressed, %d improved, %d saturated, %d unchanged, %d expectation-changed\n", n_reg, n_imp, n_sat, n_unc, n_expchg
       if (n_reg > 0) exit 1
       exit 0
     }

@@ -317,13 +317,14 @@ Classification is correctness-relative (`correct = verdict == expected`):
 | present | absent | `removed` | Fixture present only in old results |
 | absent | present | `added` | Fixture present only in new results |
 | unknown expected | any | `unknown` | Fixture missing expected verdict in both records and manifest |
+| `expected_old != expected_new` | any | `expectation-changed` | Expected verdict changed between runs; displayed as `OLD→NEW` in expected column; does not count as regressed or improved |
 
 An `INVALID` or `UNRELIABLE` verdict represents an infra/parse/timeout failure and never matches an expected `PASS` or `FLAG`. An `INVALID` outcome on a previously correct fixture is always classified as `REGRESSED`. Unknown fixtures (`expected` unresolvable) show `unknown` and never flip the exit code.
 
 ### Output and exit codes
 
 Prints a compact aligned table (`id`, `expected`, `old`, `new`, `classification`) followed by summary counts:
-`N regressed, M improved, K saturated, U unchanged`.
+`N regressed, M improved, K saturated, U unchanged, E expectation-changed`.
 
 - Exit `0`: clean comparison (0 regressed).
 - Exit `1`: regression detected (≥1 fixture classified as `REGRESSED`).
