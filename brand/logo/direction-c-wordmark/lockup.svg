@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="title-lc">
+  <title id="title-lc">flow — Command Wordmark Lockup</title>
+  <!-- Command Slash '/' Motif (Signal Teal) -->
+  <path fill="#1AA3C4" d="M 293 182 L 321.94 74 H 345.94 L 317 182 Z"/>
+  <!-- Shape-built lowercase 'flow' (currentColor) -->
+  <g fill="currentColor" fill-rule="evenodd">
+    <path d="M 372 114 H 382 V 98 A 24 24 0 0 1 406 74 H 428 V 94 H 408 A 4 4 0 0 0 404 98 V 114 H 428 V 136 H 404 V 182 H 382 V 136 H 372 Z"/>
+    <path d="M 440 74 H 464 V 182 H 440 Z"/>
+    <path d="M 517 113 A 35 35 0 1 0 517 183 A 35 35 0 1 0 517 113 Z M 517 135 A 13 13 0 1 1 517 161 A 13 13 0 1 1 517 135 Z"/>
+    <path d="M 570.00 114 L 588.22 182 H 604.00 L 616.86 134 L 629.72 182 H 645.50 L 663.72 114 H 645.50 L 634.25 156 L 623.00 114 H 610.72 L 599.47 156 L 588.22 114 Z"/>
+  </g>
+</svg>

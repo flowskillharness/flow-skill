@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t9">
+  <title id="t9">flow — 09 Bitmap Grid Wordmark</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f on 16u pitch sub-grid -->
+    <path d="M 368 74 H 400 V 94 H 384 V 110 H 400 V 126 H 384 V 182 H 368 V 126 H 352 V 110 H 368 Z"/>
+    <!-- l -->
+    <path d="M 416 74 H 436 V 182 H 416 Z"/>
+    <!-- squared o (rounded-corner rect ring on 16u sub-grid) -->
+    <path d="M 460 114 H 504 A 8 8 0 0 1 512 122 V 174 A 8 8 0 0 1 504 182 H 460 A 8 8 0 0 1 452 174 V 122 A 8 8 0 0 1 460 114 Z M 472 134 H 492 A 4 4 0 0 1 496 138 V 158 A 4 4 0 0 1 492 162 H 472 A 4 4 0 0 1 468 158 V 138 A 4 4 0 0 1 472 134 Z"/>
+    <!-- w (3 vertical stems connected at baseline) -->
+    <path d="M 528 114 H 544 V 166 H 560 V 114 H 576 V 166 H 592 V 114 H 608 V 182 H 528 Z"/>
+  </g>
+</svg>

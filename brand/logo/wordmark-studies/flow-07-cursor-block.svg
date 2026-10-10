@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t7">
+  <title id="t7">flow — 07 Cursor Block Wordmark</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 310 114 H 320 V 98 A 24 24 0 0 1 344 74 H 368 V 98 H 344 V 114 H 368 V 138 H 344 V 182 H 320 V 138 H 310 Z"/>
+    <!-- l -->
+    <path d="M 388 74 H 412 V 182 H 388 Z"/>
+    <!-- o -->
+    <path d="M 467 113 A 35 35 0 1 0 467 183 A 35 35 0 1 0 467 113 Z M 467 137 A 11 11 0 1 1 467 159 A 11 11 0 1 1 467 137 Z"/>
+    <!-- w -->
+    <path d="M 526.00 114 L 544.22 182 H 560.00 L 572.86 134 L 585.72 182 H 601.50 L 619.72 114 H 601.50 L 590.25 156 L 579.00 114 H 566.72 L 555.47 156 L 544.22 114 Z"/>
+  </g>
+  <!-- Semantic Terminal Block Cursor in Signal Teal (24u wide, 48u tall, sits on baseline y=182) -->
+  <path fill="#1AA3C4" d="M 636 134 H 660 V 182 H 636 Z"/>
+</svg>

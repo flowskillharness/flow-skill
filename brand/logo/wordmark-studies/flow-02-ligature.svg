@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t2">
+  <title id="t2">flow — 02 Ligature Wordmark (fl continuous stroke)</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- fl ligature -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 399 V 74 H 423 V 182 H 399 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+</svg>

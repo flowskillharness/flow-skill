@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/brand-lockup-dark.svg">
+    <img src="brand/brand-lockup-light.svg" alt="flow — gated build harness for coding agents" width="560">
+  </picture>
+</p>
+
 # flow — harness build có cổng cho coding agent
 
 *English: [README.md](README.md).*

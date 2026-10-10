@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t10">
+  <title id="t10">flow — 10 Wave Baseline Wordmark (Shallow Sine Modulation)</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f shifted -8u (baseline y=174, ascender y=66) -->
+    <path d="M 325 106 H 335 V 90 A 24 24 0 0 1 359 66 H 383 V 90 H 359 V 106 H 383 V 130 H 359 V 174 H 335 V 130 H 325 Z"/>
+    <!-- l shifted -12u (baseline y=170, ascender y=62) -->
+    <path d="M 403 62 H 427 V 170 H 403 Z"/>
+    <!-- o at nominal baseline y=182 -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w shifted +12u (baseline y=194, top y=126) -->
+    <path d="M 541.00 126 L 559.22 194 H 575.00 L 587.86 146 L 600.72 194 H 616.50 L 634.72 126 H 616.50 L 605.25 168 L 594.00 126 H 581.72 L 570.47 168 L 559.22 126 Z"/>
+  </g>
+</svg>

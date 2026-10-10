@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>flow — Brand Identity Gallery</title>
+  <style>
+    :root {
+      --color-teal-signal: #1AA3C4;
+      --color-teal-deep: #0A4E5E;
+      --color-teal-bright: #5BC8DE;
+      --color-ink: #0F172A;
+      --color-ink-soft: #334155;
+      --color-mist: #E2E8F0;
+      --color-paper: #F8FAFC;
+      --color-pass: #22C55E;
+      --color-warn: #F59E0B;
+      --color-fail: #EF4444;
+      --font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      background: #F1F5F9;
+      color: var(--color-ink);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 1. Header */
+    header.gallery-header {
+      background: var(--color-ink);
+      color: var(--color-paper);
+      padding: 40px 32px 32px;
+      border-bottom: 2px solid var(--color-teal-signal);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .brand-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      color: #FFFFFF;
+    }
+
+    .brand-subtitle {
+      font-size: 17px;
+      color: var(--color-teal-bright);
+      margin-bottom: 16px;
+    }
+
+    .header-links {
+      font-size: 14px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .header-links a {
+      color: var(--color-mist);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--color-teal-signal);
+      padding-bottom: 2px;
+    }
+
+    .header-links a:hover {
+      color: var(--color-teal-bright);
+      border-bottom-style: solid;
+    }
+
+    /* 2. Sticky Top Nav */
+    nav.sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--color-ink-soft);
+      padding: 12px 32px;
+    }
+
+    .nav-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .nav-content a {
+      color: var(--color-mist);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-content a:hover {
+      background: var(--color-ink-soft);
+      color: var(--color-teal-bright);
+    }
+
+    /* Main Container */
+    main.container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 56px;
+    }
+
+    section {
+      scroll-margin-top: 72px;
+    }
+
+    .section-title {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--color-ink);
+      letter-spacing: -0.01em;
+    }
+
+    .section-desc {
+      font-size: 15px;
+      color: var(--color-ink-soft);
+      margin-bottom: 24px;
+    }
+
+    /* 3. Directions Cards */
+    .directions-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .direction-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .dir-header {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-mist);
+    }
+
+    .dir-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .dir-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+
+    .dir-badge {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--color-teal-signal);
+      color: #FFFFFF;
+    }
+
+    .dir-concept {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-teal-deep);
+      margin-bottom: 6px;
+    }
+
+    .dir-rationale {
+      font-size: 14px;
+      color: var(--color-ink-soft);
+      line-height: 1.6;
+    }
+
+    /* Verdict chips */
+    .verdict-chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip-pass {
+      background: #DCFCE7;
+      color: #166534;
+      border: 1px solid #86EFAC;
+    }
+
+    /* Tiles & Visual Presentation */
+    .visuals-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .tile-box {
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      border: 1px solid transparent;
+    }
+
+    .tile-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tile-paper {
+      background: var(--color-paper);
+      border-color: #CBD5E1;
+      color: var(--color-ink-soft);
+    }
+
+    .tile-ink {
+      background: var(--color-ink);
+      border-color: #1E293B;
+      color: var(--color-mist);
+    }
+
+    .tile-neutral {
+      background: #E2E8F0;
+      border-color: #CBD5E1;
+      color: var(--color-ink);
+    }
+
+    .mono-pair {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .mono-subtile {
+      flex: 1;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Size ladder */
+    .size-ladder-container {
+      background: #F8FAFC;
+      border: 1px solid var(--color-mist);
+      border-radius: 8px;
+      padding: 18px 24px;
+      margin-bottom: 24px;
+    }
+
+    .size-ladder-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--color-ink-soft);
+      margin-bottom: 14px;
+    }
+
+    .size-ladder-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .size-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .size-step span {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--color-ink-soft);
+    }
+
+    /* Lockup strips */
+    .lockups-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .lockup-strip {
+      border-radius: 8px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .lockup-strip-paper {
+      background: var(--color-paper);
+      border: 1px solid #CBD5E1;
+    }
+
+    .lockup-strip-ink {
+      background: var(--color-ink);
+      border: 1px solid #1E293B;
+    }
+
+    .lockup-strip img {
+      width: 100%;
+      max-width: 640px;
+      height: auto;
+      display: block;
+    }
+
+    .strip-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .lockup-strip-paper .strip-label {
+      color: var(--color-ink-soft);
+    }
+
+    .lockup-strip-ink .strip-label {
+      color: var(--color-mist);
+    }
+
+    /* 4. Comparison Sheet */
+    .sheet-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .sheet-scroll-frame {
+      max-height: 800px;
+      overflow-y: auto;
+      border: 1px solid var(--color-mist);
+      border-radius: 8px;
+      background: var(--color-ink);
+      padding: 12px;
+    }
+
+    .sheet-scroll-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .sheet-caption {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--color-ink-soft);
+    }
+
+    /* 5. Palette Swatch Grid */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .swatch-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-mist);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .swatch-block {
+      height: 90px;
+      width: 100%;
+    }
+
+    .swatch-info {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .swatch-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--color-ink);
+    }
+
+    .swatch-code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-soft);
+    }
+
+    .swatch-role {
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    .palette-note {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      color: #1E40AF;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    /* 6. Typography */
+    .type-specimen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .specimen-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .specimen-header {
+      border-bottom: 1px solid var(--color-mist);
+      padding-bottom: 12px;
+    }
+
+    .specimen-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+
+    .specimen-stack {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-ink-soft);
+      margin-top: 4px;
+    }
+
+    .specimen-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .specimen-mono {
+      font-family: var(--font-mono);
+    }
+
+    .specimen-ui {
+      font-family: var(--font-ui);
+    }
+
+    .specimen-line-hero {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+
+    .specimen-line-cmd {
+      font-size: 18px;
+      color: var(--color-teal-deep);
+    }
+
+    .specimen-line-badge {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .specimen-badge-tag {
+      background: var(--color-ink);
+      color: var(--color-paper);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .specimen-line-prose {
+      font-size: 15px;
+      color: var(--color-ink-soft);
+      line-height: 1.5;
+    }
+
+    .specimen-line-vi {
+      font-size: 15px;
+      color: var(--color-teal-deep);
+      font-style: italic;
+    }
+
+    /* 7. Usage & File Map */
+    .usage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .usage-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .usage-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .usage-list li {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+
+    .usage-do .icon {
+      color: var(--color-pass);
+      font-weight: 800;
+    }
+
+    .usage-dont .icon {
+      color: var(--color-fail);
+      font-weight: 800;
+    }
+
+    .file-map-card {
+      grid-column: 1 / -1;
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .file-tree {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--color-ink);
+      color: var(--color-mist);
+      padding: 20px;
+      border-radius: 8px;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+
+    .file-tree .dir {
+      color: var(--color-teal-bright);
+      font-weight: 700;
+    }
+
+    .file-tree .note {
+      color: #94A3B8;
+    }
+
+    /* 8. Footer */
+    footer.gallery-footer {
+      background: var(--color-ink);
+      color: var(--color-mist);
+      padding: 32px;
+      border-top: 1px solid var(--color-ink-soft);
+    }
+
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .palette-strip {
+      display: flex;
+      height: 12px;
+      width: 100%;
+      max-width: 600px;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .palette-strip div {
+      flex: 1;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-paper);
+    }
+
+    .footer-sub {
+      font-size: 13px;
+      color: var(--color-mist);
+    }
+
+    
+    /* Wordmarks Studies Grid */
+    .wordmarks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .wordmarks-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .wordmark-study-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .wm-card-header {
+      border-bottom: 1px solid var(--color-mist);
+      padding-bottom: 12px;
+    }
+
+    .wm-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .wm-name {
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--color-ink);
+    }
+
+    .wm-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--color-teal-signal);
+      color: #FFFFFF;
+    }
+
+    .wm-desc {
+      font-size: 13px;
+      color: var(--color-ink-soft);
+      line-height: 1.45;
+    }
+
+    .wm-tiles-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 500px) {
+      .wm-tiles-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .wm-tile {
+      border-radius: 6px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90px;
+    }
+
+    .wm-tile-paper {
+      background: var(--color-paper);
+      color: var(--color-ink);
+      border: 1px solid #CBD5E1;
+    }
+
+    .wm-tile-ink {
+      background: var(--color-ink);
+      color: var(--color-paper);
+      border: 1px solid #1E293B;
+    }
+
+    .wm-tile-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      align-self: flex-start;
+      opacity: 0.7;
+    }
+
+    .wm-tile svg {
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+      display: block;
+    }
+
+    /* Identity & Research Section */
+    .identity-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .identity-card {
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .identity-card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 1px solid var(--color-mist);
+      padding-bottom: 12px;
+    }
+
+    .identity-card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-ink);
+    }
+
+    .identity-card-title a {
+      color: var(--color-teal-deep);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--color-teal-signal);
+    }
+
+    .identity-card-title a:hover {
+      color: var(--color-teal-signal);
+      border-bottom-style: solid;
+    }
+
+    .identity-card-sub {
+      font-size: 13px;
+      color: var(--color-ink-soft);
+    }
+
+    .identity-bullets {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--color-ink-soft);
+      line-height: 1.5;
+    }
+
+    .identity-bullets li {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .identity-bullets li::before {
+      content: "•";
+      color: var(--color-teal-signal);
+      font-weight: 800;
+    }
+
+    .audit-verdicts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+
+    .audit-verdict-box {
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .audit-verdict-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--color-ink);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .audit-verdict-score {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .score-high {
+      background: #DCFCE7;
+      color: #166534;
+    }
+
+    .score-med {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .score-low {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .audit-verdict-desc {
+      font-size: 12px;
+      color: var(--color-ink-soft);
+      line-height: 1.4;
+    }
+
+    .audit-disclaimer {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #64748B;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    @media print {
+      nav.sticky-nav {
+        display: none;
+      }
+      .sheet-scroll-frame {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Header -->
+  <header class="gallery-header">
+    <div class="header-content">
+      <h1 class="brand-title">flow — Brand Identity Gallery</h1>
+      <div class="brand-subtitle">Gated build harness for coding agents · flowskill.io.vn</div>
+      <div class="header-links">
+        <a href="../README.md">← Brand Package Index</a>
+        <a href="../brand-guidelines.md">Brand Guidelines (Source of Truth)</a>
+        <a href="../identity-system.md">Identity System Blueprint</a>
+        <a href="../research/uniqueness-audit.md">Prior-Art Uniqueness Audit</a>
+        <a href="wordmark-studies/study.html">Wordmark Studies Board</a>
+        <a href="README.md">Logo System Index</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. Sticky Nav -->
+  <nav class="sticky-nav">
+    <div class="nav-content">
+      <a href="#directions">Directions</a>
+      <a href="#wordmarks">Wordmarks</a>
+      <a href="#comparison">Comparison Sheet</a>
+      <a href="#palette">Palette</a>
+      <a href="#typography">Typography</a>
+      <a href="#identity">Identity &amp; Research</a>
+      <a href="#usage">Usage &amp; Map</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container">
+
+    <!-- 3. Directions -->
+    <section id="directions">
+      <h2 class="section-title">Brand Directions (A–D)</h2>
+      <p class="section-desc">Four distinct, fully-vector identity options built on exact geometry with zero font dependencies. Every mark has passed production svg_audit with a 100/100 score.</p>
+
+      <div class="directions-grid">
+
+        <!-- Direction A -->
+        <article class="direction-card" id="dir-a">
+          <div class="dir-header">
+            <div class="dir-title-row">
+              <span class="dir-name">Direction A — Gate</span>
+              <span class="dir-badge">Abstract Checkpoint Mark</span>
+            </div>
+            <div class="dir-concept">Dual-Gate Threshold: Twin stanchions framing an advancing chevron (&gt;)</div>
+            <p class="dir-rationale">Visualizes flow's foundational architecture: the mechanical gate (flow.sh) on the left and the semantic gate (SKILL.md) on the right. Both must agree before a stage advances. Directly embodies the harness rule that flow owns gates and receipts, never the runtime.</p>
+            <div class="verdict-chips">
+              <span class="chip chip-pass">✓ 16/24px PASS</span>
+              <span class="chip chip-pass">✓ Mono PASS</span>
+              <span class="chip chip-pass">✓ Grayscale PASS</span>
+              <span class="chip chip-pass">✓ Context PASS</span>
+            </div>
+          </div>
+
+          <div class="visuals-row">
+            <!-- Mark on Paper -->
+            <div class="tile-box tile-paper">
+              <span class="tile-label">Mark on Paper (#F8FAFC)</span>
+              <img src="direction-a-gate/mark.svg" alt="Direction A Mark on Paper" width="128" height="128">
+            </div>
+
+            <!-- Mark on Ink -->
+            <div class="tile-box tile-ink">
+              <span class="tile-label">Mark on Ink (#0F172A)</span>
+              <img src="direction-a-gate/mark.svg" alt="Direction A Mark on Ink" width="128" height="128">
+            </div>
+
+            <!-- Mono Mark -->
+            <div class="tile-box tile-neutral">
+              <span class="tile-label">Mono Mark (currentColor)</span>
+              <div class="mono-pair">
+                <div class="mono-subtile" style="background:#F8FAFC; color:#1AA3C4;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="A Mono on Light">
+                    <g fill="currentColor">
+                      <path d="M 96 96 H 208 V 144 H 144 V 368 H 208 V 416 H 96 Z"/>
+                      <path d="M 304 96 H 416 V 416 H 304 V 368 H 368 V 144 H 304 Z"/>
+                      <path d="M 224 156 L 324 256 L 224 356 H 176 L 276 256 L 176 156 Z"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="mono-subtile" style="background:#0F172A; color:#E2E8F0;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="A Mono on Dark">
+                    <g fill="currentColor">
+                      <path d="M 96 96 H 208 V 144 H 144 V 368 H 208 V 416 H 96 Z"/>
+                      <path d="M 304 96 H 416 V 416 H 304 V 368 H 368 V 144 H 304 Z"/>
+                      <path d="M 224 156 L 324 256 L 224 356 H 176 L 276 256 L 176 156 Z"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Size ladder -->
+          <div class="size-ladder-container">
+            <div class="size-ladder-title">Size Ladder (512px downscale proof)</div>
+            <div class="size-ladder-row">
+              <div class="size-step">
+                <img src="direction-a-gate/mark.svg" alt="A 128px" width="128" height="128">
+                <span>128px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-a-gate/mark.svg" alt="A 64px" width="64" height="64">
+                <span>64px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-a-gate/mark.svg" alt="A 24px" width="24" height="24">
+                <span>24px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-a-gate/mark.svg" alt="A 16px" width="16" height="16">
+                <span>16px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lockups -->
+          <div class="lockups-container">
+            <div class="lockup-strip lockup-strip-paper">
+              <span class="strip-label">Lockup on Paper (#F8FAFC)</span>
+              <img src="direction-a-gate/lockup.svg" alt="Direction A Lockup on Paper">
+            </div>
+            <div class="lockup-strip lockup-strip-ink">
+              <span class="strip-label">Lockup on Ink (#0F172A)</span>
+              <img src="direction-a-gate/lockup.svg" alt="Direction A Lockup on Ink">
+            </div>
+          </div>
+        </article>
+
+        <!-- Direction B -->
+        <article class="direction-card" id="dir-b">
+          <div class="dir-header">
+            <div class="dir-title-row">
+              <span class="dir-name">Direction B — Current</span>
+              <span class="dir-badge">Flow Motion Mark</span>
+            </div>
+            <div class="dir-concept">Verified Flow Current: Continuous laminar wave surging into a 45° checkmark</div>
+            <p class="dir-rationale">Resolves the tension between agent autonomy and verification rigor. Progress is uninterrupted (a single fluid wave), but every forward surge is physically anchored by a decisive pass check. Centered geometry with clean 45° checkmark trajectory.</p>
+            <div class="verdict-chips">
+              <span class="chip chip-pass">✓ 16/24px PASS</span>
+              <span class="chip chip-pass">✓ Mono PASS</span>
+              <span class="chip chip-pass">✓ Grayscale PASS</span>
+              <span class="chip chip-pass">✓ Context PASS</span>
+            </div>
+          </div>
+
+          <div class="visuals-row">
+            <!-- Mark on Paper -->
+            <div class="tile-box tile-paper">
+              <span class="tile-label">Mark on Paper (#F8FAFC)</span>
+              <img src="direction-b-current/mark.svg" alt="Direction B Mark on Paper" width="128" height="128">
+            </div>
+
+            <!-- Mark on Ink -->
+            <div class="tile-box tile-ink">
+              <span class="tile-label">Mark on Ink (#0F172A)</span>
+              <img src="direction-b-current/mark.svg" alt="Direction B Mark on Ink" width="128" height="128">
+            </div>
+
+            <!-- Mono Mark -->
+            <div class="tile-box tile-neutral">
+              <span class="tile-label">Mono Mark (currentColor)</span>
+              <div class="mono-pair">
+                <div class="mono-subtile" style="background:#F8FAFC; color:#1AA3C4;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="B Mono on Light">
+                    <g fill="currentColor">
+                      <path d="M 80 232 C 80 148 136 88 220 88 C 276 88 324 128 344 188 L 292 208 C 278 168 252 140 220 140 C 168 140 132 180 132 232 C 132 284 168 324 220 324 C 248 324 272 312 292 288 L 332 328 C 304 360 264 376 220 376 C 136 376 80 316 80 232 Z"/>
+                      <path d="M 288 328 L 336 376 L 432 280 L 432 328 L 336 424 L 240 328 L 288 280 Z"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="mono-subtile" style="background:#0F172A; color:#E2E8F0;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="B Mono on Dark">
+                    <g fill="currentColor">
+                      <path d="M 80 232 C 80 148 136 88 220 88 C 276 88 324 128 344 188 L 292 208 C 278 168 252 140 220 140 C 168 140 132 180 132 232 C 132 284 168 324 220 324 C 248 324 272 312 292 288 L 332 328 C 304 360 264 376 220 376 C 136 376 80 316 80 232 Z"/>
+                      <path d="M 288 328 L 336 376 L 432 280 L 432 328 L 336 424 L 240 328 L 288 280 Z"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Size ladder -->
+          <div class="size-ladder-container">
+            <div class="size-ladder-title">Size Ladder (512px downscale proof)</div>
+            <div class="size-ladder-row">
+              <div class="size-step">
+                <img src="direction-b-current/mark.svg" alt="B 128px" width="128" height="128">
+                <span>128px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-b-current/mark.svg" alt="B 64px" width="64" height="64">
+                <span>64px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-b-current/mark.svg" alt="B 24px" width="24" height="24">
+                <span>24px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-b-current/mark.svg" alt="B 16px" width="16" height="16">
+                <span>16px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lockups -->
+          <div class="lockups-container">
+            <div class="lockup-strip lockup-strip-paper">
+              <span class="strip-label">Lockup on Paper (#F8FAFC)</span>
+              <img src="direction-b-current/lockup.svg" alt="Direction B Lockup on Paper">
+            </div>
+            <div class="lockup-strip lockup-strip-ink">
+              <span class="strip-label">Lockup on Ink (#0F172A)</span>
+              <img src="direction-b-current/lockup.svg" alt="Direction B Lockup on Ink">
+            </div>
+          </div>
+        </article>
+
+        <!-- Direction C -->
+        <article class="direction-card" id="dir-c">
+          <div class="dir-header">
+            <div class="dir-title-row">
+              <span class="dir-name">Direction C — Wordmark</span>
+              <span class="dir-badge">Command Logotype</span>
+            </div>
+            <div class="dir-concept">Command Wordmark (/flow): Shape-built lowercase logotype with 75° slash</div>
+            <p class="dir-rationale">Developers meet flow via the CLI prompt (/flow, /flow next, /flow check C-001). The mark elevates the terminal invocation into a typographic signature, pairing a disciplined 75° slash with balanced geometric letterforms constructed purely from vector paths.</p>
+            <div class="verdict-chips">
+              <span class="chip chip-pass">✓ 16/24px PASS</span>
+              <span class="chip chip-pass">✓ Mono PASS</span>
+              <span class="chip chip-pass">✓ Grayscale PASS</span>
+              <span class="chip chip-pass">✓ Context PASS</span>
+            </div>
+          </div>
+
+          <div class="visuals-row">
+            <!-- Mark on Paper -->
+            <div class="tile-box tile-paper">
+              <span class="tile-label">Mark on Paper (#F8FAFC)</span>
+              <img src="direction-c-wordmark/mark.svg" alt="Direction C Mark on Paper" width="128" height="128">
+            </div>
+
+            <!-- Mark on Ink -->
+            <div class="tile-box tile-ink">
+              <span class="tile-label">Mark on Ink (#0F172A)</span>
+              <img src="direction-c-wordmark/mark.svg" alt="Direction C Mark on Ink" width="128" height="128">
+            </div>
+
+            <!-- Mono Mark -->
+            <div class="tile-box tile-neutral">
+              <span class="tile-label">Mono Mark (currentColor)</span>
+              <div class="mono-pair">
+                <div class="mono-subtile" style="background:#F8FAFC; color:#1AA3C4;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="C Mono on Light">
+                    <g fill="currentColor">
+                      <path d="M 108 416 L 193.74 96 H 233.74 L 148 416 Z"/>
+                      <path d="M 216 192 H 256 V 156 A 48 48 0 0 1 304 96 H 404 V 144 H 336 A 16 16 0 0 0 320 160 V 192 H 404 V 240 H 320 V 416 H 256 V 240 H 216 Z"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="mono-subtile" style="background:#0F172A; color:#E2E8F0;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="C Mono on Dark">
+                    <g fill="currentColor">
+                      <path d="M 108 416 L 193.74 96 H 233.74 L 148 416 Z"/>
+                      <path d="M 216 192 H 256 V 156 A 48 48 0 0 1 304 96 H 404 V 144 H 336 A 16 16 0 0 0 320 160 V 192 H 404 V 240 H 320 V 416 H 256 V 240 H 216 Z"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Size ladder -->
+          <div class="size-ladder-container">
+            <div class="size-ladder-title">Size Ladder (512px downscale proof)</div>
+            <div class="size-ladder-row">
+              <div class="size-step">
+                <img src="direction-c-wordmark/mark.svg" alt="C 128px" width="128" height="128">
+                <span>128px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-c-wordmark/mark.svg" alt="C 64px" width="64" height="64">
+                <span>64px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-c-wordmark/mark.svg" alt="C 24px" width="24" height="24">
+                <span>24px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-c-wordmark/mark.svg" alt="C 16px" width="16" height="16">
+                <span>16px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lockups -->
+          <div class="lockups-container">
+            <div class="lockup-strip lockup-strip-paper">
+              <span class="strip-label">Lockup on Paper (#F8FAFC)</span>
+              <img src="direction-c-wordmark/lockup.svg" alt="Direction C Lockup on Paper">
+            </div>
+            <div class="lockup-strip lockup-strip-ink">
+              <span class="strip-label">Lockup on Ink (#0F172A)</span>
+              <img src="direction-c-wordmark/lockup.svg" alt="Direction C Lockup on Ink">
+            </div>
+          </div>
+        </article>
+
+        <!-- Direction D -->
+        <article class="direction-card" id="dir-d">
+          <div class="dir-header">
+            <div class="dir-title-row">
+              <span class="dir-name">Direction D — Emblem</span>
+              <span class="dir-badge">Receipt Seal Badge</span>
+            </div>
+            <div class="dir-concept">Gate-Pass Receipt Seal: Stamp of a verified build outcome</div>
+            <p class="dir-rationale">Designed as a receipt/pass emblem celebrating a verified build outcome where mechanical and semantic gates agreed. Houses the dual gates behind a security seal ring with a verified pass checkmark. Acts naturally as a GitHub README badge sticker.</p>
+            <div class="verdict-chips">
+              <span class="chip chip-pass">✓ 16/24px PASS</span>
+              <span class="chip chip-pass">✓ Mono PASS</span>
+              <span class="chip chip-pass">✓ Grayscale PASS</span>
+              <span class="chip chip-pass">✓ Context PASS</span>
+            </div>
+          </div>
+
+          <div class="visuals-row">
+            <!-- Mark on Paper -->
+            <div class="tile-box tile-paper">
+              <span class="tile-label">Mark on Paper (#F8FAFC)</span>
+              <img src="direction-d-emblem/mark.svg" alt="Direction D Mark on Paper" width="128" height="128">
+            </div>
+
+            <!-- Mark on Ink -->
+            <div class="tile-box tile-ink">
+              <span class="tile-label">Mark on Ink (#0F172A)</span>
+              <img src="direction-d-emblem/mark.svg" alt="Direction D Mark on Ink" width="128" height="128">
+            </div>
+
+            <!-- Mono Mark -->
+            <div class="tile-box tile-neutral">
+              <span class="tile-label">Mono Mark (currentColor)</span>
+              <div class="mono-pair">
+                <div class="mono-subtile" style="background:#F8FAFC; color:#1AA3C4;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="D Mono on Light">
+                    <g fill="currentColor">
+                      <path fill-rule="evenodd" d="M 256 60 A 196 196 0 1 0 256 452 A 196 196 0 1 0 256 60 Z M 256 84 A 172 172 0 1 1 256 428 A 172 172 0 1 1 256 84 Z"/>
+                      <path d="M 136 172 H 176 V 340 H 136 Z"/>
+                      <path d="M 336 172 H 376 V 340 H 336 Z"/>
+                      <path d="M 224 144 H 288 V 164 H 224 Z"/>
+                      <path d="M 224 348 H 288 V 368 H 224 Z"/>
+                      <path d="M 192 272 L 240 320 L 320 240 L 320 272 L 240 352 L 192 304 Z"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="mono-subtile" style="background:#0F172A; color:#E2E8F0;">
+                  <svg viewBox="0 0 512 512" width="64" height="64" role="img" aria-label="D Mono on Dark">
+                    <g fill="currentColor">
+                      <path fill-rule="evenodd" d="M 256 60 A 196 196 0 1 0 256 452 A 196 196 0 1 0 256 60 Z M 256 84 A 172 172 0 1 1 256 428 A 172 172 0 1 1 256 84 Z"/>
+                      <path d="M 136 172 H 176 V 340 H 136 Z"/>
+                      <path d="M 336 172 H 376 V 340 H 336 Z"/>
+                      <path d="M 224 144 H 288 V 164 H 224 Z"/>
+                      <path d="M 224 348 H 288 V 368 H 224 Z"/>
+                      <path d="M 192 272 L 240 320 L 320 240 L 320 272 L 240 352 L 192 304 Z"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Size ladder -->
+          <div class="size-ladder-container">
+            <div class="size-ladder-title">Size Ladder (512px downscale proof)</div>
+            <div class="size-ladder-row">
+              <div class="size-step">
+                <img src="direction-d-emblem/mark.svg" alt="D 128px" width="128" height="128">
+                <span>128px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-d-emblem/mark.svg" alt="D 64px" width="64" height="64">
+                <span>64px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-d-emblem/mark.svg" alt="D 24px" width="24" height="24">
+                <span>24px</span>
+              </div>
+              <div class="size-step">
+                <img src="direction-d-emblem/mark.svg" alt="D 16px" width="16" height="16">
+                <span>16px</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lockups -->
+          <div class="lockups-container">
+            <div class="lockup-strip lockup-strip-paper">
+              <span class="strip-label">Lockup on Paper (#F8FAFC)</span>
+              <img src="direction-d-emblem/lockup.svg" alt="Direction D Lockup on Paper">
+            </div>
+            <div class="lockup-strip lockup-strip-ink">
+              <span class="strip-label">Lockup on Ink (#0F172A)</span>
+              <img src="direction-d-emblem/lockup.svg" alt="Direction D Lockup on Ink">
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- Wordmark Studies (01–12) -->
+    <section id="wordmarks">
+      <h2 class="section-title">Wordmark Studies (01–12)</h2>
+      <p class="section-desc">Letterform design space exploration and expansion based on Direction C. Invariant metric grid: baseline y=182, x-height y=114 (68u body), ascender y=74 (108u cap), stroke 24u on 960×256 canvas. Detailed technical rationale in <a href="wordmark-studies/README.md" style="color:var(--color-teal-deep);font-weight:600;">wordmark-studies/README.md</a> and full size-ladder review sheet in <a href="wordmark-studies/study.html" style="color:var(--color-teal-deep);font-weight:600;">wordmark-studies/study.html</a>.</p>
+
+      <div class="wordmarks-grid">
+        <article class="wordmark-study-card" id="wm-01">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-01-refined.svg</span>
+              <span class="wm-badge">Refined Baseline Monoline</span>
+            </div>
+            <p class="wm-desc">Pure geometric sans-serif standard with perfected 24u stroke, symmetrical letterspacing, and clean 75° double-V w.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-01-refined.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-01-refined.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-02">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-02-ligature.svg</span>
+              <span class="wm-badge">fl Crossbar Ligature</span>
+            </div>
+            <p class="wm-desc">The horizontal crossbar of f extends continuously at x-height (y=114–138) directly into the stem of l, eliminating a pen lift.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-02-ligature.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- fl ligature -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 399 V 74 H 423 V 182 H 399 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-02-ligature.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- fl ligature -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 399 V 74 H 423 V 182 H 399 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-03">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-03-chevron-w.svg</span>
+              <span class="wm-badge">Chevron W (Forward Motif)</span>
+            </div>
+            <p class="wm-desc">The letter w is constructed from two terminal prompt chevrons (>>), with the second chevron carrying a semantic Gate Green (#22C55E) pass accent.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-03-chevron-w.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- left terminal chevron > -->
+    <path d="M 541 114 L 575 148 L 541 182 H 558 L 592 148 L 558 114 Z"/>
+  </g>
+  <!-- Semantic Gate Green pass accent on terminal forward chevron -->
+  <path fill="#22C55E" d="M 583 114 L 617 148 L 583 182 H 600 L 634 148 L 600 114 Z"/>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-03-chevron-w.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- left terminal chevron > -->
+    <path d="M 541 114 L 575 148 L 541 182 H 558 L 592 148 L 558 114 Z"/>
+  </g>
+  <!-- Semantic Gate Green pass accent on terminal forward chevron -->
+  <path fill="#22C55E" d="M 583 114 L 617 148 L 583 182 H 600 L 634 148 L 600 114 Z"/>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-04">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-04-gate-o.svg</span>
+              <span class="wm-badge">Dual-Gate O Echo</span>
+            </div>
+            <p class="wm-desc">The letter o is constructed as twin bracket stanchions in Signal Teal (#1AA3C4) separated by an architectural threshold corridor (v1 24u; production candidate v2 features 32u corridor), echoing Direction A's gate architecture.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-04-gate-o.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+  <!-- Architectural Dual-Gate O in Signal Teal -->
+  <g fill="#1AA3C4">
+    <!-- Left gate stanchion -->
+    <path d="M 470 114 H 455 A 8 8 0 0 0 447 122 V 174 A 8 8 0 0 0 455 182 H 470 V 162 H 461 V 134 H 470 Z"/>
+    <!-- Right gate stanchion -->
+    <path d="M 494 114 H 509 A 8 8 0 0 1 517 122 V 174 A 8 8 0 0 1 509 182 H 494 V 162 H 503 V 134 H 494 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-04-gate-o.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+  <!-- Architectural Dual-Gate O in Signal Teal -->
+  <g fill="#1AA3C4">
+    <!-- Left gate stanchion -->
+    <path d="M 470 114 H 455 A 8 8 0 0 0 447 122 V 174 A 8 8 0 0 0 455 182 H 470 V 162 H 461 V 134 H 470 Z"/>
+    <!-- Right gate stanchion -->
+    <path d="M 494 114 H 509 A 8 8 0 0 1 517 122 V 174 A 8 8 0 0 1 509 182 H 494 V 162 H 503 V 134 H 494 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-05">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-05-slash-lead.svg</span>
+              <span class="wm-badge">Slash-Lead (/flow Fused)</span>
+            </div>
+            <p class="wm-desc">An exact 75° command slash in Signal Teal (#1AA3C4) is fused directly into f's crossbar, making the CLI prompt an inseparable prefix.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-05-slash-lead.svg on Paper">
+                <!-- 75° Command Slash in Signal Teal -->
+  <path fill="#1AA3C4" d="M 302 182 L 330.94 74 H 354.94 L 326 182 Z"/>
+  <!-- Geometric Lowercase 'flow' with Fused Crossbar -->
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f fused into slash -->
+    <path d="M 344.22 114 H 358 V 98 A 24 24 0 0 1 382 74 H 406 V 98 H 382 V 114 H 406 V 138 H 382 V 182 H 358 V 138 H 337.79 L 344.22 114 Z"/>
+    <!-- l -->
+    <path d="M 426 74 H 450 V 182 H 426 Z"/>
+    <!-- o -->
+    <path d="M 505 113 A 35 35 0 1 0 505 183 A 35 35 0 1 0 505 113 Z M 505 137 A 11 11 0 1 1 505 159 A 11 11 0 1 1 505 137 Z"/>
+    <!-- w -->
+    <path d="M 564.00 114 L 582.22 182 H 598.00 L 610.86 134 L 623.72 182 H 639.50 L 657.72 114 H 639.50 L 628.25 156 L 617.00 114 H 604.72 L 593.47 156 L 582.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-05-slash-lead.svg on Ink">
+                <!-- 75° Command Slash in Signal Teal -->
+  <path fill="#1AA3C4" d="M 302 182 L 330.94 74 H 354.94 L 326 182 Z"/>
+  <!-- Geometric Lowercase 'flow' with Fused Crossbar -->
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f fused into slash -->
+    <path d="M 344.22 114 H 358 V 98 A 24 24 0 0 1 382 74 H 406 V 98 H 382 V 114 H 406 V 138 H 382 V 182 H 358 V 138 H 337.79 L 344.22 114 Z"/>
+    <!-- l -->
+    <path d="M 426 74 H 450 V 182 H 426 Z"/>
+    <!-- o -->
+    <path d="M 505 113 A 35 35 0 1 0 505 183 A 35 35 0 1 0 505 113 Z M 505 137 A 11 11 0 1 1 505 159 A 11 11 0 1 1 505 137 Z"/>
+    <!-- w -->
+    <path d="M 564.00 114 L 582.22 182 H 598.00 L 610.86 134 L 623.72 182 H 639.50 L 657.72 114 H 639.50 L 628.25 156 L 617.00 114 H 604.72 L 593.47 156 L 582.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-06">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-06-motion-shear.svg</span>
+              <span class="wm-badge">Motion Shear (15° Slant)</span>
+            </div>
+            <p class="wm-desc">Entire wordmark is sheared at 15° (matching the 75° slash slope), with stems at 75° and w diagonals at exact 60°/120° in monochromatic currentColor.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-06-motion-shear.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f sheared at 75° -->
+    <path d="M 318.22 114 L 322.51 98 A 24 24 0 0 1 347.16 74 H 372.00 V 98 H 353.00 L 348.71 114 H 372.00 V 138 H 342.28 L 330.49 182 H 306.49 L 318.28 138 H 300.00 V 114 Z"/>
+    <!-- l sheared at 75° -->
+    <path d="M 396.00 182 L 424.94 74 H 448.94 L 420.00 182 Z"/>
+    <!-- o tilted at 15° -->
+    <g transform="rotate(-15 480 148)">
+      <path d="M 480 113 A 35 35 0 1 0 480 183 A 35 35 0 1 0 480 113 Z M 480 137 A 11 11 0 1 1 480 159 A 11 11 0 1 1 480 137 Z"/>
+    </g>
+    <!-- w sheared with clean 60°/120° diagonal geometry -->
+    <path d="M 553.22 114 L 571.44 182 H 589.44 L 607.66 134 L 620.52 182 H 638.52 L 656.74 114 H 638.52 L 629.66 148 L 617.88 114 H 599.88 L 591.00 148 L 579.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-06-motion-shear.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f sheared at 75° -->
+    <path d="M 318.22 114 L 322.51 98 A 24 24 0 0 1 347.16 74 H 372.00 V 98 H 353.00 L 348.71 114 H 372.00 V 138 H 342.28 L 330.49 182 H 306.49 L 318.28 138 H 300.00 V 114 Z"/>
+    <!-- l sheared at 75° -->
+    <path d="M 396.00 182 L 424.94 74 H 448.94 L 420.00 182 Z"/>
+    <!-- o tilted at 15° -->
+    <g transform="rotate(-15 480 148)">
+      <path d="M 480 113 A 35 35 0 1 0 480 183 A 35 35 0 1 0 480 113 Z M 480 137 A 11 11 0 1 1 480 159 A 11 11 0 1 1 480 137 Z"/>
+    </g>
+    <!-- w sheared with clean 60°/120° diagonal geometry -->
+    <path d="M 553.22 114 L 571.44 182 H 589.44 L 607.66 134 L 620.52 182 H 638.52 L 656.74 114 H 638.52 L 629.66 148 L 617.88 114 H 599.88 L 591.00 148 L 579.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-07">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-07-cursor-block.svg</span>
+              <span class="wm-badge">Terminal Cursor Block</span>
+            </div>
+            <p class="wm-desc">Wordmark followed by a trailing terminal block cursor ▍ in Signal Teal (#1AA3C4) sitting flush on baseline y=182 (24u wide, 48u tall).</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-07-cursor-block.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 310 114 H 320 V 98 A 24 24 0 0 1 344 74 H 368 V 98 H 344 V 114 H 368 V 138 H 344 V 182 H 320 V 138 H 310 Z"/>
+    <!-- l -->
+    <path d="M 388 74 H 412 V 182 H 388 Z"/>
+    <!-- o -->
+    <path d="M 467 113 A 35 35 0 1 0 467 183 A 35 35 0 1 0 467 113 Z M 467 137 A 11 11 0 1 1 467 159 A 11 11 0 1 1 467 137 Z"/>
+    <!-- w -->
+    <path d="M 526.00 114 L 544.22 182 H 560.00 L 572.86 134 L 585.72 182 H 601.50 L 619.72 114 H 601.50 L 590.25 156 L 579.00 114 H 566.72 L 555.47 156 L 544.22 114 Z"/>
+  </g>
+  <!-- Semantic Terminal Block Cursor in Signal Teal (24u wide, 48u tall, sits on baseline y=182) -->
+  <path fill="#1AA3C4" d="M 636 134 H 660 V 182 H 636 Z"/>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-07-cursor-block.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 310 114 H 320 V 98 A 24 24 0 0 1 344 74 H 368 V 98 H 344 V 114 H 368 V 138 H 344 V 182 H 320 V 138 H 310 Z"/>
+    <!-- l -->
+    <path d="M 388 74 H 412 V 182 H 388 Z"/>
+    <!-- o -->
+    <path d="M 467 113 A 35 35 0 1 0 467 183 A 35 35 0 1 0 467 113 Z M 467 137 A 11 11 0 1 1 467 159 A 11 11 0 1 1 467 137 Z"/>
+    <!-- w -->
+    <path d="M 526.00 114 L 544.22 182 H 560.00 L 572.86 134 L 585.72 182 H 601.50 L 619.72 114 H 601.50 L 590.25 156 L 579.00 114 H 566.72 L 555.47 156 L 544.22 114 Z"/>
+  </g>
+  <!-- Semantic Terminal Block Cursor in Signal Teal (24u wide, 48u tall, sits on baseline y=182) -->
+  <path fill="#1AA3C4" d="M 636 134 H 660 V 182 H 636 Z"/>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-08">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-08-negative-space.svg</span>
+              <span class="wm-badge">Negative Space Chevron O</span>
+            </div>
+            <p class="wm-desc">Standard circular o whose inner counter (hole) is cut into a crisp 45° forward-pointing chevron >, embedding the pass motif.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-08-negative-space.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o with negative-space terminal chevron counter > -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 468 120 L 496 148 L 468 176 V 158 L 478 148 L 468 138 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-08-negative-space.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o with negative-space terminal chevron counter > -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 468 120 L 496 148 L 468 176 V 158 L 478 148 L 468 138 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-09">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-09-bitmap-grid.svg</span>
+              <span class="wm-badge">Bitmap Modular Sub-Grid</span>
+            </div>
+            <p class="wm-desc">Built on a strict 8×16 sub-grid using 12u square modules and 4u gaps (16u minor grid pitch); squared rounded-corner o ring.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-09-bitmap-grid.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f on 16u pitch sub-grid -->
+    <path d="M 368 74 H 400 V 94 H 384 V 110 H 400 V 126 H 384 V 182 H 368 V 126 H 352 V 110 H 368 Z"/>
+    <!-- l -->
+    <path d="M 416 74 H 436 V 182 H 416 Z"/>
+    <!-- squared o (rounded-corner rect ring on 16u sub-grid) -->
+    <path d="M 460 114 H 504 A 8 8 0 0 1 512 122 V 174 A 8 8 0 0 1 504 182 H 460 A 8 8 0 0 1 452 174 V 122 A 8 8 0 0 1 460 114 Z M 472 134 H 492 A 4 4 0 0 1 496 138 V 158 A 4 4 0 0 1 492 162 H 472 A 4 4 0 0 1 468 158 V 138 A 4 4 0 0 1 472 134 Z"/>
+    <!-- w (3 vertical stems connected at baseline) -->
+    <path d="M 528 114 H 544 V 166 H 560 V 114 H 576 V 166 H 592 V 114 H 608 V 182 H 528 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-09-bitmap-grid.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f on 16u pitch sub-grid -->
+    <path d="M 368 74 H 400 V 94 H 384 V 110 H 400 V 126 H 384 V 182 H 368 V 126 H 352 V 110 H 368 Z"/>
+    <!-- l -->
+    <path d="M 416 74 H 436 V 182 H 416 Z"/>
+    <!-- squared o (rounded-corner rect ring on 16u sub-grid) -->
+    <path d="M 460 114 H 504 A 8 8 0 0 1 512 122 V 174 A 8 8 0 0 1 504 182 H 460 A 8 8 0 0 1 452 174 V 122 A 8 8 0 0 1 460 114 Z M 472 134 H 492 A 4 4 0 0 1 496 138 V 158 A 4 4 0 0 1 492 162 H 472 A 4 4 0 0 1 468 158 V 138 A 4 4 0 0 1 472 134 Z"/>
+    <!-- w (3 vertical stems connected at baseline) -->
+    <path d="M 528 114 H 544 V 166 H 560 V 114 H 576 V 166 H 592 V 114 H 608 V 182 H 528 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-10">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-10-wave-baseline.svg</span>
+              <span class="wm-badge">Wave Baseline Modulation</span>
+            </div>
+            <p class="wm-desc">Deliberate baseline deviation: letters undulate along a continuous shallow sine wave (amplitude 12u, period 310u), local x-height 68u.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-10-wave-baseline.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f shifted -8u (baseline y=174, ascender y=66) -->
+    <path d="M 325 106 H 335 V 90 A 24 24 0 0 1 359 66 H 383 V 90 H 359 V 106 H 383 V 130 H 359 V 174 H 335 V 130 H 325 Z"/>
+    <!-- l shifted -12u (baseline y=170, ascender y=62) -->
+    <path d="M 403 62 H 427 V 170 H 403 Z"/>
+    <!-- o at nominal baseline y=182 -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w shifted +12u (baseline y=194, top y=126) -->
+    <path d="M 541.00 126 L 559.22 194 H 575.00 L 587.86 146 L 600.72 194 H 616.50 L 634.72 126 H 616.50 L 605.25 168 L 594.00 126 H 581.72 L 570.47 168 L 559.22 126 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-10-wave-baseline.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f shifted -8u (baseline y=174, ascender y=66) -->
+    <path d="M 325 106 H 335 V 90 A 24 24 0 0 1 359 66 H 383 V 90 H 359 V 106 H 383 V 130 H 359 V 174 H 335 V 130 H 325 Z"/>
+    <!-- l shifted -12u (baseline y=170, ascender y=62) -->
+    <path d="M 403 62 H 427 V 170 H 403 Z"/>
+    <!-- o at nominal baseline y=182 -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- w shifted +12u (baseline y=194, top y=126) -->
+    <path d="M 541.00 126 L 559.22 194 H 575.00 L 587.86 146 L 600.72 194 H 616.50 L 634.72 126 H 616.50 L 605.25 168 L 594.00 126 H 581.72 L 570.47 168 L 559.22 126 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-11">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-11-ow-ligature.svg</span>
+              <span class="wm-badge">OW Terminal Ligature</span>
+            </div>
+            <p class="wm-desc">The first stroke of w springs directly from the right perimeter of o via a shared structural bridge, forming a unified ow path.</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-11-ow-ligature.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 341 114 H 351 V 98 A 24 24 0 0 1 375 74 H 399 V 98 H 375 V 114 H 399 V 138 H 375 V 182 H 351 V 138 H 341 Z"/>
+    <!-- l -->
+    <path d="M 419 74 H 443 V 182 H 419 Z"/>
+    <!-- ow ligature: o and w fused at shared stroke junction -->
+    <path d="M 498 113 A 35 35 0 1 0 498 183 A 35 35 0 1 0 498 113 Z M 498 137 A 11 11 0 1 1 498 159 A 11 11 0 1 1 498 137 Z M 528 136 H 534 V 152 H 528 Z M 524.00 114 L 542.22 182 H 558.00 L 570.86 134 L 583.72 182 H 599.50 L 617.72 114 H 599.50 L 588.25 156 L 577.00 114 H 564.72 L 553.47 156 L 542.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-11-ow-ligature.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 341 114 H 351 V 98 A 24 24 0 0 1 375 74 H 399 V 98 H 375 V 114 H 399 V 138 H 375 V 182 H 351 V 138 H 341 Z"/>
+    <!-- l -->
+    <path d="M 419 74 H 443 V 182 H 419 Z"/>
+    <!-- ow ligature: o and w fused at shared stroke junction -->
+    <path d="M 498 113 A 35 35 0 1 0 498 183 A 35 35 0 1 0 498 113 Z M 498 137 A 11 11 0 1 1 498 159 A 11 11 0 1 1 498 137 Z M 528 136 H 534 V 152 H 528 Z M 524.00 114 L 542.22 182 H 558.00 L 570.86 134 L 583.72 182 H 599.50 L 617.72 114 H 599.50 L 588.25 156 L 577.00 114 H 564.72 L 553.47 156 L 542.22 114 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+        <article class="wordmark-study-card" id="wm-12">
+          <div class="wm-card-header">
+            <div class="wm-title-row">
+              <span class="wm-name">flow-12-fl-gate-combo.svg</span>
+              <span class="wm-badge">Systemic Candidate (FL + Gate O)</span>
+            </div>
+            <p class="wm-desc">Synthesizes the two strongest wave-1 innovations: fl crossbar ligature bridge combined with dual-gate bracket o in Signal Teal (#1AA3C4).</p>
+          </div>
+          <div class="wm-tiles-row">
+            <div class="wm-tile wm-tile-paper">
+              <span class="wm-tile-label">Paper Tile (#F8FAFC)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-12-fl-gate-combo.svg on Paper">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- fl continuous crossbar ligature -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 399 V 74 H 423 V 182 H 399 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+  <!-- Architectural Dual-Gate O Stanchions in Signal Teal (#1AA3C4) -->
+  <g fill="#1AA3C4">
+    <!-- Left gate stanchion -->
+    <path d="M 470 114 H 455 A 8 8 0 0 0 447 122 V 174 A 8 8 0 0 0 455 182 H 470 V 162 H 461 V 134 H 470 Z"/>
+    <!-- Right gate stanchion -->
+    <path d="M 494 114 H 509 A 8 8 0 0 1 517 122 V 174 A 8 8 0 0 1 509 182 H 494 V 162 H 503 V 134 H 494 Z"/>
+  </g>
+              </svg>
+            </div>
+            <div class="wm-tile wm-tile-ink">
+              <span class="wm-tile-label">Ink Tile (#0F172A)</span>
+              <svg viewBox="0 0 960 256" width="100%" height="auto" role="img" aria-label="flow-12-fl-gate-combo.svg on Ink">
+                <g fill="currentColor" fill-rule="evenodd">
+    <!-- fl continuous crossbar ligature -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 399 V 74 H 423 V 182 H 399 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+  <!-- Architectural Dual-Gate O Stanchions in Signal Teal (#1AA3C4) -->
+  <g fill="#1AA3C4">
+    <!-- Left gate stanchion -->
+    <path d="M 470 114 H 455 A 8 8 0 0 0 447 122 V 174 A 8 8 0 0 0 455 182 H 470 V 162 H 461 V 134 H 470 Z"/>
+    <!-- Right gate stanchion -->
+    <path d="M 494 114 H 509 A 8 8 0 0 1 517 122 V 174 A 8 8 0 0 1 509 182 H 494 V 162 H 503 V 134 H 494 Z"/>
+  </g>
+              </svg>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 4. Comparison Sheet -->
+    <section id="comparison">
+      <h2 class="section-title">Comparative Evidence Sheet</h2>
+      <p class="section-desc">Single tall test board (2600×3120) with high-magnification small-size crops, luminance tests, and real-world UI contexts.</p>
+      
+      <div class="sheet-card">
+        <div class="sheet-scroll-frame">
+          <img src="previews/comparison-sheet.png" alt="Comparative Logo Evidence Sheet">
+        </div>
+        <p class="sheet-caption">Scroll within the frame to inspect the full comparative evaluation matrix across all 4 directions, including 4× nearest-neighbor crops at 16px/24px, browser tab mocks, and README headers.</p>
+      </div>
+    </section>
+
+    <!-- 5. Palette -->
+    <section id="palette">
+      <h2 class="section-title">Brand Color Palette</h2>
+      <p class="section-desc">10 tokens defined in brand/tokens.json. Governed by disciplined contrast and semantic usage ratios.</p>
+
+      <div class="swatch-grid">
+        <!-- 1. Teal Signal -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#1AA3C4;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Teal Signal</span>
+            <span class="swatch-code">#1AA3C4 · rgb(26, 163, 196)</span>
+            <span class="swatch-role">Primary accent: badges, links-as-graphics, gate glyph, brand lines.</span>
+          </div>
+        </div>
+
+        <!-- 2. Teal Deep -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#0A4E5E;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Teal Deep</span>
+            <span class="swatch-code">#0A4E5E · rgb(10, 78, 94)</span>
+            <span class="swatch-role">Teal text on light backgrounds (7.4:1 AAA), pressed states.</span>
+          </div>
+        </div>
+
+        <!-- 3. Teal Bright -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#5BC8DE;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Teal Bright</span>
+            <span class="swatch-code">#5BC8DE · rgb(91, 200, 222)</span>
+            <span class="swatch-role">Teal text/graphics on dark (#0F172A) where Signal Teal is the minimum.</span>
+          </div>
+        </div>
+
+        <!-- 4. Ink -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#0F172A;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Ink</span>
+            <span class="swatch-code">#0F172A · rgb(15, 23, 42)</span>
+            <span class="swatch-role">Primary text on light; doubles as the terminal/dark-mode background.</span>
+          </div>
+        </div>
+
+        <!-- 5. Ink Soft -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#334155;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Ink Soft</span>
+            <span class="swatch-code">#334155 · rgb(51, 65, 85)</span>
+            <span class="swatch-role">Secondary text, captions, table borders on light surfaces.</span>
+          </div>
+        </div>
+
+        <!-- 6. Mist -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#E2E8F0;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Mist</span>
+            <span class="swatch-code">#E2E8F0 · rgb(226, 232, 240)</span>
+            <span class="swatch-role">Primary text on dark backgrounds and subtle dividers.</span>
+          </div>
+        </div>
+
+        <!-- 7. Paper -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#F8FAFC; border-bottom:1px solid #CBD5E1;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Paper</span>
+            <span class="swatch-code">#F8FAFC · rgb(248, 250, 252)</span>
+            <span class="swatch-role">Light-mode background, cards, docs surfaces.</span>
+          </div>
+        </div>
+
+        <!-- 8. Pass -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#22C55E;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Pass (Green)</span>
+            <span class="swatch-code">#22C55E · rgb(34, 197, 94)</span>
+            <span class="swatch-role">Gate agreed; stage advanced. Status-only (≤ 5% surface).</span>
+          </div>
+        </div>
+
+        <!-- 9. Warn -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#F59E0B;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Warn (Amber)</span>
+            <span class="swatch-code">#F59E0B · rgb(245, 158, 11)</span>
+            <span class="swatch-role">Degraded/skipped: debt opened, best-effort degrade.</span>
+          </div>
+        </div>
+
+        <!-- 10. Fail -->
+        <div class="swatch-card">
+          <div class="swatch-block" style="background:#EF4444;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Fail (Red)</span>
+            <span class="swatch-code">#EF4444 · rgb(239, 68, 68)</span>
+            <span class="swatch-role">Gate blocked; kill is a valid outcome. Never decorative.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-note">
+        <strong>Accurate Contrast Facts:</strong> Teal Signal (#1AA3C4) and Gate Green (#22C55E) on Paper (#F8FAFC) have contrast ratios of ≈ 2.9:1 and 2.3:1 respectively (decorative-graphic level, not meeting normal text thresholds). On Ink (#0F172A), contrast is ≥ 4.6:1 (AA normal / AAA large). Per brand-guidelines §1, teal body text on light backgrounds must use Teal Deep (#0A4E5E, 7.4:1 AAA).
+      </div>
+    </section>
+
+    <!-- 6. Typography -->
+    <section id="typography">
+      <h2 class="section-title">Typography System</h2>
+      <p class="section-desc">Open-source typefaces with full Vietnamese diacritics support. Terminal-first mono paired with clean UI prose.</p>
+
+      <div class="type-specimen-grid">
+        <!-- JetBrains Mono -->
+        <div class="specimen-card">
+          <div class="specimen-header">
+            <h3 class="specimen-title">JetBrains Mono (Identity Face)</h3>
+            <div class="specimen-stack">'JetBrains Mono', 'SF Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace</div>
+          </div>
+          <div class="specimen-content specimen-mono">
+            <div class="specimen-line-hero">flow</div>
+            <div class="specimen-line-cmd">/flow next</div>
+            <div class="specimen-line-badge">
+              <span class="specimen-badge-tag">GAP</span>
+              <span class="specimen-badge-tag" style="background:var(--color-teal-deep);">NEXT -&gt;</span>
+            </div>
+            <div class="specimen-line-prose">Proof over vibes.</div>
+            <div class="specimen-line-vi">Bằng chứng hơn cảm hứng.</div>
+          </div>
+        </div>
+
+        <!-- Inter -->
+        <div class="specimen-card">
+          <div class="specimen-header">
+            <h3 class="specimen-title">Inter (UI Prose)</h3>
+            <div class="specimen-stack">Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif</div>
+          </div>
+          <div class="specimen-content specimen-ui">
+            <div class="specimen-line-hero">flow</div>
+            <div class="specimen-line-cmd">/flow next</div>
+            <div class="specimen-line-badge">
+              <span class="specimen-badge-tag">GAP</span>
+              <span class="specimen-badge-tag" style="background:var(--color-teal-deep);">NEXT -&gt;</span>
+            </div>
+            <div class="specimen-line-prose">Proof over vibes.</div>
+            <div class="specimen-line-vi">Bằng chứng hơn cảm hứng.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Identity System & Prior-Art Research -->
+    <section id="identity">
+      <h2 class="section-title">Identity System &amp; Prior-Art Research</h2>
+      <p class="section-desc">Engineering identity blueprints and legal/visual prior-art uniqueness audits governing the flow brand architecture.</p>
+
+      <div class="identity-grid">
+        <!-- Identity System Blueprint Card -->
+        <article class="identity-card">
+          <div class="identity-card-header">
+            <h3 class="identity-card-title"><a href="../identity-system.md">flow — Identity System Specification (identity-system.md)</a></h3>
+            <span class="identity-card-sub">Engineering grammar, responsive logo tiers, platform assets, and status isolation rules</span>
+          </div>
+          <ul class="identity-bullets">
+            <li><strong>Construction Grammar:</strong> Invariant geometry derived from 512×512 master canvas (64px modular grid, stroke 48/512 = 3/32, 15°-multiple canonical angles, 75° command slash, 48u gate notch).</li>
+            <li><strong>Three Display Tiers:</strong> Primary Lockup (min 24px, 1× clearspace), Compact Mark (min 24px, 1× clearspace), and Glyph (min 16px, 0.5× clearspace for favicons &amp; status bars).</li>
+            <li><strong>Platform Specifications &amp; Adoption:</strong> Invariant responsive behavior for macOS, Windows, iOS, Android, and die-cut physical stickers with circle-crop resilience rules.</li>
+          </ul>
+        </article>
+
+        <!-- Uniqueness Audit Card -->
+        <article class="identity-card">
+          <div class="identity-card-header">
+            <h3 class="identity-card-title"><a href="../research/uniqueness-audit.md">Prior-Art Collision Audit (uniqueness-audit.md · 2026-10-10)</a></h3>
+            <span class="identity-card-sub">Comprehensive collision analysis across developer tools, terminal environments, CI/CD platforms, AI coding agents (Cursor, Windsurf, Aider, Cline, Zed), and tech wordmarks</span>
+          </div>
+
+          <div class="audit-verdicts-grid">
+            <div class="audit-verdict-box">
+              <div class="audit-verdict-title">
+                <span>Direction A (Gate)</span>
+                <span class="audit-verdict-score score-high">9.2 / 10</span>
+              </div>
+              <p class="audit-verdict-desc"><strong>Similarity LOW.</strong> Strongest contender. Suggestive, proprietary metaphor ("twin gates agreed"). Highly defensible; completely avoids competitive clichés.</p>
+            </div>
+
+            <div class="audit-verdict-box">
+              <div class="audit-verdict-title">
+                <span>Direction B (Current)</span>
+                <span class="audit-verdict-score score-med">7.8 / 10</span>
+              </div>
+              <p class="audit-verdict-desc"><strong>Similarity MEDIUM-LOW.</strong> Viable alternative. Strong kinetic wave, but sits closer to crowded circular tech marks; anchored by 45° checkmark surge.</p>
+            </div>
+
+            <div class="audit-verdict-box">
+              <div class="audit-verdict-title">
+                <span>Direction C (Wordmark)</span>
+                <span class="audit-verdict-score score-med">7.4 / 10</span>
+              </div>
+              <p class="audit-verdict-desc"><strong>Similarity LOW.</strong> Clean /f command motif; permanent 75° command slash guarantees total distance from Meta "f". Recommended core typographic lockup.</p>
+            </div>
+
+            <div class="audit-verdict-box">
+              <div class="audit-verdict-title">
+                <span>Direction D (Emblem)</span>
+                <span class="audit-verdict-score score-low">4.5 / 10</span>
+              </div>
+              <p class="audit-verdict-desc"><strong>Similarity HIGH.</strong> Generic verified seal / badge trope; lowest distinctiveness. De-emphasize as primary identity; retain as secondary README sticker.</p>
+            </div>
+          </div>
+
+          <div class="audit-disclaimer">
+            Desktop research conducted on 2026-10-10; not legal advice. No trademark registry search performed. Recommend formal intellectual property counsel check before commercial deployment.
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 7. Usage -->
+    <section id="usage">
+      <h2 class="section-title">Brand Usage &amp; File Map</h2>
+      <p class="section-desc">Normative rules from brand-guidelines §3 and repository file organization.</p>
+
+      <div class="usage-grid">
+        <!-- Do Rules -->
+        <div class="usage-card">
+          <h3 style="font-size:16px; font-weight:700; color:var(--color-pass); margin-bottom:14px;">Do</h3>
+          <ul class="usage-list usage-do">
+            <li><span class="icon">✓</span> Use the mono wordmark as-is; it must always be lowercase "flow".</li>
+            <li><span class="icon">✓</span> Pair the logo with real state when context allows (glyph + pass dot).</li>
+            <li><span class="icon">✓</span> Use the #gh-light-mode-only / #gh-dark-mode-only GitHub fragments to swap logo variants.</li>
+            <li><span class="icon">✓</span> Maintain 1× mark height clearspace on all sides.</li>
+          </ul>
+        </div>
+
+        <!-- Don't Rules -->
+        <div class="usage-card">
+          <h3 style="font-size:16px; font-weight:700; color:var(--color-fail); margin-bottom:14px;">Don't</h3>
+          <ul class="usage-list usage-dont">
+            <li><span class="icon">✕</span> Don't recolor the wordmark with gate colors (pass/warn/fail) — status is data, not decoration.</li>
+            <li><span class="icon">✕</span> Don't add taglines inside the clearspace or restack/rotate the mark.</li>
+            <li><span class="icon">✕</span> Don't box the logo in a filled teal pill; the mark is stroke-first.</li>
+            <li><span class="icon">✕</span> Don't typeset the wordmark in Inter or any proportional face.</li>
+          </ul>
+        </div>
+
+        <!-- File Map -->
+        <div class="file-map-card">
+          <h3 style="font-size:16px; font-weight:700; color:var(--color-ink); margin-bottom:14px;">Brand File Architecture</h3>
+          <pre class="file-tree">
+<span class="dir">brand/</span>
+├── brand-brief.md            <span class="note"># Strategy: positioning, audience, voice &amp; tone (EN+VI)</span>
+├── brand-guidelines.md       <span class="note"># Normative visual rules: palette ratios, typography, clearspace</span>
+├── identity-system.md        <span class="note"># System blueprint: construction grammar, 3 tiers, platform specs</span>
+├── tokens.json               <span class="note"># Machine-readable color and font tokens</span>
+├── tokens.css                <span class="note"># Drop-in CSS custom properties matching tokens.json</span>
+├── <span class="dir">research/</span>
+│   └── uniqueness-audit.md   <span class="note"># Prior-art collision analysis &amp; distinctiveness ratings</span>
+└── <span class="dir">logo/</span>
+    ├── README.md             <span class="note"># Logo system index, taxonomy table, contrast specifications</span>
+    ├── gallery.html          <span class="note"># Self-contained visual review gallery</span>
+    ├── <span class="dir">direction-a-gate/</span>     <span class="note"># Direction A (Gate): mark.svg, lockup.svg, mono.svg, README.md</span>
+    ├── <span class="dir">direction-b-current/</span>  <span class="note"># Direction B (Current): mark.svg, lockup.svg, mono.svg, README.md</span>
+    ├── <span class="dir">direction-c-wordmark/</span> <span class="note"># Direction C (Wordmark): mark.svg, lockup.svg, mono.svg, README.md</span>
+    ├── <span class="dir">direction-d-emblem/</span>   <span class="note"># Direction D (Emblem): mark.svg, lockup.svg, mono.svg, README.md</span>
+    ├── <span class="dir">wordmark-studies/</span>     <span class="note"># 12 vector variants, grid invariants, study.html review sheet</span>
+    └── <span class="dir">previews/</span>             <span class="note"># 512px renders + comparison-sheet.png (2600×3120)</span>
+          </pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 8. Footer -->
+  <footer class="gallery-footer">
+    <div class="footer-content">
+      <div class="palette-strip" aria-hidden="true">
+        <div style="background:#1AA3C4;"></div>
+        <div style="background:#0A4E5E;"></div>
+        <div style="background:#5BC8DE;"></div>
+        <div style="background:#0F172A;"></div>
+        <div style="background:#334155;"></div>
+        <div style="background:#E2E8F0;"></div>
+        <div style="background:#F8FAFC;"></div>
+        <div style="background:#22C55E;"></div>
+        <div style="background:#F59E0B;"></div>
+        <div style="background:#EF4444;"></div>
+      </div>
+      <div class="footer-text">Generated for brand direction selection — 4 symbol directions (A–D) + 12 typographic wordmark variants</div>
+      <div class="footer-sub">flow identity system · MIT License · Bilingual EN/VI · flowskill.io.vn</div>
+    </div>
+  </footer>
+
+</body>
+</html>

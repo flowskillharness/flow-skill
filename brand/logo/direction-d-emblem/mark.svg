@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="title-d">
+  <title id="title-d">flow — Receipt Seal Emblem</title>
+  <!-- Security Seal Outer Ring (Signal Teal) -->
+  <path fill="#1AA3C4" fill-rule="evenodd" d="M 256 60 A 196 196 0 1 0 256 452 A 196 196 0 1 0 256 60 Z M 256 84 A 172 172 0 1 1 256 428 A 172 172 0 1 1 256 84 Z"/>
+  <!-- Dual Gate Pillars (Mechanical + Semantic) -->
+  <path fill="#1AA3C4" d="M 136 172 H 176 V 340 H 136 Z"/>
+  <path fill="#1AA3C4" d="M 336 172 H 376 V 340 H 336 Z"/>
+  <!-- Receipt Boundary Bars -->
+  <path fill="#1AA3C4" d="M 224 144 H 288 V 164 H 224 Z"/>
+  <path fill="#1AA3C4" d="M 224 348 H 288 V 368 H 224 Z"/>
+  <!-- Verified Pass Checkmark (Gate Green) -->
+  <path fill="#22C55E" d="M 192 272 L 240 320 L 320 240 L 320 272 L 240 352 L 192 304 Z"/>
+</svg>

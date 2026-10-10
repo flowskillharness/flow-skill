@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t11">
+  <title id="t11">flow — 11 OW Ligature Wordmark</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 341 114 H 351 V 98 A 24 24 0 0 1 375 74 H 399 V 98 H 375 V 114 H 399 V 138 H 375 V 182 H 351 V 138 H 341 Z"/>
+    <!-- l -->
+    <path d="M 419 74 H 443 V 182 H 419 Z"/>
+    <!-- ow ligature: o and w fused at shared stroke junction -->
+    <path d="M 498 113 A 35 35 0 1 0 498 183 A 35 35 0 1 0 498 113 Z M 498 137 A 11 11 0 1 1 498 159 A 11 11 0 1 1 498 137 Z M 528 136 H 534 V 152 H 528 Z M 524.00 114 L 542.22 182 H 558.00 L 570.86 134 L 583.72 182 H 599.50 L 617.72 114 H 599.50 L 588.25 156 L 577.00 114 H 564.72 L 553.47 156 L 542.22 114 Z"/>
+  </g>
+</svg>
