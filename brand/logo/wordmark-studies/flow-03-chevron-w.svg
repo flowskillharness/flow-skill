@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t3">
+  <title id="t3">flow — 03 Chevron W Wordmark</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 482 137 A 11 11 0 1 1 482 159 A 11 11 0 1 1 482 137 Z"/>
+    <!-- left terminal chevron > -->
+    <path d="M 541 114 L 575 148 L 541 182 H 558 L 592 148 L 558 114 Z"/>
+  </g>
+  <!-- Semantic Gate Green pass accent on terminal forward chevron -->
+  <path fill="#22C55E" d="M 583 114 L 617 148 L 583 182 H 600 L 634 148 L 600 114 Z"/>
+</svg>

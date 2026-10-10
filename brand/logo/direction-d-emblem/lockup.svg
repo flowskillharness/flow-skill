@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="title-ld">
+  <title id="title-ld">flow — Emblem Lockup</title>
+  <g id="mark">
+    <path fill="#1AA3C4" fill-rule="evenodd" d="M 309 60 A 68 68 0 1 0 309 196 A 68 68 0 1 0 309 60 Z M 309 68 A 60 60 0 1 1 309 188 A 60 60 0 1 1 309 68 Z"/>
+    <path fill="#1AA3C4" d="M 267.0 98.6 H 281.0 V 157.4 H 267.0 Z"/>
+    <path fill="#1AA3C4" d="M 337.0 98.6 H 351.0 V 157.4 H 337.0 Z"/>
+    <path fill="#1AA3C4" d="M 297.8 88.8 H 320.2 V 95.8 H 297.8 Z"/>
+    <path fill="#1AA3C4" d="M 297.8 160.2 H 320.2 V 167.2 H 297.8 Z"/>
+    <path fill="#22C55E" d="M 286.6 133.6 L 303.4 150.4 L 331.4 122.4 L 331.4 133.6 L 303.4 161.6 L 286.6 144.8 Z"/>
+  </g>
+  <g id="wordmark" fill="currentColor" fill-rule="evenodd">
+    <path d="M 427 114 H 437 V 98 A 24 24 0 0 1 461 74 H 483 V 94 H 463 A 4 4 0 0 0 459 98 V 114 H 483 V 136 H 459 V 182 H 437 V 136 H 427 Z"/>
+    <path d="M 495 74 H 519 V 182 H 495 Z"/>
+    <path d="M 572 113 A 35 35 0 1 0 572 183 A 35 35 0 1 0 572 113 Z M 572 135 A 13 13 0 1 1 572 161 A 13 13 0 1 1 572 135 Z"/>
+    <path d="M 625.00 114 L 643.22 182 H 659.00 L 671.86 134 L 684.72 182 H 700.50 L 718.72 114 H 700.50 L 689.25 156 L 678.00 114 H 665.72 L 654.47 156 L 643.22 114 Z"/>
+  </g>
+</svg>

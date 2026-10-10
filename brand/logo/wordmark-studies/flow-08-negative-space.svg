@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t8">
+  <title id="t8">flow — 08 Negative Space Wordmark (Chevron O Counter)</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- o with negative-space terminal chevron counter > -->
+    <path d="M 482 113 A 35 35 0 1 0 482 183 A 35 35 0 1 0 482 113 Z M 468 120 L 496 148 L 468 176 V 158 L 478 148 L 468 138 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+</svg>

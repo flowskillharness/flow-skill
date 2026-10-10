@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Brand identity system:** Direction A gate symbol + `flow-04-gate-o-v2` wordmark (32u corridor), guidelines/tokens/gallery, 12 wordmark studies, prior-art collision audit.
+- **README brand headers:** light/dark `<picture>` blocks in `README.md`, `README_VN.md`, `npm-wrapper/README.md`.
+- **Production asset pack:** `brand-lockup` light/dark SVGs, glyph, favicon/app-icon/og-image/sticker suite under `brand/icons/`.
+- **`brand/WEBSITE-HANDOFF.md`:** handoff for feat/flow-website adoption.
+
 ## 0.33.0 — 2026-09-17 — status --json + Stage 05 heading map
 
 Mid-tier hosts lose gate state after compact. Additive `status --json` /

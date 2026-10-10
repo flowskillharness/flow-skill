@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t4v2">
+  <title id="t4v2">flow — 04 Gate O Wordmark v2 (32u Corridor)</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f -->
+    <path d="M 325 114 H 335 V 98 A 24 24 0 0 1 359 74 H 383 V 98 H 359 V 114 H 383 V 138 H 359 V 182 H 335 V 138 H 325 Z"/>
+    <!-- l -->
+    <path d="M 403 74 H 427 V 182 H 403 Z"/>
+    <!-- w -->
+    <path d="M 541.00 114 L 559.22 182 H 575.00 L 587.86 134 L 600.72 182 H 616.50 L 634.72 114 H 616.50 L 605.25 156 L 594.00 114 H 581.72 L 570.47 156 L 559.22 114 Z"/>
+  </g>
+  <!-- Architectural Dual-Gate O Stanchions in Signal Teal (32u open threshold corridor) -->
+  <g fill="#1AA3C4">
+    <!-- Left gate stanchion -->
+    <path d="M 466 114 H 454 A 8 8 0 0 0 446 122 V 174 A 8 8 0 0 0 454 182 H 466 V 160 H 460 V 136 H 466 Z"/>
+    <!-- Right gate stanchion -->
+    <path d="M 498 114 H 510 A 8 8 0 0 1 518 122 V 174 A 8 8 0 0 1 510 182 H 498 V 160 H 504 V 136 H 498 Z"/>
+  </g>
+</svg>

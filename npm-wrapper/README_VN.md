@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../brand/brand-lockup-dark.svg">
+    <img src="../brand/brand-lockup-light.svg" alt="flow — gated build harness for coding agents" width="560">
+  </picture>
+</p>
+
 # @manhquy/flow-skill
 
 Cài skill **flow** vào coding agent bằng một lệnh.

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="title-la">
+  <title id="title-la">flow — Gate Lockup</title>
+  <g id="mark">
+    <!-- Left Mechanical Bracket -->
+    <path fill="#1AA3C4" d="M 245 64 H 289.8 V 83.2 H 264.2 V 172.8 H 289.8 V 192 H 245 Z"/>
+    <!-- Right Semantic Bracket -->
+    <path fill="#1AA3C4" d="M 328.2 64 H 373 V 192 H 328.2 V 172.8 H 353.8 V 83.2 H 328.2 Z"/>
+    <!-- Pass Chevron -->
+    <path fill="#22C55E" d="M 296.2 88 L 336.2 128 L 296.2 168 H 277 L 317 128 L 277 88 Z"/>
+  </g>
+  <g id="wordmark" fill="currentColor" fill-rule="evenodd">
+    <path d="M 423 114 H 433 V 98 A 24 24 0 0 1 457 74 H 479 V 94 H 459 A 4 4 0 0 0 455 98 V 114 H 479 V 136 H 455 V 182 H 433 V 136 H 423 Z"/>
+    <path d="M 491 74 H 515 V 182 H 491 Z"/>
+    <path d="M 568 113 A 35 35 0 1 0 568 183 A 35 35 0 1 0 568 113 Z M 568 135 A 13 13 0 1 1 568 161 A 13 13 0 1 1 568 135 Z"/>
+    <path d="M 621.00 114 L 639.22 182 H 655.00 L 667.86 134 L 680.72 182 H 696.50 L 714.72 114 H 696.50 L 685.25 156 L 674.00 114 H 661.72 L 650.47 156 L 639.22 114 Z"/>
+  </g>
+</svg>

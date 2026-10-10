@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t5">
+  <title id="t5">flow — 05 Slash-Lead Wordmark (/flow Fused)</title>
+  <!-- 75° Command Slash in Signal Teal -->
+  <path fill="#1AA3C4" d="M 302 182 L 330.94 74 H 354.94 L 326 182 Z"/>
+  <!-- Geometric Lowercase 'flow' with Fused Crossbar -->
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f fused into slash -->
+    <path d="M 344.22 114 H 358 V 98 A 24 24 0 0 1 382 74 H 406 V 98 H 382 V 114 H 406 V 138 H 382 V 182 H 358 V 138 H 337.79 L 344.22 114 Z"/>
+    <!-- l -->
+    <path d="M 426 74 H 450 V 182 H 426 Z"/>
+    <!-- o -->
+    <path d="M 505 113 A 35 35 0 1 0 505 183 A 35 35 0 1 0 505 113 Z M 505 137 A 11 11 0 1 1 505 159 A 11 11 0 1 1 505 137 Z"/>
+    <!-- w -->
+    <path d="M 564.00 114 L 582.22 182 H 598.00 L 610.86 134 L 623.72 182 H 639.50 L 657.72 114 H 639.50 L 628.25 156 L 617.00 114 H 604.72 L 593.47 156 L 582.22 114 Z"/>
+  </g>
+</svg>

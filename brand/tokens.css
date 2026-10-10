@@ -1,0 +1,16 @@
+/* flow brand tokens — must match brand/tokens.json exactly.
+   Source of truth: brand/brand-guidelines.md */
+:root {
+  --flow-color-teal-signal: #1AA3C4;
+  --flow-color-teal-deep: #0A4E5E;
+  --flow-color-teal-bright: #5BC8DE;
+  --flow-color-ink: #0F172A;
+  --flow-color-ink-soft: #334155;
+  --flow-color-mist: #E2E8F0;
+  --flow-color-paper: #F8FAFC;
+  --flow-color-pass: #22C55E;
+  --flow-color-warn: #F59E0B;
+  --flow-color-fail: #EF4444;
+  --flow-font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --flow-font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace;
+}

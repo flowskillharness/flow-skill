@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 256" width="960" height="256" role="img" aria-labelledby="t6">
+  <title id="t6">flow — 06 Motion Shear Wordmark (15° Velocity Slant)</title>
+  <g fill="currentColor" fill-rule="evenodd">
+    <!-- f sheared at 75° -->
+    <path d="M 318.22 114 L 322.51 98 A 24 24 0 0 1 347.16 74 H 372.00 V 98 H 353.00 L 348.71 114 H 372.00 V 138 H 342.28 L 330.49 182 H 306.49 L 318.28 138 H 300.00 V 114 Z"/>
+    <!-- l sheared at 75° -->
+    <path d="M 396.00 182 L 424.94 74 H 448.94 L 420.00 182 Z"/>
+    <!-- o tilted at 15° -->
+    <g transform="rotate(-15 480 148)">
+      <path d="M 480 113 A 35 35 0 1 0 480 183 A 35 35 0 1 0 480 113 Z M 480 137 A 11 11 0 1 1 480 159 A 11 11 0 1 1 480 137 Z"/>
+    </g>
+    <!-- w sheared with clean 60°/120° diagonal geometry -->
+    <path d="M 553.22 114 L 571.44 182 H 589.44 L 607.66 134 L 620.52 182 H 638.52 L 656.74 114 H 638.52 L 629.66 148 L 617.88 114 H 599.88 L 591.00 148 L 579.22 114 Z"/>
+  </g>
+</svg>
