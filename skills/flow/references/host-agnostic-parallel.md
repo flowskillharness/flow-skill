@@ -72,10 +72,13 @@ Deterministic per-card port allocator for parallel worktree web verification (`f
 
 ## resume output contract
 
-`flow resume` is the external-orchestrator re-entry surface. It is read-only
-(event-tail + registry reads via `inflight_display`; no lock, no mutation, no
-`next_verb` execution). The documented elements below are a stable contract;
-anything not listed here is not to be parsed.
+`flow resume` is the external-orchestrator re-entry surface. It is read-only for planning/card state (event-tail + registry reads via
+`inflight_display`; no lock, no plan/card mutation, no `next_verb`
+execution) — but the runner's EXIT trap (`_log_on_exit` -> `_log_event`)
+still appends telemetry on every invocation (a row to the project's
+`events.jsonl` plus a compact row to the device-global log), so expect
+those files to grow. The documented elements below describe shipped
+behavior; anything not listed here is not to be parsed.
 
 **Output shape, in order:**
 
@@ -96,7 +99,8 @@ anything not listed here is not to be parsed.
    either way. If `events.jsonl` is empty/absent: `no telemetry - showing
    gate state only`, then gate state + NEXT, and no in-flight section.
 3. **In-flight section.** `in flight:` header, then one line per todo card
-   still registered in `.inflight-registry`: `    <id> (in flight, started
+   still registered in `$CARDS_DIR/.inflight` (`cards/.inflight`, per
+   `_inflight_file`): `    <id> (in flight, started
    <Xm|Xh|Xd> ago)`. Stale ids (card file gone) self-skip; **completed cards
    are never listed** (only `status: todo` rows qualify).
 4. **Gate state.** Identical block to `flow status` (`_gate_state_brief`):
@@ -120,8 +124,10 @@ the same schema as `status --json`:
 `{"v":"flow_context/v1","stage":...,"gate":"PASS|BLOCKED|none","next_verb":...,"card":...,"dwell":...,"load":...}`.
 Display-only: it reports what to run next but never executes `next_verb`.
 
-**Stability promise.** The elements above are parseable by external
-orchestrators; parse only these, never ad-hoc prose. Any change to the
-output shape is a release-notes event tied to the flow version (the skill
-`version` in `skills/flow/SKILL.md`, surfaced by `_flow_version`); treat a
-version bump as the signal to re-diff this contract.
+**Scope note (not a stability promise).** The elements above are parseable by external
+orchestrators; parse only these, never ad-hoc prose. This documents shipped
+behavior as of the current flow version (`version` in `skills/flow/SKILL.md`
+— currently 0.33.0 — surfaced as `flow_version` in telemetry). The project
+has not adopted a formal compatibility guarantee: when upgrading flow,
+re-diff this contract against the runner (`cmd_resume`, `inflight_display`,
+`_log_event`) before relying on it.
