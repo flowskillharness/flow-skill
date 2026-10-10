@@ -4986,7 +4986,7 @@ usage: bash flow.sh <command> [args]
 
   status [--json]   Where am I? What's blocking? (also: no command). --json prints
                      one flow_context/v1 object (display-only; do not auto-exec next_verb).
-  resume [--json]   Session-story brief for a fresh agent entering mid-cycle: last session
+  resume [--budget] Session-story brief for a fresh agent entering mid-cycle: last session
                      (command names only, never raw args), in-flight card + dwell, gate state,
                      one NEXT-> line. Read-only, no lock. Run this FIRST when resuming a project.
                      --json: same closed object as status --json.
