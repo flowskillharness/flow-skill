@@ -69,3 +69,59 @@ Deterministic per-card port allocator for parallel worktree web verification (`f
 - **Exit Codes:**
   - `0`: Workspace resolved, port computed, `.env.flow.local` written.
   - `2`: Card argument invalid shape, no registered workspace in `.flow/workspaces.jsonl`, missing `port_offset`, baseport out of range, or port range exhausted > 65535 (never creates worktrees implicitly).
+
+## resume output contract
+
+`flow resume` is the external-orchestrator re-entry surface. It is read-only
+(event-tail + registry reads via `inflight_display`; no lock, no mutation, no
+`next_verb` execution). The documented elements below are a stable contract;
+anything not listed here is not to be parsed.
+
+**Output shape, in order:**
+
+1. **Header.** `flow resume`, then indented `project:` (repo root) and
+   `auto:` (attestation auto state). If planning has not started
+   (`current_stage_idx < 0`), resume emits only `nothing to resume - <next
+   action>` + `NEXT_VERB=<verb>` and stops.
+2. **Last-session telemetry block.** The most recent foreign session_id in
+   `events.jsonl` (string inequality vs the current session), emitting that
+   session's rows as `<ts> <command> ok|FAIL(n) [stage_from -> stage_to]`.
+   Command **NAMES only — never raw args** (free-text args can carry
+   unmasked secrets). Rows are capped `tail -5` (most recent wins). A
+   `ppid:`-scheme session whose latest foreign row is < 900s from the anchor
+   (this session's own first row if present, else wall-clock `now` — the
+   no-own-row-yet case is exactly when resume runs) is labeled
+   `recent activity` instead of `last session`, because PID reuse makes a
+   "last session" that may never have existed. Absolute timestamps shown
+   either way. If `events.jsonl` is empty/absent: `no telemetry - showing
+   gate state only`, then gate state + NEXT, and no in-flight section.
+3. **In-flight section.** `in flight:` header, then one line per todo card
+   still registered in `.inflight-registry`: `    <id> (in flight, started
+   <Xm|Xh|Xd> ago)`. Stale ids (card file gone) self-skip; **completed cards
+   are never listed** (only `status: todo` rows qualify).
+4. **Gate state.** Identical block to `flow status` (`_gate_state_brief`):
+   current stage only — `planning: at stage <s>` plus `gate: PASS|BLOCKED`.
+   (In the rare earlier-stage-blocked state, NEXT may point at an earlier
+   stage than this current-stage gate; that is by design.)
+5. **Exactly one `NEXT -> <action>` + `NEXT_VERB=<verb>` line pair**, from
+   the same `_next_action` ladder as `status` — the two verbs can never
+   disagree.
+
+**`--budget` semantics.** `resume --budget` caps the in-flight list at 5
+lines plus one `    +M more in flight - see 'flow card'` summary line
+(where M = hidden count). With ≤5 in-flight cards, `--budget` output is
+**byte-identical to default resume output** (matching rule:
+byte-identical-under-budget). No other section is affected; default resume
+lists all in-flight cards and never emits the summary line. Extra arguments
+to either form exit 2.
+
+**`resume --json`.** Emits exactly one closed `flow_context/v1` object —
+the same schema as `status --json`:
+`{"v":"flow_context/v1","stage":...,"gate":"PASS|BLOCKED|none","next_verb":...,"card":...,"dwell":...,"load":...}`.
+Display-only: it reports what to run next but never executes `next_verb`.
+
+**Stability promise.** The elements above are parseable by external
+orchestrators; parse only these, never ad-hoc prose. Any change to the
+output shape is a release-notes event tied to the flow version (the skill
+`version` in `skills/flow/SKILL.md`, surfaced by `_flow_version`); treat a
+version bump as the signal to re-diff this contract.
