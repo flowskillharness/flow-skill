@@ -169,7 +169,12 @@ if (
   process.exit(1);
 }
 
-// L25 — NO .integrity emission (circular trust). Rely on npm provenance for tamper detection.
+// Trust model: the co-shipped receipt (manifest-hashes.json) lets `flow doctor` detect
+// POST-INSTALL drift of the runner only (live bytes vs receipt). It does NOT establish package
+// authenticity — an attacker rewriting runner AND receipt together is invisible to doctor;
+// that remains npm provenance/registry's job (hence the receipt ships in the tarball rather
+// than being self-signed). L25's circular-trust objection applied to a self-emitted integrity
+// file as an authenticity claim; this receipt makes no such claim.
 // skills-manifest.json still ships as a completeness signal (file count + list).
 // v0.23 M3 fix — `source` used to be `resolve()`d to an absolute local filesystem path (e.g.
 // D:\project\flow\...) and that absolute path shipped inside the published npm tarball
