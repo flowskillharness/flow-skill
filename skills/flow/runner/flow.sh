@@ -2459,7 +2459,7 @@ _consistency_contract() {
   # 3. Match each endpoint path against cards Scope content
   echo "contract-to-card endpoint coverage audit (flow/05-contract.md vs cards/C-*.md ## Scope)"
   echo "  (matching rule: exact path token in cards/C-*.md '## Scope' - an occurrence counts only when not"
-  echo "   preceded/followed by [A-Za-z0-9_] and not followed by [A-Za-z0-9_\/:{.-}]; /api/users/:id does not"
+  echo "   preceded/followed by [A-Za-z0-9_] and not followed by [A-Za-z0-9_\/{}:.-]; /api/users/:id does not"
   echo "   cover /api/users; a trailing '?' or end-of-line still counts)"
   local m p n_cov=0 n_uncov=0
   : > "$td/uncovered"
@@ -2467,7 +2467,7 @@ _consistency_contract() {
     [ -n "$p" ] || continue
     # Exact-token boundary via index()/substr only (no regex interpolation): an occurrence of the
     # path counts as coverage only when it is not preceded by [A-Za-z0-9_] and not followed by
-    # [A-Za-z0-9_\/:{.-}] (end-of-line after counts, so a trailing '?' or EOL is still covered).
+    # [A-Za-z0-9_\/{}:.-] (end-of-line after counts, so a trailing '?' or EOL is still covered).
     # awk exit 0 = found (covered); awk exit 1 = not found (uncovered).
     if awk -v p="$p" '
       {
