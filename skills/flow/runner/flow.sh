@@ -2458,12 +2458,30 @@ _consistency_contract() {
 
   # 3. Match each endpoint path against cards Scope content
   echo "contract-to-card endpoint coverage audit (flow/05-contract.md vs cards/C-*.md ## Scope)"
-  echo "  (matching rule: literal path token substring in cards/C-*.md '## Scope')"
+  echo "  (matching rule: exact path token in cards/C-*.md '## Scope' - an occurrence counts only when not"
+  echo "   preceded/followed by [A-Za-z0-9_] and not followed by [A-Za-z0-9_/:{.-]; /api/users/:id does not"
+  echo "   cover /api/users; a trailing '?' or end-of-line still counts)"
   local m p n_cov=0 n_uncov=0
   : > "$td/uncovered"
   while IFS="$(printf '\t')" read -r m p; do
     [ -n "$p" ] || continue
-    if grep -qF "$p" "$td/cards_scope" 2>/dev/null; then
+    # Exact-token boundary via index()/substr only (no regex interpolation): an occurrence of the
+    # path counts as coverage only when it is not preceded by [A-Za-z0-9_] and not followed by
+    # [A-Za-z0-9_/:{.-] (end-of-line after counts, so a trailing '?' or EOL is still covered).
+    # awk exit 0 = found (covered); awk exit 1 = not found (uncovered).
+    if awk -v p="$p" '
+      {
+        s = $0; start = 1
+        while ((pos = index(substr(s, start), p)) > 0) {
+          pos += start - 1
+          before = (pos > 1) ? substr(s, pos - 1, 1) : ""
+          after  = substr(s, pos + length(p), 1)
+          if (before !~ /[A-Za-z0-9_]/ && (after == "" || after !~ /[A-Za-z0-9_\/:{.-]/)) { found = 1; exit }
+          start = pos + 1
+        }
+      }
+      END { exit found ? 0 : 1 }
+    ' "$td/cards_scope" 2>/dev/null; then
       n_cov=$((n_cov + 1))
     else
       n_uncov=$((n_uncov + 1))

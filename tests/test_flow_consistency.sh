@@ -323,7 +323,7 @@ cat > "$SB/cards/C-003.md" << 'EOF'
 status: todo
 implements: none
 ## Scope
-Admin endpoint to delete user at /api/users/:id.
+Admin endpoint to delete user at /api/users/:id
 EOF
 out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
 ck 0 "$rc" "all endpoints covered -> exit 0"
@@ -361,6 +361,74 @@ no "$out_plain" "endpoint coverage audit" "plain consistency does not run endpoi
 out_unk="$(bash "$RUN" consistency --bogus 2>&1)"; rc_unk=$?
 ck 1 "$rc_unk" "unknown flag -> exit 1"
 has "$out_unk" "usage: /flow consistency [--contract]" "usage printed on unknown flag"
+rm -rf "$SB"
+
+echo "U) --contract endpoint matching is exact-token (no prefix/substring false coverage)"
+# (a)+(c) prefix collision: card Scope mentions only /api/users/:id and /api/users-list
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /api/users | public | none | 200 |
+| GET | /api/users/:id | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+List view hits /api/users/:id
+Detail view also covers /api/users-list naming
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "prefix-collision -> /api/users uncovered -> exit 1"
+has "$out" "^ *GET /api/users\$" "/api/users flagged uncovered (":id" and "-list" do not cover it)"
+no "$out" "GET /api/users/:id" "/api/users/:id covered, not in warning list"
+has "$out" "2 endpoint(s), 1 covered, 1 uncovered" "summary counts correct"
+
+# (b) same card also mentioning /api/users plainly => both covered, exit 0
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+List view hits /api/users directly (GET /api/users?limit=10 also implied).
+Detail view covers /api/users/:id
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "plain /api/users mention covers both -> exit 0"
+has "$out" "2 endpoint(s), 2 covered, 0 uncovered" "both endpoints covered"
+rm -rf "$SB"
+
+# (d) regex metacharacters in the path are escaped: /v1/config.max must not match /v1/configXmax
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /v1/config.max | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Reads /v1/configXmax (wrong path - must not satisfy the contract).
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "'.' in path treated literally -> exit 1"
+has "$out" "GET /v1/config.max" "config.max flagged uncovered (no regex dot wildcard)"
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Reads /v1/config.max on boot.
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "exact /v1/config.max -> exit 0"
+has "$out" "1 endpoint(s), 1 covered, 0 uncovered" "literal dot path covered"
 rm -rf "$SB"
 
 echo
