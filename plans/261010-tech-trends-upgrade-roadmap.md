@@ -42,7 +42,7 @@ Candidates defined in `plans/research/gap-analysis-261010.md` §6:
 | Candidate | Trend Anchor | Surface | Effort | Status |
 |---|---|---|---|---|
 | **C1: Eval regression diff (`eval --diff`)** | `trends-agent-evals-benchmarks` | `runner/flow.sh`, `refs/gate-eval.md` | Med | Wave 2 |
-| **C2: Bounded context handoff (`resume --budget`)** | `trends-context-engineering` | `runner/flow.sh`, `docs/doc-budgets.txt` | Low | Wave 1 |
+| **C2: Bounded context handoff (`resume --budget`)** | `trends-context-engineering` | `runner/flow.sh`, `docs/doc-budgets.txt` | Low | Wave 1 — rescoped 2026-10-10: in-flight cap (see §6 C2) |
 | **C3: Adversarial injection fixtures** | `trends-agent-security-hooks` | `eval/fixtures/`, `eval/manifest.tsv` | Low | Wave 2 |
 | **C4: Worktree port allocator (`workspace port`)** | `trends-multi-agent-orchestration` | `runner/flow.sh`, `refs/host-agnostic-parallel` | Low-Med | Wave 3 — trend anchor low-confidence (justification is repo-internal, see §6 C4) |
 | **C5: Runner self-integrity verification** | `trends-agent-security-hooks` | `runner/flow.sh` (`cmd_doctor`) | Med | Wave 1 — blocked: manifest lacks hash (see §6 C5) |
@@ -53,7 +53,7 @@ Candidates defined in `plans/research/gap-analysis-261010.md` §6:
 
 ### Wave 1: Context Budget & Runner Integrity (C2 + C5)
 *Rationale: Hardens execution hygiene and prevents context rot with zero eval-engine or test-matrix risk.*
-- **C2 (`flow resume --budget`):** no wave-internal deps — design: gap-analysis-261010.md §6 Candidate 2
+- **C2 (`flow resume --budget (in-flight cap)`):** no wave-internal deps — design: gap-analysis-261010.md §6 Candidate 2
 - **C5 (Runner integrity check):** blocked on hash-source prerequisite — design question: gap-analysis-261010.md §6 Candidate 5
 
 ### Wave 2: Eval Intelligence & Adversarial Resilience (C1 + C3)

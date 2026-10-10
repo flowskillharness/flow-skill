@@ -207,9 +207,10 @@ Grounded in repository tracking documents:
 - **Rough Effort:** Medium.
 
 #### Candidate 2: Strictly Bounded Context Handoff (`flow resume --budget`)
-- **Problem:** `flow resume` output expands as project card count grows, risking context window exhaustion and violating context engineering best practices.
-- **Proposed Change:** Enforce a hard ceiling (e.g., max 35 lines / 250 words) on `flow resume` output. Collapse older completed cards into a single count summary, retaining only: last completed card, active in-flight cards with dwell time, open blocker/debt, and one atomic `NEXT ->` action.
-- **Repo Surfaces Touched:** `skills/flow/runner/flow.sh` (`cmd_resume`, `_emit_context_json`), `docs/doc-budgets.txt`, `tests/test_flow_resume.sh`.
+- **Problem:** Code inspection of `cmd_resume` shows its output structure is already largely bounded: a fixed header, foreign-session telemetry rows capped by `tail -5`, a fixed-size gate brief, and a single `NEXT ->` action. `cmd_resume` never lists completed cards. The only card-count-dependent section is `inflight_display()`, which is unbounded when multiple cards are marked in flight concurrently, risking context window exhaustion.
+- **Proposed Change:** Add a `--budget` flag on `flow resume` that caps `inflight_display()` at at most 5 in-flight cards and appends exactly one line `+M more in flight - see 'flow card'` when additional in-flight cards exist. Under-budget output (≤5 in-flight cards) and default unflagged invocations stay byte-identical to previous behavior, ensuring the entire output fits comfortably ≤35 lines.
+- **Correction (2026-10-10):** original premise (completed-card growth) was wrong on code inspection; rescoped to in-flight cap.
+- **Repo Surfaces Touched:** `skills/flow/runner/flow.sh` (`cmd_resume`, `inflight_display`), `skills/flow/references/command-dispatch.md`, `tests/test_flow_resume.sh`.
 - **ADR-0001 Compatibility:** 100% compliant. Pure bash text formatting executed on demand.
 - **Rough Effort:** Low.
 
