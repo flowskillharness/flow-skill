@@ -215,3 +215,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "npm@${{ steps.meta.outputs.version }}"
           git push origin "npm@${{ steps.meta.outputs.version }}"
+
+      - name: Trigger website rebuild
+        if: steps.meta.outputs.dry_run == 'false'
+        working-directory: ${{ github.workspace }}
+        run: |
+          gh api repos/${{ github.repository }}/dispatches \
+            -f event_type=npm-published
+        env:
+          GITHUB_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN || github.token }}
