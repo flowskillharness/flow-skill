@@ -74,7 +74,7 @@ def _maybe_forward_to_rust(argv):
             continue
         verb = tok
         break
-    if verb == "graph":
+    if verb in ("graph", "promote-suggest"):
         return None
     conflict = _flow_lineage_db(argv)
     if conflict:
@@ -656,6 +656,141 @@ def cmd_propose(con, a):
     return 0
 
 
+def cmd_promote_suggest(con, a):
+    patterns = []
+    # 1. Repeated friction from trace (>=2 occurrences)
+    if _db._table_exists(con, "trace"):
+        rows = _db.rows(
+            con,
+            "SELECT id, created_at, harness_friction AS text FROM trace "
+            "WHERE harness_friction IS NOT NULL AND TRIM(harness_friction)<>'' "
+            "AND LOWER(TRIM(harness_friction))<>'none' ORDER BY id ASC",
+        )
+        grouped = {}
+        for r in rows:
+            text = r["text"]
+            k = _normalize_token(text)
+            if not k:
+                continue
+            if k in grouped:
+                g = grouped[k]
+                g["count"] += 1
+                if r["created_at"] and (not g["oldest_created_at"] or str(r["created_at"]) < str(g["oldest_created_at"])):
+                    g["oldest_created_at"] = r["created_at"]
+                if r["id"] < g["min_id"]:
+                    g["min_id"] = r["id"]
+            else:
+                grouped[k] = {
+                    "representative": text,
+                    "count": 1,
+                    "oldest_created_at": r["created_at"] or "",
+                    "min_id": r["id"],
+                }
+        for g in grouped.values():
+            if g["count"] >= 2:
+                patterns.append({
+                    "count": g["count"],
+                    "oldest_created_at": str(g["oldest_created_at"]),
+                    "min_id": g["min_id"],
+                    "title": f"Reduce repeated friction: {_short_title(g['representative'])}",
+                    "condition": f"{g['count']} traces recorded similar friction: {g['representative']}",
+                    "suggested": "Update the relevant docs, templates, or guidance for this friction pattern.",
+                })
+
+    # 2. Repeated interventions (>=2 occurrences)
+    if _db._table_exists(con, "intervention"):
+        rows = _db.rows(
+            con,
+            "SELECT id, created_at, type, description, (type || ': ' || description) AS text "
+            "FROM intervention WHERE TRIM(description)<>'' ORDER BY id ASC",
+        )
+        grouped = {}
+        for r in rows:
+            text = r["text"]
+            k = _normalize_token(text)
+            if not k:
+                continue
+            if k in grouped:
+                g = grouped[k]
+                g["count"] += 1
+                if r["created_at"] and (not g["oldest_created_at"] or str(r["created_at"]) < str(g["oldest_created_at"])):
+                    g["oldest_created_at"] = r["created_at"]
+                if r["id"] < g["min_id"]:
+                    g["min_id"] = r["id"]
+            else:
+                grouped[k] = {
+                    "representative": text,
+                    "count": 1,
+                    "oldest_created_at": r["created_at"] or "",
+                    "min_id": r["id"],
+                }
+        for g in grouped.values():
+            if g["count"] >= 2:
+                patterns.append({
+                    "count": g["count"],
+                    "oldest_created_at": str(g["oldest_created_at"]),
+                    "min_id": g["min_id"],
+                    "title": f"Address repeated intervention: {_short_title(g['representative'])}",
+                    "condition": f"{g['count']} interventions share the pattern: {g['representative']}",
+                    "suggested": "Clarify the operating rule or gate that would have caught this earlier.",
+                })
+
+    # 3. Recurring audit findings (>=2 findings)
+    findings, _score = _audit(con)
+    for key, (label, _sql) in _AUDIT_QUERIES.items():
+        arows = findings.get(key, [])
+        if len(arows) >= 2:
+            count = len(arows)
+            min_id = 999999
+            for r in arows:
+                try:
+                    rid = int(r["id"])
+                    if rid < min_id:
+                        min_id = rid
+                except (ValueError, TypeError, KeyError):
+                    pass
+            patterns.append({
+                "count": count,
+                "oldest_created_at": "",
+                "min_id": min_id if min_id != 999999 else 0,
+                "title": f"Clean up {label}",
+                "condition": f"Audit found {count} {label}.",
+                "suggested": "Resolve the listed audit findings or record why they are intentionally retained.",
+            })
+
+    if not patterns:
+        print("no patterns meet the >=2 occurrence bar yet")
+        return 0
+
+    # Deterministic tie-breaking: count desc, oldest first, id asc
+    patterns.sort(key=lambda p: (-p["count"], p["oldest_created_at"], p["min_id"]))
+
+    cap = 10
+    total = len(patterns)
+    shown = patterns[:cap]
+
+    print("flow promote --suggest: draft playbook suggestions from repeated harness patterns")
+    print("Review each draft below, save to a file (e.g. my-playbook.md), then run 'flow promote <file>'.")
+    if total > cap:
+        print(f"Showing top {len(shown)} of {total} qualifying pattern(s) (>=2 occurrences):")
+    else:
+        print(f"Showing {len(shown)} qualifying pattern(s) (>=2 occurrences):")
+    print()
+
+    for p in shown:
+        print("```markdown")
+        print(f"# Playbook: {p['title']}")
+        print()
+        print("## When to use this")
+        print(p["condition"])
+        print()
+        print("## Suggested action")
+        print(p["suggested"])
+        print("```")
+        print()
+    return 0
+
+
 def _now(con):
     return con.execute("SELECT datetime('now')").fetchone()[0]
 
@@ -1174,6 +1309,7 @@ def build_parser():
     sub.add_parser("audit", help="entropy/drift audit: orphaned/unverified/stale records + a 0-100 score")
     pp = sub.add_parser("propose", help="deterministic improvement proposals from repeated friction/interventions + audit drift")
     pp.add_argument("--commit", action="store_true", help="write the proposals into the backlog (else dry-run)")
+    sub.add_parser("promote-suggest", help="draft playbook suggestions from recurring friction/interventions (ACE >=2 bar)")
 
     pr = sub.add_parser("rollup", help="ingest JSONL usage sinks into usage_event (idempotent)")
     pr.add_argument("--global", dest="global_", action="store_true", help="also roll up the device-global log")
@@ -1311,6 +1447,7 @@ def main(argv):
         "audit": cmd_audit, "propose": cmd_propose,
         "rollup": cmd_rollup, "usage": cmd_usage, "prune": cmd_prune,
         "graph": cmd_graph,
+        "promote-suggest": cmd_promote_suggest,
     }
     try:
         return dispatch[a.cmd](con, a) or 0

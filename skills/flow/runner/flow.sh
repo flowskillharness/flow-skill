@@ -2606,16 +2606,30 @@ cmd_consistency() {
 
 cmd_promote() {
   # cross-project knowledge tier: copy a playbook/lesson into ~/.claude/flow/playbooks so its
-  # lessons travel to every project (surfaced by '/flow recall' everywhere).
-  local src="${1:-}"
-  if [ -z "$src" ] || [ ! -f "$src" ]; then echo "usage: /flow promote <path-to-playbook.md>"; return 1; fi
-  mkdir -p "$GLOBAL_KB_DIR" 2>/dev/null || true
-  if ! cp "$src" "$GLOBAL_KB_DIR/$(basename "$src")" 2>/dev/null; then
-    echo "FAIL: could not copy into $GLOBAL_KB_DIR"; return 1
-  fi
-  echo "PASS: promoted $(basename "$src") -> $GLOBAL_KB_DIR"
-  echo "  '/flow recall' now surfaces it as a GLOBAL PLAYBOOK in every project."
-  return 0
+  # lessons travel to every project (surfaced by '/flow recall' everywhere), or suggest
+  # draft playbooks from repeated harness patterns via --suggest.
+  case "${1:-}" in
+    --suggest)
+      if ! harness_available; then
+        echo "promote --suggest: durable layer unavailable (python or harness missing, or FLOW_HARNESS_DISABLE set)."
+        return 0
+      fi
+      local py; py="$(_python)"
+      FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" promote-suggest
+      return $?
+      ;;
+    *)
+      local src="${1:-}"
+      if [ -z "$src" ] || [ ! -f "$src" ]; then echo "usage: /flow promote <path-to-playbook.md> | /flow promote --suggest"; return 1; fi
+      mkdir -p "$GLOBAL_KB_DIR" 2>/dev/null || true
+      if ! cp "$src" "$GLOBAL_KB_DIR/$(basename "$src")" 2>/dev/null; then
+        echo "FAIL: could not copy into $GLOBAL_KB_DIR"; return 1
+      fi
+      echo "PASS: promoted $(basename "$src") -> $GLOBAL_KB_DIR"
+      echo "  '/flow recall' now surfaces it as a GLOBAL PLAYBOOK in every project."
+      return 0
+      ;;
+  esac
 }
 
 cmd_doctor() {
@@ -5373,7 +5387,7 @@ usage: bash flow.sh <command> [args]
   constitution      Check operator-authored per-project invariants in flow/constitution.md (advisory; not a next-gate)
   clarify           List leftover ## Open decisions bullets on scope/PRD/contract (advisory; not a next-gate)
   converge [--file] Append-only remainder cards from a flow-converge/v1 payload (plan vs present code)
-  promote <file>    Copy a playbook into the cross-project KB (~/.claude/flow/playbooks)
+  promote <file>|--suggest Copy a playbook into KB or suggest draft playbooks from harness patterns
   doctor            Check the environment (bash/python/grep/git) across macOS/Linux/Windows
   eval [opts]       Behavioral eval: does the LLM semantic gate flag a hollow-but-mechanically-clean
                      fixture? Opt-in, BILLABLE (live mode skips cleanly with zero calls if 'claude'
@@ -5584,7 +5598,7 @@ case "$cmd" in
   constitution)   cmd_constitution ;;
   clarify)        cmd_clarify ;;
   converge)       cmd_converge "$@" ;;
-  promote)        cmd_promote "${1:-}" ;;
+  promote)        cmd_promote "$@" ;;
   doctor)         cmd_doctor ;;
   eval)           cmd_eval "$@" ;;
   usage)          cmd_usage "$@" ;;
