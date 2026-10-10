@@ -54,7 +54,7 @@ Candidates defined in `plans/research/gap-analysis-261010.md` §6:
 ### Wave 1: Context Budget & Runner Integrity (C2 + C5)
 *Rationale: Hardens execution hygiene and prevents context rot with zero eval-engine or test-matrix risk.*
 - **C2 (`flow resume --budget (in-flight cap)`):** no wave-internal deps — design: gap-analysis-261010.md §6 Candidate 2
-- **C5 (Runner integrity check):** shipped on branch (pack-time hash; doctor verifies, older installs skip; see §6 C5)
+- **C5 (Runner integrity check):** shipped on branch (pack-time receipt ships in bundled skill; doctor verifies installed bytes incl. tamper; see §6 C5)
 
 ### Wave 2: Eval Intelligence & Adversarial Resilience (C1 + C3)
 *Rationale: Equips maintainers to detect prompt/gate regressions safely before introducing new mechanical scanners.*
