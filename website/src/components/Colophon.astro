@@ -1,6 +1,5 @@
 ---
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { getVersions } from '../lib/versions';
 
 interface Props {
 	lang: 'en' | 'vi';
@@ -8,41 +7,7 @@ interface Props {
 
 const { lang } = Astro.props;
 
-/**
- * Read at build time from the repository so the printed edition can never drift.
- * The site builds from `website/`, but a checkout without the skill tree is a valid
- * state (the edition line is then omitted rather than guessed).
- */
-function repoText(relative: string): string | null {
-	for (const base of ['..', '.']) {
-		try {
-			return readFileSync(resolve(process.cwd(), base, relative), 'utf8');
-		} catch {
-			continue;
-		}
-	}
-	return null;
-}
-
-function skillVersion(): string | null {
-	const source = repoText('skills/flow/SKILL.md');
-	return source?.match(/^\s{2}version:\s*"([^"]+)"/m)?.[1] ?? null;
-}
-
-function installerVersion(): string | null {
-	const source = repoText('npm-wrapper/package.json');
-	if (!source) return null;
-	try {
-		const parsed: unknown = JSON.parse(source);
-		const version = (parsed as { version?: unknown }).version;
-		return typeof version === 'string' ? version : null;
-	} catch {
-		return null;
-	}
-}
-
-const skill = skillVersion();
-const installer = installerVersion();
+const { skillVersion: skill, installerVersion: installer } = await getVersions();
 
 const copy = {
 	en: {
