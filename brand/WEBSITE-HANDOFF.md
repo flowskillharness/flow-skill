@@ -100,3 +100,10 @@ When integrating on `feat/flow-website`, maintain the engineering rules from `br
    - On dark surfaces (Ink `#0F172A`), Signal Teal achieves 5.6:1 (AA normal / AAA large text; graphics-safe).
 4. **Status Decoupling**:
    - Never recolor the wordmark with operational status colors (`#22C55E`, `#F59E0B`, `#EF4444`). Operational colors represent live telemetry (`GAP`, `CONVERGED`), not brand decoration.
+
+---
+
+## Version automation (adopt with the rollout)
+
+Root cause: site installer and skill versions are read at build time from local files via Colophon's `readFileSync`, while Cloudflare Pages watch path `website/**` skips rebuilds for master commits, freezing metadata (e.g., 0.7.0 vs 0.7.3). Full specification: [plans/research/261011-website-version-automation.md](../plans/research/261011-website-version-automation.md).
+Adoption path: hotfix `version-cache.json` first, then migrate to `versions.ts` + cron/dispatch workflow per spec §4–5.
