@@ -2691,6 +2691,34 @@ cmd_doctor() {
     esac
   fi
   echo
+  # Runner integrity (pack-time reference hash in portable-manifest.json). The manifest lives at
+  # the repo root in a dev checkout (runner = <root>/skills/flow/runner) or next to the skill in
+  # other layouts. No manifest / no hashes entry (older installs) => informational skip only.
+  local mf="" _mf
+  for _mf in "$SCRIPT_DIR/../../../portable-manifest.json" "$SCRIPT_DIR/../../portable-manifest.json"; do
+    if [ -f "$_mf" ]; then mf="$_mf"; break; fi
+  done
+  local want=""
+  [ -n "$mf" ] && want="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$mf" 2>/dev/null | head -1)"
+  if [ -z "$want" ]; then
+    echo "  runner integrity: no reference hash in manifest (older install) - skipped"
+  else
+    local have=""
+    if command -v shasum >/dev/null 2>&1; then
+      have="$(shasum -a 256 "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
+    elif command -v sha256sum >/dev/null 2>&1; then
+      have="$(sha256sum "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
+    fi
+    if [ -z "$have" ]; then
+      echo "  runner integrity: no shasum/sha256sum available - skipped"
+    elif [ "$have" = "$want" ]; then
+      echo "  runner integrity: ok (${want%"${want#????????}"}...)"
+    else
+      echo "  FAIL: runner integrity - flow.sh does not match the installed manifest hash (expected ${want%"${want#????????}"}..., got ${have%"${have#????????}"}...) - the harness may have been modified mid-project"
+      ok=0
+    fi
+  fi
+  echo
   if [ "$ok" -eq 1 ]; then
     echo "READY. Gate engine works$([ -n "$py" ] && echo '; durable layer on.' || echo '; durable layer off (no python).')"
     return 0

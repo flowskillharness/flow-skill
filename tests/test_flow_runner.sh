@@ -145,6 +145,49 @@ else
 fi
 rm -rf "$notimeoutbin"
 
+echo "I) doctor runner integrity (C5: pack-time manifest hash vs live flow.sh)"
+sha_bin() {
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi
+}
+# Copy the skill tree into a temp root so the manifest lookup (SCRIPT_DIR/../../..)
+# resolves there without touching the repo's own portable-manifest.json. (A symlink
+# would not work: bash resolves SCRIPT_DIR through it back to the real tree.)
+IT="$(mktemp -d)"
+cp -R "$HERE/../skills/flow" "$IT/src"
+RUNX="$IT/src/runner/flow.sh"
+LIVE="$(sha_bin "$RUNX")"
+# (a) correct hash -> ok line, doctor still exits per convention (0 when nothing else fails)
+printf '{\n  "name": "flow",\n  "hashes": {\n    "skills/flow/runner/flow.sh": "%s"\n  }\n}\n' "$LIVE" > "$IT/portable-manifest.json"
+out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
+has "$out" "runner integrity: ok (${LIVE%"${LIVE#????????}"}...)" "matching hash -> ok line"
+ck 0 $rc "matching hash -> doctor exit 0"
+# (b) tamper: record hash of DIFFERENT bytes -> loud FAIL + nonzero
+printf '{\n  "hashes": {\n    "skills/flow/runner/flow.sh": "%s"\n  }\n}\n' "0000000000000000000000000000000000000000000000000000000000000000" > "$IT/portable-manifest.json"
+out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
+has "$out" "FAIL: runner integrity - flow.sh does not match the installed manifest hash" "tampered hash -> loud FAIL"
+has "$out" "expected 00000000..., got ${LIVE%"${LIVE#????????}"}..." "tampered hash -> expected/got echo"
+ck 1 $rc "tampered hash -> doctor nonzero"
+# (c) manifest without hashes entry -> informational skip, exit convention unchanged
+printf '{\n  "name": "flow"\n}\n' > "$IT/portable-manifest.json"
+out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
+has "$out" "runner integrity: no reference hash in manifest (older install) - skipped" "no hashes entry -> skip line"
+ck 0 $rc "no hashes entry -> doctor exit unchanged (0)"
+# (d) no manifest at all -> skip, no crash
+rm -f "$IT/portable-manifest.json"
+out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
+has "$out" "runner integrity: no reference hash in manifest (older install) - skipped" "no manifest -> skip line"
+ck 0 $rc "no manifest -> doctor exit unchanged, no crash"
+# (e) hash generation deterministic: sync.mjs run twice => byte-identical manifest
+cp "$HERE/../portable-manifest.json" "$IT/pm.before"
+node "$HERE/../npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1
+node "$HERE/../npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1
+if cmp -s "$IT/pm.before" "$HERE/../portable-manifest.json"; then
+  echo "  ok   [hash regeneration deterministic (byte-stable manifest)]"; pass=$((pass+1))
+else
+  echo "  FAIL [hash regeneration not byte-stable]"; fail=$((fail+1))
+fi
+rm -rf "$IT"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

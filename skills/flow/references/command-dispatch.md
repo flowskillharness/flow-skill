@@ -35,7 +35,7 @@ is no fragment loader (ADR-0001).
 | `/flow debt add\|list` | `bash <skill>/runner/flow.sh debt add\|list` | Record/list skips in `DEBT.md`. Security-class is operator-authored only. |
 | `/flow design <file>` | `bash <skill>/runner/flow.sh design <file>` | Advisory DESIGN.md mechanical check; pair `design-review-checklist.md` for UI cards. |
 | `/flow harness <args>` | `bash <skill>/runner/flow.sh harness <args>` | Passthrough to the durable-layer CLI; visible output + real exit. Use `recall` to read back. |
-| `/flow doctor` | `bash <skill>/runner/flow.sh doctor` | Relay FAIL as the fix list. Read-only. |
+| `/flow doctor` | `bash <skill>/runner/flow.sh doctor` | Relay FAIL as the fix list. Read-only. Also verifies runner integrity against the manifest hash (loud FAIL on drift; skipped on older installs without it). |
 | `/flow promote <file>` | `bash <skill>/runner/flow.sh promote <file> \| --suggest` | Copy playbook into `~/.claude/flow/playbooks` for cross-project `recall`, or suggest draft playbooks (`--suggest`) whose actions are derived from recorded harness patterns (>=2 occurrences); no generic advice is invented. |
 | `/flow mode teach` | `bash <skill>/runner/flow.sh mode teach` | Confirm; host gatekeeps, operator authors. |
 | `/flow mode work` | `bash <skill>/runner/flow.sh mode work` | Interview once, draft 00-05, pause for scope sign-off; same gates. See `references/mode-work.md`. |

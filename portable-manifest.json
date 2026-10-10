@@ -82,5 +82,8 @@
     "agents_and_packaging": "claudekit-engineer",
     "method_and_review": "BMAD-METHOD",
     "principles": "research-report-agent-orchestration-2026.md"
+  },
+  "hashes": {
+    "skills/flow/runner/flow.sh": "e88e2685d09596672a0bc129a421a094a1f07b397070ee7e4e78c3636d88183d"
   }
 }

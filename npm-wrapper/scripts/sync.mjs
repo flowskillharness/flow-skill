@@ -4,6 +4,7 @@
 // `--compare <extracted> <repo>` is an argv short-circuit BEFORE any copy. It walks both
 // trees with the same shouldShip predicate used by the copy filter (Phase 7 will extend
 // that one function — do not fork the exclusion list in bash).
+import { createHash } from 'node:crypto';
 import {
   cpSync,
   existsSync,
@@ -187,4 +188,17 @@ writeFileSync(
   ) + '\n'
 );
 
-console.log(`sync OK: ${dstFiles.length} files, skills-manifest.json emitted`);
+// C5 — pack-time runner integrity hash. sync.mjs is the only writer of the `hashes` object in
+// portable-manifest.json (the rest of that manifest stays hand-maintained): the SHA256 of the
+// source runner is recomputed here on every pack (prepack runs this file), so the recorded
+// reference always matches the bytes that ship. Never hand-edit the hash; re-run this script.
+const manifestPath = resolve(pkgRoot, '..', 'portable-manifest.json');
+const runnerRel = 'skills/flow/runner/flow.sh';
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+manifest.hashes = manifest.hashes || {};
+manifest.hashes[runnerRel] = createHash('sha256')
+  .update(readFileSync(join(src, 'runner', 'flow.sh')))
+  .digest('hex');
+writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
+console.log(`sync OK: ${dstFiles.length} files, skills-manifest.json emitted, runner hash ${manifest.hashes[runnerRel].slice(0, 8)}...`);

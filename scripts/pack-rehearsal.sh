@@ -59,6 +59,25 @@ EXTRACTED="$WORKDIR/extract/package/skills/flow"
 # Shared JS predicate — argv branch before copy. Not an unfiltered diff -r.
 node "$WRAP/scripts/sync.mjs" --compare "$EXTRACTED" "$ROOT/skills/flow"
 
+# C5 — pack verification: the packaged runner's sha256 must equal the pack-time hash that
+# sync.mjs (prepack) recorded in portable-manifest.json. Mismatch = tampered/drifted bytes.
+EXPECT="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$ROOT/portable-manifest.json" | head -1)"
+if [ -n "$EXPECT" ]; then
+  if command -v shasum >/dev/null 2>&1; then
+    GOT="$(shasum -a 256 "$EXTRACTED/runner/flow.sh" | awk '{print $1}')"
+  else
+    GOT="$(sha256sum "$EXTRACTED/runner/flow.sh" | awk '{print $1}')"
+  fi
+  if [ "$GOT" = "$EXPECT" ]; then
+    echo "runner hash verified: ${EXPECT%"${EXPECT#????????}"}..."
+  else
+    echo "FAIL: packaged runner sha256 mismatch (manifest ${EXPECT%"${EXPECT#????????}"}... vs packaged ${GOT%"${GOT#????????}"}...)" >&2
+    exit 1
+  fi
+else
+  echo "runner hash: no hashes entry in portable-manifest.json - skipped (regenerate via sync.mjs)"
+fi
+
 # Local tarball only. --ignore-scripts: do not re-run prepack on the installed copy.
 npm i --no-audit --no-fund --ignore-scripts --prefix "$PREFIX" "$PACKED"
 BIN="$PREFIX/node_modules/.bin/flow-skill"
