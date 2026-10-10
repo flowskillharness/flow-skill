@@ -1,8 +1,9 @@
 ---
 import Landing from '../layouts/Landing.astro';
 import InstallLockup from '../components/InstallLockup.astro';
+import { getVersions } from '../lib/versions';
 
-const command = 'npx @manhquy/flow-skill@next';
+const { command } = await getVersions();
 const tutorial = '/docs/tutorials/install-and-first-run/';
 const stages = [
 	{ name: 'Idea', file: 'flow/00-idea.md' },
