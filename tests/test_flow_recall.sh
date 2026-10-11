@@ -8,6 +8,10 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 H="$HERE/../skills/flow/harness/flow_harness.py"
 PY="$(command -v python3 || command -v python || true)"
+# Windows consoles may default to a legacy codepage; pin UTF-8 so em-dash output
+# from the harness round-trips into grep assertions unchanged.
+export PYTHONUTF8=1
+export PYTHONIOENCODING=utf-8
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
@@ -138,17 +142,19 @@ if [ -n "$PY" ]; then
   out_ro="$(bash "$RUN" promote --suggest 2>&1)"; rc_ro=$?
   ck 0 "$rc_ro" "promote --suggest exit 0 without harness init"
   has "$out_ro" "no patterns meet the >=2 occurrence bar yet" "no-patterns message shown without DB"
-  db_exists="$("$PY" -c "
+  db_exists="$("$PY" - "$HERE/../skills/flow/harness/_db.py" "$SB" <<'PYEOF'
 import importlib.util, os, sys
-spec = importlib.util.spec_from_file_location('fdb', r'$HERE/../skills/flow/harness/_db.py')
+db_py, sb = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location('fdb', db_py)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
-p = m.default_db_path(r'$SB')
+p = m.default_db_path(sb)
 print('db:' + str(os.path.isfile(p)))
 print('wal:' + str(os.path.isfile(p + '-wal') or os.path.isfile(p + '-shm')))
-d = os.path.join(r'$SB', '.flow')
+d = os.path.join(sb, '.flow')
 print('flow-only:' + str(not os.path.isdir(d) or all(f in ('events.jsonl', 'cycle_id') for f in os.listdir(d))))
-")"
+PYEOF
+)"
   has "$db_exists" "db:False" "no DB file minted by read-only suggest"
   has "$db_exists" "wal:False" "no DB wal/shm minted by read-only suggest"
   has "$db_exists" "flow-only:True" ".flow holds only runner telemetry (no harness artifacts)"
