@@ -27,7 +27,7 @@ required.
 | | |
 |---|---|
 | **Skill product** | **v0.33.0** |
-| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) **0.7.x** (`@latest` 0.7.3 ships the skill above) |
+| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) **0.7.x** (`@latest` 0.7.4 ships the skill above) |
 | **Website** | **[flowskill.io.vn](https://flowskill.io.vn)** |
 | **Tests / CI** | [`tests/manifest.txt`](tests/manifest.txt) · Ubuntu · macOS · Windows |
 | **License** | MIT |
@@ -53,7 +53,7 @@ installer.
 
 Two version numbers (intentional): npm package = installer CLI; skill product
 = `SKILL.md` `metadata.version`. `--help` prints both:
-`flow-skill v0.7.3 (ships skill v0.33.0)`.
+`flow-skill v0.7.4 (ships skill v0.33.0)`.
 
 Walkthrough: [Install and first run](https://flowskill.io.vn/docs/tutorials/install-and-first-run/).
 Flags: [npm-wrapper/README.md](./npm-wrapper/README.md).

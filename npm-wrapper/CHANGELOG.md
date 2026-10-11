@@ -3,6 +3,17 @@
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
 
+## [0.7.4] — 2026-10-11 — ships skill v0.33.0 (stable / latest)
+
+Documentation and brand release. Adds theme-aware gate-mark brand header to npm-wrapper READMEs (English and Vietnamese). Ships skill product **v0.33.0**. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
+
+### Added
+- Theme-aware brand header lockup (`brand-lockup-dark.svg` / `brand-lockup-light.svg`) to `npm-wrapper/README.md` and `npm-wrapper/README_VN.md`.
+
+### Changed
+- Bundled skill tree re-synced from monorepo `skills/flow/`.
+- Install: **`npx @manhquy/flow-skill@latest`**.
+
 ## [0.7.3] — 2026-09-17 — ships skill v0.33.0 (stable / latest)
 
 Skill-content release. Ships skill product **v0.33.0** (`status --json` /
