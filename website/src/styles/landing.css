@@ -83,6 +83,20 @@ code {
 	box-shadow: inset 0 -1px 0 var(--ink);
 }
 
+.brand-lockup {
+	display: inline-flex;
+	align-items: center;
+	text-decoration: none;
+	line-height: 1;
+}
+
+.brand-lockup img {
+	height: 36px;
+	width: auto;
+	display: block;
+	max-width: 100%;
+}
+
 .docket-nav {
 	display: flex;
 	align-items: center;
