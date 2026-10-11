@@ -27,6 +27,23 @@ else
   fail "npm version equals skill (usually accidental)"
 fi
 
+# C5 — the pack-time runner hash recorded by sync.mjs must match the checkout runner bytes.
+manifest_h="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' portable-manifest.json | head -1)"
+if [ -n "$manifest_h" ]; then
+  if command -v shasum >/dev/null 2>&1; then
+    live_h="$(shasum -a 256 skills/flow/runner/flow.sh | awk '{print $1}')"
+  else
+    live_h="$(sha256sum skills/flow/runner/flow.sh | awk '{print $1}')"
+  fi
+  if [ "$manifest_h" = "$live_h" ]; then
+    ok "runner hash matches manifest (${manifest_h%"${manifest_h#????????}"})"
+  else
+    fail "runner hash mismatch (manifest ${manifest_h%"${manifest_h#????????}"} vs checkout ${live_h%"${live_h#????????}"}) - re-run sync.mjs"
+  fi
+else
+  fail "portable-manifest.json missing hashes entry for skills/flow/runner/flow.sh (re-run sync.mjs)"
+fi
+
 grep -qE "v${skill_v}|${skill_v}" README.md && ok "README mentions skill $skill_v" || fail "README missing skill $skill_v"
 grep -q "$npm_v" npm-wrapper/package.json && ok "npm package.json $npm_v" || fail "npm package.json missing version"
 

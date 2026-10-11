@@ -6,6 +6,12 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
+H="$HERE/../skills/flow/harness/flow_harness.py"
+PY="$(command -v python3 || command -v python || true)"
+# Windows consoles may default to a legacy codepage; pin UTF-8 so em-dash output
+# from the harness round-trips into grep assertions unchanged.
+export PYTHONUTF8=1
+export PYTHONIOENCODING=utf-8
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
@@ -77,6 +83,83 @@ has "$out" "Prior knowledge to carry" "card prints the prior-knowledge block"
 has "$out" "established the auth pattern" "card carries the previous card's Scope forward"
 has "$out" "open debt:" "card surfaces open debt at creation time"
 rm -rf "$SB"
+
+echo "H) promote --suggest: draft playbook suggestions from recurring harness patterns (C7)"
+# (c) zero patterns => the no-patterns line exit 0
+newsb
+out_c="$(bash "$RUN" promote --suggest 2>&1)"; rc_c=$?
+ck 0 "$rc_c" "zero patterns exit 0"
+has "$out_c" "no patterns meet the >=2 occurrence bar yet" "zero patterns message shown"
+rm -rf "$SB"
+
+# (d) harness unavailable => loud degrade, exit 0
+newsb
+out_d="$(FLOW_HARNESS_DISABLE=1 bash "$RUN" promote --suggest 2>&1)"; rc_d=$?
+ck 0 "$rc_d" "harness unavailable exit 0"
+has "$out_d" "durable layer unavailable" "degrade message shown"
+rm -rf "$SB"
+
+# (a), (b), (e) synthetic DB with a 2-occurrence pattern + 1-occurrence pattern
+if [ -n "$PY" ]; then
+  newsb
+  "$PY" "$H" init >/dev/null 2>&1
+  # 2-occurrence friction pattern: "docker layer cache stale"
+  "$PY" "$H" trace --summary 't1' --outcome completed --friction 'docker layer cache stale' >/dev/null 2>&1
+  "$PY" "$H" trace --summary 't2' --outcome completed --friction 'docker layer cache stale' >/dev/null 2>&1
+  # 1-occurrence friction pattern: "rare one off network timeout"
+  "$PY" "$H" trace --summary 't3' --outcome completed --friction 'rare one off network timeout' >/dev/null 2>&1
+
+  out_p="$(bash "$RUN" promote --suggest 2>&1)"; rc_p=$?
+  ck 0 "$rc_p" "promote --suggest exit 0"
+  # (a) 2-occurrence pattern appears
+  has "$out_p" "Reduce repeated friction" "2-occurrence pattern draft title present"
+  has "$out_p" "docker layer cache stale" "2-occurrence pattern text present"
+  has "$out_p" "## Suggested action (from 2 recorded occurrences)" "derived action header with count present"
+  has "$out_p" "Recorded 2 time(s) — review the instances before acting." "recorded-count final line present"
+  no "$out_p" "Resolve the listed audit findings or record why they are intentionally retained." "generic audit advice absent"
+  # (b) 1-occurrence pattern absent
+  no "$out_p" "rare one off network timeout" "1-occurrence pattern absent"
+  # (e) output includes review/save instruction
+  has "$out_p" "Review each draft below" "review instruction present"
+  has "$out_p" "flow promote <file>" "save via flow promote instruction present"
+  has "$out_p" "1 qualifying pattern(s)" "count line present"
+
+  # (e) cap test: add 11 more distinct 2-occurrence patterns (total 12)
+  for i in $(seq 1 11); do
+    "$PY" "$H" trace --summary "t$i-a" --outcome completed --friction "recurring friction item $i" >/dev/null 2>&1
+    "$PY" "$H" trace --summary "t$i-b" --outcome completed --friction "recurring friction item $i" >/dev/null 2>&1
+  done
+
+  out_cap="$(bash "$RUN" promote --suggest 2>&1)"; rc_cap=$?
+  ck 0 "$rc_cap" "capped promote --suggest exit 0"
+  has "$out_cap" "Showing top 10 of 12 qualifying pattern(s)" "cap line reflects top 10 of 12"
+  rm -rf "$SB"
+fi
+
+# read-only promote --suggest: no harness init -> no-patterns message, no harness DB/WAL/schema side effects
+if [ -n "$PY" ]; then
+  newsb
+  out_ro="$(bash "$RUN" promote --suggest 2>&1)"; rc_ro=$?
+  ck 0 "$rc_ro" "promote --suggest exit 0 without harness init"
+  has "$out_ro" "no patterns meet the >=2 occurrence bar yet" "no-patterns message shown without DB"
+  db_exists="$("$PY" - "$HERE/../skills/flow/harness/_db.py" "$SB" <<'PYEOF'
+import importlib.util, os, sys
+db_py, sb = sys.argv[1], sys.argv[2]
+spec = importlib.util.spec_from_file_location('fdb', db_py)
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+p = m.default_db_path(sb)
+print('db:' + str(os.path.isfile(p)))
+print('wal:' + str(os.path.isfile(p + '-wal') or os.path.isfile(p + '-shm')))
+d = os.path.join(sb, '.flow')
+print('flow-only:' + str(not os.path.isdir(d) or all(f in ('events.jsonl', 'cycle_id') for f in os.listdir(d))))
+PYEOF
+)"
+  has "$db_exists" "db:False" "no DB file minted by read-only suggest"
+  has "$db_exists" "wal:False" "no DB wal/shm minted by read-only suggest"
+  has "$db_exists" "flow-only:True" ".flow holds only runner telemetry (no harness artifacts)"
+  rm -rf "$SB"
+fi
 
 echo
 echo "RESULT: $pass passed, $fail failed"

@@ -295,3 +295,37 @@ guard so an in-flight or in-postmortem run's dir cannot be pruned under the oper
 3. If the storm was rate-limit: wait past the window (typically minutes), then rerun.
 4. If persistent: capture the `.err` line in a comment, escalate — this is when a throttled
    `rate_limit_info` sample would land in the corpus and let `rate_limited` become authoritative.
+
+## eval --diff
+
+Offline longitudinal regression classifier across eval batches or model bumps.
+Mutually exclusive with live eval or replay (`flow.sh eval --diff <old_results> <new_results>`).
+Zero model calls, zero new runtime dependencies, deterministic.
+
+If multiple batches exist in an input results file, `--diff` compares the latest complete batch
+(falling back to the latest batch `run_id` present). Fixture expectations are resolved from each
+row's own `expected` field, falling back to `$EVAL_MANIFEST` (field 4).
+
+Classification is correctness-relative (`correct = verdict == expected`):
+
+| Old State | New State | Classification | Description |
+|-----------|-----------|----------------|-------------|
+| Correct (`old == expected`) | Correct (`new == expected`) | `UNCHANGED` | Intended verdict preserved (PASS→PASS on sound, FLAG→FLAG on hollow) |
+| Correct (`old == expected`) | Incorrect (`new != expected`) | `REGRESSED` | Previously correct fixture eroded (e.g. PASS→FLAG on sound, FLAG→PASS on hollow) |
+| Incorrect (`old != expected`) | Correct (`new == expected`) | `IMPROVED` | Previously failing/misclassified fixture now matches expected |
+| Incorrect (`old != expected`) | Incorrect (`new != expected`) | `SATURATED` | Neither run reached expected verdict (e.g. PASS→PASS on hollow, FLAG→INVALID) |
+| present | absent | `removed` | Fixture present only in old results |
+| absent | present | `added` | Fixture present only in new results |
+| unknown expected | any | `unknown` | Fixture missing expected verdict in both records and manifest |
+| `expected_old != expected_new` | any | `expectation-changed` | Expected verdict changed between runs; displayed as `OLD→NEW` in expected column; does not count as regressed or improved |
+
+An `INVALID` or `UNRELIABLE` verdict represents an infra/parse/timeout failure and never matches an expected `PASS` or `FLAG`. An `INVALID` outcome on a previously correct fixture is always classified as `REGRESSED`. Unknown fixtures (`expected` unresolvable) show `unknown` and never flip the exit code.
+
+### Output and exit codes
+
+Prints a compact aligned table (`id`, `expected`, `old`, `new`, `classification`) followed by summary counts:
+`N regressed, M improved, K saturated, U unchanged, E expectation-changed`.
+
+- Exit `0`: clean comparison (0 regressed).
+- Exit `1`: regression detected (≥1 fixture classified as `REGRESSED`).
+- Exit `2`: missing, unreadable, or containing no fixture records.

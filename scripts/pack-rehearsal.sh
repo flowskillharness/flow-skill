@@ -11,6 +11,7 @@ WORKDIR=""
 PREFIX=""
 DEST=""
 PACKED=""
+NL="\n"
 
 cleanup() {
   [ -n "$WORKDIR" ] && rm -rf "$WORKDIR"
@@ -59,6 +60,38 @@ EXTRACTED="$WORKDIR/extract/package/skills/flow"
 # Shared JS predicate — argv branch before copy. Not an unfiltered diff -r.
 node "$WRAP/scripts/sync.mjs" --compare "$EXTRACTED" "$ROOT/skills/flow"
 
+# C5 — pack verification: the packaged runner's sha256 must equal the pack-time hash that
+# sync.mjs (prepack) recorded in portable-manifest.json. Mismatch = tampered/drifted bytes.
+EXPECT="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$ROOT/portable-manifest.json" | head -1)"
+if [ -n "$EXPECT" ]; then
+  if command -v shasum >/dev/null 2>&1; then
+    GOT="$(shasum -a 256 "$EXTRACTED/runner/flow.sh" | awk '{print $1}')"
+  else
+    GOT="$(sha256sum "$EXTRACTED/runner/flow.sh" | awk '{print $1}')"
+  fi
+  if [ "$GOT" = "$EXPECT" ]; then
+    echo "runner hash verified: ${EXPECT%"${EXPECT#????????}"}..."
+  else
+    echo "FAIL: packaged runner sha256 mismatch (manifest ${EXPECT%"${EXPECT#????????}"}... vs packaged ${GOT%"${GOT#????????}"}...)" >&2
+    exit 1
+  fi
+else
+  echo "FAIL: no hashes entry in portable-manifest.json (run node npm-wrapper/scripts/sync.mjs)" >&2
+  exit 1
+fi
+
+# C5 receipt — the tarball must carry the skill-adjacent receipt (doctor's preferred source on
+# real installs, where repo-root portable-manifest.json does not ship), and its hash must equal
+# the sha256 of the extracted runner.
+RECEIPT="$EXTRACTED/manifest-hashes.json"
+[ -f "$RECEIPT" ] || { echo "FAIL: tarball missing skills/flow/manifest-hashes.json (receipt not shipped)" >&2; exit 1; }
+RECEIPT_HASH="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$RECEIPT" | head -1)"
+[ -n "$RECEIPT_HASH" ] && [ "$RECEIPT_HASH" = "$GOT" ] || {
+  echo "FAIL: manifest-hashes.json receipt hash mismatch (receipt ${RECEIPT_HASH:-missing} vs packaged ${GOT%"${GOT#????????}"})" >&2
+  exit 1
+}
+echo "receipt hash verified: ${RECEIPT_HASH%"${RECEIPT_HASH#????????}"}..."
+
 # Local tarball only. --ignore-scripts: do not re-run prepack on the installed copy.
 npm i --no-audit --no-fund --ignore-scripts --prefix "$PREFIX" "$PACKED"
 BIN="$PREFIX/node_modules/.bin/flow-skill"
@@ -86,5 +119,27 @@ fi
 
 # Zero-arg invoke is a job bug — always pass the installed runner as $1.
 bash "$ROOT/tests/e2e-installed-drive.sh" "$RUN"
+
+# C5 installed-artifact check — doctor must verify the live runner via the shipped receipt:
+# clean install => ok; tampered bytes => loud FAIL + nonzero; restored bytes => ok again.
+INSTALLED_RECEIPT="$DEST/.claude/skills/flow/manifest-hashes.json"
+[ -f "$INSTALLED_RECEIPT" ] || { echo "FAIL: install missing manifest-hashes.json receipt at $INSTALLED_RECEIPT" >&2; exit 1; }
+OUT="$(bash "$RUN" doctor 2>&1)" || { echo "FAIL: doctor failed on clean install:$NL$OUT" >&2; exit 1; }
+printf '%s\n' "$OUT" | grep -q "runner integrity: ok" || { echo "FAIL: doctor did not print 'runner integrity: ok' on clean install:$NL$OUT" >&2; exit 1; }
+echo "doctor on installed artifact: runner integrity: ok"
+
+cp "$RUN" "$RUN.bak"
+printf '\n' >> "$RUN"
+rc=0; OUT="$(bash "$RUN" doctor 2>&1)" || rc=$?
+if [ "$rc" -eq 0 ]; then echo "FAIL: doctor exited 0 on tampered installed runner" >&2; exit 1; fi
+if ! printf '%s\n' "$OUT" | grep -q "FAIL: runner integrity"; then
+  echo "FAIL: doctor did not flag tampered installed runner:$NL$OUT" >&2
+  exit 1
+fi
+echo "doctor on installed artifact: tamper detected -> FAIL + nonzero (rc=$rc)"
+mv "$RUN.bak" "$RUN" || exit 1
+OUT="$(bash "$RUN" doctor 2>&1)" || { echo "FAIL: doctor failed after restore:$NL$OUT" >&2; exit 1; }
+printf '%s\n' "$OUT" | grep -q "runner integrity: ok" || { echo "FAIL: doctor not ok after restore:$NL$OUT" >&2; exit 1; }
+echo "doctor on installed artifact: restored -> runner integrity: ok"
 
 echo "pack-rehearsal OK (runner=$RUN)"

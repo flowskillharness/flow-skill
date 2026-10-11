@@ -10,3 +10,5 @@ fcdd	card	cards/C-001.md	FLAG
 fcde	card	cards/C-001.md	PASS
 f05a	05-contract	flow/05-contract.md	PASS
 f05b	05-contract	flow/05-contract.md	FLAG
+f06_sound	05-contract	flow/05-contract.md	PASS
+f06_injected	05-contract	flow/05-contract.md	FLAG

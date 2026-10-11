@@ -4,6 +4,7 @@
 // `--compare <extracted> <repo>` is an argv short-circuit BEFORE any copy. It walks both
 // trees with the same shouldShip predicate used by the copy filter (Phase 7 will extend
 // that one function — do not fork the exclusion list in bash).
+import { createHash } from 'node:crypto';
 import {
   cpSync,
   existsSync,
@@ -61,7 +62,10 @@ function compareTrees(extracted, repo) {
     return 1;
   }
 
-  const extractedFiles = listFiles(extracted).sort();
+  // The bundled-only receipt (written by this script at pack time, after the copy) is expected
+  // extra in the extracted tree; its contents are verified in pack-rehearsal.sh.
+  const RECEIPT = 'manifest-hashes.json';
+  const extractedFiles = listFiles(extracted).sort().filter((f) => f !== RECEIPT);
   const repoFiles = listFiles(repo).sort();
   if (extractedFiles.length === 0) {
     console.error(`FAIL: extracted tree has zero shouldShip files: ${extracted}`);
@@ -165,7 +169,12 @@ if (
   process.exit(1);
 }
 
-// L25 — NO .integrity emission (circular trust). Rely on npm provenance for tamper detection.
+// Trust model: the co-shipped receipt (manifest-hashes.json) lets `flow doctor` detect
+// POST-INSTALL drift of the runner only (live bytes vs receipt). It does NOT establish package
+// authenticity — an attacker rewriting runner AND receipt together is invisible to doctor;
+// that remains npm provenance/registry's job (hence the receipt ships in the tarball rather
+// than being self-signed). L25's circular-trust objection applied to a self-emitted integrity
+// file as an authenticity claim; this receipt makes no such claim.
 // skills-manifest.json still ships as a completeness signal (file count + list).
 // v0.23 M3 fix — `source` used to be `resolve()`d to an absolute local filesystem path (e.g.
 // D:\project\flow\...) and that absolute path shipped inside the published npm tarball
@@ -187,4 +196,27 @@ writeFileSync(
   ) + '\n'
 );
 
-console.log(`sync OK: ${dstFiles.length} files, skills-manifest.json emitted`);
+// C5 — pack-time runner integrity hash. sync.mjs is the only writer of the `hashes` object in
+// portable-manifest.json (the rest of that manifest stays hand-maintained): the SHA256 of the
+// source runner is recomputed here on every pack (prepack runs this file), so the recorded
+// reference always matches the bytes that ship. Never hand-edit the hash; re-run this script.
+const manifestPath = resolve(pkgRoot, '..', 'portable-manifest.json');
+const runnerRel = 'skills/flow/runner/flow.sh';
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+manifest.hashes = manifest.hashes || {};
+manifest.hashes[runnerRel] = createHash('sha256')
+  .update(readFileSync(join(src, 'runner', 'flow.sh')))
+  .digest('hex');
+writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
+// C5 receipt — also write the hash INSIDE the bundled skill so real npm installs can verify:
+// package.json `files:` does not ship repo-root portable-manifest.json, but skills/ is
+// allowlisted, so this receipt travels with the install and `doctor` prefers it. Computed from
+// the bundled copy (identical to source after the parity check above). Deterministic: no
+// timestamps, fixed shape.
+writeFileSync(
+  join(dst, 'manifest-hashes.json'),
+  JSON.stringify({ [runnerRel]: manifest.hashes[runnerRel] }, null, 2) + '\n'
+);
+
+console.log(`sync OK: ${dstFiles.length} files, skills-manifest.json emitted, runner hash ${manifest.hashes[runnerRel].slice(0, 8)}...`);
