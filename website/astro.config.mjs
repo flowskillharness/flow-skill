@@ -63,7 +63,7 @@ export default defineConfig({
 					tag: 'meta',
 					attrs: {
 						property: 'og:image',
-						content: 'https://flowskill.io.vn/brand/og-image-1200x630.png',
+						content: 'https://flowskill.io.vn/brand/icons/og-image-1200x630.png',
 					},
 				},
 				{
@@ -83,8 +83,15 @@ export default defineConfig({
 				{
 					tag: 'meta',
 					attrs: {
+						name: 'twitter:card',
+						content: 'summary_large_image',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
 						name: 'twitter:image',
-						content: 'https://flowskill.io.vn/brand/og-image-1200x630.png',
+						content: 'https://flowskill.io.vn/brand/icons/og-image-1200x630.png',
 					},
 				},
 			],
@@ -133,13 +140,10 @@ export default defineConfig({
 				},
 			],
 			customCss: [
-				'./node_modules/@fontsource/big-shoulders-display/700.css',
-				'./node_modules/@fontsource/big-shoulders-display/800.css',
 				'./node_modules/@fontsource/archivo/400.css',
 				'./node_modules/@fontsource/archivo/600.css',
 				'./node_modules/@fontsource/archivo/700.css',
 				'./node_modules/@fontsource/azeret-mono/500.css',
-				'./src/styles/galley.css',
 				'./src/styles/docs.css',
 			],
 			components: {

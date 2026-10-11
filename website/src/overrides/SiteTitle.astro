@@ -5,10 +5,8 @@ const siteTitle = Astro.props.siteTitle ?? Astro.locals.starlightRoute?.siteTitl
 ---
 
 <a href={href} class="brand-lockup" aria-label="flow — gated build harness for coding agents">
-	<picture>
-		<source media="(prefers-color-scheme: dark)" srcset="/brand/brand-lockup-dark.svg" />
-		<img src="/brand/brand-lockup-light.svg" alt="flow — gated build harness for coding agents" width="156" height="42" />
-	</picture>
+	<img class="site-logo-dark" src="/brand/brand-lockup-dark.svg" alt="flow — gated build harness for coding agents" width="156" height="42" />
+	<img class="site-logo-light" src="/brand/brand-lockup-light.svg" alt="flow — gated build harness for coding agents" width="156" height="42" />
 	<span class="sr-only" translate="no">{siteTitle}</span>
 </a>
 
@@ -23,9 +21,20 @@ const siteTitle = Astro.props.siteTitle ?? Astro.locals.starlightRoute?.siteTitl
 		.brand-lockup img {
 			height: 36px;
 			width: auto;
-			display: block;
 			max-width: 100%;
 			object-fit: contain;
+		}
+		.site-logo-dark {
+			display: block;
+		}
+		.site-logo-light {
+			display: none;
+		}
+		:global([data-theme='light']) .site-logo-dark {
+			display: none;
+		}
+		:global([data-theme='light']) .site-logo-light {
+			display: block;
 		}
 		.sr-only {
 			position: absolute;
