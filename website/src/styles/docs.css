@@ -1,21 +1,172 @@
-/*
- * Docs chrome on the Galley Proof press. Tokens live in galley.css.
- * Unlayered so these beat Starlight @layer starlight.core / .content.
+/**
+ * flow docs theme styling
+ * Brand Tokens & Rules: brand/brand-guidelines.md, brand/tokens.css
+ * Palette: Ink #0F172A, Mist #E2E8F0, Paper #F8FAFC, Signal Teal #1AA3C4, Teal Deep #0A4E5E, Teal Bright #5BC8DE
  */
 
+/* ==========================================================================
+   1. Brand Tokens & Starlight CSS Custom Properties
+   ========================================================================== */
+
+:root {
+	/* Brand Color Tokens */
+	--flow-color-teal-signal: #1AA3C4;
+	--flow-color-teal-deep: #0A4E5E;
+	--flow-color-teal-bright: #5BC8DE;
+	--flow-color-ink: #0F172A;
+	--flow-color-ink-soft: #334155;
+	--flow-color-mist: #E2E8F0;
+	--flow-color-paper: #F8FAFC;
+	--flow-color-pass: #22C55E;
+	--flow-color-warn: #F59E0B;
+	--flow-color-fail: #EF4444;
+
+	/* Font Stacks */
+	--sl-font: Inter, Archivo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--sl-font-system: var(--sl-font);
+	--sl-font-mono: 'JetBrains Mono', 'Azeret Mono', 'SF Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace;
+	--__sl-font: var(--sl-font);
+	--__sl-font-mono: var(--sl-font-mono);
+
+	/* Starlight Dark Theme Tokens (Default) - Ink #0F172A ground */
+	--sl-color-white: #F8FAFC;
+	--sl-color-gray-1: #E2E8F0;
+	--sl-color-gray-2: #CBD5E1;
+	--sl-color-gray-3: #94A3B8;
+	--sl-color-gray-4: #475569;
+	--sl-color-gray-5: #334155;
+	--sl-color-gray-6: #1E293B;
+	--sl-color-gray-7: #131D31;
+	--sl-color-black: #0F172A;
+
+	/* Accents (Dark theme: Teal Signal & Teal Bright) */
+	--sl-color-accent-low: #082F3B;
+	--sl-color-accent: #1AA3C4;
+	--sl-color-accent-high: #5BC8DE;
+
+	/* Starlight Semantic UI Mappings */
+	--sl-color-text: var(--sl-color-gray-1);
+	--sl-color-text-accent: #5BC8DE;
+	--sl-color-text-invert: #0F172A;
+	--sl-color-bg: #0F172A;
+	--sl-color-bg-nav: #0F172A;
+	--sl-color-bg-sidebar: #0B1120;
+	--sl-color-bg-inline-code: #1E293B;
+	--sl-color-bg-accent: #1AA3C4;
+	--sl-color-hairline: #1E293B;
+	--sl-color-hairline-light: #334155;
+	--sl-color-hairline-shade: #0B1120;
+	--sl-color-backdrop-overlay: rgba(15, 23, 42, 0.75);
+
+	/* Functional Status Tokens */
+	--sl-color-green-high: #4ADE80;
+	--sl-color-green: #22C55E;
+	--sl-color-green-low: rgba(34, 197, 94, 0.15);
+	--sl-color-orange-high: #FBBF24;
+	--sl-color-orange: #F59E0B;
+	--sl-color-orange-low: rgba(245, 158, 11, 0.15);
+	--sl-color-red-high: #F87171;
+	--sl-color-red: #EF4444;
+	--sl-color-red-low: rgba(239, 68, 68, 0.15);
+	--sl-color-blue-high: #5BC8DE;
+	--sl-color-blue: #1AA3C4;
+	--sl-color-blue-low: rgba(26, 163, 196, 0.15);
+	--sl-color-purple-high: #C084FC;
+	--sl-color-purple: #A855F7;
+	--sl-color-purple-low: rgba(168, 85, 247, 0.15);
+
+	color-scheme: dark;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] ::backdrop {
+	/* Starlight Light Theme Tokens - Paper #F8FAFC ground */
+	--sl-color-white: #0F172A;
+	--sl-color-gray-1: #1E293B;
+	--sl-color-gray-2: #334155;
+	--sl-color-gray-3: #64748B;
+	--sl-color-gray-4: #94A3B8;
+	--sl-color-gray-5: #CBD5E1;
+	--sl-color-gray-6: #E2E8F0;
+	--sl-color-gray-7: #F1F5F9;
+	--sl-color-black: #F8FAFC;
+
+	/* Accents (Light theme: Teal Deep for accessible text contrast ≥ 7:1) */
+	--sl-color-accent-low: #E0F2FE;
+	--sl-color-accent: #0A4E5E;
+	--sl-color-accent-high: #0A4E5E;
+
+	/* Starlight Semantic UI Mappings */
+	--sl-color-text: #0F172A;
+	--sl-color-text-accent: #0A4E5E;
+	--sl-color-text-invert: #F8FAFC;
+	--sl-color-bg: #F8FAFC;
+	--sl-color-bg-nav: #F8FAFC;
+	--sl-color-bg-sidebar: #F1F5F9;
+	--sl-color-bg-inline-code: #E2E8F0;
+	--sl-color-bg-accent: #0A4E5E;
+	--sl-color-hairline: #E2E8F0;
+	--sl-color-hairline-light: #CBD5E1;
+	--sl-color-hairline-shade: #E2E8F0;
+	--sl-color-backdrop-overlay: rgba(15, 23, 42, 0.45);
+
+	/* Functional Status Tokens (Light mode) */
+	--sl-color-green-high: #15803D;
+	--sl-color-green: #22C55E;
+	--sl-color-green-low: #DCFCE7;
+	--sl-color-orange-high: #B45309;
+	--sl-color-orange: #F59E0B;
+	--sl-color-orange-low: #FEF3C7;
+	--sl-color-red-high: #B91C1C;
+	--sl-color-red: #EF4444;
+	--sl-color-red-low: #FEE2E2;
+	--sl-color-blue-high: #0A4E5E;
+	--sl-color-blue: #1AA3C4;
+	--sl-color-blue-low: #E0F2FE;
+	--sl-color-purple-high: #7E22CE;
+	--sl-color-purple: #A855F7;
+	--sl-color-purple-low: #F3E8FF;
+
+	color-scheme: light;
+}
+
+/* ==========================================================================
+   2. Base Document, Selection & Focus Rings
+   ========================================================================== */
+
 html {
-	background-color: var(--newsprint);
-	background-image: url('../assets/newsprint.png');
-	background-size: 256px 256px;
-	overflow-x: clip;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-text);
+	font-family: var(--sl-font);
 }
 
 body {
-	background-color: transparent;
-	overflow-x: clip;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-text);
 }
 
-/* Flex/grid children default to min-width:auto and will blow the sheet. */
+/* Selection Color: Teal-tinted */
+::selection {
+	background-color: rgba(26, 163, 196, 0.35);
+	color: inherit;
+}
+
+:root[data-theme='light'] ::selection {
+	background-color: rgba(26, 163, 196, 0.25);
+	color: #0F172A;
+}
+
+/* Focus Rings: Signal Teal / Teal Deep */
+:focus-visible {
+	outline: 2px solid var(--flow-color-teal-signal);
+	outline-offset: 2px;
+}
+
+:root[data-theme='light'] :focus-visible {
+	outline-color: var(--flow-color-teal-deep);
+}
+
+/* Layout Sheet Protection */
 .page,
 .main-frame,
 .main-pane,
@@ -26,566 +177,522 @@ body {
 	max-width: 100%;
 }
 
-/* No dark theme. The picker still mutates data-theme; chrome does not follow. */
-starlight-theme-select {
-	display: none;
-}
-
-:focus-visible {
-	outline: 2px solid var(--cyan-deep);
-	outline-offset: 2px;
-}
-
-/* ——— Header / title ——— */
+/* ==========================================================================
+   3. Header, Brand Chrome & Navigation
+   ========================================================================== */
 
 .header {
-	border-bottom: var(--rule);
+	border-bottom: 1px solid var(--sl-color-hairline);
+	background-color: var(--sl-color-bg-nav);
 }
 
-.site-title:hover,
-.site-title:focus-visible {
-	box-shadow: inset 0 -1px 0 var(--ink);
-}
-
-.site-title:focus-visible {
-	outline: 2px solid var(--cyan-deep);
-	outline-offset: 2px;
-}
-
-/* ——— Search button (header) ——— */
-
+/* Search input trigger */
 button[data-open-modal] {
-	color: var(--ink);
-	width: var(--sl-menu-button-size);
-	height: var(--sl-menu-button-size);
-	min-width: var(--sl-menu-button-size);
-	justify-content: center;
-	padding: 0;
-	border: var(--rule);
-	border-radius: 0;
-	background-color: var(--newsprint);
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.375rem;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-gray-2);
+	transition: border-color 140ms ease, color 140ms ease;
 }
 
 button[data-open-modal]:hover,
 button[data-open-modal]:focus-visible {
-	border-color: var(--cyan-deep);
-	color: var(--ink);
-	background-color: var(--newsprint-dark);
+	border-color: var(--flow-color-teal-signal);
+	color: var(--sl-color-white);
 }
 
-@media (min-width: 50rem) {
-	button[data-open-modal] {
-		width: 100%;
-		max-width: 22rem;
-		height: 2.5rem;
-		min-width: 0;
-		justify-content: flex-start;
-		padding-inline-start: 0.75rem;
-		padding-inline-end: 0.5rem;
-		border: var(--rule);
-		border-radius: 0;
-		background-color: var(--newsprint);
-		color: var(--ink);
-	}
-
-	button[data-open-modal]:hover,
-	button[data-open-modal]:focus-visible {
-		border-color: var(--cyan-deep);
-		color: var(--ink);
-		background-color: var(--newsprint-dark);
-	}
-
-	button[data-open-modal] kbd,
-	button[data-open-modal] > kbd {
-		border-radius: 0;
-		background-color: var(--newsprint-dark);
-		color: var(--ink);
-		border: var(--rule);
-	}
+:root[data-theme='light'] button[data-open-modal]:hover,
+:root[data-theme='light'] button[data-open-modal]:focus-visible {
+	border-color: var(--flow-color-teal-deep);
+	color: #0F172A;
 }
 
-/* ——— Search dialog + Pagefind ——— */
-
-site-search dialog {
-	background-color: var(--newsprint);
-	border: var(--rule);
-	border-radius: 0;
-	box-shadow: none;
+button[data-open-modal] kbd {
+	border: 1px solid var(--sl-color-gray-5);
+	background-color: var(--sl-color-gray-6);
+	color: var(--sl-color-gray-2);
+	font-family: var(--sl-font-mono);
+	border-radius: 0.25rem;
 }
 
-site-search dialog::backdrop {
-	background-color: var(--sl-color-backdrop-overlay);
-	-webkit-backdrop-filter: none;
-	backdrop-filter: none;
+/* Theme picker & Language selector */
+starlight-theme-select select,
+starlight-lang-select select {
+	border: 1px solid var(--sl-color-gray-5);
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-gray-1);
+	border-radius: 0.375rem;
+	font-family: var(--sl-font);
 }
 
-button[data-close-modal] {
-	color: var(--cyan-deep);
-	min-height: 2.75rem;
-	min-width: 4.5rem;
-	padding-inline: 0.75rem;
-	font-size: 1rem;
-	align-items: center;
-	justify-content: center;
+starlight-theme-select select:hover,
+starlight-lang-select select:hover {
+	border-color: var(--sl-color-accent);
 }
 
-site-search .dialog-frame {
-	max-width: 100%;
-	min-width: 0;
+.social-icons a {
+	color: var(--sl-color-gray-2);
+	transition: color 140ms ease;
 }
 
-#starlight__search {
-	--pagefind-ui-primary: var(--ink);
-	--pagefind-ui-text: var(--ink);
-	--pagefind-ui-background: var(--newsprint);
-	--pagefind-ui-border: var(--ink);
-	--pagefind-ui-border-width: 1px;
-	--pagefind-ui-tag: var(--newsprint-dark);
-	--pagefind-ui-border-radius: 0;
+.social-icons a:hover {
+	color: var(--flow-color-teal-bright);
 }
 
-#starlight__search .pagefind-ui__form::before {
-	--pagefind-ui-text: var(--ink);
-	opacity: 1;
+:root[data-theme='light'] .social-icons a:hover {
+	color: var(--flow-color-teal-deep);
 }
 
-#starlight__search .pagefind-ui__search-input {
-	color: var(--ink);
-	background-color: var(--newsprint);
-	border-radius: 0;
-	font-weight: 400;
-	font-size: 1rem;
-	min-height: 2.75rem;
-	max-width: 100%;
-}
-
-#starlight__search .pagefind-ui__search-input::placeholder {
-	opacity: 1;
-	color: var(--ink-soft);
-}
-
-#starlight__search input:focus {
-	--pagefind-ui-border: var(--cyan-deep);
-	outline: 2px solid var(--cyan-deep);
-	outline-offset: 0;
-}
-
-#starlight__search .pagefind-ui__search-clear:focus {
-	outline: 2px solid var(--cyan-deep);
-}
-
-#starlight__search .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)),
-#starlight__search .pagefind-ui__result-nested,
-#starlight__search .pagefind-ui__result-tags {
-	background-color: var(--newsprint-dark);
-	border-radius: 0;
-}
-
-#starlight__search .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)):hover,
-#starlight__search
-	.pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)):focus-within,
-#starlight__search .pagefind-ui__result-nested:hover,
-#starlight__search .pagefind-ui__result-nested:focus-within {
-	outline: 1px solid var(--cyan-deep);
-}
-
-#starlight__search
-	.pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)):focus-within,
-#starlight__search .pagefind-ui__result-nested:focus-within {
-	background-color: var(--newsprint-dark);
-}
-
-#starlight__search .pagefind-ui__result-link {
-	--pagefind-ui-text: var(--ink);
-	color: var(--ink);
-	overflow-wrap: anywhere;
-}
-
-#starlight__search .pagefind-ui__result-excerpt {
-	color: var(--ink-soft);
-	overflow-wrap: anywhere;
-}
-
-#starlight__search mark {
-	color: var(--ink);
-	background-color: color-mix(in srgb, var(--cyan-deep) 22%, var(--newsprint));
-	font-weight: 700;
-}
-
-/* ——— Sidebar ——— */
+/* ==========================================================================
+   4. Sidebar (Left Navigation)
+   ========================================================================== */
 
 .sidebar-pane {
 	background-color: var(--sl-color-bg-sidebar);
-	border-inline-end: var(--rule);
+	border-inline-end: 1px solid var(--sl-color-hairline);
 }
 
 .sidebar a,
 .sidebar summary {
-	border-radius: 0;
-	color: var(--ink);
+	color: var(--sl-color-gray-2);
+	border-radius: 0.25rem;
+	transition: color 140ms ease, background-color 140ms ease;
 }
 
 .sidebar a:hover,
-.sidebar a:focus-visible {
-	color: var(--ink);
-	box-shadow: inset 0 -1px 0 var(--ink);
+.sidebar summary:hover {
+	color: var(--sl-color-white);
 }
 
+/* Active sidebar item */
 .sidebar a[aria-current='page'],
 .sidebar a[aria-current='page']:hover,
 .sidebar a[aria-current='page']:focus-visible {
-	color: var(--ink);
-	background-color: transparent;
-	box-shadow: inset 0 -2px 0 var(--cyan-deep);
+	color: var(--flow-color-teal-bright);
+	background-color: rgba(26, 163, 196, 0.12);
+	font-weight: 600;
+	border-inline-start: 2px solid var(--flow-color-teal-signal);
+}
+
+:root[data-theme='light'] .sidebar a[aria-current='page'],
+:root[data-theme='light'] .sidebar a[aria-current='page']:hover,
+:root[data-theme='light'] .sidebar a[aria-current='page']:focus-visible {
+	color: var(--flow-color-teal-deep);
+	background-color: rgba(10, 78, 94, 0.08);
+	border-inline-start: 2px solid var(--flow-color-teal-deep);
 }
 
 .sidebar .large {
-	color: var(--ink);
+	color: var(--sl-color-gray-3);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
 .sidebar ul ul li {
-	border-inline-start: var(--guide);
+	border-inline-start: 1px solid var(--sl-color-hairline);
 }
 
-/* ——— ToC ——— */
+/* ==========================================================================
+   5. Table of Contents (Right Sidebar)
+   ========================================================================== */
+
+.right-sidebar-panel {
+	border-inline-start: 1px solid var(--sl-color-hairline);
+}
 
 .right-sidebar-panel h2 {
-	color: var(--ink);
-	font-family: var(--font-display);
-	font-weight: 800;
-	letter-spacing: -0.03em;
+	color: var(--sl-color-gray-3);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
 }
 
 .right-sidebar-panel a {
-	color: var(--ink-soft);
-	border-radius: 0;
+	color: var(--sl-color-gray-3);
+	transition: color 140ms ease;
 }
 
-.right-sidebar-panel a:hover,
-.right-sidebar-panel a:focus-visible {
-	color: var(--ink);
-	box-shadow: inset 0 -1px 0 var(--ink);
+.right-sidebar-panel a:hover {
+	color: var(--sl-color-white);
 }
 
 .right-sidebar-panel a[aria-current='true'] {
-	color: var(--cyan-deep);
-	box-shadow: inset 0 -2px 0 var(--cyan-deep);
+	color: var(--flow-color-teal-bright);
+	font-weight: 600;
 }
 
-/* ——— Mobile nav ——— */
-
-starlight-menu-button button {
-	border-radius: 0;
-	width: var(--sl-menu-button-size);
-	height: var(--sl-menu-button-size);
-	background-color: var(--ink);
-	color: var(--newsprint);
-	box-shadow: none;
+:root[data-theme='light'] .right-sidebar-panel a[aria-current='true'] {
+	color: var(--flow-color-teal-deep);
+	font-weight: 600;
 }
 
-starlight-menu-button button:focus-visible {
-	outline: 2px solid var(--cyan);
-	outline-offset: 2px;
-}
-
-starlight-menu-button[aria-expanded='true'] button,
-:root[data-theme='light'] starlight-menu-button[aria-expanded='true'] button,
-:root[data-theme='dark'] starlight-menu-button[aria-expanded='true'] button {
-	background-color: var(--cyan-deep);
-	color: var(--newsprint);
-	box-shadow: none;
-}
-
-mobile-starlight-toc nav {
-	border-top: var(--rule);
-	background-color: var(--newsprint);
-}
-
-mobile-starlight-toc summary {
-	border-bottom: var(--rule);
-	min-height: var(--sl-mobile-toc-height);
-}
-
-mobile-starlight-toc .toggle {
-	border: var(--rule);
-	border-radius: 0;
-	background-color: var(--newsprint);
-	color: var(--ink);
-	min-height: 2.75rem;
-}
-
-mobile-starlight-toc details[open] .toggle,
-mobile-starlight-toc details .toggle:hover {
-	color: var(--ink);
-	border-color: var(--cyan-deep);
-	background-color: var(--newsprint-dark);
-}
-
-mobile-starlight-toc .display-current {
-	color: var(--ink);
-}
-
-mobile-starlight-toc .dropdown {
-	border: var(--rule);
-	background-color: var(--newsprint);
-	box-shadow: none;
-}
-
-mobile-starlight-toc .isMobile a {
-	border-top: var(--guide);
-	color: var(--ink);
-	min-height: 2.75rem;
-	align-items: center;
-}
-
-mobile-starlight-toc .isMobile a[aria-current='true'],
-mobile-starlight-toc .isMobile a[aria-current='true']:hover,
-mobile-starlight-toc .isMobile a[aria-current='true']:focus {
-	color: var(--ink);
-	box-shadow: inset 0 -2px 0 var(--cyan-deep);
-}
-
-/* ——— Pagination / selects / social ——— */
-
-.pagination-links a {
-	border: var(--rule);
-	border-radius: 0;
-	box-shadow: none;
-	color: var(--ink-soft);
-	min-height: 2.75rem;
-}
-
-.pagination-links a:hover,
-.pagination-links a:focus-visible {
-	border-color: var(--cyan-deep);
-	color: var(--ink);
-}
-
-.pagination-links .link-title {
-	color: var(--ink);
-	font-family: var(--font-display);
-	font-weight: 800;
-	letter-spacing: -0.03em;
-}
-
-starlight-lang-select label,
-.social-icons a {
-	color: var(--ink);
-}
-
-starlight-lang-select label:hover,
-.social-icons a:hover {
-	color: var(--ink);
-}
-
-.mobile-preferences {
-	border-top: var(--rule);
-}
-
-.mobile-preferences starlight-lang-select label,
-.mobile-preferences .social-icons a {
-	min-height: 2.75rem;
-	align-items: center;
-}
-
-.social-icons::after {
-	border-inline-end: var(--rule);
-}
-
-/* ——— Markdown type ——— */
+/* ==========================================================================
+   6. Content Area, Headings & Links
+   ========================================================================== */
 
 .content-panel h1,
-.sl-markdown-content :is(h1, h2, h3) {
-	font-family: var(--font-display);
-	font-weight: 800;
-	letter-spacing: -0.03em;
-	color: var(--ink);
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+	font-family: var(--sl-font);
+	text-transform: none; /* Sentence-case as-is, never restyle verb casing */
+	color: var(--sl-color-white);
+	letter-spacing: -0.02em;
 	overflow-wrap: anywhere;
 }
 
 .content-panel h1 {
-	font-size: 1.85rem;
-	line-height: 1.05;
-}
-
-.sl-markdown-content :is(h4, h5, h6) {
-	color: var(--ink);
+	font-size: 2.25rem;
 	font-weight: 700;
+	line-height: 1.2;
 }
 
-.sl-markdown-content a {
-	color: var(--cyan-deep);
+.sl-markdown-content h2 {
+	font-size: 1.625rem;
+	font-weight: 600;
+	margin-top: 2.5rem;
+	margin-bottom: 1rem;
+	border-bottom: 1px solid var(--sl-color-hairline);
+	padding-bottom: 0.5rem;
 }
 
-.sl-markdown-content a:hover {
-	color: var(--ink);
+.sl-markdown-content h3 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-top: 2rem;
+	margin-bottom: 0.75rem;
+}
+
+.sl-markdown-content h4,
+.sl-markdown-content h5,
+.sl-markdown-content h6 {
+	font-weight: 600;
 }
 
 .sl-markdown-content :is(p, li, dd) {
+	line-height: 1.7;
+	color: var(--sl-color-text);
 	overflow-wrap: anywhere;
 }
 
-.sl-markdown-content code {
-	background-color: var(--newsprint-dark);
-	color: var(--ink);
-	border-radius: 0;
-	overflow-wrap: anywhere;
+/* Links */
+.sl-markdown-content a {
+	color: var(--flow-color-teal-signal);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	transition: color 140ms ease;
 }
 
-.sl-markdown-content pre {
-	border: var(--rule);
-	border-radius: 0;
-	background-color: var(--ink);
-	max-width: 100%;
-	overflow-x: auto;
+.sl-markdown-content a:hover {
+	color: var(--flow-color-teal-bright);
 }
 
-.sl-markdown-content table {
-	max-width: 100%;
-	overflow-x: auto;
-	-webkit-overflow-scrolling: touch;
+:root[data-theme='light'] .sl-markdown-content a {
+	color: var(--flow-color-teal-deep);
 }
 
-.sl-markdown-content pre code {
-	color: var(--newsprint);
-	background-color: transparent;
+:root[data-theme='light'] .sl-markdown-content a:hover {
+	color: var(--flow-color-teal-signal);
 }
 
+/* Blockquotes */
 .sl-markdown-content blockquote {
-	border-inline-start: var(--rule);
-	color: var(--ink);
+	border-inline-start: 3px solid var(--flow-color-teal-signal);
+	padding: 0.75rem 1.25rem;
+	background-color: rgba(26, 163, 196, 0.05);
+	border-radius: 0 0.375rem 0.375rem 0;
+	color: var(--sl-color-gray-2);
 }
 
-.sl-markdown-content :is(th, td) {
-	border-bottom: var(--rule);
+:root[data-theme='light'] .sl-markdown-content blockquote {
+	border-inline-start-color: var(--flow-color-teal-deep);
+	background-color: rgba(10, 78, 94, 0.04);
+}
+
+/* Tables */
+.sl-markdown-content table {
+	border-collapse: collapse;
+	width: 100%;
+	margin-block: 1.5rem;
+	border: 1px solid var(--sl-color-hairline);
+	border-radius: 0.375rem;
+	overflow: hidden;
 }
 
 .sl-markdown-content th {
-	color: var(--ink);
+	background-color: var(--sl-color-gray-6);
+	color: var(--sl-color-white);
+	font-weight: 600;
+	text-align: left;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content td {
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--sl-color-hairline);
+	color: var(--sl-color-text);
+}
+
+.sl-markdown-content tr:last-child td {
+	border-bottom: none;
 }
 
 .sl-markdown-content hr {
-	border-bottom: var(--rule);
+	border: none;
+	border-bottom: 1px solid var(--sl-color-hairline);
+	margin-block: 2.5rem;
 }
 
-.sl-markdown-content details {
-	--sl-details-border-color: var(--ink);
-	--sl-details-border-color--hover: var(--cyan-deep);
-}
+/* ==========================================================================
+   7. Code Blocks & JetBrains Mono Typography
+   ========================================================================== */
 
-.sl-markdown-content summary {
-	color: var(--ink);
-}
-
-/* ——— Asides: 1px rule, newsprint fill, ink type ——— */
-
-.starlight-aside {
-	border-radius: 0;
-	border-inline-start-width: 1px;
-	color: var(--ink);
-	background-color: var(--newsprint-dark);
-}
-
-.starlight-aside--note,
-.starlight-aside--tip {
-	--sl-color-asides-text-accent: var(--cyan-deep);
-	--sl-color-asides-border: var(--cyan-deep);
-}
-
-.starlight-aside--caution {
-	--sl-color-asides-text-accent: var(--ink);
-	--sl-color-asides-border: var(--ink);
-}
-
-.starlight-aside--danger {
-	--sl-color-asides-text-accent: var(--ink);
-	--sl-color-asides-border: var(--kill);
-}
-
-.starlight-aside__title,
-.starlight-aside__content a {
-	color: var(--sl-color-asides-text-accent);
-}
-
-/* ——— Code frames: press-bar plate, not Night Owl neon ——— */
-
+code,
+kbd,
+samp,
+pre,
+.sl-markdown-content code,
+.sl-markdown-content pre,
 .expressive-code {
-	--ec-brdRad: 0px;
+	font-family: var(--sl-font-mono) !important;
+}
+
+/* Inline code */
+.sl-markdown-content :not(pre) > code {
+	background-color: var(--sl-color-bg-inline-code);
+	color: var(--flow-color-teal-bright);
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.25rem;
+	padding: 0.15em 0.4em;
+	font-size: 0.875em;
+	word-break: break-word;
+}
+
+:root[data-theme='light'] .sl-markdown-content :not(pre) > code {
+	color: var(--flow-color-teal-deep);
+	background-color: var(--sl-color-bg-inline-code);
+	border-color: var(--sl-color-gray-5);
+}
+
+/* Expressive Code frames */
+.expressive-code {
+	--ec-brdRad: 0.375rem;
 	--ec-brdWd: 1px;
-	--ec-brdCol: var(--ink);
-	--ec-frm-edBg: var(--ink);
-	--ec-frm-trmBg: var(--ink);
-	--ec-frm-edActTabBg: var(--ink);
-	--ec-frm-edActTabFg: var(--newsprint);
-	--ec-frm-edTabBarBg: var(--ink);
-	--ec-frm-edTabBarBrdBtmCol: var(--ink);
-	max-width: 100%;
+	--ec-brdCol: var(--sl-color-hairline);
+	margin-block: 1.5rem;
 }
 
 .expressive-code .frame,
 .expressive-code pre {
-	border-radius: 0 !important;
-	box-shadow: none !important;
-	border-color: var(--ink) !important;
-	background: var(--ink) !important;
-	max-width: 100%;
-	overflow-x: auto;
-}
-
-.expressive-code pre > code,
-.expressive-code .ec-line,
-.expressive-code .ec-line span {
-	color: var(--newsprint) !important;
+	border-radius: 0.375rem !important;
+	border-color: var(--sl-color-hairline) !important;
 }
 
 .expressive-code .copy button {
-	border-radius: 0;
-	background: var(--ink);
-	color: var(--newsprint);
-	border: 1px solid var(--newsprint);
+	border-radius: 0.25rem;
+	border: 1px solid var(--sl-color-gray-5);
+	background: var(--sl-color-gray-6);
+	color: var(--sl-color-gray-2);
+	transition: border-color 140ms ease, color 140ms ease;
 }
 
 .expressive-code .copy button:hover {
-	background: var(--cyan-deep);
-	color: var(--newsprint);
+	border-color: var(--flow-color-teal-signal);
+	color: var(--sl-color-white);
 }
 
-@media (max-width: 49.999rem) {
-	#starlight__search {
-		--sl-search-cancel-space: 5.5rem;
-	}
-
-	site-search dialog {
-		width: 100%;
-		max-width: 100%;
-	}
-
-	site-search .dialog-frame {
-		padding: 0.75rem;
-	}
-
-	.sidebar-pane {
-		width: 100%;
-	}
-
-	.sidebar a,
-	.sidebar summary {
-		min-height: 2.75rem;
-		display: flex;
-		align-items: center;
-	}
-
-	.sidebar a:hover,
-	.sidebar a:focus-visible {
-		color: var(--ink);
-		background-color: transparent;
-	}
+:root[data-theme='light'] .expressive-code .copy button:hover {
+	border-color: var(--flow-color-teal-deep);
+	color: #0F172A;
 }
+
+/* ==========================================================================
+   8. Asides / Callouts
+   ========================================================================== */
+
+.starlight-aside {
+	border-radius: 0.375rem;
+	border-inline-start-width: 3px;
+	padding: 1rem 1.25rem;
+	margin-block: 1.5rem;
+}
+
+.starlight-aside--note {
+	border-color: var(--flow-color-teal-signal);
+	background-color: rgba(26, 163, 196, 0.08);
+}
+
+.starlight-aside--tip {
+	border-color: var(--flow-color-pass);
+	background-color: rgba(34, 197, 94, 0.08);
+}
+
+.starlight-aside--caution {
+	border-color: var(--flow-color-warn);
+	background-color: rgba(245, 158, 11, 0.08);
+}
+
+.starlight-aside--danger {
+	border-color: var(--flow-color-fail);
+	background-color: rgba(239, 68, 68, 0.08);
+}
+
+.starlight-aside__title {
+	font-weight: 700;
+	font-size: 0.9375rem;
+	margin-bottom: 0.25rem;
+}
+
+/* ==========================================================================
+   9. Pagination Links
+   ========================================================================== */
+
+.pagination-links a {
+	border: 1px solid var(--sl-color-hairline);
+	border-radius: 0.375rem;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-gray-2);
+	transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.pagination-links a:hover,
+.pagination-links a:focus-visible {
+	border-color: var(--flow-color-teal-signal);
+	color: var(--sl-color-white);
+}
+
+:root[data-theme='light'] .pagination-links a:hover,
+:root[data-theme='light'] .pagination-links a:focus-visible {
+	border-color: var(--flow-color-teal-deep);
+	color: #0F172A;
+}
+
+.pagination-links .link-title {
+	color: var(--sl-color-white);
+	font-family: var(--sl-font);
+	font-weight: 600;
+}
+
+/* ==========================================================================
+   10. Search Dialog (Pagefind)
+   ========================================================================== */
+
+site-search dialog {
+	background-color: var(--sl-color-bg);
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.5rem;
+	color: var(--sl-color-text);
+}
+
+site-search dialog::backdrop {
+	background-color: var(--sl-color-backdrop-overlay);
+	backdrop-filter: blur(4px);
+}
+
+#starlight__search .pagefind-ui__search-input {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.375rem;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-text);
+}
+
+#starlight__search .pagefind-ui__search-input:focus {
+	border-color: var(--flow-color-teal-signal);
+}
+
+:root[data-theme='light'] #starlight__search .pagefind-ui__search-input:focus {
+	border-color: var(--flow-color-teal-deep);
+}
+
+#starlight__search .pagefind-ui__result-link {
+	color: var(--flow-color-teal-signal);
+}
+
+:root[data-theme='light'] #starlight__search .pagefind-ui__result-link {
+	color: var(--flow-color-teal-deep);
+}
+
+#starlight__search mark {
+	background-color: rgba(26, 163, 196, 0.25);
+	color: inherit;
+}
+
+/* ==========================================================================
+   11. Mobile Navigation & TOC
+   ========================================================================== */
+
+starlight-menu-button button {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.375rem;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-gray-1);
+}
+
+starlight-menu-button[aria-expanded='true'] button {
+	border-color: var(--flow-color-teal-signal);
+	color: var(--sl-color-white);
+}
+
+mobile-starlight-toc nav {
+	border-top: 1px solid var(--sl-color-hairline);
+	background-color: var(--sl-color-bg-nav);
+}
+
+mobile-starlight-toc summary {
+	border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+mobile-starlight-toc .toggle {
+	border: 1px solid var(--sl-color-gray-5);
+	border-radius: 0.375rem;
+	background-color: var(--sl-color-bg);
+	color: var(--sl-color-text);
+}
+
+mobile-starlight-toc details[open] .toggle,
+mobile-starlight-toc details .toggle:hover {
+	border-color: var(--flow-color-teal-signal);
+	color: var(--sl-color-white);
+}
+
+:root[data-theme='light'] mobile-starlight-toc details[open] .toggle,
+:root[data-theme='light'] mobile-starlight-toc details .toggle:hover {
+	border-color: var(--flow-color-teal-deep);
+	color: #0F172A;
+}
+
+mobile-starlight-toc .dropdown {
+	border: 1px solid var(--sl-color-hairline);
+	background-color: var(--sl-color-bg);
+}
+
+mobile-starlight-toc .isMobile a {
+	color: var(--sl-color-gray-2);
+}
+
+mobile-starlight-toc .isMobile a[aria-current='true'] {
+	color: var(--flow-color-teal-bright);
+	font-weight: 600;
+}
+
+:root[data-theme='light'] mobile-starlight-toc .isMobile a[aria-current='true'] {
+	color: var(--flow-color-teal-deep);
+	font-weight: 600;
+}
+
+/* ==========================================================================
+   12. Motion Safety
+   ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-	.sidebar .caret,
-	.sl-markdown-content summary::before,
-	mobile-starlight-toc .caret {
-		transition: none;
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }
