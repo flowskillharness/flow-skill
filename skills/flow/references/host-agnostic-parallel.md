@@ -127,7 +127,7 @@ Display-only: it reports what to run next but never executes `next_verb`.
 **Scope note (not a stability promise).** The elements above are parseable by external
 orchestrators; parse only these, never ad-hoc prose. This documents shipped
 behavior as of the current flow version (`version` in `skills/flow/SKILL.md`
-— currently 0.33.0 — surfaced as `flow_version` in telemetry). The project
+— currently 0.34.0 — surfaced as `flow_version` in telemetry). The project
 has not adopted a formal compatibility guarantee: when upgrading flow,
 re-diff this contract against the runner (`cmd_resume`, `inflight_display`,
 `_log_event`) before relying on it.
