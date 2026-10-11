@@ -125,3 +125,58 @@ Programmatic extraction conducted via `bsk evaluate` on active session against l
 | **CTA / Buttons** | Solid background with text hover | Signal Teal gradient CTA button with hover glow `box-shadow: 0 0 20px rgba(26, 163, 196, 0.35)` and arrow icon nudge `transform: translateX(3px)`. |
 | **Entrance choreography** | Static rendering (no entrance motion) | Staggered CSS-only fade-up entrance: `@keyframes entrance-fade-up` (`opacity: 0, translateY(12px) → opacity: 1, translateY(0)`) staggered by 60ms across hero eyebrow, title, lead, and install widget. Completely disabled when `prefers-reduced-motion: reduce`. |
 
+## Layout skeleton (pass 3)
+
+Extracted programmatically on 2026-10-11 via `bsk evaluate` session against live `https://omp.sh/` (DOM dump: `plans/research/assets/omp-layout.json`, visual capture: `plans/research/assets/omp-layout-full.png`).
+
+### 1. Section Hierarchy & Geometry
+
+```
+header (fixed, h-14 [57px], z-40, border-b hairline)
+main (min-h-[100svh], relative, overflow-clip, bg-[#09090b])
+├── [Layer 0] Canvas atmosphere (div.[transform:scaleY(-1)], absolute inset-0)
+├── [Layer 1] CRT Scanlines (span.absolute.inset-0, opacity-35, 3px pitch)
+├── [Layer 2] section#top (relative, pt-28 pb-20 lg:pb-24, pl-5 sm:pl-8 lg:pl-40)
+│   ├── kicker: .sunray.mono-fig (11px, uppercase, tracking-[0.24em])
+│   ├── headline: h1.display (clamp(2.4rem, 1.2rem+3.8vw, 4.4rem), leading-[0.98])
+│   ├── lede: p (max-w-[46ch], text-[var(--fg-dim)], leading-relaxed)
+│   ├── install widget: mt-8 (tablist + terminal box + copy button)
+│   ├── marquee: mt-7 (infinite horizontal track with edge masks)
+│   └── mobile feature dock: mt-6 (grid-cols-4 sm:grid-cols-8)
+├── [Layer 3] Feature proof overlay (absolute inset-0, bg-[#050507]/95, video + live badge)
+├── [Layer 4] Desktop vertical dock (.left-5.top-1/2.-translate-y-1/2, buttons 01–08)
+└── footer (relative, h-14, hairline top border, colophon)
+```
+
+### 2. Key Attributes Driving omp.sh's Immersive Quality
+
+1. **Asymmetrical Left-Anchored Rhythm**:
+   - Desktop viewport reserves left rail (`lg:pl-40`) for the fixed/sticky feature dock (`.left-5.top-1/2`).
+   - Reading measure is strictly bounded (`max-w-[46ch]` for lede, `max-w-[640px]` for headlines), preventing the scattered, unfocused feeling of full-width centered card grids.
+
+2. **Atmospheric Canvas + Scanline Layering**:
+   - Background is not a static color or CSS gradient: it runs an active WebGPU/canvas shader that gently evolves, layered beneath CRT scanlines.
+   - The scanlines add physical hardware texture (oscilloscope / terminal monitor feel).
+
+3. **Numbered Progression (01–08) Over Card Grids**:
+   - omp.sh completely avoids the generic "3-column card grid" trap.
+   - Features are indexed with large tabular monospace numerals (`01`, `02`, ...).
+   - Each feature is connected to a dedicated proof visualization (live debugger video, stream rules visual) rather than marketing bullet points.
+
+4. **Hairline Precision & Crisp Surface Elevation**:
+   - Hairline borders (`1px solid oklch(1 0 0 / 0.08)` / `border-white/10`).
+   - Surfaces use ultra-dark elevation (`#050507` elevated on `#09090b` background).
+   - Radii are sharp (0 to 4px), projecting high-density engineering discipline.
+
+5. **Flowskill Layout Translation**:
+   - **Hero Band**: Full-width hero band with flow-field living canvas + scanlines + left-weighted reading measure + install widget + agent marquee.
+   - **Numbered Full-Width Bands (01–06)**: Replace the 6-card grid with full-width alternating/sequential bands. Each gate (01 Idea through 06 Contract) features:
+     - Large tabular mono numeral (`01`–`06`, font-size 2.5rem–4rem, muted teal/ink).
+     - Stage name + file chip (`flow/00-idea.md` ... `flow/05-contract.md`).
+     - Gate description and acceptance criteria.
+     - Compact side-by-side / embedded proof panel:
+       - Gate 01–02: What-will-not-pass failure modes panel (red/warning terminal diff).
+       - Gate 05–06: After-install verification terminal panel (`flow doctor`, `flow next`).
+   - **Hairline Dividers**: Center-weighted or edge-to-edge 1px hairline dividers separating each stage band.
+   - **CTA Band & Footer**: Full-width closing band with Signal Teal button and crisp terminal footer.
+
