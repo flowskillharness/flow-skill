@@ -7,6 +7,9 @@
 - **README brand headers:** light/dark `<picture>` blocks in `README.md`, `README_VN.md`, `npm-wrapper/README.md`.
 - **Production asset pack:** `brand-lockup` light/dark SVGs, glyph, favicon/app-icon/og-image/sticker suite under `brand/icons/`.
 - **`brand/WEBSITE-HANDOFF.md`:** handoff for feat/flow-website adoption.
+- **omp-inspired landing redesign:** living flow-field canvas hero, tabbed install widget, agent marquee, numbered full-width gate bands (01–06), scroll/hover motion; desktop squeeze bug fixed.
+- **Six gates immersive elevation + site-wide docs branding:** artifact-preview gate bands with bilingual taglines, Starlight docs theme (Ink/Mist + teal), favicon/og on docs pages.
+- **Version automation:** registry-driven `versions.ts` + version-cache fallback, `website-scheduled-rebuild.yml` (cron + `npm-published` dispatch), `publish-npm-wrapper.yml` dispatch step; flowskill.io.vn no longer hardcodes versions.
 
 ## 0.33.0 — 2026-09-17 — status --json + Stage 05 heading map
 
