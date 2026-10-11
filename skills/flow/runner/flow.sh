@@ -1032,6 +1032,7 @@ cmd_resume() {
     _na="$(_next_action)"
     echo "nothing to resume - $_na"
     echo "NEXT_VERB=$(_next_verb_from "$_na")"
+    _emit_pin
     return 0
   fi
 
@@ -1388,6 +1389,18 @@ _emit_next() {
   a="$(_next_action)"
   echo "NEXT -> $a"
   echo "NEXT_VERB=$(_next_verb_from "$a")"
+  _emit_pin
+}
+
+# Verbatim PIN v1 from references/pin-v1.txt. Display-only; never a capability token.
+# Missing file: fail-loud on stderr. JSON path must not call this.
+_emit_pin() {
+  local f="$SCRIPT_DIR/../references/pin-v1.txt"
+  if [ ! -f "$f" ]; then
+    echo "FAIL: PIN file missing: $f" >&2
+    return 1
+  fi
+  tr -d '\r' < "$f"
 }
 
 # PTC-aligned load hint for JSON status/resume. Display-only — never a capability token.
