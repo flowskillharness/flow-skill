@@ -66,5 +66,184 @@ const docsHome = lang === 'vi' ? '/vi/docs/' : '/docs/';
 			<slot />
 		</div>
 		<Colophon lang={lang} />
+		<script>
+			function initFlowCanvas() {
+				const canvas = document.getElementById('hero-flow-canvas');
+				if (!canvas || !(canvas instanceof HTMLCanvasElement)) return;
+				const ctx = canvas.getContext('2d');
+				if (!ctx) return;
+
+				const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+				if (motionQuery.matches) {
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					return;
+				}
+
+				let width = 0;
+				let height = 0;
+				let dpr = 1;
+				let animId = 0;
+				let isIntersecting = true;
+				let isHidden = document.hidden;
+
+				const PARTICLE_COUNT = 120;
+				interface Particle {
+					x: number;
+					y: number;
+					vx: number;
+					vy: number;
+					size: number;
+					alpha: number;
+					glow: boolean;
+					speed: number;
+				}
+				const particles: Particle[] = [];
+
+				function resize() {
+					if (!canvas) return;
+					const parent = canvas.parentElement || canvas;
+					const rect = parent.getBoundingClientRect();
+					width = rect.width || window.innerWidth;
+					height = rect.height || 620;
+					dpr = Math.min(window.devicePixelRatio || 1, 2);
+					canvas.width = Math.floor(width * dpr);
+					canvas.height = Math.floor(height * dpr);
+					ctx.setTransform(1, 0, 0, 1, 0, 0);
+					ctx.scale(dpr, dpr);
+				}
+
+				function initParticles() {
+					particles.length = 0;
+					for (let i = 0; i < PARTICLE_COUNT; i++) {
+						particles.push({
+							x: Math.random() * width,
+							y: Math.random() * height,
+							vx: (Math.random() - 0.5) * 0.2,
+							vy: (Math.random() - 0.5) * 0.2,
+							size: Math.random() * 1.5 + 0.8,
+							alpha: Math.random() * 0.2 + 0.15, // 0.15–0.35
+							glow: Math.random() > 0.8,
+							speed: Math.random() * 0.35 + 0.25,
+						});
+					}
+				}
+
+				resize();
+				initParticles();
+
+				let time = 0;
+
+				function getFieldAngle(x: number, y: number, t: number) {
+					return Math.sin(x * 0.0022 + t * 0.0003) * Math.cos(y * 0.0022 + t * 0.0002) * Math.PI * 2;
+				}
+
+				function frame() {
+					if (!isIntersecting || isHidden) {
+						animId = 0;
+						return;
+					}
+
+					time += 1;
+					ctx.clearRect(0, 0, width, height);
+
+					const isLight =
+						document.documentElement.getAttribute('data-theme') === 'light' ||
+						(!document.documentElement.getAttribute('data-theme') &&
+							window.matchMedia('(prefers-color-scheme: light)').matches);
+
+					// Signal Teal: dark = rgb(26, 163, 196), light = rgb(10, 78, 94)
+					const r = isLight ? 10 : 26;
+					const g = isLight ? 78 : 163;
+					const b = isLight ? 94 : 196;
+
+					for (let i = 0; i < particles.length; i++) {
+						const p = particles[i];
+						const angle = getFieldAngle(p.x, p.y, time);
+						p.vx = p.vx * 0.95 + Math.cos(angle) * p.speed * 0.05;
+						p.vy = p.vy * 0.95 + Math.sin(angle) * p.speed * 0.05;
+
+						p.x += p.vx;
+						p.y += p.vy;
+
+						if (p.x < 0) p.x += width;
+						if (p.x > width) p.x -= width;
+						if (p.y < 0) p.y += height;
+						if (p.y > height) p.y -= height;
+
+						ctx.save();
+						if (p.glow) {
+							ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.55)`;
+							ctx.shadowBlur = 6;
+						}
+						ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha})`;
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+						ctx.fill();
+						ctx.restore();
+					}
+
+					animId = requestAnimationFrame(frame);
+				}
+
+				function start() {
+					if (!animId && !motionQuery.matches && isIntersecting && !isHidden) {
+						animId = requestAnimationFrame(frame);
+					}
+				}
+
+				function stop() {
+					if (animId) {
+						cancelAnimationFrame(animId);
+						animId = 0;
+					}
+				}
+
+				const observer = new IntersectionObserver(
+					(entries) => {
+						for (const entry of entries) {
+							isIntersecting = entry.isIntersecting;
+							if (isIntersecting) start();
+							else stop();
+						}
+					},
+					{ threshold: 0.05 }
+				);
+				observer.observe(canvas);
+
+				function handleVisibility() {
+					isHidden = document.hidden;
+					if (isHidden) stop();
+					else start();
+				}
+				document.addEventListener('visibilitychange', handleVisibility);
+
+				let resizeTimer: number | null = null;
+				window.addEventListener('resize', () => {
+					if (resizeTimer) clearTimeout(resizeTimer);
+					resizeTimer = window.setTimeout(() => {
+						resize();
+					}, 100);
+				});
+
+				motionQuery.addEventListener('change', (e) => {
+					if (e.matches) {
+						stop();
+						ctx.clearRect(0, 0, width, height);
+					} else {
+						initParticles();
+						start();
+					}
+				});
+
+				start();
+			}
+
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', initFlowCanvas);
+			} else {
+				initFlowCanvas();
+			}
+			document.addEventListener('astro:page-load', initFlowCanvas);
+		</script>
 	</body>
 </html>
