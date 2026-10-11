@@ -19,7 +19,13 @@ const npmCmd = command.replace(/^npx\s+/, 'npm exec ');
 
 <div class="install-lockup" data-lockup>
 	<div class="install-header">
-		<div class="install-tabs" role="tablist" aria-label="Install method">
+		<div class="install-header-left">
+			<div class="terminal-chrome" aria-hidden="true">
+				<span class="terminal-dot"></span>
+				<span class="terminal-dot"></span>
+				<span class="terminal-dot"></span>
+			</div>
+			<div class="install-tabs" role="tablist" aria-label="Install method">
 			<button
 				type="button"
 				role="tab"
@@ -53,6 +59,7 @@ const npmCmd = command.replace(/^npx\s+/, 'npm exec ');
 			>
 				npm
 			</button>
+			</div>
 		</div>
 		<span class="runtime-tag mono">NODE ≥22</span>
 	</div>
