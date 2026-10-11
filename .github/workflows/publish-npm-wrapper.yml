@@ -150,10 +150,15 @@ jobs:
 
       - name: Verify skills-manifest.json file count matches synced tree
         run: |
-          synced=$(find skills/flow -type f | wc -l)
+          # manifest-hashes.json is a bundled-only C5 receipt written post-copy (see sync.mjs / compareTrees)
+          synced=$(find skills/flow -type f ! -name manifest-hashes.json | wc -l)
           manifest=$(node -p "require('./skills-manifest.json').fileCount")
           if [ "$synced" != "$manifest" ]; then
             echo "FAIL: synced skills/ file count ($synced) != skills-manifest.json fileCount ($manifest)" >&2
+            exit 1
+          fi
+          if [ ! -f skills/flow/manifest-hashes.json ]; then
+            echo "FAIL: skills/flow/manifest-hashes.json receipt missing" >&2
             exit 1
           fi
 
