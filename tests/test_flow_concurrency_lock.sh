@@ -118,31 +118,18 @@ ck 0 "$rc" "auto-id session acquires lock with no manual export"
 has "$(cat "$SB/flow/.lock" 2>/dev/null)" "sid:HARNESSID" "lock owner auto-derived from CLAUDE_CODE_SESSION_ID"
 rm -rf "$SB"
 
-echo "N) W5 atomic mkdir RACE: direct lock_acquire contention -> exactly ONE winner per iteration across 20 runs"
-# Strategy: use a thin contender wrapper that sets up the same env as flow.sh and directly
-# calls mkdir on LOCK_DIR (the POSIX test-and-set). A FIFO barrier synchronises both
-# subshells so they hit mkdir at the same time, creating real contention rather than
-# sequential execution. 20 iterations required: a vacuous pass (one finishes before the
-# other starts) would see 0 double-wins across all runs, but we assert NO double-wins at all.
+echo "N) W5 atomic claim RACE: direct lock_acquire contention -> exactly ONE winner per iteration across 20 runs"
+# Strategy: use contenders exercising the atomic claim guard (set -C / O_EXCL test-and-set).
+# A barrier synchronises both subshells so they hit the claim at the same time, creating real
+# contention rather than sequential execution. 20 iterations required: assert NO double-wins at all.
 newsb
 RACE_SB="$SB"
-# Build a thin contender script: waits on barrier, tries mkdir, exits 0=won / 1=lost
-CONTENDER="$(mktemp --suffix=.sh)"
-cat > "$CONTENDER" <<'CONTENDER_EOF'
-#!/usr/bin/env bash
-# Args: $1=LOCK_DIR $2=barrier_fifo
-LOCK_DIR="$1"; BARRIER="$2"
-# Signal ready, then block until the other side opens the FIFO
-echo ready > "$BARRIER"
-# Wait for go signal (the orchestrator cat's the FIFO after both are ready)
-read -r _go < "$BARRIER" 2>/dev/null || true
-mkdir "$LOCK_DIR" 2>/dev/null
-CONTENDER_EOF
-chmod +x "$CONTENDER"
 
 N_ITER=20; N_DOUBLE=0; N_ZERO=0
 for _i in $(seq 1 $N_ITER); do
   _lockdir="$RACE_SB/flow/.lock.d"
+  _lockclaim="$RACE_SB/flow/.lock.claim"
+  rm -f "$_lockclaim" 2>/dev/null || true
   rm -rf "$_lockdir" 2>/dev/null || true
   # Use a temp dir as a barrier: each contender writes a file; orchestrator waits for 2, then sends go
   _bar="$(mktemp -d)"
@@ -151,14 +138,24 @@ for _i in $(seq 1 $N_ITER); do
     # Contender A: signal ready then spin-wait for go file
     touch "$_bar/A"
     while [ ! -f "$_bar/go" ]; do :; done
-    mkdir "$_lockdir" 2>/dev/null; echo $?
+    if ( set -C; : > "$_lockclaim" ) 2>/dev/null; then
+      mkdir "$_lockdir" 2>/dev/null || true
+      echo 0
+    else
+      echo 1
+    fi
   ) > "$_bar/out_a" &
   _pid_a=$!
   (
     # Contender B: signal ready then spin-wait for go file
     touch "$_bar/B"
     while [ ! -f "$_bar/go" ]; do :; done
-    mkdir "$_lockdir" 2>/dev/null; echo $?
+    if ( set -C; : > "$_lockclaim" ) 2>/dev/null; then
+      mkdir "$_lockdir" 2>/dev/null || true
+      echo 0
+    else
+      echo 1
+    fi
   ) > "$_bar/out_b" &
   _pid_b=$!
   # Wait until both contenders are ready (spinning on barrier), then release
@@ -167,12 +164,11 @@ for _i in $(seq 1 $N_ITER); do
   wait $_pid_a; wait $_pid_b
   _rc_a="$(cat "$_bar/out_a" 2>/dev/null)"; _rc_b="$(cat "$_bar/out_b" 2>/dev/null)"
   rm -rf "$_bar"
-  # Count wins (exit 0 from mkdir = won the dir)
+  # Count wins (exit 0 from claim = won the lock)
   _wins=$(( (_rc_a == 0 ? 1 : 0) + (_rc_b == 0 ? 1 : 0) ))
   [ "$_wins" -gt 1 ] && N_DOUBLE=$(( N_DOUBLE + 1 ))
   [ "$_wins" -eq 0 ] && N_ZERO=$(( N_ZERO + 1 ))
 done
-rm -f "$CONTENDER"
 ck 0 "$N_DOUBLE" "N-atomic-race: zero double-wins across $N_ITER iterations (mkdir atomicity)"
 ck 0 "$N_ZERO"   "N-atomic-race: zero iterations where nobody won (no lost mkdir calls)"
 rm -rf "$RACE_SB"
@@ -198,6 +194,36 @@ out="$(FLOW_LOCK_TTL=900 FLOW_SESSION_ID=ME bash "$RUN" next 2>&1)"; rc=$?
 ck 1 "$rc" "O2-fresh-dir-no-lockfile: fresh LOCK_DIR (no LOCK_FILE) -> BLOCKED (may be live mid-claim)"
 has "$out" "BLOCKED" "O2-fresh-dir-no-lockfile: BLOCKED message printed"
 rm -rf "$SB"
+
+echo "P) live flow.sh next race contention -> exactly ONE winner per iteration across 10 runs"
+P_ITER=10; P_DOUBLE=0
+for _i in $(seq 1 $P_ITER); do
+  newsb
+  _bar="$(mktemp -d)"
+  (
+    touch "$_bar/A"
+    while [ ! -f "$_bar/go" ]; do :; done
+    FLOW_SESSION_ID=A bash "$RUN" next > "$_bar/out_a" 2>&1
+    echo $? > "$_bar/rc_a"
+  ) &
+  _pid_a=$!
+  (
+    touch "$_bar/B"
+    while [ ! -f "$_bar/go" ]; do :; done
+    FLOW_SESSION_ID=B bash "$RUN" next > "$_bar/out_b" 2>&1
+    echo $? > "$_bar/rc_b"
+  ) &
+  _pid_b=$!
+  while [ ! -f "$_bar/A" ] || [ ! -f "$_bar/B" ]; do :; done
+  touch "$_bar/go"
+  wait $_pid_a; wait $_pid_b
+  _rc_a="$(cat "$_bar/rc_a" 2>/dev/null)"; _rc_b="$(cat "$_bar/rc_b" 2>/dev/null)"
+  rm -rf "$_bar"
+  _wins=$(( (_rc_a == 0 ? 1 : 0) + (_rc_b == 0 ? 1 : 0) ))
+  [ "$_wins" -gt 1 ] && P_DOUBLE=$(( P_DOUBLE + 1 ))
+  rm -rf "$SB"
+done
+ck 0 "$P_DOUBLE" "P-live-race: zero double-wins across $P_ITER iterations (end-to-end command mutual exclusion)"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

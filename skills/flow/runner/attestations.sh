@@ -233,7 +233,7 @@ _att_git_clean_for_attest() {
     path="${path#\"}"; path="${path%\"}"
     case "$path" in
       .flow|.flow/*) continue ;;
-      flow/.lock|flow/.lock.d|flow/.lock.d/*) continue ;;
+      flow/.lock|flow/.lock.*|flow/.lock.d|flow/.lock.d/*) continue ;;
       cards/C-*.md)
         _att_card_projection_matches_head "$path" || return 1
         continue
