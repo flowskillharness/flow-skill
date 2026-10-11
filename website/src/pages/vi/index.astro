@@ -6,12 +6,12 @@ import { getVersions } from '../../lib/versions';
 const { command } = await getVersions();
 const tutorial = '/vi/docs/tutorials/install-and-first-run/';
 const stages = [
-	{ num: '01', name: 'Idea', file: 'flow/00-idea.md' },
-	{ num: '02', name: 'Research', file: 'flow/01-research.md' },
-	{ num: '03', name: 'Scope', file: 'flow/02-scope.md' },
-	{ num: '04', name: 'PRD', file: 'flow/03-prd.md' },
-	{ num: '05', name: 'ADR', file: 'flow/04-adr.md' },
-	{ num: '06', name: 'Contract', file: 'flow/05-contract.md' },
+	{ num: '01', name: 'Idea', file: 'flow/00-idea.md', tagline: 'Chặn ý tưởng tồi trước khi viết code.' },
+	{ num: '02', name: 'Research', file: 'flow/01-research.md', tagline: 'Trích nguồn thật hoặc dừng tại đây.' },
+	{ num: '03', name: 'Scope', file: 'flow/02-scope.md', tagline: 'Vạch ranh giới rõ. Bỏ hết phần thừa.' },
+	{ num: '04', name: 'PRD', file: 'flow/03-prd.md', tagline: 'Định nghĩa bài test trước khi gõ code.' },
+	{ num: '05', name: 'ADR', file: 'flow/04-adr.md', tagline: 'Ghi lại đánh đổi trước khi commit.' },
+	{ num: '06', name: 'Contract', file: 'flow/05-contract.md', tagline: 'Cả hai cùng duyệt mới được bước tiếp.' },
 ];
 const agents = [
 	'Claude Code',
@@ -110,7 +110,7 @@ const willNotPass = [
 			<ol class="pipeline" aria-label="Sáu cổng trước khi build">
 				{stages.map((stage) => (
 					<li class="pipe">
-						<a href={`#gate-${stage.num}`} class="pipe-link">
+						<a href={`#gate-${stage.num}`} class="pipe-link gate-chip">
 							<span class="pipe-num mono">{stage.num}</span>
 							<span class="pipe-name">{stage.name}</span>
 						</a>
@@ -121,12 +121,37 @@ const willNotPass = [
 			<div class="gates-container">
 				<!-- Gate 01: Idea (Features What Will Not Pass proof panel) -->
 				<article class="gate-band" id="gate-01" aria-labelledby="gate-01-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">01</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">01</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-01-title">Idea</h3>
-								<code class="gate-file-chip mono" translate="no">flow/00-idea.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">01</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-01-title">Idea</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/00-idea.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Chặn ý tưởng tồi trước khi viết code.</p>
+
+							<!-- Artifact preview visual: Idea Markdown file with [FILL] placeholder -->
+							<div class="artifact-preview artifact-idea" aria-label="Bản xem trước: flow/00-idea.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">MD</span>
+									<span class="artifact-path mono" translate="no">flow/00-idea.md</span>
+									<span class="artifact-status-pill status-halt mono">CHẶN</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line"><span class="art-ln">1</span><span class="art-kw">#</span> Vấn đề cần giải quyết</div>
+									<div class="art-line art-line-warn"><span class="art-ln">2</span><span class="art-slot-fill">[FILL: mô tả vấn đề người dùng]</span></div>
+									<div class="art-line"><span class="art-ln">3</span><span class="art-kw">#</span> Đề xuất giải pháp</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-muted">&lt;trống&gt;</span></div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">exit: 1 · phát hiện slot [FILL] chưa điền</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
@@ -155,12 +180,37 @@ const willNotPass = [
 
 				<!-- Gate 02: Research -->
 				<article class="gate-band" id="gate-02" aria-labelledby="gate-02-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">02</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">02</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-02-title">Research</h3>
-								<code class="gate-file-chip mono" translate="no">flow/01-research.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">02</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-02-title">Research</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/01-research.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Trích nguồn thật hoặc dừng tại đây.</p>
+
+							<!-- Artifact preview visual: Research primary sources citations -->
+							<div class="artifact-preview artifact-research" aria-label="Bản xem trước: flow/01-research.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">MD</span>
+									<span class="artifact-path mono" translate="no">flow/01-research.md</span>
+									<span class="artifact-status-pill status-verified mono">3/3 NGUỒN</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line"><span class="art-ln">1</span><span class="art-kw">##</span> Nguồn đối chiếu sơ cấp</div>
+									<div class="art-line art-line-cite"><span class="art-ln">2</span><span class="art-bullet">•</span> [RFC-9110] §4.2 Phương thức idempotent</div>
+									<div class="art-line art-line-cite"><span class="art-ln">3</span><span class="art-bullet">•</span> github.com/owner/repo#412 (repro)</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-kw">##</span> So sánh cạnh tranh &amp; kịch bản lỗi</div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">link đã xác thực · khóa cơ sở thực chứng</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
@@ -185,12 +235,37 @@ const willNotPass = [
 
 				<!-- Gate 03: Scope -->
 				<article class="gate-band" id="gate-03" aria-labelledby="gate-03-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">03</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">03</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-03-title">Scope</h3>
-								<code class="gate-file-chip mono" translate="no">flow/02-scope.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">03</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-03-title">Scope</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/02-scope.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Vạch ranh giới rõ. Bỏ hết phần thừa.</p>
+
+							<!-- Artifact preview visual: Scope in-scope vs non-goals perimeter -->
+							<div class="artifact-preview artifact-scope" aria-label="Bản xem trước: flow/02-scope.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">MD</span>
+									<span class="artifact-path mono" translate="no">flow/02-scope.md</span>
+									<span class="artifact-status-pill status-frozen mono">ĐÃ KHÓA</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line"><span class="art-ln">1</span><span class="art-tag-scope art-tag-in">TRONG-PHẠM-VI</span> S-01 Vòng lặp cổng CLI</div>
+									<div class="art-line"><span class="art-ln">2</span><span class="art-tag-scope art-tag-in">TRONG-PHẠM-VI</span> S-02 Kiểm tra schema biên nhận</div>
+									<div class="art-line art-line-cut"><span class="art-ln">3</span><span class="art-tag-scope art-tag-out">NGOÀI-PHẠM-VI</span> Thu thập telemetry / tracking</div>
+									<div class="art-line art-line-cut"><span class="art-ln">4</span><span class="art-tag-scope art-tag-out">NGOÀI-PHẠM-VI</span> Daemon đám mây riêng biệt</div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">2 lát cắt bàn giao · khóa ranh giới phạm vi</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
@@ -215,12 +290,37 @@ const willNotPass = [
 
 				<!-- Gate 04: PRD -->
 				<article class="gate-band" id="gate-04" aria-labelledby="gate-04-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">04</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">04</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-04-title">PRD</h3>
-								<code class="gate-file-chip mono" translate="no">flow/03-prd.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">04</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-04-title">PRD</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/03-prd.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Định nghĩa bài test trước khi gõ code.</p>
+
+							<!-- Artifact preview visual: PRD observable invariant list -->
+							<div class="artifact-preview artifact-prd" aria-label="Bản xem trước: flow/03-prd.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">MD</span>
+									<span class="artifact-path mono" translate="no">flow/03-prd.md</span>
+									<span class="artifact-status-pill status-verified mono">TIÊU CHÍ</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line"><span class="art-ln">1</span><span class="art-inv-id">INV-01:</span> exit 1 khi spec file còn trống</div>
+									<div class="art-line"><span class="art-ln">2</span><span class="art-inv-id">INV-02:</span> in dòng từ chối ra stderr</div>
+									<div class="art-line"><span class="art-ln">3</span><span class="art-inv-id">INV-03:</span> biên nhận JSON đúng định dạng schema</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-inv-id">INV-04:</span> chế độ degrade tự mở khoản nợ kỹ thuật</div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">4 bất biến kiểm chứng được · không văn mơ hồ</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
@@ -245,12 +345,37 @@ const willNotPass = [
 
 				<!-- Gate 05: ADR -->
 				<article class="gate-band" id="gate-05" aria-labelledby="gate-05-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">05</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">05</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-05-title">ADR</h3>
-								<code class="gate-file-chip mono" translate="no">flow/04-adr.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">05</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-05-title">ADR</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/04-adr.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Ghi lại đánh đổi trước khi commit.</p>
+
+							<!-- Artifact preview visual: ADR architecture decision record -->
+							<div class="artifact-preview artifact-adr" aria-label="Bản xem trước: flow/04-adr.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">ADR</span>
+									<span class="artifact-path mono" translate="no">flow/04-adr.md</span>
+									<span class="artifact-status-pill status-accepted mono">CHẤP NHẬN</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line"><span class="art-ln">1</span><span class="art-field">Trạng thái:</span> <span class="art-val-ok">Chấp nhận</span> (2026-10-11)</div>
+									<div class="art-line"><span class="art-ln">2</span><span class="art-field">Bối cảnh:</span> Lưu file repo vs daemon SQLite</div>
+									<div class="art-line"><span class="art-ln">3</span><span class="art-field">Quyết định:</span> Dùng file Markdown trong git</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-field">Hệ quả:</span> Di động tuyệt đối; không cần daemon ngầm</div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">đã lập bản đồ hoàn tác · chốt xong đánh đổi</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
@@ -275,12 +400,37 @@ const willNotPass = [
 
 				<!-- Gate 06: Contract (Features After Install proof panel) -->
 				<article class="gate-band" id="gate-06" aria-labelledby="gate-06-title">
+					<div class="gate-rail-node" aria-hidden="true"></div>
+					<span class="gate-watermark-num mono" aria-hidden="true">06</span>
 					<div class="gate-band-inner">
 						<div class="gate-meta">
-							<span class="gate-big-num mono">06</span>
-							<div class="gate-meta-text">
-								<h3 class="gate-stage-name" id="gate-06-title">Contract</h3>
-								<code class="gate-file-chip mono" translate="no">flow/05-contract.md</code>
+							<div class="gate-meta-header">
+								<span class="gate-big-num mono">06</span>
+								<div class="gate-meta-text">
+									<h3 class="gate-stage-name" id="gate-06-title">Contract</h3>
+									<div class="gate-file-row">
+										<code class="gate-file-chip mono" translate="no">flow/05-contract.md</code>
+									</div>
+								</div>
+							</div>
+							<p class="gate-tagline">Cả hai cùng duyệt mới được bước tiếp.</p>
+
+							<!-- Artifact preview visual: Signed verification contract -->
+							<div class="artifact-preview artifact-contract" aria-label="Bản xem trước: flow/05-contract.md">
+								<div class="artifact-topbar">
+									<span class="artifact-doc-icon mono">SIG</span>
+									<span class="artifact-path mono" translate="no">flow/05-contract.md</span>
+									<span class="artifact-status-pill status-pass mono">MỞ CỔNG</span>
+								</div>
+								<div class="artifact-body mono" translate="no">
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> người-duyệt: @dev đã chấp thuận</div>
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> harness-chứng-thực: sha256:7f3a..9e1b</div>
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> flow-doctor: READY (đã kiểm tra skill)</div>
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> đồng-thuận-kép: MỞ CỔNG -&gt; tiến hành build</div>
+								</div>
+								<div class="artifact-footer mono">
+									<span class="artifact-diag">hợp đồng đã ký · cổng mở cho giai đoạn build</span>
+								</div>
 							</div>
 						</div>
 						<div class="gate-proof-area">
