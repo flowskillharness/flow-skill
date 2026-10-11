@@ -185,6 +185,95 @@ ck 0 "$rc" "ready exit 0"
 has "$out" "allowed: - src/app.ts" "ready prints allowed-files via _card_allowed_files"
 clean
 
+echo "M) workspace port: deterministic per-card port allocator (C4)"
+newsb
+bash "$RUN" workspace add feat-c1 --card C-001 >/dev/null 2>&1
+bash "$RUN" workspace add feat-c2 --card C-002 >/dev/null 2>&1
+wt1="$(dirname "$SB")/$(basename "$SB")-feat-c1"
+wt2="$(dirname "$SB")/$(basename "$SB")-feat-c2"
+
+# (a) same card twice -> same port, file content stable
+out1="$(bash "$RUN" workspace port C-001 2>&1)"; rc1=$?
+ck 0 "$rc1" "port C-001 first run exit 0"
+has "$out1" "C-001 -> port 3000" "first run port 3000"
+has "$out1" "(written to $wt1/.env.flow.local)" "first run prints written path"
+content1="$(cat "$wt1/.env.flow.local")"
+
+out2="$(bash "$RUN" workspace port C-001 2>&1)"; rc2=$?
+ck 0 "$rc2" "port C-001 second run exit 0"
+has "$out2" "C-001 -> port 3000" "second run same port 3000"
+content2="$(cat "$wt1/.env.flow.local")"
+ck "$content1" "$content2" "file content stable across runs"
+
+# (b) two cards -> distinct ports (base+N distinct)
+out_b="$(bash "$RUN" workspace port C-002 2>&1)"; rc_b=$?
+ck 0 "$rc_b" "port C-002 exit 0"
+has "$out_b" "C-002 -> port 3001" "C-002 gets distinct port 3001"
+
+# consistency check: port matches workspace enter for each card, and they differ
+p1="$(printf '%s\n' "$out1" | sed -nE 's/.*-> port ([0-9]+).*/\1/p')"
+e1="$(bash "$RUN" workspace enter feat-c1 2>&1 | sed -nE 's/.*# = ([0-9]+).*/\1/p')"
+ck "$e1" "$p1" "C-001 port matches workspace enter port"
+p2="$(printf '%s\n' "$out_b" | sed -nE 's/.*-> port ([0-9]+).*/\1/p')"
+e2="$(bash "$RUN" workspace enter feat-c2 2>&1 | sed -nE 's/.*# = ([0-9]+).*/\1/p')"
+ck "$e2" "$p2" "C-002 port matches workspace enter port"
+ck 0 "$([ "$p1" != "$p2" ] && echo 0 || echo 1)" "C-001 and C-002 ports differ"
+
+# (c) FLOW_WORKSPACE_BASEPORT override respected
+out_c="$(FLOW_WORKSPACE_BASEPORT=5000 bash "$RUN" workspace port C-001 2>&1)"; rc_c=$?
+ck 0 "$rc_c" "port C-001 with BASEPORT=5000 exit 0"
+has "$out_c" "C-001 -> port 5000" "BASEPORT=5000 gives 5000"
+has "$(cat "$wt1/.env.flow.local")" "PORT=5000" ".env.flow.local reflects overridden port"
+
+# (d) card without workspace -> exit 2 with loud message
+out_d="$(bash "$RUN" workspace port C-999 2>&1)"; rc_d=$?
+ck 2 "$rc_d" "unregistered card exit 2"
+has "$out_d" "FAIL" "unregistered card loud error mentions FAIL"
+has "$out_d" "no registered workspace" "unregistered card explains missing workspace"
+
+# (e) invalid card id -> exit 2
+out_e1="$(bash "$RUN" workspace port not-a-card 2>&1)"; rc_e1=$?
+ck 2 "$rc_e1" "invalid card id 'not-a-card' exit 2"
+has "$out_e1" "usage:" "invalid card id prints usage"
+
+out_e2="$(bash "$RUN" workspace port C- 2>&1)"; rc_e2=$?
+ck 2 "$rc_e2" "invalid card id 'C-' exit 2"
+has "$out_e2" "usage:" "empty number card id prints usage"
+
+out_e3="$(bash "$RUN" workspace port 2>&1)"; rc_e3=$?
+ck 2 "$rc_e3" "missing card id arg exit 2"
+has "$out_e3" "usage:" "missing card id prints usage"
+
+# (f) .env.flow.local contains the assignment
+has "$(cat "$wt1/.env.flow.local")" "PORT=" ".env.flow.local contains PORT assignment"
+has "$(cat "$wt1/.env.flow.local")" "FLOW_CARD=C-001" ".env.flow.local contains FLOW_CARD"
+
+# (a) BASEPORT=65534 with two registered worktrees (offsets 0,1): C-001 port 65534 ok; C-002 port 65535 ok; register a third (offset 2) => port C-003 exit 2 with exhaustion message
+out_o0="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-001 2>&1)"; rc_o0=$?
+ck 0 "$rc_o0" "BASEPORT=65534 offset 0 exit 0"
+has "$out_o0" "C-001 -> port 65534" "port 65534 assigned"
+
+out_o1="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-002 2>&1)"; rc_o1=$?
+ck 0 "$rc_o1" "BASEPORT=65534 offset 1 exit 0"
+has "$out_o1" "C-002 -> port 65535" "port 65535 assigned"
+
+bash "$RUN" workspace add feat-c3 --card C-003 >/dev/null 2>&1
+out_o2="$(FLOW_WORKSPACE_BASEPORT=65534 bash "$RUN" workspace port C-003 2>&1)"; rc_o2=$?
+ck 2 "$rc_o2" "BASEPORT=65534 offset 2 exhausted exit 2"
+has "$out_o2" "port range exhausted for 'C-003'" "exhaustion message printed"
+has "$out_o2" "baseport 65534 + offset 2 = 65536 > 65535" "exhaustion details stated"
+
+# (b) FLOW_WORKSPACE_BASEPORT=70000 => exit 2 with range message
+out_oor="$(FLOW_WORKSPACE_BASEPORT=70000 bash "$RUN" workspace port C-001 2>&1)"; rc_oor=$?
+ck 2 "$rc_oor" "FLOW_WORKSPACE_BASEPORT=70000 exit 2"
+has "$out_oor" "FLOW_WORKSPACE_BASEPORT=70000 out of range (1..65535)" "out of range message printed"
+
+# (c) BASEPORT=65535 + offset 0 => 65535 ok
+out_max="$(FLOW_WORKSPACE_BASEPORT=65535 bash "$RUN" workspace port C-001 2>&1)"; rc_max=$?
+ck 0 "$rc_max" "BASEPORT=65535 offset 0 exit 0"
+has "$out_max" "C-001 -> port 65535" "port 65535 assigned"
+clean
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

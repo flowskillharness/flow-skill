@@ -56,7 +56,8 @@ DEBT_FILE="$ROOT/DEBT.md"
 PROJECT_TYPE_FILE="$ROOT/PROJECT_TYPE"
 SKIPPED_FILE="$ROOT/flow/.skipped"
 LOCK_FILE="$ROOT/flow/.lock"
-LOCK_DIR="$ROOT/flow/.lock.d"   # atomic mkdir claim dir (W5 guard); winner then writes $LOCK_FILE metadata
+LOCK_DIR="$ROOT/flow/.lock.d"   # atomic claim dir (W5 guard); winner then writes $LOCK_FILE metadata
+LOCK_CLAIM="$ROOT/flow/.lock.claim" # atomic set -C / O_EXCL claim guard
 HARNESS_PY="$SCRIPT_DIR/../harness/flow_harness.py"
 
 # Attestations library (risk, receipts, auto policy) — optional-soft: missing file is fatal for v0.28+.
@@ -643,38 +644,52 @@ _write_lock() { # $1 = cmd label
     > "$LOCK_FILE" 2>/dev/null || true
 }
 
+# Atomic test-and-set claim via bash noclobber (set -C / O_EXCL creat).
+# Guarantees atomic mutual exclusion across all filesystems and bash environments,
+# including systems where external mkdir binaries suffer from race bugs (uutils 0.10.0).
+# Winner also creates LOCK_DIR for backward compatibility with inspection/mtime tooling.
+_claim_lock() {
+  ( set -C; : > "$LOCK_CLAIM" ) 2>/dev/null || return 1
+  mkdir "$LOCK_DIR" 2>/dev/null || true
+  return 0
+}
+
+_release_claim() {
+  rm -f "$LOCK_CLAIM" 2>/dev/null || true
+  rm -rf "$LOCK_DIR" 2>/dev/null || true
+}
+
 # Guard a MUTATING command. 0 = lock taken/refreshed (proceed); 1 = refused (caller aborts).
 lock_acquire() { # $1 = cmd label
   local me age; me="$(flow_lock_owner)"
-  # Ensure the lock's PARENT dir exists so the atomic `mkdir "$LOCK_DIR"` test-and-set below can
+  # Ensure the lock's PARENT dir exists so the atomic claim test-and-set below can
   # succeed on a brand-new project (flow/ may not exist yet at stage-00 unlock / first run).
-  # This creates only the parent; LOCK_DIR itself is still created with plain mkdir (atomic guard).
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
 
-  # FLOW_FORCE: unconditional takeover; reset the atomic claim dir so the mkdir guard is bypassed cleanly.
+  # FLOW_FORCE: unconditional takeover; reset the atomic claim so the guard is bypassed cleanly.
   if [ -n "${FLOW_FORCE:-}" ]; then
     if _read_lock && [ -n "$LOCK_OWNER" ] && [ "$LOCK_OWNER" != "$me" ]; then
       echo "NOTE: FLOW_FORCE set - taking over a lock held by [$LOCK_OWNER] (cmd '${LOCK_CMD:-?}')."
     fi
-    rm -rf "$LOCK_DIR" 2>/dev/null || true
-    mkdir "$LOCK_DIR" 2>/dev/null || true
+    _release_claim
+    _claim_lock || true
     _write_lock "$1"; return 0
   fi
 
   # Same-session refresh: if the lock file names OUR owner, just update the timestamp.
-  # The session already owns LOCK_DIR from the original claim; no need to re-mkdir.
+  # The session already owns the claim from the original claim; no need to re-claim.
   if _read_lock && [ "$LOCK_OWNER" = "$me" ]; then _write_lock "$1"; return 0; fi
 
-  # W5 — Atomic claim guard. mkdir is POSIX test-and-set: exactly one racing caller wins.
-  # Only attempt when neither the claim dir nor a legacy flat-file lock exists (truly free state).
-  # Legacy flat-file (LOCK_FILE without LOCK_DIR): tolerated — fall through to reclaim logic below
+  # W5 — Atomic claim guard. set -C / O_EXCL is POSIX test-and-set: exactly one racing caller wins.
+  # Only attempt when neither the claim nor a legacy flat-file lock exists (truly free state).
+  # Legacy flat-file (LOCK_FILE without LOCK_DIR/LOCK_CLAIM): tolerated — fall through to reclaim logic below
   # so an in-flight upgrade from v0.11 does not strand a live lock.
-  if ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_FILE" ]; then
-    if mkdir "$LOCK_DIR" 2>/dev/null; then
+  if ! [ -f "$LOCK_CLAIM" ] && ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_FILE" ]; then
+    if _claim_lock; then
       _write_lock "$1"; return 0                                               # won the race; lock claimed
     fi
-    # Lost the race: LOCK_DIR now owned by the winner. Fall through to BLOCK below.
-    # LOCK_FILE may not be written yet (tiny window); treat LOCK_DIR presence as lock-held.
+    # Lost the race: claim now owned by the winner. Fall through to BLOCK below.
+    # LOCK_FILE may not be written yet (tiny window); treat claim presence as lock-held.
   fi
 
   # --- v0.11 FR4 reclaim logic (runs for: race loser, legacy flat-file, any existing lock) ---
@@ -686,25 +701,25 @@ lock_acquire() { # $1 = cmd label
     local myhost; myhost="$(uname -n 2>/dev/null || echo host)"
     if [ -n "$LOCK_PID" ] && [ "$LOCK_HOST" = "$myhost" ] && ! kill -0 "$LOCK_PID" 2>/dev/null; then
       echo "NOTE: reclaiming a flow lock from a dead session [$LOCK_OWNER] (pid $LOCK_PID no longer alive)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
-      # F2: check mkdir atomically — if another reclaimer beat us, do NOT write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      _release_claim
+      # F2: check claim atomically — if another reclaimer beat us, do NOT write
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost the re-mkdir race; another reclaimer already owns the slot — back off
+      # Lost the reclaim race; another reclaimer already owns the slot — back off
       echo "BLOCKED: another flow session claimed this project concurrently (concurrent /flow corrupts the plan)."
-      echo "  (reclaim mkdir race lost — another session already took the lock.)"
+      echo "  (reclaim claim race lost — another session already took the lock.)"
       return 1
     elif [ "$age" -ge "$FLOW_LOCK_TTL" ]; then
       echo "NOTE: reclaiming a STALE flow lock from [$LOCK_OWNER] (${age}s old >= ${FLOW_LOCK_TTL}s TTL)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
-      # F2: check mkdir atomically — if another reclaimer beat us, do NOT write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      _release_claim
+      # F2: check claim atomically — if another reclaimer beat us, do NOT write
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost the re-mkdir race; another reclaimer already owns the slot — back off
+      # Lost the reclaim race; another reclaimer already owns the slot — back off
       echo "BLOCKED: another flow session claimed this project concurrently (concurrent /flow corrupts the plan)."
-      echo "  (reclaim mkdir race lost — another session already took the lock.)"
+      echo "  (reclaim claim race lost — another session already took the lock.)"
       return 1
     fi
     if flow_owner_strong "$me" && flow_owner_strong "$LOCK_OWNER"; then         # fresh + provably foreign
@@ -719,29 +734,31 @@ lock_acquire() { # $1 = cmd label
     _write_lock "$1"; return 0
   fi
 
-  # LOCK_DIR exists but LOCK_FILE not yet written: either a race loser in the tiny window
-  # after mkdir loss, or a crashed winner (F1: process died after mkdir but before _write_lock).
-  # Distinguish via mtime: if LOCK_DIR is older than FLOW_LOCK_TTL it is a crashed stale claim
+  # LOCK_CLAIM or LOCK_DIR exists but LOCK_FILE not yet written: either a race loser in the tiny window
+  # after claim loss, or a crashed winner (F1: process died after claim but before _write_lock).
+  # Distinguish via mtime: if the claim target is older than FLOW_LOCK_TTL it is a crashed stale claim
   # and safe to reclaim; if fresh, treat as live mid-claim and BLOCK.
-  if [ -d "$LOCK_DIR" ]; then
+  if [ -f "$LOCK_CLAIM" ] || [ -d "$LOCK_DIR" ]; then
     local ttl_min; ttl_min=$(( (FLOW_LOCK_TTL + 59) / 60 ))   # ceiling division to minutes
-    if find "$LOCK_DIR" -maxdepth 0 -mmin +"$ttl_min" 2>/dev/null | grep -q .; then
+    local claim_target="$LOCK_DIR"
+    [ -d "$claim_target" ] || claim_target="$LOCK_CLAIM"
+    if find "$claim_target" -maxdepth 0 -mmin +"$ttl_min" 2>/dev/null | grep -q .; then
       echo "NOTE: reclaiming a stale crashed claim (LOCK_DIR old, no LOCK_FILE)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
+      _release_claim
       # F2: atomic re-claim; if another reclaimer beat us, don't write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost re-mkdir race; fall through to BLOCKED below
+      # Lost re-claim race; fall through to BLOCKED below
     fi
     echo "BLOCKED: another flow session is claiming this project (concurrent /flow corrupts the plan)."
     echo "  (lock dir exists; the other session is mid-claim.  If it is truly gone: '/flow unlock'.)"
     return 1
   fi
 
-  # No LOCK_DIR and no LOCK_FILE: truly free state reached after reclaim or first run.
-  # F2: check mkdir exit status — if another caller beats us here, refuse rather than double-write
-  if mkdir "$LOCK_DIR" 2>/dev/null; then
+  # No claim and no LOCK_FILE: truly free state reached after reclaim or first run.
+  # F2: check claim exit status — if another caller beats us here, refuse rather than double-write
+  if _claim_lock; then
     _write_lock "$1"; return 0                                                   # won the clean claim
   fi
   # Another caller won; fall through — will hit the BLOCKED path on next iteration.
@@ -998,10 +1015,14 @@ _resume_valid_lines() {
 }
 
 cmd_resume() {
+  local budget=0
   if [ "${1:-}" = "--json" ]; then
     if [ -n "${2:-}" ]; then usage; exit 2; fi
     _emit_context_json
     return 0
+  elif [ "${1:-}" = "--budget" ]; then
+    if [ -n "${2:-}" ]; then usage; exit 2; fi
+    budget=1
   elif [ -n "${1:-}" ]; then
     usage
     exit 2
@@ -1102,7 +1123,12 @@ cmd_resume() {
   fi
 
   # ---- IN FLIGHT ----
-  local infl_out; infl_out="$(inflight_display)"
+  local infl_out
+  if [ "$budget" -eq 1 ]; then
+    infl_out="$(inflight_display 5)"
+  else
+    infl_out="$(inflight_display)"
+  fi
   if [ -n "$infl_out" ]; then
     echo "in flight:"
     printf '%s\n' "$infl_out"
@@ -1251,15 +1277,24 @@ _elapsed_human() { # $1=start-epoch -> "Xm"/"Xh"/"Xd" (integer; GNU/BSD-portable
 }
 
 inflight_display() { # emit a line per todo card still marked in flight (stale ids self-skip)
-  local infl id ts f; infl="$(_inflight_file)"
+  local max="${1:-0}"
+  local infl id ts f count=0 hidden=0; infl="$(_inflight_file)"
   [ -f "$infl" ] || return 0
   while read -r id ts; do
     [ -n "$id" ] || continue
     f="$(resolve_card_file "$id" 2>/dev/null)"
     [ -n "$f" ] && [ -f "$f" ] || continue                   # card gone -> stale, skip
     [ "$(card_status "$f")" = "todo" ] || continue            # only todo cards are "in flight"
-    printf '    %s (in flight, started %s ago)\n' "$id" "$(_elapsed_human "$ts")"
+    count=$((count + 1))
+    if [ "$max" -gt 0 ] && [ "$count" -gt "$max" ]; then
+      hidden=$((hidden + 1))
+    else
+      printf '    %s (in flight, started %s ago)\n' "$id" "$(_elapsed_human "$ts")"
+    fi
   done < "$infl"
+  if [ "$hidden" -gt 0 ]; then
+    printf "    +%s more in flight - see 'flow card'\n" "$hidden"
+  fi
 }
 
 # Single source of truth for "what should I do next" - used by BOTH `status` (Phase 3) and
@@ -2116,10 +2151,10 @@ cmd_recall() {
 }
 
 cmd_unlock() {
-  if [ ! -f "$LOCK_FILE" ] && ! [ -d "$LOCK_DIR" ]; then echo "no flow lock to clear ($LOCK_FILE)"; return 0; fi
+  if [ ! -f "$LOCK_FILE" ] && ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_CLAIM" ]; then echo "no flow lock to clear ($LOCK_FILE)"; return 0; fi
   _read_lock
   rm -f "$LOCK_FILE" 2>/dev/null || true
-  rm -rf "$LOCK_DIR" 2>/dev/null || true   # W5: remove atomic claim dir so next acquire can mkdir
+  _release_claim
   echo "PASS: cleared flow lock (was [$LOCK_OWNER], cmd '${LOCK_CMD:-?}')."
   return 0
 }
@@ -2379,8 +2414,131 @@ prd_declares_fr() { # true if the PRD uses the FRn traceability convention (driv
   # keep it loose so the tip reliably shows in the common case. Do not "tighten" to match consistency.
   [ -f "$FLOW_DIR/03-prd.md" ] && grep -qE 'FR[0-9]+' "$FLOW_DIR/03-prd.md" 2>/dev/null
 }
+_consistency_contract() {
+  local contract="$FLOW_DIR/05-contract.md"
+  if [ ! -f "$contract" ]; then
+    echo "consistency --contract: no flow/05-contract.md found - skipped."
+    return 0
+  fi
+
+  local td; td="$(mktemp -d)"; _register_td "$td"
+  trap 'rm -rf "${td:-}" 2>/dev/null' RETURN
+
+  # 1. Extract endpoint rows from 05-contract.md
+  # Grounded in _templates/05-contract.md: table columns "| Method/Interface | Path/Name | ..."
+  # Tolerates swapped Method/Path column order based on header row inspection.
+  awk -F'|' '
+    /^[[:space:]]*\|/ {
+      line = $0
+      gsub(/^[[:space:]]*\||\|[[:space:]]*$/, "", line)
+      if (tolower(line) ~ /method/ && tolower(line) ~ /path/) {
+        n = split(line, cols, "|")
+        for (i = 1; i <= n; i++) {
+          c = tolower(cols[i])
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+          if (c ~ /method/) m_col = i
+          if (c ~ /path/) p_col = i
+        }
+        in_table = 1
+        next
+      }
+      if (in_table) {
+        if (line ~ /^[[:space:]]*-+/) next
+        n = split(line, cols, "|")
+        m = cols[m_col]; p = cols[p_col]
+        gsub(/^[[:space:]]+|[[:space:]]+$|[`"]/, "", m)
+        gsub(/^[[:space:]]+|[[:space:]]+$|[`"]/, "", p)
+        if (m ~ /^\[FILL/ || p ~ /^\[FILL/ || m == "" || p == "") next
+        print m "\t" p
+      }
+    }
+    !/^[[:space:]]*\|/ { in_table = 0 }
+  ' "$contract" > "$td/endpoints" 2>/dev/null
+
+  local n_ep
+  n_ep="$(grep -c . "$td/endpoints" 2>/dev/null || echo 0)"
+  if [ "$n_ep" -eq 0 ]; then
+    echo "consistency --contract: no endpoint table found in flow/05-contract.md - skipped."
+    rm -rf "$td" 2>/dev/null
+    return 0
+  fi
+
+  # 2. Extract ## Scope content from all cards/C-*.md
+  : > "$td/cards_scope"
+  if [ -d "$CARDS_DIR" ]; then
+    local cf
+    for cf in "$CARDS_DIR"/C-*.md; do
+      [ -f "$cf" ] || continue
+      awk '/^##[[:space:]]+[Ss]cope/{f=1;next} /^##[[:space:]]/{f=0} f' "$cf" 2>/dev/null
+    done > "$td/cards_scope"
+  fi
+
+  # 3. Match each endpoint path against cards Scope content
+  echo "contract-to-card endpoint coverage audit (flow/05-contract.md vs cards/C-*.md ## Scope)"
+  echo "  (matching rule: exact path token in cards/C-*.md '## Scope' - an occurrence counts only when not"
+  echo "   preceded/followed by [A-Za-z0-9_] and not followed by [A-Za-z0-9_\/{}:.-]; /api/users/:id does not"
+  echo "   cover /api/users; a trailing '?' or end-of-line still counts)"
+  local m p n_cov=0 n_uncov=0
+  : > "$td/uncovered"
+  while IFS="$(printf '\t')" read -r m p; do
+    [ -n "$p" ] || continue
+    # Exact-token boundary via index()/substr only (no regex interpolation): an occurrence of the
+    # path counts as coverage only when it is not preceded by [A-Za-z0-9_] and not followed by
+    # [A-Za-z0-9_\/{}:.-] (end-of-line after counts, so a trailing '?' or EOL is still covered).
+    # awk exit 0 = found (covered); awk exit 1 = not found (uncovered).
+    if awk -v p="$p" '
+      {
+        s = $0; start = 1
+        while ((pos = index(substr(s, start), p)) > 0) {
+          pos += start - 1
+          before = (pos > 1) ? substr(s, pos - 1, 1) : ""
+          after  = substr(s, pos + length(p), 1)
+          if (before !~ /[A-Za-z0-9_]/ && (after == "" || after !~ /[A-Za-z0-9_\/{}:.-]/)) { found = 1; exit }
+          start = pos + 1
+        }
+      }
+      END { exit found ? 0 : 1 }
+    ' "$td/cards_scope" 2>/dev/null; then
+      n_cov=$((n_cov + 1))
+    else
+      n_uncov=$((n_uncov + 1))
+      printf '        %s %s\n' "$m" "$p" >> "$td/uncovered"
+    fi
+  done < "$td/endpoints"
+
+  if [ "$n_uncov" -gt 0 ]; then
+    echo "  [!] uncovered contract endpoint(s) (no card references path in ## Scope):"
+    cat "$td/uncovered"
+    echo "  coverage: $n_ep endpoint(s), $n_cov covered, $n_uncov uncovered."
+    trap - RETURN
+    rm -rf "$td" 2>/dev/null
+    echo "FLAGGED: contract endpoint(s) have no card covering them in ## Scope."
+    return 1
+  fi
+
+  echo "  coverage: $n_ep endpoint(s), $n_cov covered, $n_uncov uncovered."
+  echo "  PASS: all $n_ep endpoint(s) covered across cards/ scope."
+  trap - RETURN
+  rm -rf "$td" 2>/dev/null
+  return 0
+}
 
 cmd_consistency() {
+  case "${1:-}" in
+    "") : ;;
+    --contract)
+      if [ $# -gt 1 ]; then
+        echo "usage: /flow consistency [--contract]" >&2
+        return 1
+      fi
+      _consistency_contract
+      return $?
+      ;;
+    *)
+      echo "usage: /flow consistency [--contract]" >&2
+      return 1
+      ;;
+  esac
   # Cross-artifact coverage + contradiction audit - the MECHANICAL complement to the human
   # traceability challenges in gate-rules.md (03/05). The other probes each cover one axis:
   # coherence=version drift, contract=URL-prefix drift, tokens=design-token drift. THIS axis is
@@ -2391,7 +2549,7 @@ cmd_consistency() {
   # Traceability anchors (see _templates): PRD 'Features' entries tagged 'FRn:' (functional
   # requirement id); cards declare 'implements: FR1, FR2' (or 'infra'/'none' for non-feature
   # cards); 05-contract 'Feature -> interface map' references each 'FRn'.
-  local prd="$FLOW_DIR/03-prd.md" contract="$FLOW_DIR/05-contract.md"
+  local prd="$FLOW_DIR/03-prd.md" contract="$FLOW_DIR/05-contract.md" td=""
   if [ ! -f "$prd" ]; then echo "consistency: no flow/03-prd.md yet - planning incomplete (skipped)."; return 0; fi
   local td; td="$(mktemp -d)"; _register_td "$td"
   trap 'rm -rf "$td" 2>/dev/null' RETURN
@@ -2483,16 +2641,30 @@ cmd_consistency() {
 
 cmd_promote() {
   # cross-project knowledge tier: copy a playbook/lesson into ~/.claude/flow/playbooks so its
-  # lessons travel to every project (surfaced by '/flow recall' everywhere).
-  local src="${1:-}"
-  if [ -z "$src" ] || [ ! -f "$src" ]; then echo "usage: /flow promote <path-to-playbook.md>"; return 1; fi
-  mkdir -p "$GLOBAL_KB_DIR" 2>/dev/null || true
-  if ! cp "$src" "$GLOBAL_KB_DIR/$(basename "$src")" 2>/dev/null; then
-    echo "FAIL: could not copy into $GLOBAL_KB_DIR"; return 1
-  fi
-  echo "PASS: promoted $(basename "$src") -> $GLOBAL_KB_DIR"
-  echo "  '/flow recall' now surfaces it as a GLOBAL PLAYBOOK in every project."
-  return 0
+  # lessons travel to every project (surfaced by '/flow recall' everywhere), or suggest
+  # draft playbooks from repeated harness patterns via --suggest.
+  case "${1:-}" in
+    --suggest)
+      if ! harness_available; then
+        echo "promote --suggest: durable layer unavailable (python or harness missing, or FLOW_HARNESS_DISABLE set)."
+        return 0
+      fi
+      local py; py="$(_python)"
+      FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" promote-suggest
+      return $?
+      ;;
+    *)
+      local src="${1:-}"
+      if [ -z "$src" ] || [ ! -f "$src" ]; then echo "usage: /flow promote <path-to-playbook.md> | /flow promote --suggest"; return 1; fi
+      mkdir -p "$GLOBAL_KB_DIR" 2>/dev/null || true
+      if ! cp "$src" "$GLOBAL_KB_DIR/$(basename "$src")" 2>/dev/null; then
+        echo "FAIL: could not copy into $GLOBAL_KB_DIR"; return 1
+      fi
+      echo "PASS: promoted $(basename "$src") -> $GLOBAL_KB_DIR"
+      echo "  '/flow recall' now surfaces it as a GLOBAL PLAYBOOK in every project."
+      return 0
+      ;;
+  esac
 }
 
 cmd_doctor() {
@@ -2534,6 +2706,35 @@ cmd_doctor() {
       Darwin) echo "  timeout:   absent (no timeout/gtimeout; live eval REFUSED)" ;;
       *)      echo "  timeout:   partial (watchdog fallback; live eval not GNU-bounded)" ;;
     esac
+  fi
+  echo
+  # Runner integrity (pack-time reference hash). Preferred source is the receipt sync.mjs writes
+  # INSIDE the bundled skill (skills/flow/manifest-hashes.json) - present on real npm installs;
+  # portable-manifest.json only exists in dev checkouts. First existing file wins; no file / no
+  # hashes entry (older installs) => informational skip only.
+  local mf="" _mf
+  for _mf in "$SCRIPT_DIR/../manifest-hashes.json" "$SCRIPT_DIR/../../../portable-manifest.json" "$SCRIPT_DIR/../../portable-manifest.json"; do
+    if [ -f "$_mf" ]; then mf="$_mf"; break; fi
+  done
+  local want=""
+  [ -n "$mf" ] && want="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$mf" 2>/dev/null | head -1)"
+  if [ -z "$want" ]; then
+    echo "  runner integrity: no reference hash in manifest (older install) - skipped"
+  else
+    local have=""
+    if command -v shasum >/dev/null 2>&1; then
+      have="$(shasum -a 256 "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
+    elif command -v sha256sum >/dev/null 2>&1; then
+      have="$(sha256sum "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
+    fi
+    if [ -z "$have" ]; then
+      echo "  runner integrity: no shasum/sha256sum available - skipped"
+    elif [ "$have" = "$want" ]; then
+      echo "  runner integrity: ok (${want%"${want#????????}"}...)"
+    else
+      echo "  FAIL: runner integrity - flow.sh does not match the installed manifest hash (expected ${want%"${want#????????}"}..., got ${have%"${have#????????}"}...) - the harness may have been modified mid-project"
+      ok=0
+    fi
   fi
   echo
   if [ "$ok" -eq 1 ]; then
@@ -3135,16 +3336,96 @@ cmd_converge() { # [--file <payload>]  append-only remainder cards from a flow-c
   echo "  These are remainder stubs with [FILL] Verify/Done-evidence - build them via /flow ready + /flow check."
   return 0
 }
+_ws_port() { # <C-NNN>
+  local card="${1:-}"
+  if [ $# -ne 1 ]; then
+    echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+    return 2
+  fi
+  case "$card" in
+    C-[0-9]*)
+      local num="${card#C-}"
+      case "$num" in
+        ''|*[!0-9]*)
+          echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+          return 2
+          ;;
+      esac
+      ;;
+    *)
+      echo "usage: /flow workspace port <C-NNN> (e.g. C-012)" >&2
+      return 2
+      ;;
+  esac
+
+  local rec="" r c wt offset
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    c="$(_ws_get "$r" card_id)"
+    if [ "$c" = "$card" ]; then
+      rec="$r"
+      break
+    fi
+  done <<EOF
+$(_ws_active_records)
+EOF
+
+  if [ -z "$rec" ]; then
+    echo "workspace port: FAIL - card '$card' has no registered workspace (run '/flow workspace add <branch> --card $card' first)" >&2
+    return 2
+  fi
+
+  wt="$(_ws_get "$rec" worktree_path)"
+  if [ -z "$wt" ] || [ ! -d "$wt" ]; then
+    echo "workspace port: FAIL - workspace directory for '$card' not found at '${wt:-<empty>}'" >&2
+    return 2
+  fi
+
+  offset="$(_ws_get_num "$rec" port_offset)"
+  if [ -z "$offset" ]; then
+    echo "workspace port: FAIL - workspace record for '$card' has no port_offset" >&2
+    return 2
+  fi
+
+  local baseport="${FLOW_WORKSPACE_BASEPORT:-3000}"
+  case "$baseport" in
+    ''|*[!0-9]*)
+      baseport=3000
+      ;;
+    *)
+      if [ "$baseport" -lt 1 ] || [ "$baseport" -gt 65535 ]; then
+        echo "workspace port: FLOW_WORKSPACE_BASEPORT=$baseport out of range (1..65535)" >&2
+        return 2
+      fi
+      ;;
+  esac
+
+  local raw_port port
+  raw_port=$(( baseport + offset ))
+  if [ "$raw_port" -gt 65535 ]; then
+    echo "workspace port: FAIL - port range exhausted for '$card' (baseport $baseport + offset $offset = $raw_port > 65535); lower FLOW_WORKSPACE_BASEPORT" >&2
+    return 2
+  fi
+  port="$raw_port"
+
+  local env_file="$wt/.env.flow.local"
+  printf 'PORT=%s\nFLOW_CARD=%s\n' "$port" "$card" > "$env_file" || {
+    echo "workspace port: FAIL - cannot write to '$env_file'" >&2
+    return 1
+  }
+  echo "$card -> port $port (written to $env_file)"
+  return 0
+}
 
 cmd_workspace() {
   local sub="${1:-}"; shift 2>/dev/null || true
   case "$sub" in
-    add|list|enter|remove|check|doctor) : ;;
-    *) echo "usage: /flow workspace add|list|enter|remove|check|doctor"; return 1 ;;
+    add|list|enter|remove|check|doctor|port) : ;;
+    *) echo "usage: /flow workspace add|list|enter|remove|check|doctor|port"; return 1 ;;
   esac
   if ! command -v git >/dev/null 2>&1; then
     echo "workspace: git not found - worktree isolation unavailable (serial builds still work)."
-    case "$sub" in add|remove) return 1 ;; *) return 0 ;; esac
+    case "$sub" in add|remove) return 1 ;; port) return 2 ;; *) return 0 ;; esac
   fi
   case "$sub" in
     add)    _ws_add "$@" ;;
@@ -3153,6 +3434,7 @@ cmd_workspace() {
     remove) _ws_remove "$@" ;;
     check)  _ws_check "$@" ;;
     doctor) _ws_doctor ;;
+    port)   _ws_port "$@" ;;
   esac
 }
 
@@ -3747,8 +4029,9 @@ _eval_json_str_field() { # $1=line $2=field-name -> value or empty
 # List complete run_ids (has both a start header and a done trailer, n_written >= n_expected),
 # oldest first. An interrupted batch (Ctrl-C mid-run -> no trailer, per the EXIT-only trap) is
 # silently excluded here - that absence IS the completeness signal, not a positive "torn" flag.
-_eval_complete_run_ids() {
-  [ -f "$EVAL_RESULTS_FILE" ] || return 0
+_eval_file_complete_run_ids() { # $1=results-file
+  local f="${1:-$EVAL_RESULTS_FILE}"
+  [ -f "$f" ] || return 0
   awk '
     /"batch":"start"/ {
       match($0, /"run_id":"[^"]*"/); rid = substr($0, RSTART+10, RLENGTH-11)
@@ -3769,7 +4052,11 @@ _eval_complete_run_ids() {
         if (seen_start[r] && seen_done[r] && (nwritten[r]+0) >= (nexp[r]+0)) print r
       }
     }
-  ' "$EVAL_RESULTS_FILE"
+  ' "$f"
+}
+
+_eval_complete_run_ids() {
+  _eval_file_complete_run_ids "$EVAL_RESULTS_FILE"
 }
 
 # Per-stage scorecard for one batch: hollow flag-rate, sound pass-rate, invalid/unreliable
@@ -3890,6 +4177,157 @@ _eval_print_drift() {
       echo "    $stage: $prate -> $crate"
     fi
   done
+}
+
+# Extract per-fixture verdict records from a results file.
+# If complete batches exist, selects the latest complete batch; otherwise falls back
+# to the latest run_id present in fixture rows, or all fixture rows if no run_id exists.
+# Deduplicates by fixture id, keeping the latest verdict.
+_eval_diff_extract_fixtures() { # $1=results-file
+  local file="$1"
+  local c_ids last_id=""
+  c_ids="$(_eval_file_complete_run_ids "$file")"
+  if [ -n "$c_ids" ]; then
+    last_id="$(printf '%s\n' "$c_ids" | tail -1)"
+  else
+    last_id="$(grep '"fixture":' "$file" 2>/dev/null | grep -oE '"run_id":"[^"]*"' | tail -1 | sed -E 's/"run_id":"([^"]*)"/\1/')"
+  fi
+
+  local rows
+  if [ -n "$last_id" ]; then
+    rows="$(grep -F "\"run_id\":\"$last_id\"" "$file" 2>/dev/null | grep '"fixture":')"
+  else
+    rows="$(grep '"fixture":' "$file" 2>/dev/null)"
+  fi
+  [ -z "$rows" ] && return 0
+
+  printf '%s\n' "$rows" | while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    local fid v exp
+    fid="$(_eval_json_str_field "$line" fixture)"
+    v="$(_eval_json_str_field "$line" verdict)"
+    exp="$(_eval_json_str_field "$line" expected)"
+    [ -n "$fid" ] && printf '%s\t%s\t%s\n' "$fid" "${v:-UNKNOWN}" "${exp:--}"
+  done | awk -F'\t' '{ f[$1] = $2; e[$1] = $3 } END { for (k in f) print k "\t" f[k] "\t" e[k] }' | sort -k1,1
+}
+
+# Longitudinal regression classifier: compares two eval results files offline.
+# Per fixture present in both: REGRESSED, IMPROVED, SATURATED, UNCHANGED (correctness-relative).
+# Per fixture only in old: removed. Only in new: added.
+# Unknown expected: unknown (does not count toward regressions).
+# Exit 1 if any REGRESSED, exit 2 on missing/unreadable or empty file, else 0.
+_eval_diff() { # $1=old_results $2=new_results
+  local old_file="$1" new_file="$2"
+  if [ -z "$old_file" ] || [ -z "$new_file" ]; then
+    echo "eval --diff: requires two file arguments <old_results> <new_results>" >&2
+    return 2
+  fi
+  if [ ! -f "$old_file" ] || [ ! -r "$old_file" ]; then
+    echo "eval --diff: file not found or unreadable: $old_file" >&2
+    return 2
+  fi
+  if [ ! -f "$new_file" ] || [ ! -r "$new_file" ]; then
+    echo "eval --diff: file not found or unreadable: $new_file" >&2
+    return 2
+  fi
+
+  local td; td="$(mktemp -d)"; _register_td "$td"
+
+  _eval_diff_extract_fixtures "$old_file" > "$td/old.tsv"
+  _eval_diff_extract_fixtures "$new_file" > "$td/new.tsv"
+
+  if [ ! -s "$td/old.tsv" ]; then
+    echo "eval --diff: no fixture records found in $old_file" >&2
+    rm -rf "$td" 2>/dev/null
+    return 2
+  fi
+  if [ ! -s "$td/new.tsv" ]; then
+    echo "eval --diff: no fixture records found in $new_file" >&2
+    rm -rf "$td" 2>/dev/null
+    return 2
+  fi
+
+  local all_fids
+  all_fids="$( { cut -f1 "$td/old.tsv" 2>/dev/null; cut -f1 "$td/new.tsv" 2>/dev/null; } | sort -u )"
+
+  local rc=0
+  {
+    printf '%s\n' "$all_fids" | while IFS= read -r fid; do
+      [ -n "$fid" ] && printf 'ALL\t%s\n' "$fid"
+    done
+    if [ -f "${EVAL_MANIFEST:-}" ]; then
+      awk -F'\t' 'NR>1 && $1!="" && $4!="" { print "MAN\t" $1 "\t" $4 }' "$EVAL_MANIFEST" 2>/dev/null
+    fi
+    awk -F'\t' '{ print "OLD\t" $1 "\t" $2 "\t" $3 }' "$td/old.tsv"
+    awk -F'\t' '{ print "NEW\t" $1 "\t" $2 "\t" $3 }' "$td/new.tsv"
+  } | awk -F'\t' '
+    $1 == "ALL" { order[++n_fids] = $2 }
+    $1 == "MAN" { if ($3 != "" && $3 != "-") exp_man[$2] = $3 }
+    $1 == "OLD" {
+      old_v[$2] = $3
+      if ($4 != "" && $4 != "-") exp_old_row[$2] = $4
+    }
+    $1 == "NEW" {
+      new_v[$2] = $3
+      if ($4 != "" && $4 != "-") exp_new_row[$2] = $4
+    }
+    END {
+      printf "  %-12s %-12s %-10s %-10s %s\n", "id", "expected", "old", "new", "classification"
+      n_reg = 0; n_imp = 0; n_sat = 0; n_unc = 0; n_expchg = 0
+      for (i = 1; i <= n_fids; i++) {
+        fid = order[i]
+        has_old = (fid in old_v)
+        has_new = (fid in new_v)
+        eo = (fid in exp_old_row) ? exp_old_row[fid] : ((fid in exp_man) ? exp_man[fid] : "-")
+        en = (fid in exp_new_row) ? exp_new_row[fid] : ((fid in exp_man) ? exp_man[fid] : "-")
+        ov = has_old ? old_v[fid] : "-"
+        nv = has_new ? new_v[fid] : "-"
+        expected_disp = "-"
+        if (has_old && has_new) {
+          if (eo != "-" && en != "-" && eo != en) {
+            cls = "expectation-changed"
+            n_expchg++
+            expected_disp = eo "→" en
+          } else {
+            expected_val = (en != "-") ? en : eo
+            expected_disp = expected_val
+            if (expected_val == "-") {
+              cls = "unknown"
+            } else {
+              old_corr = (ov == expected_val)
+              new_corr = (nv == expected_val)
+              if (old_corr && new_corr) {
+                cls = "UNCHANGED"
+                n_unc++
+              } else if (old_corr && !new_corr) {
+                cls = "REGRESSED"
+                n_reg++
+              } else if (!old_corr && new_corr) {
+                cls = "IMPROVED"
+                n_imp++
+              } else {
+                cls = "SATURATED"
+                n_sat++
+              }
+            }
+          }
+        } else if (has_old && !has_new) {
+          cls = "removed"
+          expected_disp = (eo != "-") ? eo : en
+        } else {
+          cls = "added"
+          expected_disp = (en != "-") ? en : eo
+        }
+        printf "  %-12s %-12s %-10s %-10s %s\n", fid, expected_disp, ov, nv, cls
+      }
+      printf "\n%d regressed, %d improved, %d saturated, %d unchanged, %d expectation-changed\n", n_reg, n_imp, n_sat, n_unc, n_expchg
+      if (n_reg > 0) exit 1
+      exit 0
+    }
+  '
+  rc=$?
+  rm -rf "$td" 2>/dev/null
+  return "$rc"
 }
 
 ## ---------------------------------------------------------------------------------------
@@ -4527,7 +4965,7 @@ _eval_guard_unbounded_darwin() { # $1=replay_mode (0/1); return 1 = refused
 # -positives on that exact byte sequence regardless of language. Purely a spelling dodge for a
 # generic scanner; behavior is 100% identical to every other function in this file.
 function cmd_eval {
-  local stage_filter="" fixture_filter="" n=3 timeout=120 report_mode=0 keep_going=0 replay_mode=0 record_mode=0
+  local stage_filter="" fixture_filter="" n=3 timeout=120 report_mode=0 keep_going=0 replay_mode=0 record_mode=0 diff_mode=0 diff_old="" diff_new=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --stage)      shift; stage_filter="${1:-}" ;;
@@ -4538,10 +4976,25 @@ function cmd_eval {
       --record)     record_mode=1 ;;
       --replay)     replay_mode=1 ;;
       --keep-going) keep_going=1 ;;
-      *) echo "usage: /flow eval [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay]"; return 1 ;;
+      --diff)
+        diff_mode=1
+        shift
+        diff_old="${1:-}"
+        shift
+        diff_new="${1:-}"
+        ;;
+      *) echo "usage: /flow eval [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay] [--diff <old> <new>]"; return 1 ;;
     esac
     shift 2>/dev/null || true
   done
+  if [ "$diff_mode" -eq 1 ]; then
+    if [ "$report_mode" -eq 1 ] || [ "$record_mode" -eq 1 ] || [ "$replay_mode" -eq 1 ]; then
+      echo "eval: --diff cannot combine with --report, --record, or --replay" >&2
+      return 1
+    fi
+    _eval_diff "$diff_old" "$diff_new"
+    return $?
+  fi
   case "$n" in ''|*[!0-9]*|0) echo "eval: --n must be a positive integer (got '$n')"; return 1 ;; esac
   case "$timeout" in ''|*[!0-9]*|0) echo "eval: --timeout must be a positive integer seconds value (got '$timeout')"; return 1 ;; esac
   case "$stage_filter" in ""|01|02|05|card|routing|converge) : ;; *) echo "eval: --stage must be one of 01|02|05|card|routing|converge (got '$stage_filter')"; return 1 ;; esac
@@ -4968,7 +5421,7 @@ usage: bash flow.sh <command> [args]
 
   status [--json]   Where am I? What's blocking? (also: no command). --json prints
                      one flow_context/v1 object (display-only; do not auto-exec next_verb).
-  resume [--json]   Session-story brief for a fresh agent entering mid-cycle: last session
+  resume [--json|--budget]  Session-story brief for a fresh agent entering mid-cycle: last session
                      (command names only, never raw args), in-flight card + dwell, gate state,
                      one NEXT-> line. Read-only, no lock. Run this FIRST when resuming a project.
                      --json: same closed object as status --json.
@@ -4981,7 +5434,7 @@ usage: bash flow.sh <command> [args]
   project-type [t]  Show or set project type (web|cli|library|skill); adapts done-evidence
   skip <stage> --reason  Advance past a gate that has a matching open DEBT (non-security only)
   ready             List buildable todo cards + parallel-safety hint
-  workspace <verb>  Multi-agent worktree isolation: add|list|enter|remove|check|doctor (one worktree per agent)
+  workspace <verb>  Multi-agent worktree isolation: add|list|enter|remove|check|doctor|port (one worktree per agent)
   loop-prep <card>  Plumbing for ck-loop: isolated worktree + numeric Verify command + param block (thin wrapper; ck-loop is the engine)
   loop-log <card>   Record a finished ck-loop run (iterations/start/end/outcome) into usage-log telemetry
   auto [stop]        Activate attested auto (risk + Stage 05 receipt) or stop
@@ -4994,11 +5447,11 @@ usage: bash flow.sh <command> [args]
   contract          Check client base-URL vs served-path prefixes (path-resolution drift; web)
   tokens            Check DESIGN.md declared tokens vs CSS usage (design-system drift)
   coherence         Flag version drift across declared version fields (doc-vs-code coherence)
-  consistency       Audit cross-artifact coverage (PRD features <-> cards <-> contract; FR ids)
+  consistency [--contract] Audit cross-artifact coverage (PRD FR ids or --contract endpoint audit)
   constitution      Check operator-authored per-project invariants in flow/constitution.md (advisory; not a next-gate)
   clarify           List leftover ## Open decisions bullets on scope/PRD/contract (advisory; not a next-gate)
   converge [--file] Append-only remainder cards from a flow-converge/v1 payload (plan vs present code)
-  promote <file>    Copy a playbook into the cross-project KB (~/.claude/flow/playbooks)
+  promote <file>|--suggest Copy a playbook into KB or suggest draft playbooks from harness patterns
   doctor            Check the environment (bash/python/grep/git) across macOS/Linux/Windows
   eval [opts]       Behavioral eval: does the LLM semantic gate flag a hollow-but-mechanically-clean
                      fixture? Opt-in, BILLABLE (live mode skips cleanly with zero calls if 'claude'
@@ -5205,11 +5658,11 @@ case "$cmd" in
   contract)       cmd_contract ;;
   tokens)         cmd_tokens ;;
   coherence)      cmd_coherence ;;
-  consistency)    cmd_consistency ;;
+  consistency)    cmd_consistency "$@" ;;
   constitution)   cmd_constitution ;;
   clarify)        cmd_clarify ;;
   converge)       cmd_converge "$@" ;;
-  promote)        cmd_promote "${1:-}" ;;
+  promote)        cmd_promote "$@" ;;
   doctor)         cmd_doctor ;;
   eval)           cmd_eval "$@" ;;
   usage)          cmd_usage "$@" ;;

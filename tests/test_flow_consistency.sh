@@ -277,6 +277,180 @@ out="$(bash "$RUN" status)"
 no "$out" "FR->card->contract" "no consistency nudge without FR ids"
 rm -rf "$SB"
 
+echo "T) consistency --contract: contract-to-card endpoint coverage audit (C6)"
+# (c) no contract => note + exit 0
+newsb
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "no contract -> exit 0"
+has "$out" "no flow/05-contract.md found" "skip note printed when contract missing"
+rm -rf "$SB"
+
+# (a) contract with 3 endpoints, cards covering 2 => warning lists exactly the 1 uncovered, summary line correct, exit 1
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /healthz | public | none | 200 |
+| POST | /api/login | public | creds | 200 token |
+| DELETE | /api/users/:id | admin | none | 204 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Build the GET /healthz health check endpoint.
+EOF
+cat > "$SB/cards/C-002.md" << 'EOF'
+# C-002
+status: todo
+implements: none
+## Scope
+Build the authentication flow at /api/login with token response.
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "uncovered endpoint -> exit 1"
+has "$out" "DELETE /api/users/:id" "lists uncovered endpoint"
+no "$out" "GET /healthz" "covered endpoint /healthz not in warning list"
+no "$out" "POST /api/login" "covered endpoint /api/login not in warning list"
+has "$out" "3 endpoint(s), 2 covered, 1 uncovered" "summary line correct"
+has "$out" "FLAGGED" "FLAGGED on uncovered endpoints"
+
+# (b) all covered => no warning, exit 0
+cat > "$SB/cards/C-003.md" << 'EOF'
+# C-003
+status: todo
+implements: none
+## Scope
+Admin endpoint to delete user at /api/users/:id
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "all endpoints covered -> exit 0"
+no "$out" "FLAGGED" "no FLAGGED when all covered"
+has "$out" "PASS" "PASS when all covered"
+has "$out" "3 endpoint(s), 3 covered, 0 uncovered" "summary line reflects 0 uncovered"
+
+# (d) no --contract => output byte-identical to pre-change behavior on the same sandbox
+prd "$SB" "10 items in week 1"
+cat >> "$SB/flow/05-contract.md" << 'EOF'
+## Feature -> interface map
+- FR1 -> GET /healthz
+- FR2 -> POST /api/login
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: FR1
+## Scope
+Build the GET /healthz health check endpoint.
+EOF
+cat > "$SB/cards/C-002.md" << 'EOF'
+# C-002
+status: todo
+implements: FR2
+## Scope
+Build the authentication flow at /api/login with token response.
+EOF
+out_plain="$(bash "$RUN" consistency 2>&1)"; rc_plain=$?
+ck 0 "$rc_plain" "plain consistency exit 0 on clean sandbox"
+has "$out_plain" "cross-artifact consistency audit (flow/02-05 + cards/)" "plain consistency runs FR audit"
+no "$out_plain" "endpoint coverage audit" "plain consistency does not run endpoint audit"
+
+# (e) missing args / unknown flag handling
+out_unk="$(bash "$RUN" consistency --bogus 2>&1)"; rc_unk=$?
+ck 1 "$rc_unk" "unknown flag -> exit 1"
+has "$out_unk" "usage: /flow consistency [--contract]" "usage printed on unknown flag"
+rm -rf "$SB"
+
+echo "U) --contract endpoint matching is exact-token (no prefix/substring false coverage)"
+# (a)+(c) prefix collision: card Scope mentions only /api/users/:id and /api/users-list
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /api/users | public | none | 200 |
+| GET | /api/users/:id | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+List view hits /api/users/:id
+Detail view also covers /api/users-list naming
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "prefix-collision -> /api/users uncovered -> exit 1"
+has "$out" "^ *GET /api/users\$" "/api/users flagged uncovered (":id" and "-list" do not cover it)"
+no "$out" "GET /api/users/:id" "/api/users/:id covered, not in warning list"
+has "$out" "2 endpoint(s), 1 covered, 1 uncovered" "summary counts correct"
+
+# (b) same card also mentioning /api/users plainly => both covered, exit 0
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+List view hits /api/users directly (GET /api/users?limit=10 also implied).
+Detail view covers /api/users/:id
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "plain /api/users mention covers both -> exit 0"
+has "$out" "2 endpoint(s), 2 covered, 0 uncovered" "both endpoints covered"
+rm -rf "$SB"
+
+# (d) regex metacharacters in the path are escaped: /v1/config.max must not match /v1/configXmax
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /v1/config.max | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Reads /v1/configXmax (wrong path - must not satisfy the contract).
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "'.' in path treated literally -> exit 1"
+has "$out" "GET /v1/config.max" "config.max flagged uncovered (no regex dot wildcard)"
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Reads /v1/config.max on boot.
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 0 "$rc" "exact /v1/config.max -> exit 0"
+has "$out" "1 endpoint(s), 1 covered, 0 uncovered" "literal dot path covered"
+rm -rf "$SB"
+
+# (e) closing brace is path continuation: /api/users} must not cover /api/users
+newsb
+cat > "$SB/flow/05-contract.md" << 'EOF'
+# Stage 05 - Contract
+| Method/Interface | Path/Name | Access/Effects | Input shape | Output shape |
+|---|---|---|---|---|
+| GET | /api/users | public | none | 200 |
+EOF
+cat > "$SB/cards/C-001.md" << 'EOF'
+# C-001
+status: todo
+implements: none
+## Scope
+Callback hits /api/users}
+EOF
+out="$(bash "$RUN" consistency --contract 2>&1)"; rc=$?
+ck 1 "$rc" "'/api/users}' is path continuation -> exit 1"
+has "$out" "GET /api/users" "/api/users flagged uncovered (trailing } continues path)"
+rm -rf "$SB"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

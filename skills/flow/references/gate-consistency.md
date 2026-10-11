@@ -22,3 +22,15 @@ declared in the PRD's **`## Features`** section (ids in prose or the pain table 
 ignored so a legacy mention can't inflate the set). A blank success-metric body is the gate's job, not
 this probe's (it only checks "if a metric exists, it carries a number"). When `consistency` reports
 "no FR ids found", treat it as *coverage-unverified*, not *coverage-clean*.
+
+## Contract-to-card endpoint coverage (`/flow consistency --contract`)
+
+Mechanical audit verifying that every endpoint declared in `flow/05-contract.md` is covered across generated cards before building starts.
+
+- **Extraction:** Parses `flow/05-contract.md`'s interface table (`Method` and `Path` columns; tolerates column order variations).
+- **Matching Rule:** Scans `cards/C-*.md` `## Scope` sections for literal path token substring matches (e.g. `/healthz`, `/api/users/:id`).
+- **Summary & Warnings:**
+  - Prints `N endpoint(s), M covered, K uncovered`.
+  - Uncovered endpoints produce an advisory warning block and exit 1 (matching `consistency` house convention for findings).
+  - Clean audit exits 0 (`PASS: all N endpoint(s) covered across cards/ scope.`).
+- **Auto-skip:** If `flow/05-contract.md` is absent or declares no endpoint table, prints a one-line note and exits 0 (consistent with F3 non-REST auto-skip spirit).
