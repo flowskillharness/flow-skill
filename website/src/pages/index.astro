@@ -6,12 +6,22 @@ import { getVersions } from '../lib/versions';
 const { command } = await getVersions();
 const tutorial = '/docs/tutorials/install-and-first-run/';
 const stages = [
-	{ name: 'Idea', file: 'flow/00-idea.md' },
-	{ name: 'Research', file: 'flow/01-research.md' },
-	{ name: 'Scope', file: 'flow/02-scope.md' },
-	{ name: 'PRD', file: 'flow/03-prd.md' },
-	{ name: 'ADR', file: 'flow/04-adr.md' },
-	{ name: 'Contract', file: 'flow/05-contract.md' },
+	{ num: '01', name: 'Idea', file: 'flow/00-idea.md' },
+	{ num: '02', name: 'Research', file: 'flow/01-research.md' },
+	{ num: '03', name: 'Scope', file: 'flow/02-scope.md' },
+	{ num: '04', name: 'PRD', file: 'flow/03-prd.md' },
+	{ num: '05', name: 'ADR', file: 'flow/04-adr.md' },
+	{ num: '06', name: 'Contract', file: 'flow/05-contract.md' },
+];
+const agents = [
+	'Claude Code',
+	'Codex CLI',
+	'Gemini CLI',
+	'Cursor',
+	'Aider',
+	'Cline',
+	'Continue',
+	'Zed',
 ];
 const afterInstall = [
 	'Skill files land in the agent home.',
@@ -33,30 +43,63 @@ const willNotPass = [
 		name="description"
 		content="A gated harness around the coding agent you already use. npx @manhquy/flow-skill@next. Killing a weak idea at a gate is valid. Not an agent."
 	/>
-	<main>
-		<section class="sheet" aria-label="Install and outcomes">
+	<main class="landing-main">
+		<!-- HERO SECTION -->
+		<section class="sheet hero-section" aria-label="Install and outcomes">
 			<div class="hero">
-				<p class="display" translate="no">flow</p>
+				<div class="kicker-wrap">
+					<span class="kicker mono">PROOF OVER VIBES.</span>
+				</div>
+				<p class="display mono" translate="no">flow</p>
 				<h1 class="headline">Hollow work does not advance.</h1>
 				<p class="lede">
 					A gated harness around the coding agent you already use. Flow owns the gates and
 					the receipts, never the runtime. Killing a weak idea at a gate is a valid outcome.
 				</p>
-				<p class="verdict">The gate opens only when both agree.</p>
+				<p class="verdict mono">The gate opens only when both agree.</p>
+
+				<!-- TABBED INSTALL WIDGET -->
+				<div class="hero-install">
+					<InstallLockup
+						command={command}
+						copyLabel="Copy"
+						copiedLabel="Copied"
+						selectLabel="Selected — press Ctrl+C"
+						secondaryHref={tutorial}
+						secondaryLabel="Install and first run"
+					/>
+				</div>
 			</div>
-			<InstallLockup
-				command={command}
-				copyLabel="Copy"
-				copiedLabel="Copied"
-				selectLabel="Selected — press Ctrl+C"
-				secondaryHref={tutorial}
-				secondaryLabel="Install and first run"
-			/>
+
+			<!-- AGENT MARQUEE -->
+			<div class="marquee-wrapper" aria-label="Works with your coding agents">
+				<p class="marquee-label mono">WORKS WITH YOUR CODING AGENTS</p>
+				<div class="marquee" tabindex="0" role="region" aria-label="Coding agent badges">
+					<div class="marquee-track">
+						<div class="marquee-group">
+							{agents.map((agent) => (
+								<span class="agent-chip mono">{agent}</span>
+							))}
+						</div>
+						<div class="marquee-group" aria-hidden="true">
+							{agents.map((agent) => (
+								<span class="agent-chip mono">{agent}</span>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- GALLEYS / OUTCOMES -->
 			<div class="galleys">
-				<article class="galley" aria-labelledby="after-install-title">
-					<h2 id="after-install-title">After install</h2>
-					<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
-					<p>
+				<article class="galley galley-pass" aria-labelledby="after-install-title">
+					<div class="galley-head">
+						<span class="status-badge status-badge-pass" aria-hidden="true">
+							<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
+						</span>
+						<h2 id="after-install-title">After install</h2>
+					</div>
+					<p class="galley-intro">
 						The skill is on disk. <code translate="no">/flow</code> or
 						<code translate="no">$flow</code> exists.
 						<code translate="no">doctor</code> can print <code translate="no">READY</code>.
@@ -65,33 +108,51 @@ const willNotPass = [
 					</p>
 					<ul class="proofs">{afterInstall.map((item) => <li>{item}</li>)}</ul>
 				</article>
-				<article class="galley" aria-labelledby="will-not-pass-title">
-					<h2 id="will-not-pass-title">What will not pass</h2>
-					<p>
+
+				<article class="galley galley-fail" aria-labelledby="will-not-pass-title">
+					<div class="galley-head">
+						<span class="status-badge status-badge-fail" aria-hidden="true">
+							<span class="fail-dot"></span>
+						</span>
+						<h2 id="will-not-pass-title">What will not pass</h2>
+					</div>
+					<p class="galley-intro">
 						Empty, leftover <code translate="no">[FILL]</code>, or “tests pass” offered as done.
 						<span class="kill-line">A weak idea is killed at the gate.</span>
 					</p>
 					<ul class="proofs">{willNotPass.map((item) => <li>{item}</li>)}</ul>
 				</article>
 			</div>
+
 			<ol class="pipeline" aria-label="Idea through Contract">
-				{stages.map((stage) => <li class="pipe">{stage.name}</li>)}
+				{stages.map((stage) => (
+					<li class="pipe">
+						<span class="pipe-num mono">{stage.num}</span>
+						<span class="pipe-name">{stage.name}</span>
+					</li>
+				))}
 			</ol>
 		</section>
 
+		<!-- NUMBERED GATES 01-06 -->
 		<section class="band run" aria-labelledby="run-title">
-			<h2 class="band-title" id="run-title">Six gates before you build</h2>
-			<p class="band-lede">
-				Each stage writes a real file in your repo. <code translate="no">/flow next</code> will
-				not unlock the next one until the runner and the skill both agree. Those files exist
-				after you walk the gates, not after install.
-			</p>
+			<div class="band-intro">
+				<h2 class="band-title" id="run-title">Six gates before you build</h2>
+				<p class="band-lede">
+					Each stage writes a real file in your repo. <code translate="no">/flow next</code> will
+					not unlock the next one until the runner and the skill both agree. Those files exist
+					after you walk the gates, not after install.
+				</p>
+			</div>
 			<ol class="run-list">
 				{
 					stages.map((stage) => (
-						<li>
-							<span class="run-stage">{stage.name}</span>
-							<code class="run-file" translate="no">
+						<li class="gate-tile">
+							<div class="gate-tile-header">
+								<span class="gate-num mono">{stage.num}</span>
+								<span class="run-stage">{stage.name}</span>
+							</div>
+							<code class="run-file mono" translate="no">
 								{stage.file}
 							</code>
 						</li>
@@ -104,6 +165,7 @@ const willNotPass = [
 			</p>
 		</section>
 
+		<!-- CLOSING SECTION -->
 		<section class="band stand" aria-labelledby="stand-title">
 			<div class="stand-copy">
 				<h2 class="stand-title" id="stand-title">Not an AI coding agent. A harness around one.</h2>
@@ -113,8 +175,8 @@ const willNotPass = [
 				</p>
 			</div>
 			<div class="stand-actions">
-				<a class="action primary" href={tutorial}>Install and first run</a>
-				<a class="action" href="/docs/">Read the docs</a>
+				<a class="action primary mono" href={tutorial}>Install and first run</a>
+				<a class="action secondary mono" href="/docs/">Read the docs</a>
 			</div>
 		</section>
 	</main>

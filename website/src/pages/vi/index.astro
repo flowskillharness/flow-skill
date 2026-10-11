@@ -6,12 +6,22 @@ import { getVersions } from '../../lib/versions';
 const { command } = await getVersions();
 const tutorial = '/vi/docs/tutorials/install-and-first-run/';
 const stages = [
-	{ name: 'Idea', file: 'flow/00-idea.md' },
-	{ name: 'Research', file: 'flow/01-research.md' },
-	{ name: 'Scope', file: 'flow/02-scope.md' },
-	{ name: 'PRD', file: 'flow/03-prd.md' },
-	{ name: 'ADR', file: 'flow/04-adr.md' },
-	{ name: 'Contract', file: 'flow/05-contract.md' },
+	{ num: '01', name: 'Idea', file: 'flow/00-idea.md' },
+	{ num: '02', name: 'Research', file: 'flow/01-research.md' },
+	{ num: '03', name: 'Scope', file: 'flow/02-scope.md' },
+	{ num: '04', name: 'PRD', file: 'flow/03-prd.md' },
+	{ num: '05', name: 'ADR', file: 'flow/04-adr.md' },
+	{ num: '06', name: 'Contract', file: 'flow/05-contract.md' },
+];
+const agents = [
+	'Claude Code',
+	'Codex CLI',
+	'Gemini CLI',
+	'Cursor',
+	'Aider',
+	'Cline',
+	'Continue',
+	'Zed',
 ];
 const afterInstall = [
 	'Skill nằm trong agent home.',
@@ -33,65 +43,116 @@ const willNotPass = [
 		name="description"
 		content="Agent vẫn viết code, còn cổng mở hay đóng thì flow quyết. Phải cả flow.sh lẫn skill thì cổng mới mở. Bị chặn ở cổng thì dừng luôn, chứ không phải fail. npx @manhquy/flow-skill@next"
 	/>
-	<main>
-		<section class="sheet" aria-label="Cài rồi cổng">
+	<main class="landing-main">
+		<!-- HERO SECTION -->
+		<section class="sheet hero-section" aria-label="Cài rồi cổng">
 			<div class="hero">
-				<p class="display" translate="no">flow</p>
-				<h1 class="headline">Việc rỗng thì cổng không mở.</h1>
+				<div class="kicker-wrap">
+					<span class="kicker mono">BẰNG CHỨNG HƠN CẢM HỨNG.</span>
+				</div>
+				<p class="display mono" translate="no">flow</p>
+				<h1 class="headline">Việc rỗng thì không qua cổng.</h1>
 				<p class="lede">
-					Agent vẫn viết code, còn cổng mở hay đóng thì flow quyết. Flow sở hữu cổng và biên
-					nhận, không bao giờ sở hữu runtime. Bị chặn ở cổng thì dừng luôn, chứ không phải fail.
+					flow là khung kiểm soát quanh coding agent bạn đang dùng. flow giữ cổng và bằng chứng,
+					chứ không chạy thay agent. Bị chặn ở cổng thì dừng luôn, chứ không phải fail.
 				</p>
-				<p class="verdict">Cổng chỉ mở khi cả hai cùng đồng ý.</p>
+				<p class="verdict mono">Cổng chỉ mở khi cả hai bên cùng đồng ý.</p>
+
+				<!-- TABBED INSTALL WIDGET -->
+				<div class="hero-install">
+					<InstallLockup
+						command={command}
+						copyLabel="Copy"
+						copiedLabel="Đã copy"
+						selectLabel="Đã bôi đen — bấm Ctrl+C"
+						secondaryHref={tutorial}
+						secondaryLabel="Cài rồi chạy thử"
+					/>
+				</div>
 			</div>
-			<InstallLockup
-				command={command}
-				copyLabel="Sao chép"
-				copiedLabel="Đã sao chép"
-				selectLabel="Đã chọn, nhấn Ctrl+C"
-				secondaryHref={tutorial}
-				secondaryLabel="Cách cài"
-			/>
+
+			<!-- AGENT MARQUEE -->
+			<div class="marquee-wrapper" aria-label="Tương thích với các coding agent">
+				<p class="marquee-label mono">TƯƠNG THÍCH VỚI CÁC CODING AGENT</p>
+				<div class="marquee" tabindex="0" role="region" aria-label="Các coding agent được hỗ trợ">
+					<div class="marquee-track">
+						<div class="marquee-group">
+							{agents.map((agent) => (
+								<span class="agent-chip mono">{agent}</span>
+							))}
+						</div>
+						<div class="marquee-group" aria-hidden="true">
+							{agents.map((agent) => (
+								<span class="agent-chip mono">{agent}</span>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- GALLEYS / OUTCOMES -->
 			<div class="galleys">
-				<article class="galley" aria-labelledby="after-install-title">
-					<h2 id="after-install-title">Sau khi cài</h2>
-					<svg class="pass-mark" aria-hidden="true"><use href="#tick"></use></svg>
-					<p>
-						Skill nằm trong agent home. Gõ <code translate="no">/flow</code> (Codex:
-						<code translate="no">$flow</code>). <code translate="no">doctor</code> in
-						<code translate="no">READY</code>. <code translate="no">/flow next</code> trên
-						thư mục trống thì cổng chặn. <code translate="no">flow.sh</code> vẫn là lớp 0/1.
+				<article class="galley galley-pass" aria-labelledby="after-install-title">
+					<div class="galley-head">
+						<span class="status-badge status-badge-pass" aria-hidden="true">
+							<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
+						</span>
+						<h2 id="after-install-title">Cài xong</h2>
+					</div>
+					<p class="galley-intro">
+						Skill nằm trên ổ đĩa. <code translate="no">/flow</code> hoặc
+						<code translate="no">$flow</code> dùng được.
+						<code translate="no">doctor</code> in <code translate="no">READY</code>.
+						<code translate="no">/flow next</code> trên file idea trống thì từ chối kèm số
+						dòng.
 					</p>
 					<ul class="proofs">{afterInstall.map((item) => <li>{item}</li>)}</ul>
 				</article>
-				<article class="galley" aria-labelledby="will-not-pass-title">
-					<h2 id="will-not-pass-title">Cổng không cho qua</h2>
-					<p>
-						File trống, <code translate="no">[FILL]</code> còn sót, hoặc “tests pass” thế cho
-						bằng chứng done.
-						<span class="kill-line">Ý tưởng yếu thì dừng ngay tại cổng.</span>
+
+				<article class="galley galley-fail" aria-labelledby="will-not-pass-title">
+					<div class="galley-head">
+						<span class="status-badge status-badge-fail" aria-hidden="true">
+							<span class="fail-dot"></span>
+						</span>
+						<h2 id="will-not-pass-title">Những gì không qua cổng</h2>
+					</div>
+					<p class="galley-intro">
+						Trống, còn <code translate="no">[FILL]</code>, hay chỉ bảo “tests pass” là chưa đủ.
+						<span class="kill-line">Ý tưởng yếu thì dừng ngay ở cổng.</span>
 					</p>
 					<ul class="proofs">{willNotPass.map((item) => <li>{item}</li>)}</ul>
 				</article>
 			</div>
+
 			<ol class="pipeline" aria-label="Sáu cổng trước khi build">
-				{stages.map((stage) => <li class="pipe">{stage.name}</li>)}
+				{stages.map((stage) => (
+					<li class="pipe">
+						<span class="pipe-num mono">{stage.num}</span>
+						<span class="pipe-name">{stage.name}</span>
+					</li>
+				))}
 			</ol>
 		</section>
 
+		<!-- NUMBERED GATES 01-06 -->
 		<section class="band run" aria-labelledby="run-title">
-			<h2 class="band-title" id="run-title">Sáu cổng rồi mới tới card build đầu</h2>
-			<p class="band-lede">
-				Mỗi cổng để lại một file thật trong repo. File hiện tại chưa qua cả hai bên thì
-				<code translate="no">/flow next</code> không mở cổng sau. Những file đó có sau khi đi
-				cổng, không phải sau <code translate="no">npx</code>.
-			</p>
+			<div class="band-intro">
+				<h2 class="band-title" id="run-title">Sáu cổng trước khi bạn build</h2>
+				<p class="band-lede">
+					Mỗi cổng viết ra một file thật trong repo. <code translate="no">/flow next</code> không cho
+					qua cổng tiếp theo nếu cả flow.sh lẫn skill chưa cùng đồng ý. Các file này xuất hiện
+					khi bạn đi qua cổng, không phải có sẵn sau khi cài.
+				</p>
+			</div>
 			<ol class="run-list">
 				{
 					stages.map((stage) => (
-						<li>
-							<span class="run-stage">{stage.name}</span>
-							<code class="run-file" translate="no">
+						<li class="gate-tile">
+							<div class="gate-tile-header">
+								<span class="gate-num mono">{stage.num}</span>
+								<span class="run-stage">{stage.name}</span>
+							</div>
+							<code class="run-file mono" translate="no">
 								{stage.file}
 							</code>
 						</li>
@@ -99,21 +160,22 @@ const willNotPass = [
 				}
 			</ol>
 			<p class="band-foot">
-				Rồi mới tới <code translate="no">/flow card</code>. Done thì phải có bằng chứng done: URL đã
-				deploy, CLI cài được và chạy được, public API, hoặc một lần chạy skill thật.
+				Xong thì <code translate="no">/flow card</code>. Xong nghĩa là có bằng chứng thật: một
+				URL đã deploy, một CLI cài chạy được, một public API, hay một lần chạy skill thật.
 			</p>
 		</section>
 
+		<!-- CLOSING SECTION -->
 		<section class="band stand" aria-labelledby="stand-title">
 			<div class="stand-copy">
-				<h2 class="stand-title" id="stand-title">flow gác cổng, chứ không viết code.</h2>
+				<h2 class="stand-title" id="stand-title">Không phải AI coding agent. Là cổng kiểm soát quanh agent.</h2>
 				<p>
-					Agent vẫn viết. Được đi tiếp hay phải dừng thì cổng quyết.
+					flow không tự viết code. Agent vẫn viết, flow chỉ quyết việc có được qua cổng hay không.
 				</p>
 			</div>
 			<div class="stand-actions">
-				<a class="action primary" href={tutorial}>Cài và chạy lần đầu</a>
-				<a class="action" href="/vi/docs/">Đọc tài liệu</a>
+				<a class="action primary mono" href={tutorial}>Cài rồi chạy thử</a>
+				<a class="action secondary mono" href="/vi/docs/">Đọc tài liệu</a>
 			</div>
 		</section>
 	</main>

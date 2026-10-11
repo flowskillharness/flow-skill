@@ -10,87 +10,83 @@ interface Props {
 
 const { command, copyLabel, copiedLabel, selectLabel, secondaryHref, secondaryLabel } =
 	Astro.props;
+
+// Generate derived commands for alternative package managers preserving version tag
+const npxCmd = command;
+const pnpmCmd = command.replace(/^npx\s+/, 'pnpm dlx ');
+const npmCmd = command.replace(/^npx\s+/, 'npm exec ');
 ---
 
-<div class="lockup" data-lockup>
-	<svg class="reg" aria-hidden="true"><use href="#reg"></use></svg>
-	<code class="cmd" translate="no" data-command>{command}</code>
-	<div class="lockup-tools">
-		<button class="copy-cmd" type="button" data-copy>{copyLabel}</button>
+<div class="install-lockup" data-lockup>
+	<div class="install-header">
+		<div class="install-tabs" role="tablist" aria-label="Install method">
+			<button
+				type="button"
+				role="tab"
+				class="tab-btn active mono"
+				data-tab="npx"
+				data-cmd={npxCmd}
+				aria-selected="true"
+				aria-controls="install-code-box"
+			>
+				npx
+			</button>
+			<button
+				type="button"
+				role="tab"
+				class="tab-btn mono"
+				data-tab="pnpm"
+				data-cmd={pnpmCmd}
+				aria-selected="false"
+				aria-controls="install-code-box"
+			>
+				pnpm
+			</button>
+			<button
+				type="button"
+				role="tab"
+				class="tab-btn mono"
+				data-tab="npm"
+				data-cmd={npmCmd}
+				aria-selected="false"
+				aria-controls="install-code-box"
+			>
+				npm
+			</button>
+		</div>
+		<span class="runtime-tag mono">NODE ≥22</span>
+	</div>
+
+	<div class="install-box">
+		<span class="prompt-glyph mono" aria-hidden="true">$</span>
+		<code id="install-code-box" class="cmd mono" translate="no" data-command>{command}</code>
+		<button
+			class="copy-btn mono"
+			type="button"
+			data-copy
+			aria-label={copyLabel}
+		>
+			<span class="copy-text">{copyLabel}</span>
+			<span class="copied-text" aria-hidden="true">✓ {copiedLabel}</span>
+		</button>
+	</div>
+
+	<div class="install-subline">
 		<span
-			class="copied"
+			class="copy-status-sr"
 			role="status"
 			aria-live="polite"
 			data-status
 			data-done={copiedLabel}
-			data-fallback={selectLabel}></span>
-		<a class="folio" href={secondaryHref}>{secondaryLabel}</a>
+			data-fallback={selectLabel}
+		></span>
+		{secondaryHref && (
+			<a class="install-secondary-link mono" href={secondaryHref}>
+				{secondaryLabel} <span aria-hidden="true">→</span>
+			</a>
+		)}
 	</div>
 </div>
-
-<style>
-	.copy-cmd {
-		transition:
-			background-color 120ms ease-out,
-			border-color 120ms ease-out,
-			transform 120ms ease-out;
-	}
-
-	.lockup[data-pressing] .copy-cmd {
-		background: var(--cyan-deep);
-		border-color: var(--cyan);
-		transform: translateY(1px);
-	}
-
-	.reg {
-		transform-origin: 50% 50%;
-	}
-
-	.lockup[data-pressing] .reg {
-		animation: lockup-reg-tick 120ms ease-out;
-	}
-
-	@keyframes lockup-reg-tick {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(90deg);
-		}
-	}
-
-	.copied {
-		clip-path: inset(0 100% 0 0);
-		opacity: 0;
-		transition:
-			clip-path 220ms ease-out,
-			opacity 220ms ease-out;
-	}
-
-	.lockup[data-printed] .copied {
-		clip-path: inset(0 0 0 0);
-		opacity: 1;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.copy-cmd,
-		.reg,
-		.copied {
-			transition: none;
-			animation: none;
-		}
-
-		.lockup[data-pressing] .copy-cmd,
-		.lockup[data-pressing] .reg {
-			transform: none;
-		}
-
-		.copied {
-			clip-path: none;
-			opacity: 1;
-		}
-	}
-</style>
 
 <script>
 	function selectNode(node: HTMLElement) {
@@ -102,59 +98,54 @@ const { command, copyLabel, copiedLabel, selectLabel, secondaryHref, secondaryLa
 		selection.addRange(range);
 	}
 
-	function pressMs(): number {
-		return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 120;
-	}
+	document.querySelectorAll<HTMLElement>('[data-lockup]').forEach((lockup) => {
+		const code = lockup.querySelector<HTMLElement>('[data-command]');
+		const copyBtn = lockup.querySelector<HTMLButtonElement>('[data-copy]');
+		const status = lockup.querySelector<HTMLElement>('[data-status]');
+		const tabButtons = lockup.querySelectorAll<HTMLButtonElement>('.tab-btn');
 
-	document.querySelectorAll<HTMLElement>('[data-lockup]').forEach((bar) => {
-		const button = bar.querySelector<HTMLButtonElement>('[data-copy]');
-		const code = bar.querySelector<HTMLElement>('[data-command]');
-		const status = bar.querySelector<HTMLElement>('[data-status]');
-		if (!button || !code || !status) return;
+		if (!code || !copyBtn) return;
 
-		let clear = 0;
-		let stamp = 0;
+		let resetTimer = 0;
 
-		button.addEventListener('click', async () => {
-			const run = ++stamp;
-			const dwell = pressMs();
+		// Tab switching logic
+		tabButtons.forEach((tab) => {
+			tab.addEventListener('click', () => {
+				tabButtons.forEach((t) => {
+					t.classList.remove('active');
+					t.setAttribute('aria-selected', 'false');
+				});
+				tab.classList.add('active');
+				tab.setAttribute('aria-selected', 'true');
 
-			bar.removeAttribute('data-printed');
-
-			const pressed = new Promise<void>((resolve) => {
-				if (dwell === 0) {
-					resolve();
-					return;
+				const nextCmd = tab.getAttribute('data-cmd');
+				if (nextCmd) {
+					code.textContent = nextCmd;
 				}
-				bar.removeAttribute('data-pressing');
-				void bar.offsetWidth;
-				bar.setAttribute('data-pressing', '');
-				window.setTimeout(() => {
-					if (run === stamp) bar.removeAttribute('data-pressing');
-					resolve();
-				}, dwell);
-			});
 
-			const command = code.textContent?.trim() ?? '';
+				// Reset copied state on tab change
+				copyBtn.removeAttribute('data-copied');
+				if (status) status.textContent = '';
+			});
+		});
+
+		// Copy command logic with animated feedback
+		copyBtn.addEventListener('click', async () => {
+			const textToCopy = code.textContent?.trim() ?? '';
 			try {
-				await navigator.clipboard.writeText(command);
-				status.textContent = status.dataset.done ?? '';
+				await navigator.clipboard.writeText(textToCopy);
+				if (status) status.textContent = status.getAttribute('data-done') ?? 'Copied';
 			} catch {
 				selectNode(code);
-				status.textContent = status.dataset.fallback ?? '';
+				if (status) status.textContent = status.getAttribute('data-fallback') ?? 'Selected';
 			}
 
-			await pressed;
-			if (run !== stamp) return;
-
-			void bar.offsetWidth;
-			bar.setAttribute('data-printed', '');
-			window.clearTimeout(clear);
-			clear = window.setTimeout(() => {
-				if (run !== stamp) return;
-				status.textContent = '';
-				bar.removeAttribute('data-printed');
-			}, 3000);
+			copyBtn.setAttribute('data-copied', 'true');
+			window.clearTimeout(resetTimer);
+			resetTimer = window.setTimeout(() => {
+				copyBtn.removeAttribute('data-copied');
+				if (status) status.textContent = '';
+			}, 2400);
 		});
 	});
 </script>
