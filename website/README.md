@@ -66,4 +66,4 @@ Required GitHub status checks for the `website` job remain operator-owned (branc
 4. root `DESIGN.md` must match `origin/master` **only when the change set also touches `website/**`**
 5. `npm-wrapper/package.json` `files` array JSON-equal to `origin/master`
 
-Public URL in the root README is **[flowskill.io.vn](https://flowskill.io.vn)**. Never paste a preview `*.pages.dev` hostname there. The live project was created as Direct Upload (`flow-website`); do not recreate it. Git import later is optional and separate.
+Public URL in the root README is **[flowskill.io.vn](https://flowskill.io.vn)**. Never paste a preview `*.pages.dev` hostname there. flow-website is a Cloudflare Pages DIRECT UPLOAD project (Git Provider: No, verified via wrangler pages project list 2026-10-11). Production deploys happen via wrangler pages deploy (manually or via .github/workflows/website-scheduled-rebuild.yml on master), NOT via git pushes.
