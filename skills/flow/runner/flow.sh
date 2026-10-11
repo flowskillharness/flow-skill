@@ -56,7 +56,8 @@ DEBT_FILE="$ROOT/DEBT.md"
 PROJECT_TYPE_FILE="$ROOT/PROJECT_TYPE"
 SKIPPED_FILE="$ROOT/flow/.skipped"
 LOCK_FILE="$ROOT/flow/.lock"
-LOCK_DIR="$ROOT/flow/.lock.d"   # atomic mkdir claim dir (W5 guard); winner then writes $LOCK_FILE metadata
+LOCK_DIR="$ROOT/flow/.lock.d"   # atomic claim dir (W5 guard); winner then writes $LOCK_FILE metadata
+LOCK_CLAIM="$ROOT/flow/.lock.claim" # atomic set -C / O_EXCL claim guard
 HARNESS_PY="$SCRIPT_DIR/../harness/flow_harness.py"
 
 # Attestations library (risk, receipts, auto policy) — optional-soft: missing file is fatal for v0.28+.
@@ -643,38 +644,52 @@ _write_lock() { # $1 = cmd label
     > "$LOCK_FILE" 2>/dev/null || true
 }
 
+# Atomic test-and-set claim via bash noclobber (set -C / O_EXCL creat).
+# Guarantees atomic mutual exclusion across all filesystems and bash environments,
+# including systems where external mkdir binaries suffer from race bugs (uutils 0.10.0).
+# Winner also creates LOCK_DIR for backward compatibility with inspection/mtime tooling.
+_claim_lock() {
+  ( set -C; : > "$LOCK_CLAIM" ) 2>/dev/null || return 1
+  mkdir "$LOCK_DIR" 2>/dev/null || true
+  return 0
+}
+
+_release_claim() {
+  rm -f "$LOCK_CLAIM" 2>/dev/null || true
+  rm -rf "$LOCK_DIR" 2>/dev/null || true
+}
+
 # Guard a MUTATING command. 0 = lock taken/refreshed (proceed); 1 = refused (caller aborts).
 lock_acquire() { # $1 = cmd label
   local me age; me="$(flow_lock_owner)"
-  # Ensure the lock's PARENT dir exists so the atomic `mkdir "$LOCK_DIR"` test-and-set below can
+  # Ensure the lock's PARENT dir exists so the atomic claim test-and-set below can
   # succeed on a brand-new project (flow/ may not exist yet at stage-00 unlock / first run).
-  # This creates only the parent; LOCK_DIR itself is still created with plain mkdir (atomic guard).
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
 
-  # FLOW_FORCE: unconditional takeover; reset the atomic claim dir so the mkdir guard is bypassed cleanly.
+  # FLOW_FORCE: unconditional takeover; reset the atomic claim so the guard is bypassed cleanly.
   if [ -n "${FLOW_FORCE:-}" ]; then
     if _read_lock && [ -n "$LOCK_OWNER" ] && [ "$LOCK_OWNER" != "$me" ]; then
       echo "NOTE: FLOW_FORCE set - taking over a lock held by [$LOCK_OWNER] (cmd '${LOCK_CMD:-?}')."
     fi
-    rm -rf "$LOCK_DIR" 2>/dev/null || true
-    mkdir "$LOCK_DIR" 2>/dev/null || true
+    _release_claim
+    _claim_lock || true
     _write_lock "$1"; return 0
   fi
 
   # Same-session refresh: if the lock file names OUR owner, just update the timestamp.
-  # The session already owns LOCK_DIR from the original claim; no need to re-mkdir.
+  # The session already owns the claim from the original claim; no need to re-claim.
   if _read_lock && [ "$LOCK_OWNER" = "$me" ]; then _write_lock "$1"; return 0; fi
 
-  # W5 — Atomic claim guard. mkdir is POSIX test-and-set: exactly one racing caller wins.
-  # Only attempt when neither the claim dir nor a legacy flat-file lock exists (truly free state).
-  # Legacy flat-file (LOCK_FILE without LOCK_DIR): tolerated — fall through to reclaim logic below
+  # W5 — Atomic claim guard. set -C / O_EXCL is POSIX test-and-set: exactly one racing caller wins.
+  # Only attempt when neither the claim nor a legacy flat-file lock exists (truly free state).
+  # Legacy flat-file (LOCK_FILE without LOCK_DIR/LOCK_CLAIM): tolerated — fall through to reclaim logic below
   # so an in-flight upgrade from v0.11 does not strand a live lock.
-  if ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_FILE" ]; then
-    if mkdir "$LOCK_DIR" 2>/dev/null; then
+  if ! [ -f "$LOCK_CLAIM" ] && ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_FILE" ]; then
+    if _claim_lock; then
       _write_lock "$1"; return 0                                               # won the race; lock claimed
     fi
-    # Lost the race: LOCK_DIR now owned by the winner. Fall through to BLOCK below.
-    # LOCK_FILE may not be written yet (tiny window); treat LOCK_DIR presence as lock-held.
+    # Lost the race: claim now owned by the winner. Fall through to BLOCK below.
+    # LOCK_FILE may not be written yet (tiny window); treat claim presence as lock-held.
   fi
 
   # --- v0.11 FR4 reclaim logic (runs for: race loser, legacy flat-file, any existing lock) ---
@@ -686,25 +701,25 @@ lock_acquire() { # $1 = cmd label
     local myhost; myhost="$(uname -n 2>/dev/null || echo host)"
     if [ -n "$LOCK_PID" ] && [ "$LOCK_HOST" = "$myhost" ] && ! kill -0 "$LOCK_PID" 2>/dev/null; then
       echo "NOTE: reclaiming a flow lock from a dead session [$LOCK_OWNER] (pid $LOCK_PID no longer alive)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
-      # F2: check mkdir atomically — if another reclaimer beat us, do NOT write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      _release_claim
+      # F2: check claim atomically — if another reclaimer beat us, do NOT write
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost the re-mkdir race; another reclaimer already owns the slot — back off
+      # Lost the reclaim race; another reclaimer already owns the slot — back off
       echo "BLOCKED: another flow session claimed this project concurrently (concurrent /flow corrupts the plan)."
-      echo "  (reclaim mkdir race lost — another session already took the lock.)"
+      echo "  (reclaim claim race lost — another session already took the lock.)"
       return 1
     elif [ "$age" -ge "$FLOW_LOCK_TTL" ]; then
       echo "NOTE: reclaiming a STALE flow lock from [$LOCK_OWNER] (${age}s old >= ${FLOW_LOCK_TTL}s TTL)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
-      # F2: check mkdir atomically — if another reclaimer beat us, do NOT write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      _release_claim
+      # F2: check claim atomically — if another reclaimer beat us, do NOT write
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost the re-mkdir race; another reclaimer already owns the slot — back off
+      # Lost the reclaim race; another reclaimer already owns the slot — back off
       echo "BLOCKED: another flow session claimed this project concurrently (concurrent /flow corrupts the plan)."
-      echo "  (reclaim mkdir race lost — another session already took the lock.)"
+      echo "  (reclaim claim race lost — another session already took the lock.)"
       return 1
     fi
     if flow_owner_strong "$me" && flow_owner_strong "$LOCK_OWNER"; then         # fresh + provably foreign
@@ -719,29 +734,31 @@ lock_acquire() { # $1 = cmd label
     _write_lock "$1"; return 0
   fi
 
-  # LOCK_DIR exists but LOCK_FILE not yet written: either a race loser in the tiny window
-  # after mkdir loss, or a crashed winner (F1: process died after mkdir but before _write_lock).
-  # Distinguish via mtime: if LOCK_DIR is older than FLOW_LOCK_TTL it is a crashed stale claim
+  # LOCK_CLAIM or LOCK_DIR exists but LOCK_FILE not yet written: either a race loser in the tiny window
+  # after claim loss, or a crashed winner (F1: process died after claim but before _write_lock).
+  # Distinguish via mtime: if the claim target is older than FLOW_LOCK_TTL it is a crashed stale claim
   # and safe to reclaim; if fresh, treat as live mid-claim and BLOCK.
-  if [ -d "$LOCK_DIR" ]; then
+  if [ -f "$LOCK_CLAIM" ] || [ -d "$LOCK_DIR" ]; then
     local ttl_min; ttl_min=$(( (FLOW_LOCK_TTL + 59) / 60 ))   # ceiling division to minutes
-    if find "$LOCK_DIR" -maxdepth 0 -mmin +"$ttl_min" 2>/dev/null | grep -q .; then
+    local claim_target="$LOCK_DIR"
+    [ -d "$claim_target" ] || claim_target="$LOCK_CLAIM"
+    if find "$claim_target" -maxdepth 0 -mmin +"$ttl_min" 2>/dev/null | grep -q .; then
       echo "NOTE: reclaiming a stale crashed claim (LOCK_DIR old, no LOCK_FILE)."
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
+      _release_claim
       # F2: atomic re-claim; if another reclaimer beat us, don't write
-      if mkdir "$LOCK_DIR" 2>/dev/null; then
+      if _claim_lock; then
         _write_lock "$1"; return 0
       fi
-      # Lost re-mkdir race; fall through to BLOCKED below
+      # Lost re-claim race; fall through to BLOCKED below
     fi
     echo "BLOCKED: another flow session is claiming this project (concurrent /flow corrupts the plan)."
     echo "  (lock dir exists; the other session is mid-claim.  If it is truly gone: '/flow unlock'.)"
     return 1
   fi
 
-  # No LOCK_DIR and no LOCK_FILE: truly free state reached after reclaim or first run.
-  # F2: check mkdir exit status — if another caller beats us here, refuse rather than double-write
-  if mkdir "$LOCK_DIR" 2>/dev/null; then
+  # No claim and no LOCK_FILE: truly free state reached after reclaim or first run.
+  # F2: check claim exit status — if another caller beats us here, refuse rather than double-write
+  if _claim_lock; then
     _write_lock "$1"; return 0                                                   # won the clean claim
   fi
   # Another caller won; fall through — will hit the BLOCKED path on next iteration.
@@ -2134,10 +2151,10 @@ cmd_recall() {
 }
 
 cmd_unlock() {
-  if [ ! -f "$LOCK_FILE" ] && ! [ -d "$LOCK_DIR" ]; then echo "no flow lock to clear ($LOCK_FILE)"; return 0; fi
+  if [ ! -f "$LOCK_FILE" ] && ! [ -d "$LOCK_DIR" ] && ! [ -f "$LOCK_CLAIM" ]; then echo "no flow lock to clear ($LOCK_FILE)"; return 0; fi
   _read_lock
   rm -f "$LOCK_FILE" 2>/dev/null || true
-  rm -rf "$LOCK_DIR" 2>/dev/null || true   # W5: remove atomic claim dir so next acquire can mkdir
+  _release_claim
   echo "PASS: cleared flow lock (was [$LOCK_OWNER], cmd '${LOCK_CMD:-?}')."
   return 0
 }
