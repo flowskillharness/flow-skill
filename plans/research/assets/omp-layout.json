@@ -1,0 +1,503 @@
+{
+  "footer": {
+    "class": "relative",
+    "computed": {
+      "borderBottom": "0px solid oklch(0.97 0 0)",
+      "borderLeft": "0px solid oklch(0.97 0 0)",
+      "borderRight": "0px solid oklch(0.97 0 0)",
+      "borderTop": "0px solid oklch(0.97 0 0)",
+      "display": "block",
+      "gridTemplateColumns": "none",
+      "maxWidth": "none",
+      "paddingBottom": "0px",
+      "paddingLeft": "0px",
+      "paddingRight": "0px",
+      "paddingTop": "0px",
+      "position": "relative"
+    },
+    "offsetHeight": 58,
+    "offsetTop": 842,
+    "tag": "footer"
+  },
+  "header": {
+    "class": "fixed inset-x-0 top-0 z-40 transition-colors duration-300 border-b border-transparent",
+    "computed": {
+      "borderBottom": "1px solid rgba(0, 0, 0, 0)",
+      "borderLeft": "0px solid rgba(0, 0, 0, 0)",
+      "borderRight": "0px solid rgba(0, 0, 0, 0)",
+      "borderTop": "0px solid rgba(0, 0, 0, 0)",
+      "display": "block",
+      "gridTemplateColumns": "none",
+      "maxWidth": "none",
+      "paddingBottom": "0px",
+      "paddingLeft": "0px",
+      "paddingRight": "0px",
+      "paddingTop": "0px",
+      "position": "fixed"
+    },
+    "offsetHeight": 57,
+    "offsetTop": 0,
+    "tag": "header"
+  },
+  "hero": {
+    "container": {
+      "class": "mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:pl-40",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "1280px",
+        "paddingBottom": "0px",
+        "paddingLeft": "160px",
+        "paddingRight": "32px",
+        "paddingTop": "0px",
+        "position": "static"
+      },
+      "offsetHeight": 574,
+      "offsetTop": 142,
+      "tag": "div"
+    },
+    "heading": {
+      "details": {
+        "class": "display text-[clamp(2.4rem,1.2rem+3.8vw,4.4rem)] font-medium leading-[0.98]",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.97 0 0)",
+          "borderLeft": "0px solid oklch(0.97 0 0)",
+          "borderRight": "0px solid oklch(0.97 0 0)",
+          "borderTop": "0px solid oklch(0.97 0 0)",
+          "display": "block",
+          "gridTemplateColumns": "none",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "static"
+        },
+        "offsetHeight": 207,
+        "offsetTop": 179,
+        "tag": "h1"
+      },
+      "text": "A coding agent\nwith the\nIDE wired in."
+    },
+    "installWidget": {
+      "details": {
+        "class": "mt-8",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.97 0 0)",
+          "borderLeft": "0px solid oklch(0.97 0 0)",
+          "borderRight": "0px solid oklch(0.97 0 0)",
+          "borderTop": "0px solid oklch(0.97 0 0)",
+          "display": "block",
+          "gridTemplateColumns": "none",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "static"
+        },
+        "offsetHeight": 87,
+        "offsetTop": 526,
+        "tag": "div"
+      },
+      "tabs": [
+        "CURL",
+        "BREW",
+        "BUN",
+        "PS1",
+        "MISE",
+        "COPY\n✓ COPIED"
+      ]
+    },
+    "kicker": {
+      "details": {
+        "class": "sunray mono-fig mb-5 w-fit text-[11px] uppercase tracking-[0.24em]",
+        "computed": {
+          "borderBottom": "0px solid rgba(0, 0, 0, 0)",
+          "borderLeft": "0px solid rgba(0, 0, 0, 0)",
+          "borderRight": "0px solid rgba(0, 0, 0, 0)",
+          "borderTop": "0px solid rgba(0, 0, 0, 0)",
+          "display": "block",
+          "gridTemplateColumns": "none",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "static"
+        },
+        "offsetHeight": 17,
+        "offsetTop": 142,
+        "tag": "p"
+      },
+      "text": "OMP², SOON!"
+    },
+    "lede": {
+      "details": {
+        "class": "mt-6 max-w-[46ch] text-[var(--fg-dim)] text-[clamp(0.98rem,0.92rem+0.3vw,1.08rem)] leading-relaxed",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.82 0.005 280)",
+          "borderLeft": "0px solid oklch(0.82 0.005 280)",
+          "borderRight": "0px solid oklch(0.82 0.005 280)",
+          "borderTop": "0px solid oklch(0.82 0.005 280)",
+          "display": "block",
+          "gridTemplateColumns": "none",
+          "maxWidth": "526.565px",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "static"
+        },
+        "offsetHeight": 84,
+        "offsetTop": 410,
+        "tag": "p"
+      },
+      "text": "An agentic harness with all you need built in, powered by a native Rust core, with every tool tuned against real sessions.\nWindows-native, skip the WSL."
+    },
+    "marquee": {
+      "class": "mt-7",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "static"
+      },
+      "offsetHeight": 51,
+      "offsetTop": 641,
+      "tag": "div"
+    }
+  },
+  "main": {
+    "class": "",
+    "computed": {
+      "borderBottom": "0px solid oklch(0.97 0 0)",
+      "borderLeft": "0px solid oklch(0.97 0 0)",
+      "borderRight": "0px solid oklch(0.97 0 0)",
+      "borderTop": "0px solid oklch(0.97 0 0)",
+      "display": "block",
+      "gridTemplateColumns": "none",
+      "maxWidth": "none",
+      "paddingBottom": "0px",
+      "paddingLeft": "0px",
+      "paddingRight": "0px",
+      "paddingTop": "0px",
+      "position": "static"
+    },
+    "offsetHeight": 900,
+    "offsetTop": 0,
+    "tag": "main"
+  },
+  "mainChildren": [
+    {
+      "class": "relative flex min-h-[100svh] flex-col overflow-clip bg-[#09090b]",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "flex",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "relative"
+      },
+      "offsetHeight": 900,
+      "offsetTop": 0,
+      "tag": "div"
+    }
+  ],
+  "mainDeepChildren": [
+    {
+      "class": "[transform:scaleY(-1)]",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "absolute"
+      },
+      "offsetHeight": 900,
+      "offsetTop": 0,
+      "tag": "div"
+    },
+    {
+      "class": "absolute inset-0 pointer-events-none opacity-35 [background:repeating-linear-gradient(to_bottom,rgba(0,0,0,0.4)_0_1px,transparent_1px_3px)]",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "absolute"
+      },
+      "offsetHeight": 900,
+      "offsetTop": 0,
+      "tag": "span"
+    },
+    {
+      "class": "relative flex-1 flex flex-col justify-start lg:justify-center pt-28 pb-20 lg:pb-24",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "flex",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "96px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "112px",
+        "position": "relative"
+      },
+      "offsetHeight": 842,
+      "offsetTop": 0,
+      "tag": "section"
+    },
+    {
+      "class": "absolute inset-0 bg-[#050507]/95 transition-opacity duration-300 pointer-events-none opacity-0",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "absolute"
+      },
+      "offsetHeight": 900,
+      "offsetTop": 0,
+      "tag": "div"
+    },
+    {
+      "class": "absolute left-5 top-1/2 z-10 hidden -translate-y-1/2 lg:block",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "absolute"
+      },
+      "offsetHeight": 457,
+      "offsetTop": 450,
+      "tag": "div"
+    },
+    {
+      "class": "relative",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "block",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "0px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "0px",
+        "position": "relative"
+      },
+      "offsetHeight": 58,
+      "offsetTop": 842,
+      "tag": "footer"
+    }
+  ],
+  "numberedSections": [
+    {
+      "details": {
+        "class": "relative grid h-12 w-12 cursor-pointer place-items-center bg-[#050507] transition-colors sm:h-14 sm:w-14 text-[var(--fg-faint)] hover:text-[var(--fg)]",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.5 0.008 280)",
+          "borderLeft": "0px solid oklch(0.5 0.008 280)",
+          "borderRight": "0px solid oklch(0.5 0.008 280)",
+          "borderTop": "0px solid oklch(0.5 0.008 280)",
+          "display": "grid",
+          "gridTemplateColumns": "56px",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "relative"
+        },
+        "offsetHeight": 56,
+        "offsetTop": 1,
+        "tag": "button"
+      },
+      "index": 1,
+      "label": "debugger",
+      "number": "01"
+    },
+    {
+      "details": {
+        "class": "relative grid h-12 w-12 cursor-pointer place-items-center bg-[#050507] transition-colors sm:h-14 sm:w-14 text-[var(--fg-faint)] hover:text-[var(--fg)]",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.5 0.008 280)",
+          "borderLeft": "0px solid oklch(0.5 0.008 280)",
+          "borderRight": "0px solid oklch(0.5 0.008 280)",
+          "borderTop": "0px solid oklch(0.5 0.008 280)",
+          "display": "grid",
+          "gridTemplateColumns": "56px",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "relative"
+        },
+        "offsetHeight": 56,
+        "offsetTop": 58,
+        "tag": "button"
+      },
+      "index": 2,
+      "label": "stream rules",
+      "number": "02"
+    },
+    {
+      "details": {
+        "class": "relative grid h-12 w-12 cursor-pointer place-items-center bg-[#050507] transition-colors sm:h-14 sm:w-14 text-[var(--fg-faint)] hover:text-[var(--fg)]",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.5 0.008 280)",
+          "borderLeft": "0px solid oklch(0.5 0.008 280)",
+          "borderRight": "0px solid oklch(0.5 0.008 280)",
+          "borderTop": "0px solid oklch(0.5 0.008 280)",
+          "display": "grid",
+          "gridTemplateColumns": "56px",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "relative"
+        },
+        "offsetHeight": 56,
+        "offsetTop": 115,
+        "tag": "button"
+      },
+      "index": 3,
+      "label": "subagents",
+      "number": "03"
+    },
+    {
+      "details": {
+        "class": "relative grid h-12 w-12 cursor-pointer place-items-center bg-[#050507] transition-colors sm:h-14 sm:w-14 text-[var(--fg-faint)] hover:text-[var(--fg)]",
+        "computed": {
+          "borderBottom": "0px solid oklch(0.5 0.008 280)",
+          "borderLeft": "0px solid oklch(0.5 0.008 280)",
+          "borderRight": "0px solid oklch(0.5 0.008 280)",
+          "borderTop": "0px solid oklch(0.5 0.008 280)",
+          "display": "grid",
+          "gridTemplateColumns": "56px",
+          "maxWidth": "none",
+          "paddingBottom": "0px",
+          "paddingLeft": "0px",
+          "paddingRight": "0px",
+          "paddingTop": "0px",
+          "position": "relative"
+        },
+        "offsetHeight": 56,
+        "offsetTop": 172,
+        "tag": "button"
+      },
+      "index": 4,
+      "label": "advisor",
+      "number": "04"
+    }
+  ],
+  "sections": [
+    {
+      "class": "relative flex-1 flex flex-col justify-start lg:justify-center pt-28 pb-20 lg:pb-24",
+      "computed": {
+        "borderBottom": "0px solid oklch(0.97 0 0)",
+        "borderLeft": "0px solid oklch(0.97 0 0)",
+        "borderRight": "0px solid oklch(0.97 0 0)",
+        "borderTop": "0px solid oklch(0.97 0 0)",
+        "display": "flex",
+        "gridTemplateColumns": "none",
+        "maxWidth": "none",
+        "paddingBottom": "96px",
+        "paddingLeft": "0px",
+        "paddingRight": "0px",
+        "paddingTop": "112px",
+        "position": "relative"
+      },
+      "offsetHeight": 842,
+      "offsetTop": 0,
+      "tag": "section"
+    }
+  ],
+  "numberedSectionsDetail": [
+    {
+      "number": "01",
+      "title": "debugger",
+      "badge": "LIVE · DEBUGGER",
+      "demoProof": {
+        "type": "video",
+        "src": "https://omp.sh/clips/dap.mp4",
+        "poster": "https://omp.sh/clips/dap-poster.webp",
+        "classes": "absolute inset-0 h-full w-full object-contain p-[4vmin] pt-20 pb-16 lg:pl-40"
+      },
+      "trigger": {
+        "icon": "circle with crosshairs (DAP debugger)",
+        "badge": "01"
+      }
+    },
+    {
+      "number": "02",
+      "title": "stream rules",
+      "badge": "LIVE · STREAM RULES",
+      "demoProof": {
+        "type": "video",
+        "src": "https://omp.sh/clips/ttsr.mp4",
+        "poster": "https://omp.sh/clips/ttsr-poster.webp",
+        "classes": "absolute inset-0 h-full w-full object-contain p-[4vmin] pt-20 pb-16 lg:pl-40"
+      },
+      "trigger": {
+        "icon": "stream rules icon",
+        "badge": "02"
+      }
+    }
+  ]
+}

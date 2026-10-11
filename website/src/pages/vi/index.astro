@@ -47,6 +47,7 @@ const willNotPass = [
 		<!-- HERO SECTION -->
 		<section class="sheet hero-section" aria-label="Cài rồi cổng">
 			<div class="hero-atmosphere" aria-hidden="true"></div>
+			<canvas id="hero-flow-canvas" class="hero-flow-canvas" aria-hidden="true"></canvas>
 			<div class="hero">
 				<div class="kicker-wrap hero-kicker-anim">
 					<span class="kicker mono">BẰNG CHỨNG HƠN CẢM HỨNG.</span>
@@ -90,53 +91,10 @@ const willNotPass = [
 					</div>
 				</div>
 			</div>
-
-			<!-- GALLEYS / OUTCOMES -->
-			<div class="galleys">
-				<article class="galley galley-pass" aria-labelledby="after-install-title">
-					<div class="galley-head">
-						<span class="status-badge status-badge-pass" aria-hidden="true">
-							<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
-						</span>
-						<h2 id="after-install-title">Cài xong</h2>
-					</div>
-					<p class="galley-intro">
-						Skill nằm trên ổ đĩa. <code translate="no">/flow</code> hoặc
-						<code translate="no">$flow</code> dùng được.
-						<code translate="no">doctor</code> in <code translate="no">READY</code>.
-						<code translate="no">/flow next</code> trên file idea trống thì từ chối kèm số
-						dòng.
-					</p>
-					<ul class="proofs">{afterInstall.map((item) => <li>{item}</li>)}</ul>
-				</article>
-
-				<article class="galley galley-fail" aria-labelledby="will-not-pass-title">
-					<div class="galley-head">
-						<span class="status-badge status-badge-fail" aria-hidden="true">
-							<span class="fail-dot"></span>
-						</span>
-						<h2 id="will-not-pass-title">Những gì không qua cổng</h2>
-					</div>
-					<p class="galley-intro">
-						Trống, còn <code translate="no">[FILL]</code>, hay chỉ bảo “tests pass” là chưa đủ.
-						<span class="kill-line">Ý tưởng yếu thì dừng ngay ở cổng.</span>
-					</p>
-					<ul class="proofs">{willNotPass.map((item) => <li>{item}</li>)}</ul>
-				</article>
-			</div>
-
-			<ol class="pipeline" aria-label="Sáu cổng trước khi build">
-				{stages.map((stage) => (
-					<li class="pipe">
-						<span class="pipe-num mono">{stage.num}</span>
-						<span class="pipe-name">{stage.name}</span>
-					</li>
-				))}
-			</ol>
 		</section>
 
-		<!-- NUMBERED GATES 01-06 -->
-		<section class="band run" aria-labelledby="run-title">
+		<!-- NUMBERED GATES 01-06 (FULL-WIDTH BANDS) -->
+		<section class="band run gates-section" aria-labelledby="run-title">
 			<div class="band-intro">
 				<h2 class="band-title" id="run-title">Sáu cổng trước khi bạn build</h2>
 				<p class="band-lede">
@@ -145,21 +103,212 @@ const willNotPass = [
 					khi bạn đi qua cổng, không phải có sẵn sau khi cài.
 				</p>
 			</div>
-			<ol class="run-list">
-				{
-					stages.map((stage) => (
-						<li class="gate-tile">
-							<div class="gate-tile-header">
-								<span class="gate-num mono">{stage.num}</span>
-								<span class="run-stage">{stage.name}</span>
-							</div>
-							<code class="run-file mono" translate="no">
-								{stage.file}
-							</code>
-						</li>
-					))
-				}
+
+			<!-- Stage pipeline index -->
+			<ol class="pipeline" aria-label="Sáu cổng trước khi build">
+				{stages.map((stage) => (
+					<li class="pipe">
+						<a href={`#gate-${stage.num}`} class="pipe-link">
+							<span class="pipe-num mono">{stage.num}</span>
+							<span class="pipe-name">{stage.name}</span>
+						</a>
+					</li>
+				))}
 			</ol>
+
+			<div class="gates-container">
+				<!-- Gate 01: Idea (Features What Will Not Pass proof panel) -->
+				<article class="gate-band" id="gate-01" aria-labelledby="gate-01-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">01</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-01-title">Idea</h3>
+								<code class="gate-file-chip mono" translate="no">flow/00-idea.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-fail" aria-labelledby="will-not-pass-title">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-fail" aria-hidden="true">
+										<span class="fail-dot"></span>
+									</span>
+									<span class="proof-badge-label mono">FAIL · BỊ CHẶN TẠI CỔNG</span>
+									<h4 id="will-not-pass-title" class="proof-title">Những gì không qua cổng</h4>
+								</div>
+								<p class="proof-intro">
+									Trống, còn <code translate="no">[FILL]</code>, hay chỉ bảo “tests pass” là chưa đủ.
+									<span class="kill-line">Ý tưởng yếu thì dừng ngay ở cổng.</span>
+								</p>
+								<ul class="proofs">{willNotPass.map((item) => <li>{item}</li>)}</ul>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> /flow next<br />
+									<span class="receipt-err">refusing: flow/00-idea.md is empty (line 1)</span><br />
+									<span class="receipt-halt">Bị chặn ở cổng thì dừng luôn, chứ không phải fail.</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<!-- Gate 02: Research -->
+				<article class="gate-band" id="gate-02" aria-labelledby="gate-02-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">02</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-02-title">Research</h3>
+								<code class="gate-file-chip mono" translate="no">flow/01-research.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-verified">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-gate mono">02</span>
+									<span class="proof-badge-label mono">BẰNG CHỨNG · NGUỒN ĐỐI CHIẾU</span>
+									<h4 class="proof-title">Thực chứng trước khi chốt kiến trúc</h4>
+								</div>
+								<p class="proof-intro">
+									So sánh đối thủ, trích dẫn tài liệu thật và failure mode ghi lại trong file repo.
+								</p>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> /flow check 01-research<br />
+									<span class="receipt-ok">✓ 3 nguồn tài liệu gốc được kiểm chứng (URL thật)</span><br />
+									<span class="receipt-ok">✓ so sánh đối thủ &amp; failure modes đã khoá</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<!-- Gate 03: Scope -->
+				<article class="gate-band" id="gate-03" aria-labelledby="gate-03-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">03</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-03-title">Scope</h3>
+								<code class="gate-file-chip mono" translate="no">flow/02-scope.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-verified">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-gate mono">03</span>
+									<span class="proof-badge-label mono">BIÊN GIỚI · PHI MỤC TIÊU</span>
+									<h4 class="proof-title">Khoá cứng phần ngoài phạm vi</h4>
+								</div>
+								<p class="proof-intro">
+									Chia nhỏ các phần việc khả thi. Ngăn tình trạng phình phạm vi trước khi sinh code.
+								</p>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> /flow check 02-scope<br />
+									<span class="receipt-ok">✓ 3 lát cắt bàn giao được khoá</span><br />
+									<span class="receipt-ok">✓ phi mục tiêu được đóng băng (chặn scope creep)</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<!-- Gate 04: PRD -->
+				<article class="gate-band" id="gate-04" aria-labelledby="gate-04-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">04</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-04-title">PRD</h3>
+								<code class="gate-file-chip mono" translate="no">flow/03-prd.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-verified">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-gate mono">04</span>
+									<span class="proof-badge-label mono">HỢP ĐỒNG · TIÊU CHÍ NGHIỆM THU</span>
+									<h4 class="proof-title">Chỉ chấp nhận tiêu chí quan sát được</h4>
+								</div>
+								<p class="proof-intro">
+									User stories với các bất biến kiểm thử được. Agent không thể tự đổi định nghĩa done giữa chừng.
+								</p>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> /flow check 03-prd<br />
+									<span class="receipt-ok">✓ tiêu chí nghiệm thu quan sát được đã xác nhận</span><br />
+									<span class="receipt-ok">✓ trạng thái lỗi &amp; phương án suy thoái đã định nghĩa</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<!-- Gate 05: ADR -->
+				<article class="gate-band" id="gate-05" aria-labelledby="gate-05-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">05</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-05-title">ADR</h3>
+								<code class="gate-file-chip mono" translate="no">flow/04-adr.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-verified">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-gate mono">05</span>
+									<span class="proof-badge-label mono">QUYẾT ĐỊNH · ĐÁNH ĐỔI</span>
+									<h4 class="proof-title">Bản ghi quyết định kiến trúc</h4>
+								</div>
+								<p class="proof-intro">
+									Bối cảnh, quyết định và hệ quả được ghi chép trước khi triển khai.
+								</p>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> /flow check 04-adr<br />
+									<span class="receipt-ok">✓ bối cảnh, quyết định, hệ quả đã ghi chép</span><br />
+									<span class="receipt-ok">✓ khả năng hoàn tác &amp; ca kiểm thử âm đã đối chiếu</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+
+				<!-- Gate 06: Contract (Features After Install proof panel) -->
+				<article class="gate-band" id="gate-06" aria-labelledby="gate-06-title">
+					<div class="gate-band-inner">
+						<div class="gate-meta">
+							<span class="gate-big-num mono">06</span>
+							<div class="gate-meta-text">
+								<h3 class="gate-stage-name" id="gate-06-title">Contract</h3>
+								<code class="gate-file-chip mono" translate="no">flow/05-contract.md</code>
+							</div>
+						</div>
+						<div class="gate-proof-area">
+							<div class="proof-terminal proof-pass" aria-labelledby="after-install-title">
+								<div class="proof-terminal-head">
+									<span class="status-badge status-badge-pass" aria-hidden="true">
+										<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
+									</span>
+									<span class="proof-badge-label mono">PASS · SẴN SÀNG</span>
+									<h4 id="after-install-title" class="proof-title">Cài xong</h4>
+								</div>
+								<p class="proof-intro">
+									Skill nằm trên ổ đĩa. <code translate="no">/flow</code> hoặc
+									<code translate="no">$flow</code> dùng được.
+									<code translate="no">doctor</code> in <code translate="no">READY</code>.
+									<code translate="no">/flow next</code> trên file idea trống thì từ chối kèm số
+									dòng.
+								</p>
+								<ul class="proofs">{afterInstall.map((item) => <li>{item}</li>)}</ul>
+								<div class="proof-code-receipt mono" translate="no">
+									<span class="receipt-prompt">$</span> flow doctor<br />
+									<span class="receipt-ok">doctor: READY (skills/flow/SKILL.md verified)</span><br />
+									<span class="receipt-ok">Cổng chỉ mở khi cả hai bên cùng đồng ý.</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</article>
+			</div>
+
 			<p class="band-foot">
 				Xong thì <code translate="no">/flow card</code>. Xong nghĩa là có bằng chứng thật: một
 				URL đã deploy, một CLI cài chạy được, một public API, hay một lần chạy skill thật.
