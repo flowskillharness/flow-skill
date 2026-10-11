@@ -23,6 +23,71 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'flow',
+			favicon: '/brand/icons/favicon.svg',
+			head: [
+				{
+					tag: 'link',
+					attrs: {
+						rel: 'icon',
+						type: 'image/svg+xml',
+						href: '/brand/icons/favicon.svg',
+					},
+				},
+				{
+					tag: 'link',
+					attrs: {
+						rel: 'icon',
+						type: 'image/png',
+						sizes: '32x32',
+						href: '/brand/icons/favicon-32.png',
+					},
+				},
+				{
+					tag: 'link',
+					attrs: {
+						rel: 'icon',
+						type: 'image/png',
+						sizes: '16x16',
+						href: '/brand/icons/favicon-16.png',
+					},
+				},
+				{
+					tag: 'link',
+					attrs: {
+						rel: 'apple-touch-icon',
+						sizes: '180x180',
+						href: '/brand/icons/apple-touch-icon-180.png',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						property: 'og:image',
+						content: 'https://flowskill.io.vn/brand/og-image-1200x630.png',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						property: 'og:image:width',
+						content: '1200',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						property: 'og:image:height',
+						content: '630',
+					},
+				},
+				{
+					tag: 'meta',
+					attrs: {
+						name: 'twitter:image',
+						content: 'https://flowskill.io.vn/brand/og-image-1200x630.png',
+					},
+				},
+			],
 			defaultLocale: 'root',
 			locales: {
 				root: { label: 'English', lang: 'en' },

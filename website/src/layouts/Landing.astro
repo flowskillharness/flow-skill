@@ -25,7 +25,15 @@ const docsHome = lang === 'vi' ? '/vi/docs/' : '/docs/';
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="color-scheme" content="light" />
-		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="icon" type="image/svg+xml" href="/brand/icons/favicon.svg" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/brand/icons/favicon-32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/brand/icons/favicon-16.png" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/brand/icons/apple-touch-icon-180.png" />
+		<meta property="og:image" content="https://flowskill.io.vn/brand/og-image-1200x630.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:image" content="https://flowskill.io.vn/brand/og-image-1200x630.png" />
 		<slot name="head" />
 	</head>
 	<body style={`--grain: url(${newsprint.src})`}>
@@ -51,7 +59,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 			</defs>
 		</svg>
 		<header class="docket">
-			<a class="wordmark" href={lang === 'vi' ? '/vi/' : '/'} translate="no">flow</a>
+			<a href={lang === 'vi' ? '/vi/' : '/'} class="brand-lockup" aria-label="flow — gated build harness for coding agents">
+				<picture>
+					<source media="(prefers-color-scheme: dark)" srcset="/brand/brand-lockup-dark.svg" />
+					<img src="/brand/brand-lockup-light.svg" alt="flow — gated build harness for coding agents" width="156" height="42" />
+				</picture>
+			</a>
 			<nav class="docket-nav" aria-label={lang === 'vi' ? 'Ngôn ngữ và tài liệu' : 'Language and docs'}>
 				<a href="/" aria-current={lang === 'en' ? 'page' : undefined}>EN</a>
 				<span aria-hidden="true">|</span>
