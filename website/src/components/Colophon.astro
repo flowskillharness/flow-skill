@@ -67,6 +67,38 @@ const docsHome = lang === 'vi' ? '/vi/docs/' : '/docs/';
 		padding: 2.75rem 0 3.25rem;
 		margin-top: auto;
 	}
+	@media (prefers-color-scheme: light) {
+		.colophon {
+			background: #F8FAFC;
+			border-top: 1px solid #E2E8F0;
+		}
+		.colophon-logo-dark {
+			display: none;
+		}
+		.colophon-logo-light {
+			display: block;
+		}
+		.imprint-line {
+			color: #0F172A;
+		}
+		.tagline {
+			color: #0A4E5E;
+		}
+		.edition {
+			color: #475569;
+		}
+		.colophon-nav a,
+		.colophon-locale a {
+			color: #475569;
+		}
+		.colophon-nav a:hover,
+		.colophon-locale a:hover {
+			color: #0A4E5E;
+		}
+		.colophon-locale a[aria-current='page'] {
+			color: #0A4E5E;
+		}
+	}
 	:global([data-theme='light']) .colophon {
 		background: #F8FAFC;
 		border-top: 1px solid #E2E8F0;
