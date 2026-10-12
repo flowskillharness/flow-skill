@@ -2,8 +2,6 @@
 
 ## [Unreleased]
 
-- **npm installer v0.7.7:** Release installer CLI v0.7.7 shipping skill product v0.34.0 with PIN v1 status/resume contract, runner concurrency lock guard, cross-platform CI hardening, and brand/docs/UX parity.
-
 ## 0.34.0 — 2026-10-12 — PIN v1 + runner hardening + brand identity
 
 Skill product bump to **v0.34.0** shipping PIN v1 status/resume contract,
@@ -12,6 +10,9 @@ and brand identity system. npm installer → **0.7.7** (dist-tag `latest`
 after `npm@0.7.7` publish).
 
 ### Added
+- **npm installer v0.7.7:** Release installer CLI v0.7.7 shipping skill product
+  v0.34.0 with PIN v1 status/resume contract, runner concurrency lock guard,
+  cross-platform CI hardening, and brand/docs/UX parity.
 - **PIN v1 status/resume contract:** exact STOP body excerpts reprinted after
   `NEXT_VERB` on status/resume so compact hosts recover `FLOW_FORCE`, `HALT`,
   and hollow-done rules (`skills/flow/references/pin-v1.txt`). JSON remains

@@ -19,11 +19,10 @@ optional: without it the gates still run and only the durable SQLite layer switc
 ## Step 1 — run the installer
 
 ```bash
-npx @manhquy/flow-skill@next
+npx @manhquy/flow-skill@latest
 ```
 
-Use `@next` for skill **v0.31.0** (installer `0.7.1-next.0`). `@latest` still ships 0.7.0 /
-skill 0.30.0 until promoted. A bare `npx @manhquy/flow-skill` can be served from the npx
+Use `@latest` for skill **v0.34.0** (installer `0.7.7`). A bare `npx @manhquy/flow-skill` can be served from the npx
 cache and quietly re-run an older copy.
 
 Three things happen:
@@ -69,8 +68,8 @@ Confirming installer vs skill version numbers is optional depth. See
 <summary>Print both version numbers</summary>
 
 ```bash
-npx @manhquy/flow-skill@next --help
-# expect: flow-skill v0.7.1-next.0 (ships skill v0.31.0)
+npx @manhquy/flow-skill@latest --help
+# expect: flow-skill v0.7.7 (ships skill v0.34.0)
 ```
 
 The installer prints its own version and the skill version it ships. Then read the skill

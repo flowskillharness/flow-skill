@@ -20,11 +20,10 @@ cổng vẫn chạy, chỉ lớp SQLite bền vững tắt.
 ## Bước 1 — chạy installer
 
 ```bash
-npx @manhquy/flow-skill@next
+npx @manhquy/flow-skill@latest
 ```
 
-Dùng `@next` cho skill **v0.31.0** (installer `0.7.1-next.0`). `@latest` vẫn ship 0.7.0 /
-skill 0.30.0 cho đến khi được promote. Lệnh trần `npx @manhquy/flow-skill` có thể lấy từ
+Dùng `@latest` cho skill **v0.34.0** (installer `0.7.7`). Lệnh trần `npx @manhquy/flow-skill` có thể lấy từ
 cache npx và âm thầm chạy bản cũ.
 
 Ba việc xảy ra:
@@ -67,8 +66,8 @@ Xác nhận hai số version (installer và skill) là độ sâu tùy chọn. X
 <summary>In cả hai số version</summary>
 
 ```bash
-npx @manhquy/flow-skill@next --help
-# expect: flow-skill v0.7.1-next.0 (ships skill v0.31.0)
+npx @manhquy/flow-skill@latest --help
+# expect: flow-skill v0.7.7 (ships skill v0.34.0)
 ```
 
 Installer in version của chính nó và skill version nó ship. Rồi đọc skill version từ đĩa:
