@@ -1,11 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+- **npm installer v0.7.7:** Release installer CLI v0.7.7 shipping skill product v0.34.0 with PIN v1 status/resume contract, runner concurrency lock guard, cross-platform CI hardening, and brand/docs/UX parity.
+
 ## 0.34.0 — 2026-10-12 — PIN v1 + runner hardening + brand identity
 
 Skill product bump to **v0.34.0** shipping PIN v1 status/resume contract,
 atomic concurrency lock, runner integrity verification (C1–C7 wave),
-and brand identity system. npm installer → **0.7.6** (dist-tag `latest`
-after `npm@0.7.6` publish).
+and brand identity system. npm installer → **0.7.7** (dist-tag `latest`
+after `npm@0.7.7` publish).
 
 ### Added
 - **PIN v1 status/resume contract:** exact STOP body excerpts reprinted after
