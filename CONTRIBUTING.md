@@ -56,6 +56,11 @@ npm auth / dist-tag ops: [`npm-wrapper/RELEASE_CHECKLIST.md`](npm-wrapper/RELEAS
 - If you change skill content that ships in the npm tarball, note that a later **npm-wrapper**
   release (`npm run sync` + tag `npm@…`) is required for registry users to receive it.
 
+## Brand
+
+Brand guidelines live in [`brand/brand-guidelines.md`](brand/brand-guidelines.md).
+See [`brand/CONTRIBUTING-brand.md`](brand/CONTRIBUTING-brand.md) for asset and copy contribution rules.
+
 ## Reporting a security issue
 
 See `SECURITY.md` — do not open a public issue for a vulnerability.

@@ -20,6 +20,11 @@ build — it is the reference package.
 | `brand-mark-glyph.svg` | Standalone gate mark glyph tier (512×512 baked vector). |
 | `icons/` | Complete production icon suite: vector favicon, 16/32px PNGs, apple-touch-icon, PWA 512, squircle 1024, og-image, die-cut sticker. |
 | `WEBSITE-HANDOFF.md` | Implementation handoff for `feat/flow-website` (asset inventory, navbar `<picture>` markup, metadata snippets). |
+| `CONTRIBUTING-brand.md` | Brand contribution guide: asset rules, naming conventions, light/dark usage, copy approval. |
+| `usage-examples.md` | Logo usage examples with clear-space diagrams, minimum sizes, correct vs incorrect rules. |
+| `social-templates.md` | Social media avatar and banner specifications (X, GitHub, LinkedIn) with safe-zones. |
+| `email-signature.html` | Production table-based HTML email signature with inline CSS and brand lockup. |
+| `press-kit.md` | One-page summary for journalists/partners: key stats, logo downloads, color palette, boilerplate. |
 
 ## Reading order
 
