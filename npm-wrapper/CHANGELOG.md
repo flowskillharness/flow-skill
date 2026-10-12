@@ -2,6 +2,27 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.7] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
+
+Feature, stability, and brand parity release. Ships skill product **v0.34.0** with PIN v1 status/resume contract, runner concurrency lock guard, C1–C7 runner wave integrity checks, theme-aware brand headers, UX and copy refresh, and cross-platform CI hardening. Note that while the `website/` subtree does not ship to npm, this release aligns the installer with the upgraded docs, gates elevation, and developer-tool UX. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
+
+### Added
+- **Skill product v0.34.0:**
+  - PIN v1 status/resume contract: exact STOP body excerpts reprinted after `NEXT_VERB` on status/resume so compact hosts recover `FLOW_FORCE`, `HALT`, and hollow-done rules (`pin-v1.txt`).
+  - AgentKit (`ak:*`) aliases mapped across references.
+  - C5 runner integrity check: pack-time SHA-256 in `portable-manifest.json` and bundled `manifest-hashes.json` receipt, verified via `flow doctor`.
+- **Brand & documentation:**
+  - Theme-aware brand header lockups across docs and wrappers.
+  - Aligned installer documentation with website developer-tool UX and natural bilingual copy refresh.
+
+### Fixed
+- **Runner concurrency lock:** Atomic `set -C` lock claim guard in `flow.sh` and `attestations.sh` to prevent `mkdir` race condition (#26).
+- **Cross-platform CI hardening:** Normalized harness `_db.py` path for Windows MSYS, fixed i18n CRLF test handling on Windows Git (#24), and expanded Windows CI bash-suite timeout to 60m (#27).
+
+### Changed
+- Bundled skill tree re-synced from monorepo `skills/flow/`.
+- Install: **`npx @manhquy/flow-skill@latest`**.
+
 ## [0.7.6] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
 
 Patch release. Fixes broken brand logo image links on npm package page. Ships skill product **v0.34.0**. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
