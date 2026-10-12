@@ -1,15 +1,44 @@
 # Changelog
 
-## [Unreleased]
+## 0.34.0 — 2026-10-12 — PIN v1 + runner hardening + brand identity
+
+Skill product bump to **v0.34.0** shipping PIN v1 status/resume contract,
+atomic concurrency lock, runner integrity verification (C1–C7 wave),
+and brand identity system. npm installer → **0.7.5** (dist-tag `latest`
+after `npm@0.7.5` publish).
 
 ### Added
-- **Brand identity system:** Direction A gate symbol + `flow-04-gate-o-v2` wordmark (32u corridor), guidelines/tokens/gallery, 12 wordmark studies, prior-art collision audit.
+- **PIN v1 status/resume contract:** exact STOP body excerpts reprinted after
+  `NEXT_VERB` on status/resume so compact hosts recover `FLOW_FORCE`, `HALT`,
+  and hollow-done rules (`skills/flow/references/pin-v1.txt`). JSON remains
+  7-field state (`flow_context/v1`).
+- **AgentKit (`ak:*`) aliases:** cross-vendor agent mapping across references
+  (`claudekit-skills.md`, `agent-stage-mapping.md`, `adversarial-review.md`).
+- **C5 runner integrity check:** pack-time runner SHA-256 hash in
+  `portable-manifest.json` and bundled `manifest-hashes.json` receipt;
+  verified via `flow doctor`.
+- **Brand identity system:** Direction A gate symbol + `flow-04-gate-o-v2` wordmark
+  (32u corridor), guidelines/tokens/gallery, 12 wordmark studies, prior-art collision audit.
 - **README brand headers:** light/dark `<picture>` blocks in `README.md`, `README_VN.md`, `npm-wrapper/README.md`.
 - **Production asset pack:** `brand-lockup` light/dark SVGs, glyph, favicon/app-icon/og-image/sticker suite under `brand/icons/`.
 - **`brand/WEBSITE-HANDOFF.md`:** handoff for feat/flow-website adoption.
 - **omp-inspired landing redesign:** living flow-field canvas hero, tabbed install widget, agent marquee, numbered full-width gate bands (01–06), scroll/hover motion; desktop squeeze bug fixed.
 - **Six gates immersive elevation + site-wide docs branding:** artifact-preview gate bands with bilingual taglines, Starlight docs theme (Ink/Mist + teal), favicon/og on docs pages.
 - **Version automation:** registry-driven `versions.ts` + version-cache fallback, `website-scheduled-rebuild.yml` (cron + `npm-published` dispatch), `publish-npm-wrapper.yml` dispatch step; flowskill.io.vn no longer hardcodes versions.
+
+### Fixed
+- **Runner concurrency lock:** Atomic `set -C` lock claim guard in `flow.sh` and
+  `attestations.sh` to prevent `mkdir` race condition (#22).
+- **MSYS path normalization:** Normalized harness `_db.py` path for Windows MSYS (#21).
+- **i18n CRLF handling:** Fixed i18n pairs verification on Windows Git with CRLF (#24).
+- **Windows CI timeout:** Increased Windows bash-suite timeout from 45m to 60m for
+  the full 67-suite set (#27).
+
+### Tests
+- `test_flow_status_legibility.sh` PIN v1 assertions.
+- Pack-rehearsal exercises `flow doctor` on installed artifact.
+
+PR: [#28](https://github.com/manhquydev/flow-skill/pull/28).
 
 ## 0.33.0 — 2026-09-17 — status --json + Stage 05 heading map
 

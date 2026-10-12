@@ -3,6 +3,25 @@
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
 
+## [0.7.5] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
+
+Feature and stability release. Ships skill product **v0.34.0** with PIN v1 status/resume contract, runner concurrency lock guard, C1–C7 runner wave integrity checks, theme-aware brand headers, and cross-platform CI hardening. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
+
+### Added
+- **Skill product v0.34.0:**
+  - PIN v1 status/resume contract: exact STOP body excerpts reprinted after `NEXT_VERB` on status/resume so compact hosts recover `FLOW_FORCE`, `HALT`, and hollow-done rules (`pin-v1.txt`).
+  - AgentKit (`ak:*`) aliases mapped across references.
+  - C5 runner integrity check: pack-time SHA-256 in `portable-manifest.json` and bundled `manifest-hashes.json` receipt, verified via `flow doctor`.
+- Theme-aware brand header lockups across docs and wrappers.
+
+### Fixed
+- **Runner concurrency lock:** Atomic `set -C` lock claim guard in `flow.sh` and `attestations.sh` to prevent `mkdir` race condition (#22).
+- **Cross-platform CI hardening:** Normalized harness `_db.py` path for Windows MSYS, fixed i18n CRLF test handling on Windows Git, and expanded Windows CI bash-suite timeout to 60m.
+
+### Changed
+- Bundled skill tree re-synced from monorepo `skills/flow/`.
+- Install: **`npx @manhquy/flow-skill@latest`**.
+
 ## [0.7.4] — 2026-10-11 — ships skill v0.33.0 (stable / latest)
 
 Documentation and brand release. Adds theme-aware gate-mark brand header to npm-wrapper READMEs (English and Vietnamese). Ships skill product **v0.33.0**. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
