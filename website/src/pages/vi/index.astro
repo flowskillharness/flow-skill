@@ -6,12 +6,12 @@ import { getVersions } from '../../lib/versions';
 const { command } = await getVersions();
 const tutorial = '/vi/docs/tutorials/install-and-first-run/';
 const stages = [
-	{ num: '01', name: 'Idea', file: 'flow/00-idea.md', tagline: 'Chặn ý tưởng tồi trước khi viết code.' },
-	{ num: '02', name: 'Research', file: 'flow/01-research.md', tagline: 'Trích nguồn thật hoặc dừng tại đây.' },
-	{ num: '03', name: 'Scope', file: 'flow/02-scope.md', tagline: 'Vạch ranh giới rõ. Bỏ hết phần thừa.' },
-	{ num: '04', name: 'PRD', file: 'flow/03-prd.md', tagline: 'Định nghĩa bài test trước khi gõ code.' },
-	{ num: '05', name: 'ADR', file: 'flow/04-adr.md', tagline: 'Ghi lại đánh đổi trước khi commit.' },
-	{ num: '06', name: 'Contract', file: 'flow/05-contract.md', tagline: 'Cả hai cùng duyệt mới được bước tiếp.' },
+	{ num: '01', name: 'Idea', file: 'flow/00-idea.md', tagline: 'Loại ý tưởng yếu trước khi đụng vào code.' },
+	{ num: '02', name: 'Research', file: 'flow/01-research.md', tagline: 'Dẫn nguồn thật hoặc dừng tại đây.' },
+	{ num: '03', name: 'Scope', file: 'flow/02-scope.md', tagline: 'Vạch rõ ranh giới. Cắt bỏ phần thừa.' },
+	{ num: '04', name: 'PRD', file: 'flow/03-prd.md', tagline: 'Chốt tiêu chí test trước khi viết code.' },
+	{ num: '05', name: 'ADR', file: 'flow/04-adr.md', tagline: 'Ghi nhận đánh đổi trước khi commit.' },
+	{ num: '06', name: 'Contract', file: 'flow/05-contract.md', tagline: 'Cả hai cùng duyệt mới được đi tiếp.' },
 ];
 const agents = [
 	'Claude Code',
@@ -24,28 +24,28 @@ const agents = [
 	'Zed',
 ];
 const afterInstall = [
-	'Skill nằm trong agent home.',
-	'Gõ /flow (Codex: $flow).',
-	'doctor in READY.',
-	'/flow next trên thư mục trống thì cổng chặn.',
+	'File skill nằm gọn trong thư mục của agent.',
+	'Gõ /flow trong chat (Codex: $flow).',
+	'Lệnh doctor in ra READY.',
+	'/flow next trên file idea trống sẽ từ chối và chỉ rõ số dòng.',
 ];
 const willNotPass = [
-	'File trống.',
-	'[FILL] còn trong file.',
-	'“tests pass” thế cho bằng chứng done.',
+	'File còn để trống.',
+	'Còn sót token [FILL] chưa điền.',
+	'Báo “tests pass” thay vì đưa bằng chứng done.',
 ];
 ---
 
 <Landing lang="vi">
-	<title slot="head">flow: cổng chặn việc rỗng</title>
+	<title slot="head">flow — tiến độ ảo không qua được gate</title>
 	<meta
 		slot="head"
 		name="description"
-		content="Agent vẫn viết code, còn cổng mở hay đóng thì flow quyết. Phải cả flow.sh lẫn skill thì cổng mới mở. Bị chặn ở cổng thì dừng luôn, chứ không phải fail. npx @manhquy/flow-skill@next"
+		content="Harness kiểm soát bằng gate cho coding agent bạn đang dùng. flow giữ gate và biên nhận, không can thiệp runtime. Dừng ở gate là kết quả hợp lệ. npx @manhquy/flow-skill@latest"
 	/>
 	<main class="landing-main">
 		<!-- HERO SECTION -->
-		<section class="hero-section" aria-label="Cài rồi cổng">
+		<section class="hero-section" aria-label="Cài đặt và kết quả kiểm chứng">
 			<div class="hero-atmosphere" aria-hidden="true"></div>
 			<canvas id="hero-flow-canvas" class="hero-flow-canvas" aria-hidden="true"></canvas>
 			<div class="hero">
@@ -54,12 +54,12 @@ const willNotPass = [
 						<span class="kicker mono"><span class="kicker-dot" aria-hidden="true"></span>BẰNG CHỨNG HƠN CẢM HỨNG.</span>
 					</div>
 					<p class="display mono hero-display-anim" translate="no">flow</p>
-					<h1 class="headline hero-title-anim"><span class="headline-gradient">Việc rỗng</span> thì không qua cổng.</h1>
+					<h1 class="headline hero-title-anim"><span class="headline-gradient">Tiến độ ảo</span> không qua được gate.</h1>
 					<p class="lede hero-lede-anim">
-						flow là khung kiểm soát quanh coding agent bạn đang dùng. flow giữ cổng và bằng chứng,
-						chứ không chạy thay agent. Bị chặn ở cổng thì dừng luôn, chứ không phải fail.
+						flow là harness kiểm soát bằng gate cho coding agent bạn đang dùng. flow giữ gate và biên nhận,
+						không can thiệp runtime. Dừng lại ở gate là kết quả hợp lệ, được ghi nhận.
 					</p>
-					<p class="verdict mono hero-verdict-anim">Cổng chỉ mở khi cả hai bên cùng đồng ý.</p>
+					<p class="verdict mono hero-verdict-anim">Gate chỉ mở khi cả hai cùng duyệt.</p>
 				</div>
 
 				<!-- TABBED INSTALL WIDGET -->
@@ -68,17 +68,17 @@ const willNotPass = [
 						command={command}
 						copyLabel="Copy"
 						copiedLabel="Đã copy"
-						selectLabel="Đã bôi đen — bấm Ctrl+C"
+						selectLabel="Đã chọn — nhấn Ctrl+C"
 						secondaryHref={tutorial}
-						secondaryLabel="Cài rồi chạy thử"
+						secondaryLabel="Cài đặt và lần chạy đầu"
 					/>
 				</div>
 			</div>
 
 			<!-- AGENT MARQUEE -->
 			<div class="marquee-wrapper" aria-label="Tương thích với các coding agent">
-				<p class="marquee-label mono">TƯƠNG THÍCH VỚI CÁC CODING AGENT</p>
-				<div class="marquee" tabindex="0" role="region" aria-label="Các coding agent được hỗ trợ">
+				<p class="marquee-label mono">HOẠT ĐỘNG CÙNG CÁC CODING AGENT BẠN DÙNG</p>
+				<div class="marquee" tabindex="0" role="region" aria-label="Danh sách coding agent tương thích">
 					<div class="marquee-track">
 						<div class="marquee-group">
 							{agents.map((agent) => (
@@ -98,16 +98,16 @@ const willNotPass = [
 		<!-- NUMBERED GATES 01-06 (FULL-WIDTH BANDS) -->
 		<section class="band run gates-section" aria-labelledby="run-title">
 			<div class="band-intro">
-				<h2 class="band-title" id="run-title">Sáu cổng trước khi bạn build</h2>
+				<h2 class="band-title" id="run-title">6 gate kiểm soát trước khi build</h2>
 				<p class="band-lede">
-					Mỗi cổng viết ra một file thật trong repo. <code translate="no">/flow next</code> không cho
-					qua cổng tiếp theo nếu cả flow.sh lẫn skill chưa cùng đồng ý. Các file này xuất hiện
-					khi bạn đi qua cổng, không phải có sẵn sau khi cài.
+					Mỗi stage ghi một file thật vào repo. <code translate="no">/flow next</code> chỉ mở
+					khóa stage kế tiếp khi cả runner lẫn skill cùng duyệt. Các file này hình thành
+					khi bạn vượt qua từng gate, không phải tự sinh sau khi cài.
 				</p>
 			</div>
 
 			<!-- Stage pipeline index -->
-			<ol class="pipeline" aria-label="Sáu cổng trước khi build">
+			<ol class="pipeline" aria-label="Quy trình 6 gate từ Idea đến Contract">
 				{stages.map((stage) => (
 					<li class="pipe">
 						<a href={`#gate-${stage.num}`} class="pipe-link gate-chip">
@@ -134,7 +134,7 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Chặn ý tưởng tồi trước khi viết code.</p>
+							<p class="gate-tagline">Loại ý tưởng yếu trước khi đụng vào code.</p>
 
 							<!-- Artifact preview visual: Idea Markdown file with [FILL] placeholder -->
 							<div class="artifact-preview artifact-idea" aria-label="Bản xem trước: flow/00-idea.md">
@@ -150,7 +150,7 @@ const willNotPass = [
 									<div class="art-line"><span class="art-ln">4</span><span class="art-muted">&lt;trống&gt;</span></div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">exit: 1 · phát hiện slot [FILL] chưa điền</span>
+									<span class="artifact-diag">exit: 1 · còn sót token [FILL] chưa điền</span>
 								</div>
 							</div>
 						</div>
@@ -160,18 +160,18 @@ const willNotPass = [
 									<span class="status-badge status-badge-fail" aria-hidden="true">
 										<span class="fail-dot"></span>
 									</span>
-									<span class="proof-badge-label mono">FAIL · BỊ CHẶN TẠI CỔNG</span>
-									<h4 id="will-not-pass-title" class="proof-title">Những gì không qua cổng</h4>
+									<span class="proof-badge-label mono">FAIL · DỪNG TẠI GATE</span>
+									<h4 id="will-not-pass-title" class="proof-title">Những gì không qua được gate</h4>
 								</div>
 								<p class="proof-intro">
-									Trống, còn <code translate="no">[FILL]</code>, hay chỉ bảo “tests pass” là chưa đủ.
-									<span class="kill-line">Ý tưởng yếu thì dừng ngay ở cổng.</span>
+									File trống, sót token <code translate="no">[FILL]</code>, hay chỉ nói miệng “tests pass” đều bị chặn.
+									<span class="kill-line">Ý tưởng yếu sẽ dừng ngay tại gate.</span>
 								</p>
 								<ul class="proofs">{willNotPass.map((item) => <li>{item}</li>)}</ul>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> /flow next<br />
 									<span class="receipt-err">refusing: flow/00-idea.md is empty (line 1)</span><br />
-									<span class="receipt-halt">Bị chặn ở cổng thì dừng luôn, chứ không phải fail.</span>
+									<span class="receipt-halt">dừng ở gate là kết quả hợp lệ.</span>
 								</div>
 							</div>
 						</div>
@@ -193,7 +193,7 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Trích nguồn thật hoặc dừng tại đây.</p>
+							<p class="gate-tagline">Dẫn nguồn thật hoặc dừng tại đây.</p>
 
 							<!-- Artifact preview visual: Research primary sources citations -->
 							<div class="artifact-preview artifact-research" aria-label="Bản xem trước: flow/01-research.md">
@@ -203,13 +203,13 @@ const willNotPass = [
 									<span class="artifact-status-pill status-verified mono">3/3 NGUỒN</span>
 								</div>
 								<div class="artifact-body mono" translate="no">
-									<div class="art-line"><span class="art-ln">1</span><span class="art-kw">##</span> Nguồn đối chiếu sơ cấp</div>
+									<div class="art-line"><span class="art-ln">1</span><span class="art-kw">##</span> Nguồn tài liệu gốc</div>
 									<div class="art-line art-line-cite"><span class="art-ln">2</span><span class="art-bullet">•</span> [RFC-9110] §4.2 Phương thức idempotent</div>
 									<div class="art-line art-line-cite"><span class="art-ln">3</span><span class="art-bullet">•</span> github.com/owner/repo#412 (repro)</div>
-									<div class="art-line"><span class="art-ln">4</span><span class="art-kw">##</span> So sánh cạnh tranh &amp; kịch bản lỗi</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-kw">##</span> So sánh đối thủ &amp; các kịch bản lỗi</div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">link đã xác thực · khóa cơ sở thực chứng</span>
+									<span class="artifact-diag">URL đã xác thực · chốt xong dữ liệu thực chứng</span>
 								</div>
 							</div>
 						</div>
@@ -217,16 +217,16 @@ const willNotPass = [
 							<div class="proof-terminal proof-verified">
 								<div class="proof-terminal-head">
 									<span class="status-badge status-badge-gate mono">02</span>
-									<span class="proof-badge-label mono">BẰNG CHỨNG · NGUỒN ĐỐI CHIẾU</span>
-									<h4 class="proof-title">Thực chứng trước khi chốt kiến trúc</h4>
+									<span class="proof-badge-label mono">BẰNG CHỨNG · NGUỒN TÀI LIỆU GỐC</span>
+									<h4 class="proof-title">Dữ liệu thực chứng trước khi lên kiến trúc</h4>
 								</div>
 								<p class="proof-intro">
-									So sánh đối thủ, trích dẫn tài liệu thật và failure mode ghi lại trong file repo.
+									So sánh đối thủ, trích dẫn tài liệu thật và ghi nhận failure mode vào repo.
 								</p>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> /flow check 01-research<br />
 									<span class="receipt-ok">✓ 3 nguồn tài liệu gốc được kiểm chứng (URL thật)</span><br />
-									<span class="receipt-ok">✓ so sánh đối thủ &amp; failure modes đã khoá</span>
+									<span class="receipt-ok">✓ phân tích đối thủ &amp; failure mode đã khóa</span>
 								</div>
 							</div>
 						</div>
@@ -248,7 +248,7 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Vạch ranh giới rõ. Bỏ hết phần thừa.</p>
+							<p class="gate-tagline">Vạch rõ ranh giới. Cắt bỏ phần thừa.</p>
 
 							<!-- Artifact preview visual: Scope in-scope vs non-goals perimeter -->
 							<div class="artifact-preview artifact-scope" aria-label="Bản xem trước: flow/02-scope.md">
@@ -258,13 +258,13 @@ const willNotPass = [
 									<span class="artifact-status-pill status-frozen mono">ĐÃ KHÓA</span>
 								</div>
 								<div class="artifact-body mono" translate="no">
-									<div class="art-line"><span class="art-ln">1</span><span class="art-tag-scope art-tag-in">TRONG-PHẠM-VI</span> S-01 Vòng lặp cổng CLI</div>
+									<div class="art-line"><span class="art-ln">1</span><span class="art-tag-scope art-tag-in">TRONG-PHẠM-VI</span> S-01 Vòng lặp gate CLI</div>
 									<div class="art-line"><span class="art-ln">2</span><span class="art-tag-scope art-tag-in">TRONG-PHẠM-VI</span> S-02 Kiểm tra schema biên nhận</div>
 									<div class="art-line art-line-cut"><span class="art-ln">3</span><span class="art-tag-scope art-tag-out">NGOÀI-PHẠM-VI</span> Thu thập telemetry / tracking</div>
-									<div class="art-line art-line-cut"><span class="art-ln">4</span><span class="art-tag-scope art-tag-out">NGOÀI-PHẠM-VI</span> Daemon đám mây riêng biệt</div>
+									<div class="art-line art-line-cut"><span class="art-ln">4</span><span class="art-tag-scope art-tag-out">NGOÀI-PHẠM-VI</span> Daemon đám mây riêng</div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">2 lát cắt bàn giao · khóa ranh giới phạm vi</span>
+									<span class="artifact-diag">2 phần việc bàn giao · ranh giới đã khóa</span>
 								</div>
 							</div>
 						</div>
@@ -272,16 +272,16 @@ const willNotPass = [
 							<div class="proof-terminal proof-verified">
 								<div class="proof-terminal-head">
 									<span class="status-badge status-badge-gate mono">03</span>
-									<span class="proof-badge-label mono">BIÊN GIỚI · PHI MỤC TIÊU</span>
-									<h4 class="proof-title">Khoá cứng phần ngoài phạm vi</h4>
+									<span class="proof-badge-label mono">RANH GIỚI · NON-GOALS</span>
+									<h4 class="proof-title">Khóa cứng danh sách non-goals</h4>
 								</div>
 								<p class="proof-intro">
-									Chia nhỏ các phần việc khả thi. Ngăn tình trạng phình phạm vi trước khi sinh code.
+									Gói gọn từng phần việc bàn giao. Chặn đứng scope creep trước khi agent bắt đầu sinh code.
 								</p>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> /flow check 02-scope<br />
-									<span class="receipt-ok">✓ 3 lát cắt bàn giao được khoá</span><br />
-									<span class="receipt-ok">✓ phi mục tiêu được đóng băng (chặn scope creep)</span>
+									<span class="receipt-ok">✓ 3 phần việc bàn giao đã khóa</span><br />
+									<span class="receipt-ok">✓ non-goals đã khóa cứng (chặn đứng scope creep)</span>
 								</div>
 							</div>
 						</div>
@@ -303,7 +303,7 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Định nghĩa bài test trước khi gõ code.</p>
+							<p class="gate-tagline">Chốt tiêu chí test trước khi viết code.</p>
 
 							<!-- Artifact preview visual: PRD observable invariant list -->
 							<div class="artifact-preview artifact-prd" aria-label="Bản xem trước: flow/03-prd.md">
@@ -316,10 +316,10 @@ const willNotPass = [
 									<div class="art-line"><span class="art-ln">1</span><span class="art-inv-id">INV-01:</span> exit 1 khi spec file còn trống</div>
 									<div class="art-line"><span class="art-ln">2</span><span class="art-inv-id">INV-02:</span> in dòng từ chối ra stderr</div>
 									<div class="art-line"><span class="art-ln">3</span><span class="art-inv-id">INV-03:</span> biên nhận JSON đúng định dạng schema</div>
-									<div class="art-line"><span class="art-ln">4</span><span class="art-inv-id">INV-04:</span> chế độ degrade tự mở khoản nợ kỹ thuật</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-inv-id">INV-04:</span> chế độ degrade tự ghi nhận technical debt</div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">4 bất biến kiểm chứng được · không văn mơ hồ</span>
+									<span class="artifact-diag">4 điều kiện bất biến kiểm chứng được · 0 từ ngữ mơ hồ</span>
 								</div>
 							</div>
 						</div>
@@ -327,16 +327,16 @@ const willNotPass = [
 							<div class="proof-terminal proof-verified">
 								<div class="proof-terminal-head">
 									<span class="status-badge status-badge-gate mono">04</span>
-									<span class="proof-badge-label mono">HỢP ĐỒNG · TIÊU CHÍ NGHIỆM THU</span>
-									<h4 class="proof-title">Chỉ chấp nhận tiêu chí quan sát được</h4>
+									<span class="proof-badge-label mono">CAM KẾT · TIÊU CHÍ NGHIỆM THU</span>
+									<h4 class="proof-title">Chỉ chấp nhận tiêu chí kiểm chứng được</h4>
 								</div>
 								<p class="proof-intro">
-									User stories với các bất biến kiểm thử được. Agent không thể tự đổi định nghĩa done giữa chừng.
+									User stories đi kèm điều kiện bất biến kiểm thử được. Agent không thể tự ý đổi định nghĩa done giữa chừng.
 								</p>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> /flow check 03-prd<br />
-									<span class="receipt-ok">✓ tiêu chí nghiệm thu quan sát được đã xác nhận</span><br />
-									<span class="receipt-ok">✓ trạng thái lỗi &amp; phương án suy thoái đã định nghĩa</span>
+									<span class="receipt-ok">✓ tiêu chí nghiệm thu kiểm chứng được đã xác nhận</span><br />
+									<span class="receipt-ok">✓ trạng thái lỗi &amp; luồng xử lý degrade đã xác định</span>
 								</div>
 							</div>
 						</div>
@@ -358,7 +358,7 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Ghi lại đánh đổi trước khi commit.</p>
+							<p class="gate-tagline">Ghi nhận đánh đổi trước khi commit.</p>
 
 							<!-- Artifact preview visual: ADR architecture decision record -->
 							<div class="artifact-preview artifact-adr" aria-label="Bản xem trước: flow/04-adr.md">
@@ -369,12 +369,12 @@ const willNotPass = [
 								</div>
 								<div class="artifact-body mono" translate="no">
 									<div class="art-line"><span class="art-ln">1</span><span class="art-field">Trạng thái:</span> <span class="art-val-ok">Chấp nhận</span> (2026-10-11)</div>
-									<div class="art-line"><span class="art-ln">2</span><span class="art-field">Bối cảnh:</span> Lưu file repo vs daemon SQLite</div>
+									<div class="art-line"><span class="art-ln">2</span><span class="art-field">Bối cảnh:</span> Lưu file trong repo vs chạy daemon SQLite</div>
 									<div class="art-line"><span class="art-ln">3</span><span class="art-field">Quyết định:</span> Dùng file Markdown trong git</div>
-									<div class="art-line"><span class="art-ln">4</span><span class="art-field">Hệ quả:</span> Di động tuyệt đối; không cần daemon ngầm</div>
+									<div class="art-line"><span class="art-ln">4</span><span class="art-field">Hệ quả:</span> Portable; không cần background server</div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">đã lập bản đồ hoàn tác · chốt xong đánh đổi</span>
+									<span class="artifact-diag">đã tính đường lùi · chốt xong đánh đổi</span>
 								</div>
 							</div>
 						</div>
@@ -386,12 +386,12 @@ const willNotPass = [
 									<h4 class="proof-title">Bản ghi quyết định kiến trúc</h4>
 								</div>
 								<p class="proof-intro">
-									Bối cảnh, quyết định và hệ quả được ghi chép trước khi triển khai.
+									Ghi nhận bối cảnh, quyết định và hệ quả trước khi bắt đầu code.
 								</p>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> /flow check 04-adr<br />
-									<span class="receipt-ok">✓ bối cảnh, quyết định, hệ quả đã ghi chép</span><br />
-									<span class="receipt-ok">✓ khả năng hoàn tác &amp; ca kiểm thử âm đã đối chiếu</span>
+									<span class="receipt-ok">✓ bối cảnh, quyết định và hệ quả đã ghi nhận</span><br />
+									<span class="receipt-ok">✓ khả năng rollback &amp; kịch bản kiểm thử lỗi đã đối chiếu</span>
 								</div>
 							</div>
 						</div>
@@ -413,23 +413,23 @@ const willNotPass = [
 									</div>
 								</div>
 							</div>
-							<p class="gate-tagline">Cả hai cùng duyệt mới được bước tiếp.</p>
+							<p class="gate-tagline">Cả hai cùng duyệt mới được đi tiếp.</p>
 
 							<!-- Artifact preview visual: Signed verification contract -->
 							<div class="artifact-preview artifact-contract" aria-label="Bản xem trước: flow/05-contract.md">
 								<div class="artifact-topbar">
 									<span class="artifact-doc-icon mono">SIG</span>
 									<span class="artifact-path mono" translate="no">flow/05-contract.md</span>
-									<span class="artifact-status-pill status-pass mono">MỞ CỔNG</span>
+									<span class="artifact-status-pill status-pass mono">UNLOCKED</span>
 								</div>
 								<div class="artifact-body mono" translate="no">
-									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> người-duyệt: @dev đã chấp thuận</div>
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> dev-xác-nhận: @dev đã duyệt</div>
 									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> harness-chứng-thực: sha256:7f3a..9e1b</div>
 									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> flow-doctor: READY (đã kiểm tra skill)</div>
-									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> đồng-thuận-kép: MỞ CỔNG -&gt; tiến hành build</div>
+									<div class="art-line art-line-pass"><span class="art-check">[✓]</span> xác-nhận-kép: UNLOCKED -&gt; tiến hành build</div>
 								</div>
 								<div class="artifact-footer mono">
-									<span class="artifact-diag">hợp đồng đã ký · cổng mở cho giai đoạn build</span>
+									<span class="artifact-diag">hợp đồng đã ký · gate đã mở cho giai đoạn build</span>
 								</div>
 							</div>
 						</div>
@@ -440,20 +440,20 @@ const willNotPass = [
 										<svg class="pass-mark" role="img" aria-label="PASS"><use href="#tick"></use></svg>
 									</span>
 									<span class="proof-badge-label mono">PASS · SẴN SÀNG</span>
-									<h4 id="after-install-title" class="proof-title">Cài xong</h4>
+									<h4 id="after-install-title" class="proof-title">Sau khi cài đặt</h4>
 								</div>
 								<p class="proof-intro">
-									Skill nằm trên ổ đĩa. <code translate="no">/flow</code> hoặc
-									<code translate="no">$flow</code> dùng được.
-									<code translate="no">doctor</code> in <code translate="no">READY</code>.
-									<code translate="no">/flow next</code> trên file idea trống thì từ chối kèm số
+									Skill đã sẵn sàng trên máy. <code translate="no">/flow</code> hoặc
+									<code translate="no">$flow</code> đã nhận.
+									<code translate="no">flow doctor</code> in <code translate="no">READY</code>.
+									<code translate="no">/flow next</code> trên file idea trống sẽ báo lỗi kèm số
 									dòng.
 								</p>
 								<ul class="proofs">{afterInstall.map((item) => <li>{item}</li>)}</ul>
 								<div class="proof-code-receipt mono" translate="no">
 									<span class="receipt-prompt">$</span> flow doctor<br />
 									<span class="receipt-ok">doctor: READY (skills/flow/SKILL.md verified)</span><br />
-									<span class="receipt-ok">Cổng chỉ mở khi cả hai bên cùng đồng ý.</span>
+									<span class="receipt-ok">Gate chỉ mở khi cả hai cùng duyệt.</span>
 								</div>
 							</div>
 						</div>
@@ -462,21 +462,21 @@ const willNotPass = [
 			</div>
 
 			<p class="band-foot">
-				Xong thì <code translate="no">/flow card</code>. Xong nghĩa là có bằng chứng thật: một
-				URL đã deploy, một CLI cài chạy được, một public API, hay một lần chạy skill thật.
+				Tiếp theo là <code translate="no">/flow card</code>. Done phải có bằng chứng thực tế: một
+				URL đang chạy, một CLI cài đặt và chạy được, một public API, hay một lần chạy skill thật.
 			</p>
 		</section>
 
 		<!-- CLOSING SECTION -->
 		<section class="band stand" aria-labelledby="stand-title">
 			<div class="stand-copy">
-				<h2 class="stand-title" id="stand-title">Không phải AI coding agent. Là cổng kiểm soát quanh agent.</h2>
+				<h2 class="stand-title" id="stand-title">Không phải một coding agent. Đây là harness giữ kỷ luật cho agent.</h2>
 				<p>
-					flow không tự viết code. Agent vẫn viết, flow chỉ quyết việc có được qua cổng hay không.
+					flow không tự viết code. Agent vẫn viết; harness quyết định xem phần việc đó có đủ tiêu chuẩn để đi tiếp hay không.
 				</p>
 			</div>
 			<div class="stand-actions">
-				<a class="action primary mono" href={tutorial}>Cài rồi chạy thử</a>
+				<a class="action primary mono" href={tutorial}>Cài đặt và lần chạy đầu</a>
 				<a class="action secondary mono" href="/vi/docs/">Đọc tài liệu</a>
 			</div>
 		</section>
