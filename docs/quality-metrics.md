@@ -1,13 +1,23 @@
 # /flow — quality metrics
 
 Living record of the quality experiment: collect real numbers, improve, ensure quality.
-Updated as the skill evolves. Current: **skill v0.34.0** (2026-10-12), **npm-wrapper v0.7.5** (`npx @manhquy/flow-skill@latest` after publish).
+Updated as the skill evolves. Current: **skill v0.34.0** (2026-10-12), **npm-wrapper v0.7.6** (`npx @manhquy/flow-skill@latest` after publish).
 
 Release process for future bumps: [`docs/release-process.md`](release-process.md). Release notes: [`CHANGELOG.md`](../CHANGELOG.md).
 
+## npm-wrapper v0.7.6 + skill v0.34.0 — package README brand logo fix (2026-10-12)
+
+Current pairing (stable). Notes live in [`npm-wrapper/CHANGELOG.md`](../npm-wrapper/CHANGELOG.md) (0.7.6). Dist-tag **`latest`** after `npm@0.7.6` publish.
+
+| Axis | Value | Notes |
+|---|---|---|
+| **npm package** | 0.7.6 | ships skill v0.34.0; install `npx @manhquy/flow-skill@latest` |
+| **Skill product in tarball** | 0.34.0 | SKILL.md / plugin / portable-manifest |
+| **Stable dist-tag** | `latest` | workflow on non-prerelease `npm@0.7.6` |
+
 ## npm-wrapper v0.7.5 + skill v0.34.0 — PIN v1 + runner hardening + brand identity (2026-10-12)
 
-Current pairing (stable). Notes live in [`CHANGELOG.md`](../CHANGELOG.md) (0.34.0). Dist-tag **`latest`** after `npm@0.7.5` publish.
+Prior pairing (stable). Notes live in [`CHANGELOG.md`](../CHANGELOG.md) (0.34.0). Dist-tag **`latest`** after `npm@0.7.5` publish.
 
 | Axis | Value | Notes |
 |---|---|---|

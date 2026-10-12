@@ -4,8 +4,8 @@
 
 Skill product bump to **v0.34.0** shipping PIN v1 status/resume contract,
 atomic concurrency lock, runner integrity verification (C1–C7 wave),
-and brand identity system. npm installer → **0.7.5** (dist-tag `latest`
-after `npm@0.7.5` publish).
+and brand identity system. npm installer → **0.7.6** (dist-tag `latest`
+after `npm@0.7.6` publish).
 
 ### Added
 - **PIN v1 status/resume contract:** exact STOP body excerpts reprinted after

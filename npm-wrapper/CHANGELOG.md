@@ -2,6 +2,13 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.6] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
+
+Patch release. Fixes broken brand logo image links on npm package page. Ships skill product **v0.34.0**. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.
+
+### Fixed
+- **Brand logo in package README:** Use absolute raw GitHub URLs (`https://raw.githubusercontent.com/...`) for light and dark theme brand lockup images in `npm-wrapper/README.md` and `npm-wrapper/README_VN.md`. Fixes 404 broken image on npmjs.com caused by relative path evaluation against GitHub blob URLs (#29).
+
 
 ## [0.7.5] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
 
