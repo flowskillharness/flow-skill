@@ -629,7 +629,7 @@ def run_flow(args):
         # hook-triggered read-only verb writes no events anywhere; the adapter's sole
         # permitted write remains its own private snapshot.
         env = dict(os.environ)
-        env["FLOW_PROJECT_ROOT"] = PROJECT
+        env["FLOW_PROJECT_ROOT"] = PROJECT.replace("\\", "/") if os.name == 'nt' else PROJECT
         env["FLOW_LOG_DISABLE"] = "1"
         popen_kwargs = {
             "cwd": PROJECT,
@@ -649,7 +649,8 @@ def run_flow(args):
                 return 127, b"", b""
             popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             popen_kwargs["stdin"] = subprocess.PIPE
-            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, "bash", RUNNER] + args
+            runner_arg = RUNNER.replace("\\", "/")
+            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, "bash", runner_arg] + args
             proc = subprocess.Popen(gate_cmd, **popen_kwargs)
             proc_handle = getattr(proc, "_handle", None)
             if not proc_handle or not assign_process_to_job(job_holder, proc_handle):

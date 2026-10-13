@@ -1,0 +1,66 @@
+name: Windows Smoke
+on:
+  push:
+    branches: [test/windows-smoke]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run test_flow_host_hooks.sh
+        id: hooks
+        continue-on-error: true
+        shell: bash
+        run: bash tests/test_flow_host_hooks.sh
+
+      - name: Run test_install_safe_update.sh
+        id: installer
+        continue-on-error: true
+        shell: bash
+        run: bash tests/test_install_safe_update.sh
+
+      - name: Run test_flow_windows_lifecycle.sh
+        id: lifecycle
+        continue-on-error: true
+        shell: bash
+        run: bash tests/test_flow_windows_lifecycle.sh
+
+      - name: Run test_install_safe_update.ps1 (PowerShell)
+        id: pwsh
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          if (-not (Test-Path tests/test_install_safe_update.ps1)) {
+            throw "Mandatory test suite tests/test_install_safe_update.ps1 is missing!"
+          }
+          pwsh -NoProfile -File tests/test_install_safe_update.ps1
+
+      - name: Smoke Verdict
+        shell: pwsh
+        run: |
+          $failed = $false
+          Write-Host "=== SMOKE TEST RESULTS SUMMARY ==="
+          Write-Host "1. test_flow_host_hooks.sh: ${{ steps.hooks.outcome }}"
+          Write-Host "2. test_install_safe_update.sh: ${{ steps.installer.outcome }}"
+          Write-Host "3. test_flow_windows_lifecycle.sh: ${{ steps.lifecycle.outcome }}"
+          Write-Host "4. test_install_safe_update.ps1: ${{ steps.pwsh.outcome }}"
+          if ("${{ steps.hooks.outcome }}" -ne "success") { Write-Error "test_flow_host_hooks.sh failed"; $failed = $true }
+          if ("${{ steps.installer.outcome }}" -ne "success") { Write-Error "test_install_safe_update.sh failed"; $failed = $true }
+          if ("${{ steps.lifecycle.outcome }}" -ne "success") { Write-Error "test_flow_windows_lifecycle.sh failed"; $failed = $true }
+          if ("${{ steps.pwsh.outcome }}" -ne "success") { Write-Error "test_install_safe_update.ps1 failed"; $failed = $true }
+          if ($failed) {
+            Write-Error "SMOKE VERDICT: FAILED"
+            exit 1
+          }
+          Write-Host "SMOKE VERDICT: ALL 4 WINDOWS SUITES PASSED GREEN!"
