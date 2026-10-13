@@ -482,39 +482,22 @@ set -e
 ck 3 "$s_conf_rc" "install.sh update conflict fails with exit code 3"
 
 # 10.6 No-Python update safety refusal
-# Run with a restricted PATH containing standard POSIX tools but NO python
-RESTRICTED_BIN="$SCRATCH/restricted_bin"
-mkdir -p "$RESTRICTED_BIN"
-for cmd in sh bash cp mv rm ls mkdir dirname basename find mktemp chmod cat rmdir sed grep uname tr head cut printf awk sort wc tail env; do
-  p="$(type -p "$cmd" 2>/dev/null || command -v "$cmd" 2>/dev/null || true)"
-  if [ -n "$p" ] && [ -f "$p" ]; then
-    ln -s "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || true
-    if [ "$IS_WINDOWS" = yes ]; then
-      cp "$p" "$RESTRICTED_BIN/${cmd}.exe" 2>/dev/null || true
-    fi
-  fi
-done
-# For shell builtins echo, test, [, provide safe wrapper scripts if no disk binary was found
-for builtin_cmd in echo test [; do
-  p="$(type -p "$builtin_cmd" 2>/dev/null || command -v "$builtin_cmd" 2>/dev/null || true)"
-  if [ -n "$p" ] && [ -f "$p" ]; then
-    ln -s "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || true
-    if [ "$IS_WINDOWS" = yes ]; then
-      cp "$p" "$RESTRICTED_BIN/${builtin_cmd}.exe" 2>/dev/null || true
-    fi
-  else
-    # Create minimal shell wrapper in restricted bin so non-builtin subshells can execute it
-    cat <<EOF > "$RESTRICTED_BIN/$builtin_cmd"
-#!/bin/sh
-builtin $builtin_cmd "\$@"
-EOF
-    chmod +x "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || true
-  fi
-done
+# Simulate missing Python by shadowing python3 and python with failing shims
+NOPY_SHIM="$SCRATCH/nopy_shim"
+mkdir -p "$NOPY_SHIM"
+printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python3"
+printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python"
+chmod +x "$NOPY_SHIM/python3" "$NOPY_SHIM/python"
+if [ "$IS_WINDOWS" = yes ]; then
+  # On Windows, shadow python.exe and python3.exe as well
+  printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python3.exe"
+  printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python.exe"
+  chmod +x "$NOPY_SHIM/python3.exe" "$NOPY_SHIM/python.exe"
+fi
 
 # Try update on existing install without python
 set +e
-PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global omp >/dev/null 2>&1
+PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global omp >/dev/null 2>&1
 no_py_update_rc=$?
 set -e
 ck 1 "$no_py_update_rc" "no-Python update fails loudly with exit 1"
@@ -523,7 +506,7 @@ ck 1 "$no_py_update_rc" "no-Python update fails loudly with exit 1"
 FAKE_HOME_NOPY="$SCRATCH/fake_home_nopy"
 mkdir -p "$FAKE_HOME_NOPY"
 set +e
-out="$(PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME_NOPY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
+out="$(PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME_NOPY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
 no_py_fresh_rc=$?
 set -e
 ck 0 "$no_py_fresh_rc" "no-Python fresh install succeeds with exit 0"
@@ -553,7 +536,7 @@ FAKE_HOME_EMPTY="$SCRATCH/fake_home_empty"
 mkdir -p "$FAKE_HOME_EMPTY/.claude/skills/flow"
 
 set +e
-out="$(PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME_EMPTY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
+out="$(PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME_EMPTY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
 empty_rc=$?
 set -e
 ck 0 "$empty_rc" "no-Python fresh install over empty directory succeeds (exit 0)"
