@@ -1,11 +1,10 @@
 # Wave 2 Release Execution Record & CI Verification Ledger
 
-**Date:** 2026-10-13  
+**Date:** 2026-10-14  
 **Prior Superseded Candidate SHAs:** `c052b4e` (run `38364821630` - macos context_handler path alias fail), `4827774` (run `38367426700` - macos uncanonicalized test scratch fail), `005e659` (run `38369511454` - Windows context_handler stdin pipe & test_flow_host_hooks MSYS path fail)  
-**Terminal Failed Base SHA:** `005e65963872c27f04e2400b22bd2aaf21449d8b` (CI run `38369511454` FAILURE; working tree holds uncommitted repairs awaiting new candidate commit)  
-**Current Candidate Status:** Uncommitted repair in progress; no Git commit/publish performed; awaiting commit to produce new active candidate SHA.  
-**Failed Base GitHub Actions Run URL:** https://github.com/manhquydev/flow-skill/actions/runs/38369511454  
-
+**Terminal Fix Commit SHA:** `4e4b1131e8e191991db7e43f4e2042bcafd877e4` (master CI run `38434237203` SUCCESS; 13/13 jobs green, `bash-suite (windows-latest)` and `all-checks-passed` green)  
+**Canonical Release Commit SHA:** `82eca0f04c673ebf1b885c301c238b1be6b5a374` (master CI run `38443263113` SUCCESS; 13/13 jobs green, `bash-suite (windows-latest)` and `all-checks-passed` green)  
+**Active Release Status:** Skill product `v0.34.1` tagged and released; npm installer `npm@0.7.8` tagged, `publish-npm-wrapper.yml` run `38450043704` waiting manual approval on `npm-publish` environment gate.  
 ---
 
 ## 1. Concrete Root-Cause Repairs & Fix Evidence
@@ -93,8 +92,9 @@ Commit `005e659` triggered matrix run `38369511454` (https://github.com/manhquyd
 
 ---
 
-## 5. Release Candidate Gate & Status
+## 5. Release Execution & Registry Publication Status
 
-* **Conclusion:** All Windows defects repaired and verified 100% green on native Windows Server 2025 runners.
-* **Release Candidate Status:** Working tree clean and verified; ready for atomic commit and push to master to trigger full CI `all-checks-passed`.
-* **Terminal Release Gate:** Release version tags (`v0.34.1`, `npm@0.7.8`) and registry publications remain **STRICTLY HELD** until full master CI run completes green on the newly minted release commit SHA.
+* **Terminal Windows Verification & Master Green:** All Windows defects repaired and verified 100% green on native Windows Server 2025 runners (Smoke run `38431842785`). Master CI run `38434237203` (SHA `4e4b1131e8e191991db7e43f4e2042bcafd877e4`) completed 13/13 jobs with SUCCESS. Canonical release CI run `38443263113` (SHA `82eca0f04c673ebf1b885c301c238b1be6b5a374`) completed 13/13 matrix jobs with terminal SUCCESS, confirming Ubuntu, macOS, and Windows bash-suite and PowerShell suites pass green under `all-checks-passed`.
+* **Skill Product Release v0.34.1:** Tag `v0.34.1` minted and pushed to origin. GitHub Release v0.34.1 published at https://github.com/manhquydev/flow-skill/releases/tag/v0.34.1.
+* **npm Installer Release 0.7.8:** Tag `npm@0.7.8` minted and pushed to origin, triggering `publish-npm-wrapper.yml` run `38450043704` (https://github.com/manhquydev/flow-skill/actions/runs/38450043704). The workflow is currently in `waiting` status awaiting manual reviewer authorization for the `npm-publish` environment gate.
+* **Registry Dist-Tag State:** The npm registry currently serves `@manhquy/flow-skill@latest` at version `0.7.7` (`{"rc": "0.1.0-rc.3", "next": "0.7.1-next.0", "latest": "0.7.7"}`); upon human approval of the environment gate, OIDC trusted publishing will publish package `0.7.8` with provenance attestations and update `latest` to `0.7.8`.

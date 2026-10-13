@@ -15,7 +15,9 @@ import os
 import re
 import sqlite3
 import subprocess
+import secrets
 import sys
+from pathlib import Path
 
 import _db
 import _domain as D
@@ -74,7 +76,7 @@ def _maybe_forward_to_rust(argv):
             continue
         verb = tok
         break
-    if verb in ("graph", "promote-suggest"):
+    if verb in ("graph", "promote-suggest", "journal"):
         return None
     conflict = _flow_lineage_db(argv)
     if conflict:
@@ -1215,6 +1217,176 @@ def cmd_prune(con, a):
                          "reset it too (run a rollup after deleting their rollup_cursor row for that path).\n")
     return 0
 
+MAX_REVISIONS = 128
+REVISION_WIDTH = 16
+MAX_JOURNAL_JSON_BYTES = 256 * 1024
+
+
+def _journal_dir(explicit_dir=None):
+    if explicit_dir:
+        cand = Path(explicit_dir)
+    else:
+        root = os.environ.get("FLOW_PROJECT_ROOT") or os.getcwd()
+        cand = Path(root) / ".flow" / "journal"
+    if os.path.islink(str(cand)):
+        return cand
+    return cand.resolve()
+
+
+def _ensure_journal_dir(jdir):
+    if not jdir.exists():
+        jdir.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        try:
+            os.chmod(str(jdir), 0o700)
+        except OSError:
+            pass
+
+
+def _list_journal_revisions(jdir):
+    if not jdir.exists() or not jdir.is_dir() or os.path.islink(str(jdir)):
+        return []
+    revisions = []
+    for entry in jdir.iterdir():
+        if entry.is_file() and not os.path.islink(str(entry)) and entry.name.endswith(".json"):
+            stem = entry.name[:-5]
+            if len(stem) == REVISION_WIDTH and stem.isdigit():
+                try:
+                    revisions.append(int(stem))
+                except ValueError:
+                    pass
+    revisions.sort()
+    return revisions
+
+
+def _prune_journal(jdir, keep=128):
+    revs = _list_journal_revisions(jdir)
+    to_prune = revs[:max(0, len(revs) - keep)]
+    pruned_count = 0
+    for r in to_prune:
+        p = jdir / f"{r:016d}.json"
+        try:
+            p.unlink()
+            pruned_count += 1
+        except OSError:
+            pass
+    return pruned_count, len(revs) - pruned_count
+
+
+def cmd_journal_record(a):
+    jdir = _journal_dir(getattr(a, "dir", None))
+    if os.path.islink(str(jdir)):
+        sys.stderr.write("flow-harness: refusing journal write to symlink directory\n")
+        return 1
+    _ensure_journal_dir(jdir)
+    data_str = getattr(a, "data", None)
+    file_path = getattr(a, "file", None)
+    if file_path:
+        if not os.path.isfile(file_path):
+            sys.stderr.write(f"flow-harness: --file not found: {file_path}\n")
+            return 1
+        with open(file_path, "r", encoding="utf-8") as f:
+            data_str = f.read()
+    elif data_str == "-":
+        data_str = sys.stdin.read()
+    elif not data_str:
+        sys.stderr.write("flow-harness: --data JSON payload or --file required\n")
+        return 1
+    if len(data_str.encode("utf-8")) > MAX_JOURNAL_JSON_BYTES:
+        sys.stderr.write("flow-harness: payload exceeds 256 KiB size cap\n")
+        return 1
+    try:
+        parsed = json.loads(data_str)
+    except Exception as e:
+        sys.stderr.write(f"flow-harness: invalid JSON: {e}\n")
+        return 1
+    keep = getattr(a, "keep", None) or 128
+
+    revs = _list_journal_revisions(jdir)
+    next_rev = (revs[-1] + 1) if revs else 1
+    filename = f"{next_rev:016d}.json"
+    target = jdir / filename
+
+    tmp_path = jdir / f"{filename}.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    mode = 0o600
+    try:
+        fd = os.open(str(tmp_path), flags, mode)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(parsed, f, indent=2)
+                f.write("\n")
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+            raise
+    except OSError as e:
+        sys.stderr.write(f"flow-harness: cannot write candidate journal file: {e}\n")
+        return 1
+
+    if os.name != "nt":
+        try:
+            os.chmod(str(tmp_path), 0o600)
+        except OSError:
+            pass
+
+    os.replace(str(tmp_path), str(target))
+    _prune_journal(jdir, keep)
+    print(json.dumps({"status": "ok", "revision": next_rev, "file": filename}))
+    return 0
+
+
+def cmd_journal_list(a):
+    jdir = _journal_dir(getattr(a, "dir", None))
+    revs = _list_journal_revisions(jdir)
+    print(json.dumps({"status": "ok", "revisions": revs, "count": len(revs)}))
+    return 0
+
+
+def cmd_journal_highest(a):
+    jdir = _journal_dir(getattr(a, "dir", None))
+    revs = _list_journal_revisions(jdir)
+    if not revs:
+        print(json.dumps({"status": "ok", "highest": None}))
+        return 0
+    highest_rev = revs[-1]
+    p = jdir / f"{highest_rev:016d}.json"
+    try:
+        with open(str(p), "r", encoding="utf-8") as f:
+            data = json.load(f)
+        print(json.dumps({"status": "ok", "revision": highest_rev, "data": data}))
+        return 0
+    except Exception as e:
+        sys.stderr.write(f"flow-harness: error reading highest revision {highest_rev}: {e}\n")
+        return 1
+
+
+def cmd_journal_prune(a):
+    jdir = _journal_dir(getattr(a, "dir", None))
+    keep = getattr(a, "keep", None) or 128
+    pruned, remaining = _prune_journal(jdir, keep)
+    print(json.dumps({"status": "ok", "pruned": pruned, "remaining": remaining}))
+    return 0
+
+
+def cmd_journal(a):
+    subcmd = getattr(a, "journal_cmd", None)
+    if subcmd == "record":
+        return cmd_journal_record(a)
+    elif subcmd == "list":
+        return cmd_journal_list(a)
+    elif subcmd == "highest":
+        return cmd_journal_highest(a)
+    elif subcmd == "prune":
+        return cmd_journal_prune(a)
+    else:
+        sys.stderr.write(f"flow-harness: unknown journal command: {subcmd}\n")
+        return 1
+
 
 # ---------------- arg parsing ----------------
 
@@ -1413,6 +1585,23 @@ def build_parser():
     g8 = pgs.add_parser("lint", help="validate a topology (default: the shipped one incl. pin)")
     g8.add_argument("--topology", help="explicit topology path (fixtures; skips the pin unless --pin)")
     g8.add_argument("--pin", help="explicit pin file to verify against")
+    pj = sub.add_parser("journal", help="stateless immutable revision journal")
+    pjs = pj.add_subparsers(dest="journal_cmd", required=True)
+    pjr = pjs.add_parser("record", help="record next journal revision")
+    pjr.add_argument("--data", help="JSON payload string (or - for stdin)")
+    pjr.add_argument("--file", help="read JSON payload from file")
+    pjr.add_argument("--dir", help="custom journal directory")
+    pjr.add_argument("--keep", type=int, default=128, help="retention cap (default: 128)")
+
+    pjl = pjs.add_parser("list", help="list committed journal revisions")
+    pjl.add_argument("--dir", help="custom journal directory")
+
+    pjh = pjs.add_parser("highest", help="read highest committed journal revision")
+    pjh.add_argument("--dir", help="custom journal directory")
+
+    pjp = pjs.add_parser("prune", help="prune old journal entries keeping newest N")
+    pjp.add_argument("--keep", type=int, default=128, help="entries to keep (default: 128)")
+    pjp.add_argument("--dir", help="custom journal directory")
     return p
 
 
@@ -1440,6 +1629,8 @@ def main(argv):
         # lint touches no table: skip connect() so CI/linting never mints a DB
         # (or runs migrations) in the working tree.
         return G.cmd_graph_lint(None, a) or 0
+    if a.cmd == "journal":
+        return cmd_journal(a)
     if a.cmd == "promote-suggest":
         path = getattr(a, "db", None) or _db.default_db_path()
         if not path or not os.path.isfile(path) or os.path.getsize(path) == 0:

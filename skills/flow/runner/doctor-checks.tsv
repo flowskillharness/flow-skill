@@ -10,3 +10,4 @@ harness	assets	Flow durable harness script presence
 timeout	tools	GNU timeout or gtimeout command for bounded eval
 bundled_tree_integrity	integrity	Bundled tree receipt integrity (manifest-hashes.json)
 install_homes	install	Static detection of installed agent skill targets
+bounded_json	integrity	Bounded JSON and context-handoff directory integrity (modes, nofollow)

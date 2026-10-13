@@ -290,6 +290,56 @@ ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print
 ck "fail" "$ck_status" "symlinked receipt file produces fail status"
 
 rm -rf "$TMP_DIR"
+echo "F) Bounded JSON and context-handoff directory integrity"
+SB_DOC="$(mktemp -d)"
+export FLOW_PROJECT_ROOT="$SB_DOC"
+mkdir -p "$SB_DOC/flow"
+
+# F1. Absent directory -> skip status, doctor exit 0
+out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+ck 0 "$rc" "doctor --check bounded_json on absent directory exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+ck "skip" "$ck_status" "absent context-handoff produces skip status"
+
+# F2. Valid private directory (0700) + valid snapshot (0600) -> ok status, doctor exit 0
+mkdir -p "$SB_DOC/.flow/context-handoff"
+chmod 0700 "$SB_DOC/.flow/context-handoff"
+printf '{"magic":"flow-compact-handoff/v1","project":"%s","status":"ok"}\n' "$SB_DOC" > "$SB_DOC/.flow/context-handoff/snapshot.json"
+chmod 0600 "$SB_DOC/.flow/context-handoff/snapshot.json"
+out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+ck 0 "$rc" "doctor --check bounded_json on valid directory exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+ck "ok" "$ck_status" "valid context-handoff produces ok status"
+
+# F3. Symlinked context-handoff directory -> fail status, doctor exit 1
+rm -rf "$SB_DOC/.flow/context-handoff"
+mkdir -p "$SB_DOC/fake-handoff"
+ln -s "$SB_DOC/fake-handoff" "$SB_DOC/.flow/context-handoff"
+out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+ck 1 "$rc" "doctor --check bounded_json on symlink directory exits 1"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+ck "fail" "$ck_status" "symlinked context-handoff produces fail status"
+
+# F4. Unsafe permissions (0777) on directory -> fail status, doctor exit 1
+rm -rf "$SB_DOC/.flow/context-handoff" "$SB_DOC/fake-handoff"
+mkdir -p "$SB_DOC/.flow/context-handoff"
+chmod 0777 "$SB_DOC/.flow/context-handoff"
+out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+ck 1 "$rc" "doctor --check bounded_json on unsafe permissions exits 1"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+ck "fail" "$ck_status" "unsafe directory mode produces fail status"
+
+# F5. Duplicate keys in snapshot.json -> fail status, doctor exit 1
+chmod 0700 "$SB_DOC/.flow/context-handoff"
+printf '{"magic":"flow-compact-handoff/v1","a":1,"a":2}\n' > "$SB_DOC/.flow/context-handoff/snapshot.json"
+chmod 0600 "$SB_DOC/.flow/context-handoff/snapshot.json"
+out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+ck 1 "$rc" "doctor --check bounded_json on duplicate JSON keys exits 1"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+ck "fail" "$ck_status" "duplicate JSON keys produce fail status"
+
+rm -rf "$SB_DOC"
+unset FLOW_PROJECT_ROOT
 
 echo
 echo "RESULT: $pass passed, $fail failed"

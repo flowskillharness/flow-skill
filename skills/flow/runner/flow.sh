@@ -1013,9 +1013,23 @@ _resume_valid_lines() {
     esac
   done
 }
+_redact_secrets() {
+  sed -E \
+    -e 's/AKIA[0-9A-Z]{16}/[REDACTED:aws-key-id]/g' \
+    -e 's/eyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}/[REDACTED:jwt]/g' \
+    -e 's/gh[pousr]_[A-Za-z0-9]{36,}/[REDACTED:github-token]/g' \
+    -e 's/github_pat_[A-Za-z0-9_]{22,}/[REDACTED:github-token]/g' \
+    -e 's/xox[abpr]-[A-Za-z0-9-]+/[REDACTED:slack-token]/g' \
+    -e 's/([Bb]earer[[:space:]]+)[A-Za-z0-9._~+/=-]{8,}/\1[REDACTED:bearer]/g' \
+    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----[^-]*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:private-key-block]/g' \
+    -e 's|://([^:/@[:space:]]{1,}):([^/@[:space:]]{1,})@|://[REDACTED:credentials]@|g' \
+    -e 's/(([Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Aa][Pp][Ii]_[Kk][Ee][Yy]|[Tt][Oo][Kk][Ee][Nn])[[:space:]]*[:=][[:space:]]*)[^[:space:]]{8,}/\1[REDACTED:credential]/g'
+}
+
 
 cmd_resume() {
   local budget=0
+  local resume_card=""
   if [ "${1:-}" = "--json" ]; then
     if [ -n "${2:-}" ]; then usage; exit 2; fi
     _emit_context_json
@@ -1023,9 +1037,91 @@ cmd_resume() {
   elif [ "${1:-}" = "--budget" ]; then
     if [ -n "${2:-}" ]; then usage; exit 2; fi
     budget=1
+  elif [ "${1:-}" = "--card" ]; then
+    if [ -z "${2:-}" ] || [ -n "${3:-}" ]; then usage; exit 2; fi
+    resume_card="$2"
+  elif case "${1:-}" in --card=*) true ;; *) false ;; esac; then
+    if [ -n "${2:-}" ]; then usage; exit 2; fi
+    resume_card="${1#--card=}"
   elif [ -n "${1:-}" ]; then
     usage
     exit 2
+  fi
+
+  if [ -n "$resume_card" ]; then
+    case "$resume_card" in
+      C-[0-9]*) ;;
+      *) echo "invalid card id: $resume_card (expected C-NNN)" >&2; exit 2 ;;
+    esac
+    local card_file="$CARDS_DIR/$resume_card.md"
+    if [ ! -f "$card_file" ]; then
+      echo "card $resume_card not found: $card_file" >&2
+      exit 1
+    fi
+    local card_st; card_st="$(grep -E '^status:' "$card_file" 2>/dev/null | head -1 | awk '{print $2}')"
+    if [ "$card_st" = "done" ]; then
+      echo "card $resume_card is already done - see 'flow recall'"
+      echo "NEXT_VERB=card"
+      return 0
+    fi
+    {
+      echo "flow resume card: $resume_card"
+      echo "  project: $ROOT"
+      echo "  status:  ${card_st:-unknown}"
+      echo
+      echo "scope:"
+      local scope; scope="$(awk '/^## Scope/{flag=1; next} /^## /{flag=0} flag' "$card_file" | sed -e '1{/^[[:space:]]*$/d;}' -e '${/^[[:space:]]*$/d;}')"
+      if [ -n "$scope" ]; then
+        printf '%s\n' "$scope" | sed 's/^/  /'
+      else
+        echo "  Not captured in this session"
+      fi
+      echo
+      echo "allowed files:"
+      local allowed; allowed="$(awk '/^## Allowed files/{flag=1; next} /^## /{flag=0} flag' "$card_file" | sed -e '1{/^[[:space:]]*$/d;}' -e '${/^[[:space:]]*$/d;}')"
+      if [ -n "$allowed" ]; then
+        printf '%s\n' "$allowed" | sed 's/^/  /'
+      else
+        echo "  Not captured in this session"
+      fi
+      echo
+      echo "verify:"
+      local verify_sec; verify_sec="$(awk '/^## Verify/{flag=1; next} /^## /{flag=0} flag' "$card_file" | sed -e '1{/^[[:space:]]*$/d;}' -e '${/^[[:space:]]*$/d;}')"
+      if [ -n "$verify_sec" ]; then
+        printf '%s\n' "$verify_sec" | sed 's/^/  /'
+      else
+        echo "  Not captured in this session"
+      fi
+      echo
+      echo "linked decisions:"
+      local decisions=""
+      if harness_available; then
+        local py; py="$(_python)"
+        decisions="$(FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" decision query --story "$resume_card" 2>/dev/null || true)"
+      fi
+      if [ -n "$decisions" ]; then
+        printf '%s\n' "$decisions" | sed 's/^/  /'
+      else
+        echo "  none recorded in harness"
+      fi
+      echo
+      echo "git status:"
+      local git_st=""
+      if command -v git >/dev/null 2>&1 && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git_st="$(git -C "$ROOT" status --short 2>/dev/null | head -10)"
+        if [ -n "$git_st" ]; then
+          printf '%s\n' "$git_st" | sed 's/^/  /'
+        else
+          echo "  working tree clean"
+        fi
+      else
+        echo "  Not captured in this session"
+      fi
+      echo
+      echo "NEXT_VERB=card"
+      echo "**First safe step**: review Scope and run Verify commands before editing"
+    } | _redact_secrets
+    return 0
   fi
   local idx; idx="$(current_stage_idx)"
   if [ "$idx" -lt 0 ]; then
@@ -2754,7 +2850,7 @@ cmd_doctor() {
       if [ -f "$tsv_reg" ]; then
         known_checks="$(awk -F'\t' '{printf "%s,", $1}' "$tsv_reg" | sed 's/,$//')"
       else
-        known_checks="os,bash,python,sqlite3,grep_p,git,cargo,templates,harness,timeout,bundled_tree_integrity,install_homes"
+        known_checks="os,bash,python,sqlite3,grep_p,git,cargo,templates,harness,timeout,bundled_tree_integrity,install_homes,bounded_json"
       fi
       local count=0
       local unknown_checks=""
@@ -3046,6 +3142,40 @@ cmd_doctor() {
       [ "$opt_json" -eq 0 ] && echo "  install homes: none detected (local project or custom path)"
       _record "install_homes" "install" "skip" "none detected (local project or custom path)"
     fi
+  fi
+
+  # 13. bounded_json
+  if _run_check "bounded_json"; then
+    local bj_out=""
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+      bj_out="$("$py" "$helper" verify-bounded-json "$ROOT" 2>/dev/null || echo "FAIL:execution error during bounded-json verification")"
+    else
+      bj_out="FAIL:python 3.8+ interpreter unavailable for bounded-json verification"
+    fi
+
+    case "$bj_out" in
+      OK:*)
+        local det="${bj_out#OK:}"
+        [ "$opt_json" -eq 0 ] && echo "  bounded state:   ok ($det)"
+        _record "bounded_json" "integrity" "ok" "ok ($det)"
+        ;;
+      SKIP:*)
+        local reason="${bj_out#SKIP:}"
+        [ "$opt_json" -eq 0 ] && echo "  bounded state:   $reason - skipped"
+        _record "bounded_json" "integrity" "skip" "$reason"
+        ;;
+      FAIL:*)
+        local reason="${bj_out#FAIL:}"
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: bounded state - $reason"
+        _record "bounded_json" "integrity" "fail" "$reason"
+        ok=0
+        ;;
+      *)
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: bounded state - unknown verification error"
+        _record "bounded_json" "integrity" "fail" "unknown verification error"
+        ok=0
+        ;;
+    esac
   fi
 
   if [ "$opt_json" -eq 1 ]; then

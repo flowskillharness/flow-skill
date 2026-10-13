@@ -296,6 +296,110 @@ def cmd_verify_receipt(skill_dir_str, manifest_path_str):
     else:
         print("OK:%d" % (len(files),))
 
+def cmd_verify_bounded_json(project_root_str):
+    root = Path(project_root_str).resolve()
+    flow_dir = root / ".flow"
+    handoff_dir = flow_dir / "context-handoff"
+    journal_dir = flow_dir / "journal"
+
+    if not handoff_dir.exists() and not journal_dir.exists():
+        print("SKIP:no bounded state directories present")
+        return
+
+    # 1. Check context-handoff if present
+    if handoff_dir.exists():
+        if os.path.islink(str(handoff_dir)):
+            print("FAIL:context-handoff directory is a symlink")
+            return
+        if not handoff_dir.is_dir():
+            print("FAIL:context-handoff is not a directory")
+            return
+        if os.name != "nt":
+            st = handoff_dir.stat()
+            if hasattr(os, "getuid") and st.st_uid != os.getuid():
+                print("FAIL:context-handoff directory foreign owner")
+                return
+            if (st.st_mode & 0o777) != 0o700:
+                print("FAIL:context-handoff directory mode is not 0700 (got %o)" % (st.st_mode & 0o777))
+                return
+
+        snap = handoff_dir / "snapshot.json"
+        if snap.exists():
+            if os.path.islink(str(snap)):
+                print("FAIL:snapshot.json is a symlink")
+                return
+            if not snap.is_file():
+                print("FAIL:snapshot.json is not a regular file")
+                return
+            if os.name != "nt":
+                st_snap = snap.stat()
+                if hasattr(os, "getuid") and st_snap.st_uid != os.getuid():
+                    print("FAIL:snapshot.json foreign owner")
+                    return
+                if (st_snap.st_mode & 0o777) != 0o600:
+                    print("FAIL:snapshot.json mode is not 0600 (got %o)" % (st_snap.st_mode & 0o777))
+                    return
+                if st_snap.st_size > 256 * 1024:
+                    print("FAIL:snapshot.json exceeds 256 KiB cap")
+                    return
+            try:
+                with open(str(snap), "r", encoding="utf-8") as f:
+                    data = json.load(f, object_pairs_hook=_reject_duplicate_keys_hook)
+                if not isinstance(data, dict):
+                    print("FAIL:snapshot.json root is not an object")
+                    return
+            except Exception as e:
+                print("FAIL:snapshot.json invalid JSON (%s)" % (str(e),))
+                return
+
+    # 2. Check journal if present
+    if journal_dir.exists():
+        if os.path.islink(str(journal_dir)):
+            print("FAIL:journal directory is a symlink")
+            return
+        if not journal_dir.is_dir():
+            print("FAIL:journal is not a directory")
+            return
+        if os.name != "nt":
+            st_j = journal_dir.stat()
+            if hasattr(os, "getuid") and st_j.st_uid != os.getuid():
+                print("FAIL:journal directory foreign owner")
+                return
+            if (st_j.st_mode & 0o777) != 0o700:
+                print("FAIL:journal directory mode is not 0700 (got %o)" % (st_j.st_mode & 0o777))
+                return
+        try:
+            for entry in journal_dir.iterdir():
+                if entry.name.endswith(".json"):
+                    if os.path.islink(str(entry)):
+                        print("FAIL:journal file is a symlink: %s" % (entry.name,))
+                        return
+                    if not entry.is_file():
+                        print("FAIL:journal entry is not a regular file: %s" % (entry.name,))
+                        return
+                    if os.name != "nt":
+                        st_e = entry.stat()
+                        if hasattr(os, "getuid") and st_e.st_uid != os.getuid():
+                            print("FAIL:journal file foreign owner: %s" % (entry.name,))
+                            return
+                        if (st_e.st_mode & 0o777) != 0o600:
+                            print("FAIL:journal file mode is not 0600 (got %o): %s" % (st_e.st_mode & 0o777, entry.name))
+                            return
+                        if st_e.st_size > 256 * 1024:
+                            print("FAIL:journal file exceeds 256 KiB cap: %s" % (entry.name,))
+                            return
+                    try:
+                        with open(str(entry), "r", encoding="utf-8") as f:
+                            data = json.load(f, object_pairs_hook=_reject_duplicate_keys_hook)
+                    except Exception as e:
+                        print("FAIL:journal file invalid JSON (%s): %s" % (str(e), entry.name))
+                        return
+        except Exception as e:
+            print("FAIL:cannot iterate journal directory: %s" % (str(e),))
+            return
+
+    print("OK:bounded state verified (private modes, no symlinks)")
+
 
 def main():
     if len(sys.argv) < 2:
@@ -320,6 +424,11 @@ def main():
             print("FAIL:insufficient arguments for verify-receipt")
             return
         cmd_verify_receipt(sys.argv[2], sys.argv[3])
+    elif cmd == "verify-bounded-json":
+        if len(sys.argv) < 3:
+            print("FAIL:insufficient arguments for verify-bounded-json")
+            return
+        cmd_verify_bounded_json(sys.argv[2])
     else:
         sys.exit(1)
 

@@ -62,6 +62,7 @@ test_flow_attestations.sh
 test_flow_auto_attestation_enforcement.sh
 test_flow_attestation_harden.sh
 test_flow_host_hooks.sh
+test_flow_journal.sh
 test_release_coherence.sh
 test_harness_cli_optional_smoke.sh
 test_manifest_runner.sh

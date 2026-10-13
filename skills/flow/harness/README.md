@@ -167,6 +167,15 @@ stage_from→to, card, project_type, mode, flow_version, tier, host, read_only.
 - A failing `next`/`check` records `gate_fail_reason` (e.g. `fill:2,unchecked:1`) and attributes the
   failing stage, so "stage X fails often" is diagnosable. All best-effort / exit-code preserving.
 
+## Stateless immutable revision journal (`journal`)
+
+Ported from AgentKit's bounded revision store (`immutable-revision-journal.cjs`):
+- **Zero database dependency**: runs statelessly without SQLite connection or migrations.
+- **Monotonic 16-digit padded filenames**: `<project>/.flow/journal/0000000000000001.json`.
+- **Hardened private permissions**: directory `0700`, files `0600`, symlinks strictly refused.
+- **Bounded payload & retention**: JSON payloads capped at 256 KiB; automatic prune keeps newest 128 revisions (`--keep 128`).
+- **Commands**: `journal record --data '{"event":"..."}'` (or `--file <path>`), `journal list`, `journal highest`, `journal prune [--keep N]`.
+
 ## Files
 - `flow_harness.py` — CLI entrypoint + backend toggle + compat guard.
 - `_domain.py` — pure rules (input types, lanes, hard gates, trace tiers, tool kinds/responsibilities,

@@ -185,6 +185,60 @@ ck 2 "$rc_extra" "resume --budget with extra arg exits 2"
 bash "$RUN" resume --bogus >/dev/null 2>&1; rc_bogus=$?
 ck 2 "$rc_bogus" "resume with unknown flag exits 2"
 clean
+echo "K) resume --card: validation on card ID, missing card, and done card"
+newsb
+clean_stage 00-idea
+bash "$RUN" resume --card not-a-card >/dev/null 2>&1; rc_bad=$?
+ck 2 "$rc_bad" "resume --card with invalid card ID format exits 2"
+out_miss="$(bash "$RUN" resume --card C-999 2>&1)"; rc_miss=$?
+ck 1 "$rc_miss" "resume --card with non-existent card exits 1"
+has "$out_miss" "card C-999 not found" "error message reports missing card path"
+printf '# C-001 — test\nstatus: done\ndeps: none\n## Scope\none thing\n## Allowed files\ninfra/\n## Verify\n- [x] ok\n## Evidence\nproof\n' > "$SB/cards/C-001.md"
+out_done="$(bash "$RUN" resume --card C-001 2>&1)"; rc_done=$?
+ck 0 "$rc_done" "resume --card on already done card exits 0"
+has "$out_done" "card C-001 is already done - see 'flow recall'" "done card points user to flow recall"
+has "$out_done" "NEXT_VERB=card" "NEXT_VERB emitted on done card"
+clean
+
+echo "L) resume --card C-001 on active card: streams scope, verify, linked decisions, git status"
+newsb
+clean_stage 00-idea
+printf '# C-001 — test\nstatus: in_progress\ndeps: none\n## Scope\nbuild the widget\n## Allowed files\nsrc/widget.ts\n## Verify\n- [ ] npm test\n## Evidence\n(empty)\n' > "$SB/cards/C-001.md"
+out_card="$(bash "$RUN" resume --card C-001 2>&1)"; rc_card=$?
+ck 0 "$rc_card" "resume --card on active card exits 0"
+has "$out_card" "flow resume card: C-001" "header identifies card C-001"
+has "$out_card" "status:  in_progress" "status matches card"
+has "$out_card" "build the widget" "Scope section rendered"
+has "$out_card" "src/widget.ts" "Allowed files rendered"
+has "$out_card" "npm test" "Verify section rendered"
+has "$out_card" "linked decisions:" "linked decisions section rendered"
+has "$out_card" "git status:" "git status section rendered"
+has "$out_card" "NEXT_VERB=card" "advisory NEXT_VERB=card rendered"
+has "$out_card" "**First safe step**" "First safe step prompt rendered"
+clean
+
+echo "M) resume --card redaction pipeline: masks AWS keys, JWTs, Bearer tokens"
+newsb
+clean_stage 00-idea
+printf '# C-002 — secrets\nstatus: todo\ndeps: none\n## Scope\nfetch with Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgN\n## Allowed files\nconfig/\n## Verify\n- [ ] curl AKIA1234567890ABCDEF\n## Evidence\n(empty)\n' > "$SB/cards/C-002.md"
+out_redact="$(bash "$RUN" resume --card C-002 2>&1)"; rc_redact=$?
+ck 0 "$rc_redact" "resume --card with secrets exits 0"
+has "$out_redact" '\[REDACTED:jwt\]' "JWT token is redacted"
+has "$out_redact" '\[REDACTED:aws-key-id\]' "AWS key is redacted"
+no "$out_redact" "AKIA1234567890ABCDEF" "raw AWS key does not appear in stdout"
+no "$out_redact" "eyJhbGciOiJIUzI1NiJ9" "raw JWT header does not appear in stdout"
+clean
+
+echo "N) resume --card in non-git directory degrades gracefully to 'Not captured in this session'"
+newsb
+clean_stage 00-idea
+printf '# C-003 — nongit\nstatus: todo\ndeps: none\n## Scope\nlocal task\n## Allowed files\nlocal/\n## Verify\n- [ ] true\n## Evidence\n(empty)\n' > "$SB/cards/C-003.md"
+# Force git check to fail by masking PATH or git inside subshell
+out_nongit="$(PATH="/bin:/usr/bin" bash -c 'git() { return 1; }; export -f git; bash "'"$RUN"'" resume --card C-003' 2>&1)"; rc_nongit=$?
+ck 0 "$rc_nongit" "resume --card without working git exits 0"
+has "$out_nongit" "flow resume card: C-003" "card header rendered"
+has "$out_nongit" "Not captured in this session" "git status reports Not captured in this session"
+clean
 
 echo
 echo "RESULT: $pass passed, $fail failed"
