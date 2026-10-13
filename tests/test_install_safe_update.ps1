@@ -214,7 +214,7 @@ try {
   Check "backup directory is strictly PRESERVED on rollback failure and remains empty" ($null -ne $preservedBackup -and $preservedBackup.Count -gt 0 -and ((Get-ChildItem -LiteralPath $preservedBackup[0].FullName -Force).Count -eq 0))
 
   # Restore standard Move-Item
-  Remove-Item -Function:\Move-Item -ErrorAction SilentlyContinue
+  Remove-Item Function:\Move-Item -ErrorAction SilentlyContinue
 
   Write-Host "=== 8. Raw drive and UNC path parsing verification ==="
   $driveCheckPassed = $false

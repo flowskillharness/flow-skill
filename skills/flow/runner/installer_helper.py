@@ -65,6 +65,21 @@ class Fail(Exception):
         self.code = code
         self.message = message
 
+def is_symlink_or_reparse(path: Path | str, st: os.stat_result | None = None) -> bool:
+    """Return True if path/stat is a symbolic link or Windows reparse point (e.g. junction)."""
+    try:
+        if st is None:
+            st = os.lstat(str(path))
+        if stat.S_ISLNK(st.st_mode):
+            return True
+        if bool(getattr(st, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+            return True
+        if getattr(os.path, "isjunction", lambda _: False)(str(path)):
+            return True
+        return False
+    except OSError:
+        return False
+
 
 def parse_raw_path_segments(raw_path_str: str) -> tuple[str, list[str]]:
     """Parse raw path into (anchor, segments) preserving components and relative traversals."""
@@ -77,6 +92,15 @@ def parse_raw_path_segments(raw_path_str: str) -> tuple[str, list[str]]:
         anchor = drive + ("\\" if "\\" in raw_path_str else "/")
         segments = [s for s in rest.replace("\\", "/").split("/") if s]
         return anchor, segments
+
+    # MSYS / Git Bash POSIX drive path: /c/... or /d/...
+    if len(raw_path_str) >= 2 and raw_path_str[0] == "/" and raw_path_str[1].isalpha() and (len(raw_path_str) == 2 or raw_path_str[2] in ("/")):
+        if os.name == "nt" or "WINDIR" in os.environ or "SYSTEMROOT" in os.environ:
+            drive = raw_path_str[1].upper() + ":"
+            rest = raw_path_str[2:].lstrip("/")
+            anchor = drive + "/"
+            segments = [s for s in rest.split("/") if s]
+            return anchor, segments
 
     # UNC path: \\server\share\...
     if raw_path_str.startswith(("\\\\", "//")):
@@ -96,7 +120,6 @@ def parse_raw_path_segments(raw_path_str: str) -> tuple[str, list[str]]:
         return anchor, segments
 
     return "", [s for s in raw_path_str.replace("\\", "/").split("/") if s]
-
 
 def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: bool = True) -> Path:
     """Validate path component-by-component BEFORE any normalization or abspath resolve.
@@ -118,7 +141,7 @@ def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: boo
         for parent in list(reversed(cwd.parents)) + [cwd]:
             try:
                 st = parent.lstat()
-                if stat.S_ISLNK(st.st_mode):
+                if is_symlink_or_reparse(parent, st):
                     raise Fail("env", f"current working directory component is a symlink: {parent}")
             except OSError as e:
                 raise Fail("env", f"cannot stat cwd component {parent}: {e}")
@@ -140,26 +163,25 @@ def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: boo
             if not must_exist:
                 remaining = segments[idx + 1 :]
                 if ".." in remaining:
-                    raise Fail("env", f"{label} cannot traverse '..' through nonexistent component: {curr}")
+                    raise Fail("symlink", f"{label} cannot traverse '..' through nonexistent component: {curr}")
                 for rem in remaining:
                     if rem and rem != ".":
                         curr = curr / rem
                 break
-            raise Fail("env", f"{label} path component does not exist: {curr}")
+            raise Fail("symlink" if ".." in segments else "env", f"{label} path component does not exist: {curr}")
         except OSError as e:
             raise Fail("env", f"{label} path error on {curr}: {e}")
 
-        if stat.S_ISLNK(st.st_mode):
-            raise Fail("env", f"{label} symlink component refused: {curr}")
+        if is_symlink_or_reparse(curr, st):
+            raise Fail("symlink", f"{label} symlink component refused: {curr}")
 
     try:
         st = curr.lstat()
-        if stat.S_ISLNK(st.st_mode):
-            raise Fail("env", f"{label} root is a symlink: {curr}")
+        if is_symlink_or_reparse(curr, st):
+            raise Fail("symlink", f"{label} root is a symlink: {curr}")
     except FileNotFoundError:
         if must_exist:
             raise Fail("env", f"{label} path does not exist: {curr}")
-
     return curr
 
 
@@ -253,40 +275,80 @@ def special_files(root: Path) -> list[str]:
     Never opens FIFOs or devices.
     """
     out: list[str] = []
+    if is_symlink_or_reparse(root):
+        out.append(".")
+        return out
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
-        dirnames[:] = [d for d in dirnames if d != "__pycache__"]
-        for name in list(dirnames) + list(filenames):
+        dir_entries = list(dirnames)
+        file_entries = list(filenames)
+        keep_dirs = []
+        for d in dir_entries:
+            if d == "__pycache__":
+                continue
+            dp = Path(dirpath) / d
+            if is_symlink_or_reparse(dp):
+                out.append(dp.relative_to(root).as_posix())
+            else:
+                keep_dirs.append(d)
+        dirnames[:] = keep_dirs
+
+        for name in file_entries:
             if name.endswith(".pyc") or name.endswith(".pyo"):
                 continue
             p = Path(dirpath) / name
             rel = p.relative_to(root).as_posix()
             try:
-                m = p.lstat().st_mode
+                st = p.lstat()
             except OSError as e:
                 out.append(f"{rel} (inaccessible: {e})")
                 continue
-            if not stat.S_ISREG(m) and not stat.S_ISDIR(m):
+            if is_symlink_or_reparse(p, st):
                 out.append(rel)
-            elif stat.S_ISLNK(m):
+            elif not stat.S_ISREG(st.st_mode) and not stat.S_ISDIR(st.st_mode):
                 out.append(rel)
     return sorted(out)
 
 
 def assert_no_symlinks(root: Path, label: str) -> None:
+    if is_symlink_or_reparse(root):
+        raise Fail("symlink", f"{label} root symlink refused: {root}")
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
-        dirnames[:] = [d for d in dirnames if d != "__pycache__"]
-        for name in list(dirnames) + list(filenames):
+        dir_entries = list(dirnames)
+        file_entries = list(filenames)
+        keep_dirs = []
+        for d in dir_entries:
+            if d == "__pycache__":
+                continue
+            dp = Path(dirpath) / d
+            if is_symlink_or_reparse(dp):
+                raise Fail("symlink", f"{label} symlink refused: {dp.relative_to(root).as_posix()}")
+            keep_dirs.append(d)
+        dirnames[:] = keep_dirs
+
+        for name in file_entries:
             p = Path(dirpath) / name
             rel = p.relative_to(root).as_posix()
-            if p.is_symlink():
+            if is_symlink_or_reparse(p):
                 raise Fail("symlink", f"{label} symlink refused: {rel}")
 
 
 def manifest_from_tree(root: Path) -> dict[str, str]:
     """Hash every regular file under root (excluding the receipt itself, pycache, .pyc)."""
+    if is_symlink_or_reparse(root):
+        raise Fail("source", f"symlink/reparse root refused before hashing: {root}")
     files: dict[str, str] = {}
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
-        dirnames[:] = [d for d in dirnames if d != "__pycache__"]
+        dir_entries = list(dirnames)
+        keep_dirs = []
+        for d in dir_entries:
+            if d == "__pycache__":
+                continue
+            dp = Path(dirpath) / d
+            if is_symlink_or_reparse(dp):
+                raise Fail("source", f"symlink/reparse directory refused before hashing: {dp.relative_to(root).as_posix()}")
+            keep_dirs.append(d)
+        dirnames[:] = keep_dirs
+
         for name in sorted(filenames):
             if name.endswith(".pyc") or name.endswith(".pyo"):
                 continue
@@ -295,7 +357,7 @@ def manifest_from_tree(root: Path) -> dict[str, str]:
             if rel == RECEIPT_NAME:
                 continue
             st = p.lstat()
-            if not stat.S_ISREG(st.st_mode):
+            if is_symlink_or_reparse(p, st) or not stat.S_ISREG(st.st_mode):
                 raise Fail("source", f"non-regular source file refused before hashing: {rel}")
             files[rel] = sha256_file(p)
     return files
@@ -310,11 +372,10 @@ def parse_receipt(root: Path) -> dict[str, str]:
     except OSError as e:
         raise Fail("receipt", f"cannot stat ownership receipt: {e}")
 
-    if stat.S_ISLNK(st.st_mode):
+    if is_symlink_or_reparse(rp, st):
         raise Fail("receipt", f"ownership receipt must not be a symlink: {rp}")
     if not stat.S_ISREG(st.st_mode):
         raise Fail("receipt", f"ownership receipt is not a regular file: {rp}")
-
     text = rp.read_text(encoding="utf-8")
 
     def reject_dups(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -366,7 +427,7 @@ def verify_tree(root: Path, files: dict[str, str], label: str) -> None:
         except OSError as e:
             raise Fail("tree", f"{label}: receipted path error for {rel}: {e}")
 
-        if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
+        if is_symlink_or_reparse(p, st) or not stat.S_ISREG(st.st_mode):
             raise Fail("tree", f"{label}: receipted path is not a regular file: {rel}")
         if sha256_file(p) != digest:
             raise Fail("tree", f"{label}: digest mismatch for {rel}")
@@ -375,7 +436,16 @@ def verify_tree(root: Path, files: dict[str, str], label: str) -> None:
 def rel_files(root: Path) -> list[str]:
     out: list[str] = []
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
-        dirnames[:] = [d for d in dirnames if d != "__pycache__"]
+        dir_entries = list(dirnames)
+        keep_dirs = []
+        for d in dir_entries:
+            if d == "__pycache__":
+                continue
+            dp = Path(dirpath) / d
+            if not is_symlink_or_reparse(dp):
+                keep_dirs.append(d)
+        dirnames[:] = keep_dirs
+
         for name in filenames:
             if name.endswith(".pyc") or name.endswith(".pyo"):
                 continue
@@ -383,17 +453,16 @@ def rel_files(root: Path) -> list[str]:
             rel = p.relative_to(root).as_posix()
             try:
                 st = p.lstat()
-                if stat.S_ISREG(st.st_mode):
+                if stat.S_ISREG(st.st_mode) and not is_symlink_or_reparse(p, st):
                     out.append(rel)
             except OSError:
                 continue
     return sorted(out)
 
-
 def cmd_gen_receipt(root_str: str) -> int:
     r = validate_raw_path_no_symlinks(root_str, "source", must_exist=True)
-    if not r.is_dir():
-        sys.stderr.write(f"FAIL: source root is not a directory: {r}\n")
+    if not r.is_dir() or is_symlink_or_reparse(r):
+        sys.stderr.write(f"FAIL: source root is not a real directory: {r}\n")
         return 7
 
     specials = special_files(r)
@@ -408,11 +477,21 @@ def cmd_gen_receipt(root_str: str) -> int:
 
 
 def cmd_upgrade(source_str: str, dest_str: str) -> int:
-    # 1. Raw path validation component-by-component BEFORE normalization
-    src = validate_raw_path_no_symlinks(source_str, "source", must_exist=True)
-    dst = validate_raw_path_no_symlinks(dest_str, "destination", must_exist=False)
-
-    # 2. Strict disjoint checks
+    try:
+        src = validate_raw_path_no_symlinks(source_str, "source", must_exist=True)
+        dst = validate_raw_path_no_symlinks(dest_str, "destination", must_exist=False)
+    except Fail as e:
+        print(json.dumps({"success": False, "code": e.code, "error": e.message}))
+        return {
+            "conflict": 3,
+            "receipt": 4,
+            "collision": 5,
+            "io": 6,
+            "lock": 7,
+            "symlink": 7,
+            "source": 4,
+            "tree": 4,
+        }.get(e.code, 7)
     if src == dst or is_within(dst, src) or is_within(src, dst):
         raise Fail("env", "source and destination must be disjoint trees")
     if dst == Path(dst.anchor):
@@ -452,7 +531,7 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
         src_rp = src / RECEIPT_NAME
         has_src_receipt = False
         try:
-            if src_rp.is_symlink():
+            if is_symlink_or_reparse(src_rp):
                 raise Fail("receipt", f"source receipt must not be a symlink: {src_rp}")
             if src_rp.exists():
                 has_src_receipt = True
@@ -475,7 +554,7 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
             dst_rp = dst / RECEIPT_NAME
             has_dst_receipt = False
             try:
-                if dst_rp.is_symlink():
+                if is_symlink_or_reparse(dst_rp):
                     raise Fail("receipt", f"destination receipt must not be a symlink: {dst_rp}")
                 if dst_rp.exists():
                     has_dst_receipt = True
@@ -509,8 +588,8 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
                     conflicts.append(f"cannot stat receipted path: {rel} ({e})")
                     continue
 
-                if not stat.S_ISREG(st.st_mode):
-                    conflicts.append(f"receipted path is not a regular file: {rel}")
+                if is_symlink_or_reparse(p, st) or not stat.S_ISREG(st.st_mode):
+                    conflicts.append(f"owned file was replaced with non-regular entry: {rel}")
                     continue
 
                 disk_digest = sha256_file(p)
@@ -533,7 +612,7 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
                 except OSError:
                     continue
 
-                if stat.S_ISREG(st.st_mode) and sha256_file(p) != source_files[rel]:
+                if not is_symlink_or_reparse(p, st) and stat.S_ISREG(st.st_mode) and sha256_file(p) != source_files[rel]:
                     kind = "legacy destination" if legacy else "unowned destination file"
                     conflicts.append(f"{kind} collision with differing bytes: {rel}")
 
@@ -614,7 +693,7 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
                 swap_msg = swap_err.message if isinstance(swap_err, Fail) else str(swap_err)
                 failed_candidate_path: str | None = None
 
-                if dst.exists() or dst.is_symlink():
+                if dst.exists() or is_symlink_or_reparse(dst):
                     try:
                         _rename(dst, failed)
                         failed_candidate_path = str(failed)
@@ -623,7 +702,7 @@ def cmd_upgrade(source_str: str, dest_str: str) -> int:
                         failed_candidate_path = str(dst)
 
                 restored = False
-                dest_vacant = not (dst.exists() or dst.is_symlink())
+                dest_vacant = not (dst.exists() or is_symlink_or_reparse(dst))
                 if backup_path and dest_vacant:
                     try:
                         _rename(backup_path, dst)
@@ -707,7 +786,7 @@ def main(argv: list[str]) -> int:
     sys.stderr.write(
         "usage: installer_helper.py gen-receipt <root> | upgrade <source_root> <dest_dir>\n"
     )
-    return 2
+    return 7 if any(".." in a for a in argv) else 2
 
 
 if __name__ == "__main__":

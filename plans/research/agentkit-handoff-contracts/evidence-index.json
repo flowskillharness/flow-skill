@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "generated_at": "2026-10-13",
   "target_system": "AgentKit CLI ak 2.19.0 (observed via capture ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3; kit cache installation path ~/.agentkit/cache/kits/engineer/omp/2.18.1/engineer)",
-  "scope_summary": "Retained REA evidence strictly covers static AST inspection (hooks/scout-block, hooks/notifications) and controlled CLI process scenarios (version, help). Dynamic runtime trace of ak:handoff and project-handoff-store is unobserved. Runtime daemons, persistent servers, and resident loops remain unobserved.",
+  "scope_summary": "Retained REA evidence covers static AST inspection (hooks/scout-block, hooks/notifications), controlled CLI process scenarios (version, help), and an isolated process capture observing project-handoff-store.cjs state transitions (revision allocation, write, self-session suppression, successor loading, and 7-day stale handoff suppression). Live dynamic execution of the prompt-driven ak:handoff workflow and resident runtime daemons remain unobserved.",
   "external_raw_bundle_path": "/tmp/rea-evidence-bundle-wave3.json",
   "external_raw_bundle_bytes": 4037481,
   "records": [
@@ -88,6 +88,22 @@
       "provider": "rea-analysis-view v1",
       "limitations": [
         "Static AST analysis view of hooks/notifications; does not observe runtime event dispatch, daemon loop, or dynamic handoff store trace."
+      ]
+    },
+    {
+      "evidence_id": "ev_ba7a40682accb4960d34b20752eb6eed6bc74358b435f6c5b5404e5de57bb7b7",
+      "operation": "capture_process_scenario",
+      "target": "node (isolated project-handoff-store.cjs execution harness)",
+      "target_sha256": "d0efb6fcb9d023ba4e2b160ec2384dc28fe4f17732141ef47f676828fa960505",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": "rea-process v3",
+      "observed_exit": 0,
+      "observed_output_summary": "Observed isolated store transitions: revision allocation (rev 1), checkpoint write, self-session load suppression, successor session fresh load, 7-day stale handoff suppression, and cross-project isolation.",
+      "limitations": [
+        "Bounded to isolated low-level module execution of project-handoff-store.cjs; does not establish prompt-level ak:handoff model workflow.",
+        "Does not claim that all of AgentKit was analyzed by this single module.",
+        "Runtime daemons, persistent servers, and network activity remain unobserved."
       ]
     }
   ],

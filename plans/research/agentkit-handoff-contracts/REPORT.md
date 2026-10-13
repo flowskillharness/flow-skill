@@ -45,33 +45,44 @@
   Concerns/Blockers: <optional>
   ```
 * **Durable Session Checkpoint Store (`hooks/lib/project-handoff-store.cjs`):**
-  * *(Status: Observed via static file read; dynamic runtime trace unobserved. No live ak:handoff execution trace or project-handoff-store dynamic trace was captured.)*
-  * Manages session state files under `~/.agentkit/session-states/v2/<runtime>/<projectKey>/`.
-  * Maintains numbered, immutable event revisions (`revisions/`) and verified checkpoints (`checkpoints/`).
-  * Checkpoint schema: `schemaVersion: 2`, `sourceSessionKey`, `eventRevision`, `snapshotRevision`, `branch`, `activePlan`, `todos` (capped at 200 items), `modifiedFiles` (capped at 100 items), with 7-day TTL expiry.
+  * **Source Exports & Dependencies:**
+    - Exports: `EXPIRY_DAYS` (7), `allocateEventRevision`, `loadProjectCheckpoint`, `projectStatePaths`, `resolveAgentKitHome`, `validCheckpoint`, `writeProjectCheckpoint`.
+    - Dependencies: `runtime-state-identity.cjs` (session context hashing, project root canonicalization), `bounded-json-file.cjs` (strict private permissions 0700 dirs / 0600 files, non-symlink checks), `immutable-revision-journal.cjs` (revision reservations `.reserve`, records `.json`).
+  * **Observed Isolated Runtime Transitions (REA Capture `ev_ba7a40682accb4960d34b20752eb6eed6bc74358b435f6c5b5404e5de57bb7b7`):**
+    - Evaluated in a dedicated temp-dir sandbox (mode 0700) with fake `HOME` and `AGENTKIT_HOME`. Real `HOME`, config, and auth remained 100% untouched; zero billable calls; no daemons or network traffic.
+    - Producer Creation (Session A): Allocates event revision 1; successfully writes checkpoint (`writeProjectCheckpoint` -> `true`) with schemaVersion 2, branch, activePlan, todos, and modifiedFiles.
+    - Self-Session Suppression: Producer Session A calling `loadProjectCheckpoint` returns `null` (`sourceSessionKey === context.sessionKey`), verifying that a producer cannot self-ingest its own handoff.
+    - Successor Session Fresh Load: Consumer Session B (distinct session key, identical canonical project root) calling `loadProjectCheckpoint` successfully retrieves the checkpoint (matching revision 1, branch, todos, `sourceSessionKey`).
+    - Stale / Expired Handoff Rejection: Calling `loadProjectCheckpoint` with simulated timestamp exceeding the 7-day TTL (`now > expiresAt`) returns `null`, proving automatic staleness rejection.
+    - Cross-Project Isolation: Calling `loadProjectCheckpoint` from an alternate project root returns `null`.
+  * **Explicit Scope & Limitations:**
+    - This observation strictly establishes the deterministic behavior of the low-level CJS checkpoint store (`project-handoff-store.cjs`).
+    - It does **not** establish the prompt-level `ak:handoff` agent workflow (which is a model-driven prompt skill that writes Markdown files in `plans/handoffs/`).
+    - It does **not** claim that all of AgentKit was analyzed by this single module.
 * **Agent Status Authority Matrix:**
   * `planner` (`agents/planner.md`): Tech Lead persona. Formulates dependency DAGs, failure modes, rollback strategies. Status authority is **advisory and authoring only**—does not approve production gates.
   * `tester` (`agents/tester.md`): QA Lead persona. Runs test suites, analyzes coverage, verifies error handling. Authority is **verification reporting only**.
   * `code-reviewer` (`agents/code-reviewer.md`): Staff Engineer persona. Audits diffs for production traps, security defects, and regressions. Authority is **advisory feedback only**.
 * **Runtime Orchestration & Daemon Claims:**
-  * Any claims of background daemons, persistent servers, or resident runtime orchestration are `[UNOBSERVED]`: no resident background loop or daemon was observed in retained process scenario captures. Furthermore, no global proprietary license claims are asserted; observations are strictly bounded to local files and captured CLI invocations.
+  * Any claims of background daemons, persistent servers, or resident runtime orchestration are `[UNOBSERVED]`: no resident background loop or daemon was observed across process scenario captures. Furthermore, no global proprietary license claims are asserted; observations are strictly bounded to local files and captured CLI/node invocations.
 ---
 
 ## 2. REA MCP Reverse Engineering Evidence & Scoping
 
-* **Retained Evidence Inventory (No New Tool Invocations or REA Reruns):**
+* **Retained Evidence Inventory (Bounded & Sanitized):**
   1. `ev_7773c2b267566769dfd9707c5334b6c800feea890ea62688f7fe6beed47e3934`: `inspect_analysis_view` on `hooks/scout-block` (static AST syntax analysis; conservative relationship candidates; no dynamic execution).
   2. `ev_231a9a8e777ddbe28083bff49d49788242f1211be5fc10e4088ae59e0cd359a2`: `analyze_javascript_application` on `hooks/scout-block` (static AST graph; no dynamic trace).
   3. `ev_deb05dfaa8ee9360de7c06f6f3ecda6e25f0508668d81c29d5e3e88467b93b8a`: `inspect_analysis_view` on `hooks/notifications` (static AST analysis view; no dynamic execution).
   4. `ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3`: `capture_process_scenario` on `ak.bak --version` (observed exit 0; stdout `ak 2.19.0`).
   5. `ev_74643d62c09653f9b67d08d646792a58f59828f22508494f17f4ab19828f53c4`: `capture_process_scenario` on `ak.bak --help` (observed exit 0; partial stdout frame bounded by terminal cell render cap).
   6. `ev_fcabdc1a35a2ac55423a4b67db60cfc19c193894157d8a4e0b2e8d466daabe9e`: `capture_process_scenario` on `ak.bak backups --help` (observed exit 0; snapshot subcommand summary).
+  7. `ev_ba7a40682accb4960d34b20752eb6eed6bc74358b435f6c5b5404e5de57bb7b7`: `capture_process_scenario` on isolated `project-handoff-store.cjs` execution harness (observed exit 0; verified revision allocation, checkpoint write, self-session suppression, successor loading, 7-day stale handoff suppression, and cross-project isolation).
 
 * **Observed Scope & Truthful Boundaries:**
-  - The retained evidence is strictly divided between **static AST inspection** (`hooks/scout-block/`, `hooks/notifications/`) and **controlled CLI process observations** (`ak.bak` version/help).
-  - **No live `ak:handoff` dynamic execution trace** and **no live `project-handoff-store` runtime trace** was captured.
+  - The retained evidence is categorized into: (A) static AST inspection (`hooks/scout-block/`, `hooks/notifications/`), (B) controlled CLI process observations (`ak.bak` version/help), and (C) isolated low-level module process capture (`project-handoff-store.cjs`).
+  - **No live `ak:handoff` prompt-level dynamic execution trace** was performed or captured.
   - Background daemons, resident processes, and runtime orchestrators remain `[UNOBSERVED]`.
-  - Unmeasured execution speed assertions (such as "<100ms") and assertions of "complete context" recovery are explicitly avoided; AST analysis is bounded to parsed syntax trees, and CLI observations are bounded to captured terminal stdout frames.
+  - Unmeasured execution speed assertions (such as "<100ms") and assertions of "complete context" recovery are explicitly avoided; AST analysis is bounded to parsed syntax trees, and CLI/module observations are bounded to captured terminal stdout frames.
   - Native binary decompilation remains blocked by host prerequisites (Host JDK 17 vs JDK 21+ required for Ghidra; `GHIDRA_INSTALL_DIR` unset).
 ---
 

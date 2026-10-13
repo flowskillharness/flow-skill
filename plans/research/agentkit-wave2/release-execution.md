@@ -81,12 +81,20 @@ Commit `005e659` triggered matrix run `38369511454` (https://github.com/manhquyd
 
 ---
 
-## 4. Release Candidate Gate & Status
+## 4. Native Windows Smoke Verification Evidence (`run 38431842785` on branch `test/windows-smoke`)
 
-* **Conclusion:** Prior base commit `005e65963872c27f04e2400b22bd2aaf21449d8b` is **FAILED & NOT RELEASABLE** (CI run `38369511454` red on Windows).
-* **Repairs Applied Locally:**
-  - Windows `context_handler.py`: synchronous `_win_peek_pipe` / `PeekNamedPipe` polling on stdin and process pipes; launch gate with Job Object containment (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) before `GO`; explicit typed `int(proc_handle)` -> `wintypes.HANDLE` conversion; `JobHolder.close()` verification with `TerminateJobObject` fallback; failure in `drain_capped` cleans up and fails closed.
-  - `tests/test_flow_host_hooks.sh`: P4 snapshot fixture converts path via `to_native_path` before Python open and verifies `[ -f "$P4_SNAP" ]` fixture existence before assertion (50/50 pass).
-  - `tests/test_flow_windows_lifecycle.py`: baseline runners use `sys.executable` with normalized forward slashes and `shlex.quote` for argv safety (14 pass, 0 fail, 2 Windows skips). Registered in `tests/manifest.txt` via `tests/test_flow_windows_lifecycle.sh`.
-  - `tests/test_install_safe_update.sh`: unsupported FIFO capability branch uses `skip_test` counter instead of fake `ck` pass; required link fixtures still fail strictly if link capability is missing.
-* **Terminal Release Gate:** Release version tags (`v0.34.1`, `npm@0.7.8`) and registry publications remain **STRICTLY HELD** until a new commit is minted and native Windows CI passes green.
+* **Workflow Run ID:** `38431842785` (Job ID `115415736231`, Microsoft Windows Server 2025, CPython 3.14.7).
+* **Overall Verdict:** **SMOKE VERDICT: ALL 4 WINDOWS SUITES PASSED GREEN!** (Exit code 0).
+* **Exact Suite Results on Native Windows:**
+  1. `tests/test_flow_host_hooks.sh`: **RESULT: 49 passed, 0 failed** (100% green; fresh authoritative status handoff produced, snapshot refused without O_NOFOLLOW, orphan/root-exit child processes killed on deadline via Win32 Job Objects).
+  2. `tests/test_flow_windows_lifecycle.sh`: **RESULT: 23 passed, 0 failed, 0 skipped** (100% green; Job Object creation/assignment failure injection verified, CRT pipe EOF buffer drain captured sentinel data, child process termination verified via `OpenProcess` / `WaitForSingleObject` / `GetExitCodeProcess`).
+  3. `tests/test_install_safe_update.sh`: **Pass: 41, Fail: 0, Skipped: 1** (100% green; Section 1 symlink traversal correctly refused with exit 7, Section 10/12 `NOPY_SHIM` verified, 1 unsupported mkfifo FIFO skipped cleanly).
+  4. `tests/test_install_safe_update.ps1`: **Pass: 30, Fail: 0** (100% green; all 8 PowerShell installer sections passed).
+
+---
+
+## 5. Release Candidate Gate & Status
+
+* **Conclusion:** All Windows defects repaired and verified 100% green on native Windows Server 2025 runners.
+* **Release Candidate Status:** Working tree clean and verified; ready for atomic commit and push to master to trigger full CI `all-checks-passed`.
+* **Terminal Release Gate:** Release version tags (`v0.34.1`, `npm@0.7.8`) and registry publications remain **STRICTLY HELD** until full master CI run completes green on the newly minted release commit SHA.

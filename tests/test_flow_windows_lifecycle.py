@@ -86,7 +86,8 @@ def test_job_creation_failure_aborts_spawn():
         payload = json.dumps({"hook_event_name": "SessionStart", "cwd": proj}).encode("utf-8")
         p_base = subprocess.run([sys.executable, HANDLER_PY],
                                 input=payload, capture_output=True, env=base_env, timeout=10)
-        check("healthy baseline creates marker", os.path.exists(marker))
+        diag = ("(rc=%d stderr=%s)" % (p_base.returncode, p_base.stderr[:200])) if not os.path.exists(marker) else ""
+        check("healthy baseline creates marker", os.path.exists(marker), details=diag)
         if os.path.exists(marker):
             os.remove(marker)
 
@@ -123,10 +124,10 @@ def test_job_assignment_failure_terminates_gate():
         payload = json.dumps({"hook_event_name": "SessionStart", "cwd": proj}).encode("utf-8")
         p_base = subprocess.run([sys.executable, HANDLER_PY],
                                 input=payload, capture_output=True, env=base_env, timeout=10)
-        check("healthy baseline creates marker", os.path.exists(marker))
+        diag = ("(rc=%d stderr=%s)" % (p_base.returncode, p_base.stderr[:200])) if not os.path.exists(marker) else ""
+        check("healthy baseline creates marker", os.path.exists(marker), details=diag)
         if os.path.exists(marker):
             os.remove(marker)
-
         fail_env = dict(base_env)
         fail_env["FLOW_TEST_INJECT_WIN_ASSIGN_FAIL"] = "1"
         proc = subprocess.run([sys.executable, HANDLER_PY],
@@ -182,9 +183,10 @@ def test_surplus_output_drain():
 
         proc = subprocess.run([sys.executable, HANDLER_PY],
                               input=payload, capture_output=True, env=env, timeout=10)
+        diag = ("(len=%d rc=%d stderr=%s)" % (len(proc.stdout), proc.returncode, proc.stderr[:200])) if b"SENTINEL_SURPLUS_DATA" not in proc.stdout else ""
         check("surplus output drain: exit 0", proc.returncode == 0)
         check("surplus output drain: output capped <= 2048 bytes (%d)" % len(proc.stdout), len(proc.stdout) <= 2048)
-        check("surplus output drain: contains expected sentinel", b"SENTINEL_SURPLUS_DATA" in proc.stdout)
+        check("surplus output drain: contains expected sentinel", b"SENTINEL_SURPLUS_DATA" in proc.stdout, details=diag)
         check("surplus output drain: no timeout diagnostic", b"timeout" not in proc.stderr.lower())
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -197,9 +199,25 @@ def test_root_exit_descendant_held_pipe():
         os.makedirs(runner_dir, exist_ok=True)
         runner_sh = os.path.join(runner_dir, "flow.sh")
         pidfile = os.path.join(tmp, "child.pid")
-        # Root exits 0 immediately; child sleeps 30 inheriting pipes
+        started_marker = os.path.join(tmp, "child.started")
+
+        # Launch a python child that writes pid and started marker, then sleeps while holding pipes
+        py_bin = sys.executable.replace('\\', '/')
+        pid_path = pidfile.replace('\\', '/')
+        start_path = started_marker.replace('\\', '/')
+        child_script = (
+            'import sys, os, time; '
+            'open(sys.argv[1], "w").write(str(os.getpid())); '
+            'open(sys.argv[2], "w").write("STARTED"); '
+            'time.sleep(30)'
+        )
         with open(runner_sh, "w") as f:
-            f.write('#!/bin/sh\nsleep 30 & echo $! > "%s"\nexit 0\n' % pidfile)
+            f.write(
+                '#!/bin/sh\n'
+                '%s -c %s %s %s &\n'
+                'exit 0\n' %
+                (shlex.quote(py_bin), shlex.quote(child_script), shlex.quote(pid_path), shlex.quote(start_path))
+            )
         os.chmod(runner_sh, 0o755)
 
         env = dict(os.environ)
@@ -213,21 +231,69 @@ def test_root_exit_descendant_held_pipe():
         elapsed = time.monotonic() - t0
         check("root-exit held-pipe: exit 0 (fail-open)", proc.returncode == 0)
         check("root-exit held-pipe: bounded by timeout (%.2fs <= 5s)" % elapsed, elapsed <= 5.0)
+        check("root-exit held-pipe: child actually started", os.path.exists(started_marker))
 
-        # On POSIX, verify child was reaped by group kill
-        if os.name != 'nt' and os.path.exists(pidfile):
+        # Verify child was terminated by process group (POSIX) or Job Object (Windows)
+        if os.path.exists(pidfile):
             try:
                 with open(pidfile) as pf:
                     cpid = int(pf.read().strip())
-                # kill -0 check
-                try:
-                    os.kill(cpid, 0)
-                    alive = True
-                except OSError:
-                    alive = False
-                check("root-exit held-pipe: child was reaped by group kill", not alive)
-            except Exception:
-                pass
+                if os.name == 'nt':
+                    import ctypes
+                    from ctypes import wintypes
+                    SYNCHRONIZE = 0x00100000
+                    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+                    STILL_ACTIVE = 259
+                    ERROR_INVALID_PARAMETER = 87
+
+                    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                    k32.OpenProcess.restype = wintypes.HANDLE
+                    k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+                    k32.WaitForSingleObject.restype = wintypes.DWORD
+                    k32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+                    k32.GetExitCodeProcess.restype = wintypes.BOOL
+                    k32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+                    k32.CloseHandle.restype = wintypes.BOOL
+                    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+                    is_dead = False
+                    diag = ""
+                    h = k32.OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION, False, cpid)
+                    if not h:
+                        err = ctypes.get_last_error()
+                        if err == ERROR_INVALID_PARAMETER:
+                            is_dead = True
+                        else:
+                            diag = "OpenProcess failed: OS error %d" % err
+                    else:
+                        try:
+                            wait_res = k32.WaitForSingleObject(h, 0)
+                            if wait_res == 0:
+                                exit_code = wintypes.DWORD()
+                                if k32.GetExitCodeProcess(h, ctypes.byref(exit_code)):
+                                    if exit_code.value != STILL_ACTIVE:
+                                        is_dead = True
+                                    else:
+                                        diag = "process is STILL_ACTIVE"
+                                else:
+                                    err = ctypes.get_last_error()
+                                    diag = "GetExitCodeProcess failed: OS error %d" % err
+                            else:
+                                diag = "WaitForSingleObject returned %d (non-signaled)" % wait_res
+                        finally:
+                            k32.CloseHandle(h)
+                    check("root-exit held-pipe: child was reaped by Job Object", is_dead, details=diag)
+                else:
+                    try:
+                        os.kill(cpid, 0)
+                        alive = True
+                    except OSError:
+                        alive = False
+                    check("root-exit held-pipe: child was reaped by group kill", not alive)
+            except Exception as ex:
+                check("root-exit held-pipe: child pid check succeeded", False, details=str(ex))
+        else:
+            check("root-exit held-pipe: child pidfile recorded", False)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

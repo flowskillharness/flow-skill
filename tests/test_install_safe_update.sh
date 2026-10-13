@@ -46,23 +46,37 @@ if [ "$IS_WINDOWS" = yes ] && command -v cygpath >/dev/null 2>&1; then
 else
   export PYTHONPATH="$ROOT/skills/flow/runner${PYTHONPATH:+:$PYTHONPATH}"
 fi
-# Symlink helper: `ln -s` on Windows Git Bash creates a copy, not a reparse point.
-# Use `cmd //c mklink /J` (junction) which Windows lstat() reports as S_ISLNK.
+to_native_path() {
+  if [ "$IS_WINDOWS" = yes ] && command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# Symlink helper: on Windows Git Bash, ln -s creates a regular copy, not a reparse point.
+# Create a true NTFS directory junction with `cmd //c mklink /J` and verify via native Python
+# lstat st_file_attributes FILE_ATTRIBUTE_REPARSE_POINT (or S_ISLNK).
 make_link() {
   local target="$1" linkpath="$2"
+  if [ "$IS_WINDOWS" = yes ]; then
+    rm -rf "$linkpath"
+    if command -v cmd >/dev/null 2>&1; then
+      local win_link win_target
+      win_link="$(cygpath -w "$linkpath")"
+      win_target="$(cygpath -w "$target")"
+      cmd //c mklink //J "$win_link" "$win_target" >/dev/null 2>&1
+      if "$PY" -c 'import os, stat, sys; p = sys.argv[1]; st = os.lstat(p); sys.exit(0 if (stat.S_ISLNK(st.st_mode) or bool(getattr(st, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or getattr(os.path, "isjunction", lambda _: False)(p)) else 1)' "$win_link" 2>/dev/null; then
+        return 0
+      fi
+    fi
+    return 1
+  fi
   ln -s "$target" "$linkpath" 2>/dev/null
   if [ -L "$linkpath" ]; then
-    return 0  # real symlink created
+    return 0
   fi
-  # On Windows, ln -s may have created a regular file/dir copy; remove the failed linkpath
-  rm -rf "$linkpath"
-  # Fall back to junction on Windows
-  if command -v cmd >/dev/null 2>&1; then
-    cmd //c mklink //J "$(cygpath -w "$linkpath")" "$(cygpath -w "$target")" >/dev/null 2>&1
-    [ -L "$linkpath" ] && return 0
-    "$PY" -c "import os, sys; sys.exit(0 if (os.path.isjunction(sys.argv[1]) or os.path.islink(sys.argv[1])) else 1)" "$(cygpath -w "$linkpath")" 2>/dev/null && return 0
-  fi
-  return 1  # cannot create a real link on this platform
+  return 1
 }
 skipped=0
 ck() {
@@ -137,7 +151,12 @@ S1_BYPASS_LINK="$SCRATCH/s1_bypass_link"
 mkdir -p "$S1_BYPASS_TARGET"
 if make_link "$S1_BYPASS_TARGET" "$S1_BYPASS_LINK"; then
   set +e
-  out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  if [ "$IS_WINDOWS" = yes ]; then
+    s1_dst_arg="$(to_native_path "$S1_BYPASS_LINK")\\..\\s1_dst"
+    out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$s1_dst_arg" 2>&1)"
+  else
+    out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  fi
   rc=$?
   set -e
   ck 7 "$rc" "traversal through symlink component (/tmp/link/../dest) refused with exit 7"
@@ -150,7 +169,14 @@ S2_SRC="$SCRATCH/s2_src"
 S2_DST="$SCRATCH/s2_dst"
 mkdir -p "$S2_SRC" "$S2_DST"
 echo "# skill" > "$S2_SRC/SKILL.md"
-if mkfifo "$S2_SRC/blocker_fifo" 2>/dev/null && [ -p "$S2_SRC/blocker_fifo" ]; then
+has_real_fifo=no
+if mkfifo "$S2_SRC/blocker_fifo" 2>/dev/null; then
+  if "$PY" -c 'import os, stat, sys; st = os.lstat(sys.argv[1]); sys.exit(0 if stat.S_ISFIFO(st.st_mode) else 1)' "$(to_native_path "$S2_SRC/blocker_fifo")" 2>/dev/null; then
+    has_real_fifo=yes
+  fi
+fi
+
+if [ "$has_real_fifo" = yes ]; then
   set +e
   out="$("$PY" "$HELPER" gen-receipt "$S2_SRC" 2>&1)"
   rc=$?
@@ -158,7 +184,8 @@ if mkfifo "$S2_SRC/blocker_fifo" 2>/dev/null && [ -p "$S2_SRC/blocker_fifo" ]; t
   ck 4 "$rc" "gen-receipt refuses FIFO without hanging (exit 4)"
   rm -f "$S2_SRC/blocker_fifo"
 else
-  skip_test "gen-receipt refuses FIFO" "mkfifo unavailable on this platform"
+  rm -f "$S2_SRC/blocker_fifo" 2>/dev/null || true
+  skip_test "gen-receipt refuses FIFO" "mkfifo/FIFO unsupported by native filesystem or interpreter"
 fi
 echo "=== 3. Strict receipt schema validation ==="
 S3_DIR="$SCRATCH/s3_schema"
@@ -179,11 +206,11 @@ out="$("$PY" -c '
 import sys, installer_helper
 from pathlib import Path
 try:
-    installer_helper.parse_receipt(Path("'"$S3_DIR"'"))
+    installer_helper.parse_receipt(Path(sys.argv[1]))
     print("UNEXPECTED_SUCCESS")
 except installer_helper.Fail as e:
     print("REJECTED:" + e.code)
-' 2>/dev/null || echo "CRASH")"
+' "$(to_native_path "$S3_DIR")" 2>/dev/null || echo "CRASH")"
 ck "REJECTED:receipt" "$out" "duplicate JSON keys strictly rejected"
 
 # Case B: schema_version is boolean true
@@ -199,11 +226,11 @@ out="$("$PY" -c '
 import sys, installer_helper
 from pathlib import Path
 try:
-    installer_helper.parse_receipt(Path("'"$S3_DIR"'"))
+    installer_helper.parse_receipt(Path(sys.argv[1]))
     print("UNEXPECTED_SUCCESS")
 except installer_helper.Fail as e:
     print("REJECTED:" + e.code)
-' 2>/dev/null || echo "CRASH")"
+' "$(to_native_path "$S3_DIR")" 2>/dev/null || echo "CRASH")"
 ck "REJECTED:receipt" "$out" "boolean schema_version strictly rejected"
 
 # Case C: non-canonical path
@@ -219,11 +246,11 @@ out="$("$PY" -c '
 import sys, installer_helper
 from pathlib import Path
 try:
-    installer_helper.parse_receipt(Path("'"$S3_DIR"'"))
+    installer_helper.parse_receipt(Path(sys.argv[1]))
     print("UNEXPECTED_SUCCESS")
 except installer_helper.Fail as e:
     print("REJECTED:" + e.code)
-' 2>/dev/null || echo "CRASH")"
+' "$(to_native_path "$S3_DIR")" 2>/dev/null || echo "CRASH")"
 ck "REJECTED:receipt" "$out" "non-canonical relative path rejected"
 
 echo "=== 4. Fresh install with staged receipt ==="
@@ -247,7 +274,7 @@ ck "yes" "$ck_exec" "runner flow.sh is executable"
 echo "=== 5. In-place update with user-modified file (conflict) ==="
 # User modifies an owned file in S4_DST
 echo "MODIFIED" >> "$S4_DST/file.txt"
-orig_hash="$("$PY" -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$S4_DST/file.txt")"
+orig_hash="$("$PY" -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$(to_native_path "$S4_DST/file.txt")")"
 
 set +e
 out="$("$PY" "$HELPER" upgrade "$S4_SRC" "$S4_DST" 2>&1)"
@@ -255,7 +282,7 @@ rc=$?
 set -e
 ck 3 "$rc" "user-modified owned file triggers exit 3 (conflict)"
 
-curr_hash="$("$PY" -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$S4_DST/file.txt")"
+curr_hash="$("$PY" -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$(to_native_path "$S4_DST/file.txt")")"
 ck "$orig_hash" "$curr_hash" "destination left completely untouched on conflict"
 
 # Restore original content for subsequent tests
@@ -279,13 +306,13 @@ ck "yes" "$c2" "custom file inside managed runner subdir preserved"
 
 # Verify that custom files are NOT in the new ownership receipt
 is_owned="$("$PY" -c '
-import json
-doc = json.load(open("'"$S4_DST"'/manifest-hashes.json"))
+import json, sys
+doc = json.load(open(sys.argv[1], "r", encoding="utf-8"))
 files = doc.get("files", {})
 assert "custom_root.txt" not in files
 assert "runner/custom_runner.txt" not in files
 print("CLEAN")
-')"
+' "$(to_native_path "$S4_DST/manifest-hashes.json")")"
 ck "CLEAN" "$is_owned" "custom files excluded from manifest-hashes.json"
 
 echo "=== 7. Retired files: unmodified pruned, modified preserved ==="
@@ -363,9 +390,9 @@ def mock_rename(s, d):
     return orig_rename(s, d)
 
 with mock.patch.object(installer_helper, "_rename", side_effect=mock_rename):
-    rc = installer_helper.cmd_upgrade("'"$S9_SRC"'", "'"$S9_DST"'")
+    rc = installer_helper.cmd_upgrade(sys.argv[1], sys.argv[2])
     sys.exit(rc)
-' 2>&1)"
+' "$(to_native_path "$S9_SRC")" "$(to_native_path "$S9_DST")" 2>&1)"
 rc=$?
 set -e
 ck 6 "$rc" "promotion failure returns exit 6"
@@ -390,9 +417,9 @@ def mock_rename(s, d):
 
 with mock.patch.object(installer_helper, "verify_tree", side_effect=installer_helper.Fail("io", "injected verify fail")):
     with mock.patch.object(installer_helper, "_rename", side_effect=mock_rename):
-        rc = installer_helper.cmd_upgrade("'"$S9_SRC"'", "'"$S9_DST"'")
+        rc = installer_helper.cmd_upgrade(sys.argv[1], sys.argv[2])
         sys.exit(rc)
-' 2>&1)"
+' "$(to_native_path "$S9_SRC")" "$(to_native_path "$S9_DST")" 2>&1)"
 rc=$?
 set -e
 ck 6 "$rc" "quarantine failure returns exit 6"
@@ -455,17 +482,22 @@ set -e
 ck 3 "$s_conf_rc" "install.sh update conflict fails with exit code 3"
 
 # 10.6 No-Python update safety refusal
-# Run with a restricted PATH containing standard POSIX tools but NO python
-RESTRICTED_BIN="$SCRATCH/restricted_bin"
-mkdir -p "$RESTRICTED_BIN"
-for cmd in bash cp mv rm ls mkdir dirname find mktemp chmod cat echo test [ rmdir; do
-  p="$(command -v "$cmd" 2>/dev/null || true)"
-  [ -n "$p" ] && ln -s "$p" "$RESTRICTED_BIN/$cmd"
-done
+# Simulate missing Python by shadowing python3 and python with failing shims
+NOPY_SHIM="$SCRATCH/nopy_shim"
+mkdir -p "$NOPY_SHIM"
+printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python3"
+printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python"
+chmod +x "$NOPY_SHIM/python3" "$NOPY_SHIM/python"
+if [ "$IS_WINDOWS" = yes ]; then
+  # On Windows, shadow python.exe and python3.exe as well
+  printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python3.exe"
+  printf '#!/bin/sh\nexit 127\n' > "$NOPY_SHIM/python.exe"
+  chmod +x "$NOPY_SHIM/python3.exe" "$NOPY_SHIM/python.exe"
+fi
 
 # Try update on existing install without python
 set +e
-PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global omp >/dev/null 2>&1
+PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global omp >/dev/null 2>&1
 no_py_update_rc=$?
 set -e
 ck 1 "$no_py_update_rc" "no-Python update fails loudly with exit 1"
@@ -474,7 +506,7 @@ ck 1 "$no_py_update_rc" "no-Python update fails loudly with exit 1"
 FAKE_HOME_NOPY="$SCRATCH/fake_home_nopy"
 mkdir -p "$FAKE_HOME_NOPY"
 set +e
-out="$(PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME_NOPY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
+out="$(PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME_NOPY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
 no_py_fresh_rc=$?
 set -e
 ck 0 "$no_py_fresh_rc" "no-Python fresh install succeeds with exit 0"
@@ -488,7 +520,7 @@ echo "=== 11. Pre-mkdir non-creation on traversal refusal ==="
 S11_TARGET="$SCRATCH/s11_target"
 mkdir -p "$S11_TARGET"
 S11_LINK="$SCRATCH/s11_link"
-ln -s "$S11_TARGET" "$S11_LINK"
+make_link "$S11_TARGET" "$S11_LINK"
 S11_NEWPARENT="$SCRATCH/s11_target_newparent"
 
 set +e
@@ -504,7 +536,7 @@ FAKE_HOME_EMPTY="$SCRATCH/fake_home_empty"
 mkdir -p "$FAKE_HOME_EMPTY/.claude/skills/flow"
 
 set +e
-out="$(PATH="$RESTRICTED_BIN" HOME="$FAKE_HOME_EMPTY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
+out="$(PATH="$NOPY_SHIM:$PATH" HOME="$FAKE_HOME_EMPTY" bash "$TEST_REPO/install.sh" global claude 2>&1)"
 empty_rc=$?
 set -e
 ck 0 "$empty_rc" "no-Python fresh install over empty directory succeeds (exit 0)"

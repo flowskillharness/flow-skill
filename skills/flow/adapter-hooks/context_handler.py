@@ -123,15 +123,19 @@ if os.name == 'nt':
     def _win_peek_pipe(h_pipe):
         """Peek an open Windows named pipe handle without blocking.
         Returns (avail_bytes, is_eof, err_code)."""
+        try:
+            h_val = int(h_pipe) & 0xFFFFFFFFFFFFFFFF
+            h = wintypes.HANDLE(h_val)
+        except (ValueError, TypeError, OverflowError):
+            return 0, False, 6  # ERROR_INVALID_HANDLE
         avail = wintypes.DWORD(0)
-        res = kernel32.PeekNamedPipe(h_pipe, None, 0, None, byref(avail), None)
+        res = kernel32.PeekNamedPipe(h, None, 0, None, byref(avail), None)
         if not res:
             err = ctypes.get_last_error()
-            if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED):
+            if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED, 38):
                 return 0, True, 0
             return 0, False, err
         return avail.value, False, 0
-
 def utf8_cut(data, cap):
     """Byte cap that never splits a UTF-8 sequence."""
     if len(data) <= cap:
@@ -182,6 +186,15 @@ def read_event():
                     return None, "stdin deadline exceeded before a complete event"
                 avail, is_eof, err = _win_peek_pipe(h_pipe)
                 if is_eof:
+                    try:
+                        while total <= STDIN_MAX + 1:
+                            chunk = os.read(fd, min(65536, STDIN_MAX + 1 - total))
+                            if not chunk:
+                                break
+                            chunks.append(chunk)
+                            total += len(chunk)
+                    except OSError:
+                        pass
                     break
                 if err != 0:
                     # NEVER fallback to blocking os.read; report safe error code
@@ -228,13 +241,17 @@ def read_event():
 payload, reason = read_event()
 if payload is None:
     fail_open("no usable event (%s) - ignoring" % reason)
+def _normalize_win_path(p):
+    if isinstance(p, str) and os.name == 'nt' and len(p) >= 3 and p.startswith('/') and p[1].isalpha() and p[2] == '/':
+        return p[1].upper() + ':' + p[2:]
+    return p
 
 kind = payload.get("hook_event_name")
 if kind not in ("SessionStart", "PreCompact"):
     fail_open("unsupported or missing event class - handles SessionStart and PreCompact "
               "only; ignoring")
 
-proj = payload.get("cwd")
+proj = _normalize_win_path(payload.get("cwd"))
 try:
     real = os.path.realpath(proj) if isinstance(proj, str) and proj else ""
     has_marker = bool(real) and os.path.isdir(real) and (
@@ -251,9 +268,9 @@ if not has_marker:
 
 PROJECT = real
 
-base = os.environ.get("FLOW_SKILL_DIR") or ""
+base = _normalize_win_path(os.environ.get("FLOW_SKILL_DIR") or "")
 if not base:
-    home = os.environ.get("HOME", "")
+    home = _normalize_win_path(os.environ.get("HOME", ""))
     for cand in (os.path.join(home, ".claude", "skills", "flow"),
                  os.path.join(home, ".codex", "skills", "flow"),
                  os.path.join(home, ".agents", "skills", "flow"),
@@ -548,7 +565,8 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             h_out = msvcrt.get_osfhandle(out_fd)
             h_err = msvcrt.get_osfhandle(err_fd)
             streams = {out_fd: (h_out, out_buf), err_fd: (h_err, err_buf)}
-        except (OSError, ValueError):
+        except (OSError, ValueError) as ex:
+            note("WARNING get_osfhandle failed (%s)" % type(ex).__name__)
             streams = {}
             drain_failed = True
 
@@ -561,9 +579,19 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             for fd, (h, buf) in list(streams.items()):
                 avail, is_eof, err = _win_peek_pipe(h)
                 if is_eof:
+                    try:
+                        while True:
+                            chunk = os.read(fd, 65536)
+                            if not chunk:
+                                break
+                            if len(buf) < cap:
+                                buf.extend(chunk[:cap - len(buf)])
+                    except OSError:
+                        pass
                     del streams[fd]
                     continue
                 if err != 0:
+                    note("WARNING _win_peek_pipe fd=%d failed (OS error %d)" % (fd, err))
                     drain_failed = True
                     del streams[fd]
                     break
@@ -572,11 +600,13 @@ def drain_capped(proc, cap, pgid, job_holder=None):
                     to_read = min(avail, 65536)
                     try:
                         chunk = os.read(fd, to_read)
-                    except OSError:
+                    except OSError as ex:
+                        note("WARNING os.read fd=%d failed (%s)" % (fd, type(ex).__name__))
                         drain_failed = True
                         del streams[fd]
                         break
                     if not chunk:
+                        note("WARNING os.read fd=%d returned empty with avail=%d" % (fd, avail))
                         drain_failed = True
                         del streams[fd]
                         break
@@ -586,7 +616,7 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             if not did_read and streams and not drain_failed:
                 time.sleep(0.01)
 
-        timed_out = (time.monotonic() >= deadline) or bool(streams)
+        timed_out = (time.monotonic() >= deadline)
         rc = None
         try:
             rem = max(deadline - time.monotonic(), 0.1) if not timed_out else 0.1
@@ -606,15 +636,40 @@ def drain_capped(proc, cap, pgid, job_holder=None):
         else:
             if job_holder and not job_holder.close():
                 rc = 124
-        return rc, bytes(out_buf), bytes(err_buf)
+        res_rc = rc if rc is not None else 1
+        res_out = bytes(out_buf)
+        res_err = bytes(err_buf)
+        if res_rc != 0:
+            note("DEBUG: run_flow exit %s, stdout=%r, stderr=%r" % (res_rc, res_out[:200], res_err[:200]))
+        return res_rc, res_out, res_err
 WIN_GATE_SCRIPT = (
     "import sys, subprocess\n"
     "go = sys.stdin.buffer.read(1)\n"
     "if go != b'G':\n"
     "    sys.exit(125)\n"
-    "p = subprocess.Popen(sys.argv[1:])\n"
-    "sys.exit(p.wait())\n"
+    "try:\n"
+    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL)\n"
+    "    sys.exit(p.wait())\n"
+    "except FileNotFoundError:\n"
+    "    sys.exit(127)\n"
+    "except Exception as ex:\n"
+    "    sys.stderr.write('GATE_ERROR: %s\\n' % ex)\n"
+    "    sys.stderr.flush()\n"
+    "    sys.exit(126)\n"
 )
+def get_bash_executable():
+    cand = os.environ.get("FLOW_BASH")
+    if cand and os.path.isfile(cand):
+        return cand
+    if os.name == 'nt':
+        for git_bash in (
+            os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "Git", "bin", "bash.exe"),
+            os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "Git", "usr", "bin", "bash.exe"),
+            os.path.join(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"), "Git", "bin", "bash.exe"),
+        ):
+            if os.path.isfile(git_bash):
+                return git_bash
+    return "bash"
 
 def run_flow(args):
     proc = None
@@ -629,7 +684,7 @@ def run_flow(args):
         # hook-triggered read-only verb writes no events anywhere; the adapter's sole
         # permitted write remains its own private snapshot.
         env = dict(os.environ)
-        env["FLOW_PROJECT_ROOT"] = PROJECT
+        env["FLOW_PROJECT_ROOT"] = PROJECT.replace("\\", "/") if os.name == 'nt' else PROJECT
         env["FLOW_LOG_DISABLE"] = "1"
         popen_kwargs = {
             "cwd": PROJECT,
@@ -649,7 +704,9 @@ def run_flow(args):
                 return 127, b"", b""
             popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             popen_kwargs["stdin"] = subprocess.PIPE
-            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, "bash", RUNNER] + args
+            runner_arg = RUNNER.replace("\\", "/")
+            bash_bin = get_bash_executable()
+            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, bash_bin, runner_arg] + args
             proc = subprocess.Popen(gate_cmd, **popen_kwargs)
             proc_handle = getattr(proc, "_handle", None)
             if not proc_handle or not assign_process_to_job(job_holder, proc_handle):
