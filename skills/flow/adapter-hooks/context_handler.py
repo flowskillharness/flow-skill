@@ -132,7 +132,7 @@ if os.name == 'nt':
         res = kernel32.PeekNamedPipe(h, None, 0, None, byref(avail), None)
         if not res:
             err = ctypes.get_last_error()
-            if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED):
+            if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED, 38):
                 return 0, True, 0
             return 0, False, err
         return avail.value, False, 0
@@ -552,7 +552,8 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             h_out = msvcrt.get_osfhandle(out_fd)
             h_err = msvcrt.get_osfhandle(err_fd)
             streams = {out_fd: (h_out, out_buf), err_fd: (h_err, err_buf)}
-        except (OSError, ValueError):
+        except (OSError, ValueError) as ex:
+            note("WARNING get_osfhandle failed (%s)" % type(ex).__name__)
             streams = {}
             drain_failed = True
 
@@ -568,6 +569,7 @@ def drain_capped(proc, cap, pgid, job_holder=None):
                     del streams[fd]
                     continue
                 if err != 0:
+                    note("WARNING _win_peek_pipe fd=%d failed (OS error %d)" % (fd, err))
                     drain_failed = True
                     del streams[fd]
                     break
@@ -576,11 +578,13 @@ def drain_capped(proc, cap, pgid, job_holder=None):
                     to_read = min(avail, 65536)
                     try:
                         chunk = os.read(fd, to_read)
-                    except OSError:
+                    except OSError as ex:
+                        note("WARNING os.read fd=%d failed (%s)" % (fd, type(ex).__name__))
                         drain_failed = True
                         del streams[fd]
                         break
                     if not chunk:
+                        note("WARNING os.read fd=%d returned empty with avail=%d" % (fd, avail))
                         drain_failed = True
                         del streams[fd]
                         break
@@ -617,7 +621,9 @@ WIN_GATE_SCRIPT = (
     "if go != b'G':\n"
     "    sys.exit(125)\n"
     "try:\n"
-    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL)\n"
+    "    out_target = getattr(sys.stdout, 'fileno', None) and sys.stdout\n"
+    "    err_target = getattr(sys.stderr, 'fileno', None) and sys.stderr\n"
+    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=out_target, stderr=err_target, close_fds=False)\n"
     "    sys.exit(p.wait())\n"
     "except FileNotFoundError:\n"
     "    sys.exit(127)\n"
