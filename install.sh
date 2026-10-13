@@ -6,35 +6,244 @@
 #                                                   + Antigravity homes     (if ~/.gemini exists):
 #                                                       ~/.gemini/antigravity-cli/skills/flow (CLI)
 #                                                       ~/.gemini/config/skills/flow          (IDE)
-#   bash install.sh global claude|codex|agents|antigravity -> only that one harness
+#                                                   + OMP home              (if ~/.omp/agent/skills exists):
+#                                                       ~/.omp/agent/skills/flow
+#   bash install.sh global claude|codex|agents|antigravity|omp -> only that one harness
 #   bash install.sh project [dir]                -> <dir|cwd>/.claude/skills/flow
+#
+# Safe transactional installation:
+#   - Fresh installs are staged and promoted atomically without destructive pre-deletion.
+#     When Python 3 is available, an ownership receipt (manifest-hashes.json) is generated.
+#     Without Python, fresh installs proceed with POSIX staging and emit an advisory.
+#   - In-place updates of existing destinations REQUIRE Python 3 (stdlib only helper) to
+#     enforce strict ownership, preserve user custom files, prune retired files, detect
+#     conflicts, and execute transactional swap with rollback. If Python 3 is absent on an
+#     existing destination, the update fails loudly and the original tree is left untouched.
+#
 # Re-run after any update to re-sync every harness (the repo is the single source of truth).
 # Windows: run under Git Bash. Claude Code invokes it as /flow; Codex CLI as $flow.
 set -eu
+
+export PYTHONDONTWRITEBYTECODE=1
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="$HERE/skills/flow"
 MODE="${1:-global}"
 
 [ -f "$SRC/SKILL.md" ] || { echo "FAIL: skill source not found at $SRC"; exit 1; }
+[ -d "$SRC" ] || { echo "FAIL: skill source directory missing at $SRC"; exit 1; }
 
-install_to() {
+HELPER="$SRC/runner/installer_helper.py"
+
+select_py() {
+  PY=""
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' >/dev/null 2>&1; then
+        PY="$candidate"
+        return 0
+      fi
+    fi
+  done
+}
+
+validate_path_no_symlinks() {
+  target="$1"
+  label="$2"
+  [ -n "$target" ] || { echo "FAIL: $label path is empty"; exit 1; }
+
+  # Reject dotdot relative traversals strictly in raw input
+  case "$target" in
+    *"/../"*|*"../"*|*"/.."|"..")
+      echo "FAIL: $label path containing '..' relative traversal refused: $target"
+      exit 1
+      ;;
+  esac
+
+  # If relative, validate cwd ancestry first
+  if [ "${target#/}" = "$target" ]; then
+    curr="$PWD"
+    pcheck="$curr"
+    while [ "$pcheck" != "/" ] && [ "$pcheck" != "." ]; do
+      if [ -L "$pcheck" ]; then
+        echo "FAIL: current directory component is a symlink: $pcheck"
+        exit 1
+      fi
+      pcheck="$(dirname "$pcheck")"
+    done
+    prefix="$target"
+  else
+    curr=""
+    prefix="${target#/}"
+  fi
+
+  # Walk segments component by component before any mkdir or resolution
+  old_ifs="$IFS"
+  IFS='/'
+  set -f
+  # shellcheck disable=SC2086
+  set -- $prefix
+  set +f
+  IFS="$old_ifs"
+
+  for seg in "$@"; do
+    [ -z "$seg" ] || [ "$seg" = "." ] && continue
+    curr="$curr/$seg"
+    if [ -L "$curr" ]; then
+      echo "FAIL: $label symlink component refused: $curr"
+      exit 1
+    fi
+  done
+}
+
+check_source_tree() {
+  validate_path_no_symlinks "$SRC" "source"
+  if [ ! -d "$SRC" ] || [ -L "$SRC" ]; then
+    echo "FAIL: source is not a real directory: $SRC"
+    exit 1
+  fi
+  sl="$(find "$SRC" -type l -print)"
+  if [ -n "$sl" ]; then
+    echo "FAIL: source contains symlinks which are refused:"
+    echo "$sl"
+    exit 1
+  fi
+  spec="$(find "$SRC" ! -type d ! -type f)"
+  if [ -n "$spec" ]; then
+    echo "FAIL: source contains non-regular entries which are refused:"
+    echo "$spec"
+    exit 1
+  fi
+}
+
+# Verify that an existing destination has files
+is_nonempty_dir() {
+  d="$1"
+  if [ -d "$d" ] && [ ! -L "$d" ]; then
+    contents="$(ls -A "$d" 2>/dev/null)" || return 1
+    [ -n "$contents" ]
+  else
+    return 1
+  fi
+}
+
+# POSIX-only fresh install staging when Python is not available
+posix_fresh_install() {
   dest="$1"
-  mkdir -p "$dest"
-  # clean stale runtime artifacts but keep the destination dir
-  rm -rf "$dest"/_templates "$dest"/law "$dest"/references "$dest"/runner "$dest"/harness "$dest"/playbooks 2>/dev/null || true
-  cp -r "$SRC/." "$dest/"
-  chmod +x "$dest/runner/flow.sh" 2>/dev/null || true
+  validate_path_no_symlinks "$dest" "destination"
+  check_source_tree
+
+  dparent="$(dirname "$dest")"
+  validate_path_no_symlinks "$dparent" "destination parent"
+  mkdir -p "$dparent"
+
+  stage="$(mktemp -d "${dparent}/.flow-skill-stage-XXXXXX")"
+  backup_slot=""
+
+  cleanup_posix_fresh() {
+    rm -rf "$stage"
+    if [ -n "$backup_slot" ] && [ -d "$backup_slot" ] && [ ! -e "$dest" ]; then
+      mv "$backup_slot" "$dest" 2>/dev/null || true
+    fi
+  }
+  trap cleanup_posix_fresh EXIT INT TERM
+
+  cp -R "$SRC/." "$stage/"
+  chmod +x "$stage/runner/flow.sh" 2>/dev/null || true
+
+  # Handle existing destination after stage is fully populated
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    if [ -L "$dest" ]; then
+      echo "FAIL: destination is a symlink: $dest"
+      exit 1
+    fi
+    if [ ! -d "$dest" ]; then
+      echo "FAIL: destination exists and is not a regular directory: $dest"
+      exit 1
+    fi
+    content="$(ls -A "$dest")" || { echo "FAIL: cannot inspect destination: $dest"; exit 1; }
+    if [ -n "$content" ]; then
+      echo "FAIL: destination exists and is not empty: $dest"
+      exit 1
+    fi
+
+    # Backup empty directory via rename rather than deleting it
+    backup_slot="$(mktemp -d "${dparent}/.flow-skill-backup-XXXXXX")"
+    rmdir "$backup_slot"
+    mv "$dest" "$backup_slot"
+  fi
+
+  if ! mv "$stage" "$dest"; then
+    echo "FAIL: promotion mv failed for $dest"
+    exit 1
+  fi
+
+  # Promotion succeeded: remove backup of empty dir
+  if [ -n "$backup_slot" ] && [ -d "$backup_slot" ]; then
+    rmdir "$backup_slot" 2>/dev/null || true
+    backup_slot=""
+  fi
+  trap - EXIT INT TERM
+
+  echo "NOTE: Python 3 not found - installed without ownership receipt; future in-place updates will refuse unknown file collisions."
   echo "installed flow -> $dest"
   LAST="$dest"
 }
 
-usage() { echo "usage: bash install.sh [global [claude|codex|agents|antigravity|all] | project [dir]]"; }
+install_to() {
+  dest="$1"
+  # Validate raw path before ANY directory creation or helper invocation
+  validate_path_no_symlinks "$dest" "destination"
 
-# v0.23 A0 fix — the reported symptom: a user installs to a non-Claude agent, opens it, types
-# /flow, and sees nothing, because a freshly-installed skill isn't discovered until the agent
-# reloads. The old static Done line only told Claude+Codex users what to do; track which
-# targets actually got installed so every one of them gets its own restart/reload hint.
+  select_py
+
+  if is_nonempty_dir "$dest"; then
+    # In-place update of an existing destination: REQUIRED Python 3 full transaction
+    if [ -z "$PY" ]; then
+      echo "FAIL: updating an existing flow install requires Python 3 (ownership-receipt transaction); destination left untouched: $dest"
+      exit 1
+    fi
+    if [ ! -f "$HELPER" ]; then
+      echo "FAIL: installer helper missing at $HELPER"
+      exit 1
+    fi
+
+    # Run single-process upgrade transaction
+    set +e
+    out="$("$PY" "$HELPER" upgrade "$SRC" "$dest" 2>&1)"
+    rc=$?
+    set -e
+    if [ $rc -ne 0 ]; then
+      echo "FAIL: update failed for $dest (exit code $rc):"
+      echo "$out"
+      exit $rc
+    fi
+    echo "installed flow -> $dest"
+    LAST="$dest"
+  else
+    # Fresh install (destination missing or empty)
+    if [ -n "$PY" ] && [ -f "$HELPER" ]; then
+      set +e
+      out="$("$PY" "$HELPER" upgrade "$SRC" "$dest" 2>&1)"
+      rc=$?
+      set -e
+      if [ $rc -ne 0 ]; then
+        echo "FAIL: fresh install via helper failed for $dest (exit code $rc):"
+        echo "$out"
+        exit $rc
+      fi
+      echo "installed flow -> $dest"
+      LAST="$dest"
+    else
+      posix_fresh_install "$dest"
+    fi
+  fi
+}
+
+usage() {
+  echo "usage: bash install.sh [global [claude|codex|agents|antigravity|omp|all] | project [dir]]"
+}
+
 INSTALLED=""
 done_line() {
   out="Done."
@@ -44,6 +253,7 @@ done_line() {
       codex)       out="$out Codex CLI: type \$flow (restart Codex once to load a new skill) |" ;;
       antigravity) out="$out Antigravity: restart/reload the IDE (or restart agy) to load the new skill, then type /flow |" ;;
       agents)      out="$out Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills |" ;;
+      omp)         out="$out OMP: restart/reload your agent to load the new skill, then invoke flow |" ;;
     esac
   done
   echo "${out% |}"
@@ -71,8 +281,13 @@ case "$MODE" in
     # antigravity (Gemini): same SKILL.md bundle; two global homes (CLI + IDE) under ~/.gemini
     if [ "$TARGET" = "antigravity" ] || { [ "$TARGET" = "all" ] && [ -d "${HOME}/.gemini" ]; }; then
       install_to "${HOME}/.gemini/antigravity-cli/skills/flow"   # agy CLI global
-      install_to "${HOME}/.gemini/config/skills/flow"            # Antigravity IDE global
       INSTALLED="$INSTALLED antigravity"
+      install_to "${HOME}/.gemini/config/skills/flow"            # Antigravity IDE global
+    fi
+    # omp: explicit target or autodetected only when ~/.omp/agent/skills exists (never bare ~/.omp)
+    if [ "$TARGET" = "omp" ] || { [ "$TARGET" = "all" ] && [ -d "${HOME}/.omp/agent/skills" ]; }; then
+      install_to "${HOME}/.omp/agent/skills/flow"
+      INSTALLED="$INSTALLED omp"
     fi
     [ -n "$LAST" ] || { echo "FAIL: unknown target '$TARGET'"; usage; exit 1; }
     ;;
@@ -86,6 +301,8 @@ esac
 
 echo
 # run the real cross-platform doctor from a freshly installed runner
-bash "$LAST/runner/flow.sh" doctor || true
+if [ -n "$LAST" ] && [ -f "$LAST/runner/flow.sh" ]; then
+  bash "$LAST/runner/flow.sh" doctor || true
+fi
 echo
 done_line
