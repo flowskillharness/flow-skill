@@ -2,6 +2,14 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **`omp` install target:** explicit `--target omp` installs the skill to `~/.omp/agent/skills/flow` (created on demand, same as explicit codex/claude); autodetection requires the genuine skills dir `~/.omp/agent/skills` — bare `~/.omp` (logs/cache/run state) never triggers detection, mirroring the cursor/antigravity bare-dir guards. Project scope unchanged (`claude` only; `--project -t omp` exits 2). OMP has its own post-install restart/reload hint. Marker and destination verified against a live OMP host (`~/.omp/agent/skills` is the real skills home; `~/.omp/skills` does not exist).
+
+### Changed
+- **Transactional ownership installer (npm channel):** upgrades no longer delete managed subdirectories before copying. Every install/update is a transaction: strict input validation (disjoint source/dest, no ancestor/dest/source symlinks, no special files) → read-only ownership survey against the previous `manifest-hashes.json` receipt (user-modified owned files abort with an explicit conflict list before anything is touched; receipt/root mismatches refuse; legacy unreceipted destinations collide-refuse on differing bytes) → staged candidate preserving all user-created files (inside managed dirs too) and pruning only unmodified retired files → rename-only backup, rename-promote, promoted-tree verification against the staged expectation, backup removal only after verification. Promotion/verification failure restores the original; a failed restore keeps the backup and reports `recoveryPath` (structured field in `install:done` JSONL and a human recovery line). The installed receipt is always freshly generated from the staged bytes and owns only new source files — preserved customs are never pruned by future upgrades. No `--force` exists; guarantees hold for returned failures (no crash/kill atomicity). `CLEANUP_SUBDIRS` and the `cleanupSubdirs` parameter were removed (clean cutover).
+
 ## [0.7.7] — 2026-10-12 — ships skill v0.34.0 (stable / latest)
 
 Feature, stability, and brand parity release. Ships skill product **v0.34.0** with PIN v1 status/resume contract, runner concurrency lock guard, C1–C7 runner wave integrity checks, theme-aware brand headers, UX and copy refresh, and cross-platform CI hardening. Note that while the `website/` subtree does not ship to npm, this release aligns the installer with the upgraded docs, gates elevation, and developer-tool UX. Installer CLI contract unchanged. Publishes to dist-tag **`latest`**.

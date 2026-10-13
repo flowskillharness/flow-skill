@@ -109,6 +109,9 @@ The npm channel is the **canonical distribution** for cross-platform adoption (p
 ### Bundled Tree Receipt Integrity
 The npm installer co-ships `skills/flow/manifest-hashes.json` generated during `sync.mjs`. `flow doctor` validates every bundled file against this receipt (detecting missing files, post-install drift, symlink substitutions, or unsafe path traversals with loud FAIL, while skipping with an advisory message on un-receipted local dev checkouts).
 
+### Transactional Ownership Upgrades (npm channel)
+The installer's receipt is also the upgrade ownership ledger: each install/update validates inputs strictly (disjoint trees, no source/dest/ancestor symlinks, no special files), surveys the destination read-only against the previous receipt (user-modified owned files, receipt/root mismatches, and legacy differing-byte collisions refuse before any mutation), stages a candidate that preserves all user-created files and prunes only unmodified retired files, then swaps via rename-only backup → promote → promoted-tree verification against the staged expectation, removing the backup only after verification. Failures restore the original; a failed restore keeps the backup and reports `recoveryPath` in the `install:done` JSONL event. The installed receipt is regenerated from the staged bytes and owns only new source files.
+
 ### Host Lifecycle Context Adapters (ADR-0001 Addendum)
 Flow provides opt-in, operator-installed lifecycle context adapters (`skills/flow/adapter-hooks/`) invoked by hosting agents (e.g. SessionStart, PreCompact). Handlers execute with zero tool interposition, zero residency/daemons, and fail-open. The sole permitted write is an advisory private snapshot under `<project>/.flow/context-handoff/snapshot.json` (mode 0600 in a 0700 dir, symlink-rejected, size-bounded), enabling post-compaction status continuity without gate mutation.
 

@@ -1,17 +1,19 @@
 import {
   chmodSync,
-  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { createHash, randomBytes } from 'node:crypto';
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
-import { CLEANUP_SUBDIRS } from './constants.mjs';
+export const RECEIPT_NAME = 'manifest-hashes.json';
 
 // L24 — Retry the codes Windows emits when an agent (Claude Code, Codex, Antigravity) holds an
 // open handle inside the destination. EACCES is intentionally excluded: on POSIX it is almost
@@ -57,13 +59,16 @@ export function assertNoSymlinks(root) {
 }
 
 // L29 — Advisory lock: best-effort concurrent-run prevention.
-// Uses `writeFileSync` with `flag: 'wx'` (exclusive-create — fails with EEXIST if the file
-// already exists) so the check + acquire are atomic. The previous TOCTOU version could have
+// Uses `writeFileSync` with `flag: 'wx'` (exclusive-create — fails with EEXIST if the
+// file already exists) so the check + acquire are atomic. The previous TOCTOU version could have
 // two `npx` processes both observe "no lock" and both acquire.
 // Stale-lock recovery: on EEXIST, read the recorded PID; if that PID is dead (ESRCH), remove
 // the file and retry the exclusive-create once. `process.kill(pid, 0)` on a live PID always
 // succeeds, including our own PID — so a re-entrant call sees "held" and refuses, which is
 // the correct behavior (install() is not re-entrant-safe).
+// Accepted same-uid limitation (documented in SECURITY.md): the lock path is predictable and an
+// existing path is read to decide staleness; a local same-uid attacker could pre-place it. No
+// malicious-same-uid filesystem safety is claimed anywhere in this installer.
 export function acquireLock(lockPath) {
   mkdirSync(dirname(lockPath), { recursive: true });
   try {
@@ -111,24 +116,393 @@ export function releaseLock(lockPath) {
   }
 }
 
-// Core install — parity with install.sh:24-27:
-//   rm -rf <dest>/{runner,_templates,law,references,harness,playbooks}
-//   cp -r <sourceDir>/. <dest>/
-//   chmod +x <dest>/runner/flow.sh
-// This intentionally preserves any user files in <dest> outside the 6 cleanup subdirs.
+// ---------------------------------------------------------------------------
+// Ownership receipt (manifest-hashes.json) — strict contract, mirrors what
+// `flow doctor` enforces on an installed tree.
+// ---------------------------------------------------------------------------
+
+function sha256File(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+// Canonical relative path: POSIX separators, no absolute form, no drive colon, no empty or
+// `.`/`..` segments (same rules as doctor_helper.py verify-receipt).
+function assertCanonicalRel(p) {
+  if (typeof p !== 'string' || p.length === 0) return 'empty path';
+  if (p.includes('\\')) return 'backslash in path';
+  if (p.includes(':')) return 'drive colon in path';
+  if (isAbsolute(p) || p.startsWith('/') || p.startsWith('~')) return 'absolute path';
+  const segs = p.split('/');
+  for (const s of segs) {
+    if (s.length === 0) return 'empty segment';
+    if (s === '.' || s === '..') return 'traversal segment';
+  }
+  return null;
+}
+
+// Duplicate-key check (SEMANTIC pass, runs only after JSON.parse already proved the
+// grammar): a small token-aware recursive-descent walker. Strings are lexed with escape
+// handling and each key token is decoded via JSON.parse of the raw token, so `"files"` and
+// `"\u0066iles"` collide exactly as they do after parsing. Objects track a decoded-key Set
+// per level; arrays walk values (never keys); string values are lexed and skipped without
+// recording; primitives are skipped - grammar is already proven, so the walker only needs
+// structure. Throws EDUPKEY on any repeated object key.
+function rejectDuplicateKeys(text) {
+  let i = 0;
+
+  function skipString() {
+    const start = i; // text[i] is the opening quote
+    i++;
+    while (i < text.length) {
+      const c = text[i];
+      if (c === '\\') {
+        i += 2;
+        continue;
+      }
+      if (c === '"') {
+        i++;
+        return text.slice(start, i);
+      }
+      i++;
+    }
+    throw new Error('unterminated string');
+  }
+
+  function parseValue() {
+    while (i < text.length && /\s/.test(text[i])) i++;
+    const c = text[i];
+    if (c === '{') return parseObject();
+    if (c === '[') return parseArray();
+    if (c === '"') {
+      const tok = skipString();
+      JSON.parse(tok); // validate the escape sequence itself
+      return;
+    }
+    while (i < text.length && !/[,\]}]/.test(text[i])) i++;
+  }
+
+  function parseObject() {
+    i++; // consume '{'
+    const keys = new Set();
+    for (;;) {
+      while (i < text.length && /\s/.test(text[i])) i++;
+      if (text[i] === '}') { i++; return; }
+      if (text[i] === ',') { i++; continue; }
+      if (text[i] !== '"') throw new Error('expected object key string');
+      const rawKey = skipString();
+      let decoded;
+      try {
+        decoded = JSON.parse(rawKey);
+      } catch {
+        throw new Error('malformed key escape');
+      }
+      if (typeof decoded !== 'string') throw new Error('non-string object key');
+      if (keys.has(decoded)) {
+        const err = new Error(`duplicate key in receipt JSON: ${decoded}`);
+        err.code = 'EDUPKEY';
+        throw err;
+      }
+      keys.add(decoded);
+      while (i < text.length && /\s/.test(text[i])) i++;
+      if (text[i] !== ':') throw new Error('expected colon after key');
+      i++;
+      parseValue();
+    }
+  }
+
+  function parseArray() {
+    i++; // consume '['
+    for (;;) {
+      while (i < text.length && /\s/.test(text[i])) i++;
+      if (text[i] === ']') { i++; return; }
+      if (text[i] === ',') { i++; continue; }
+      parseValue();
+    }
+  }
+
+  parseValue();
+}
+
+// Prototype-less data map: untrusted keys like `__proto__` stay plain data (no inherited
+// reads, no setter collisions).
+function nullProtoMap(obj) {
+  const out = Object.create(null);
+  for (const k of Object.keys(obj)) out[k] = obj[k];
+  return out;
+}
+
+// Parse + validate a receipt document. Throws Error with a precise message on any violation.
+export function readOwnershipReceipt(root, receiptPath = join(root, RECEIPT_NAME)) {
+  let st;
+  try {
+    st = lstatSync(receiptPath);
+  } catch {
+    throw new Error(`ownership receipt missing: ${receiptPath}`);
+  }
+  if (st.isSymbolicLink()) throw new Error(`ownership receipt must not be a symlink: ${receiptPath}`);
+  if (!st.isFile()) throw new Error(`ownership receipt is not a regular file: ${receiptPath}`);
+  const text = readFileSync(receiptPath, 'utf8');
+  // Grammar first (a malformed document must not reach the structure walker), then the
+  // duplicate-key walk over the proven-valid token stream.
+  let doc;
+  try {
+    doc = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`ownership receipt is not valid JSON: ${err.message}`);
+  }
+  rejectDuplicateKeys(text);
+  if (doc?.schema_version !== 1) throw new Error(`receipt schema_version must be 1`);
+  const files = doc.files;
+  if (!files || typeof files !== 'object' || Array.isArray(files)) {
+    throw new Error(`receipt "files" map missing`);
+  }
+  const names = Object.keys(files);
+  if (names.length === 0) throw new Error(`receipt lists no files`);
+  const safe = Object.create(null);
+  for (const rel of names) {
+    const bad = assertCanonicalRel(rel);
+    if (bad) throw new Error(`receipt path ${rel}: ${bad}`);
+    const digest = files[rel];
+    if (
+      typeof digest !== 'string' ||
+      digest.length !== 64 ||
+      !/^[0-9a-f]{64}$/.test(digest)
+    ) {
+      throw new Error(`receipt digest for ${rel} is not 64-hex`);
+    }
+    if (rel === RECEIPT_NAME) throw new Error(`receipt must not list itself`);
+    safe[rel] = digest;
+  }
+  return safe;
+}
+
+// Verify every receipted path exists under root as a regular file with the receipted digest.
+// Read-only: never mutates anything. Throws on first mismatch with a precise message.
+export function verifyTreeAgainstReceipt(root, files, { rootLabel = 'tree' } = {}) {
+  for (const rel of Object.keys(files)) {
+    const p = join(root, rel);
+    let st;
+    try {
+      st = lstatSync(p);
+    } catch {
+      throw new Error(`${rootLabel}: receipted file missing: ${rel}`);
+    }
+    if (st.isSymbolicLink() || !st.isFile()) {
+      throw new Error(`${rootLabel}: receipted path is not a regular file: ${rel}`);
+    }
+    const actual = sha256File(p);
+    if (actual !== files[rel]) {
+      throw new Error(`${rootLabel}: digest mismatch for ${rel}`);
+    }
+  }
+}
+
+// Generate ownership receipt content from every regular file in root (excluding the receipt
+// itself). Source tree must already be symlink-free (assertNoSymlinks runs before this).
+export function generateReceipt(root) {
+  const files = manifestFromTree(root);
+  return JSON.stringify({ schema_version: 1, files }, null, 2) + '\n';
+}
+
+// Hash every regular file under root (excluding the receipt itself) into an ownership map.
+// Used for authored source checkouts that ship without a receipt.
+export function manifestFromTree(root) {
+  const files = Object.create(null);
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir)) {
+      const p = join(dir, entry);
+      const rel = prefix ? `${prefix}/${entry}` : entry;
+      if (rel === RECEIPT_NAME) continue;
+      const st = lstatSync(p);
+      if (st.isSymbolicLink()) throw new Error(`symlink rejected: ${p}`);
+      if (st.isDirectory()) walk(p, rel);
+      else if (st.isFile()) files[rel] = sha256File(p);
+    }
+  };
+  walk(root, '');
+  return files;
+}
+
+// Refuse when source and dest resolve to the same tree or one contains the other.
+function assertDisjoint(sourceDir, destDir) {
+  const s = resolve(sourceDir);
+  const d = resolve(destDir);
+  if (s === d) throw new Error(`source and destination are the same directory: ${s}`);
+  if (d.startsWith(s + sep)) throw new Error(`destination ${d} is inside source ${s}`);
+  if (s.startsWith(d + sep)) throw new Error(`source ${s} is inside destination ${d}`);
+}
+
+// Refuse when any ancestor of targetPath (or targetPath itself) is a symlink.
+function assertNoAncestorSymlinks(targetPath) {
+  const abs = resolve(targetPath);
+  const segs = abs.split(sep).filter(Boolean);
+  let cur = abs.startsWith(sep) ? sep : '';
+  for (const seg of segs) {
+    cur = cur === sep || cur === '' ? join(cur, seg) : join(cur, seg);
+    let st;
+    try {
+      st = lstatSync(cur);
+    } catch {
+      return; // nonexistent tail — nothing more to check
+    }
+    if (st.isSymbolicLink()) {
+      throw new Error(`ancestor symlink refused: ${cur}`);
+    }
+  }
+}
+
+// Refuse when any entry inside the destination tree (any depth) is a symlink. lstat-based —
+// a broken symlink is still a symlink and still refused. Runs BEFORE the old receipt is read
+// or any dest byte is hashed.
+function assertNoDestSymlinks(root) {
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir)) {
+      const p = join(dir, entry);
+      const rel = prefix ? `${prefix}/${entry}` : entry;
+      const st = lstatSync(p);
+      if (st.isSymbolicLink()) {
+        const err = new Error(`destination symlink refused: ${rel}`);
+        err.code = 'EDESTSYMLINK';
+        throw err;
+      }
+      if (st.isDirectory()) walk(p, rel);
+    }
+  };
+  walk(root, '');
+}
+
+// Relative paths of destination entries that are neither regular files nor directories nor
+// symlinks (FIFOs, sockets, devices). Symlinks are handled by assertNoDestSymlinks first.
+function listSpecialFiles(root) {
+  const out = [];
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir)) {
+      const p = join(dir, entry);
+      const rel = prefix ? `${prefix}/${entry}` : entry;
+      const st = lstatSync(p);
+      if (st.isDirectory()) walk(p, rel);
+      else if (!st.isFile()) out.push(rel);
+    }
+  };
+  walk(root, '');
+  return out;
+}
+
+function listRelativeFiles(root) {
+  const out = [];
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir)) {
+      const p = join(dir, entry);
+      const rel = prefix ? `${prefix}/${entry}` : entry;
+      const st = lstatSync(p);
+      if (st.isDirectory()) walk(p, rel);
+      else if (st.isFile()) out.push(rel);
+    }
+  };
+  if (existsSync(root)) walk(root, '');
+  return out;
+}
+
+function ensureDir(dir) {
+  mkdirSync(dir, { recursive: true });
+}
+
+// Core install — transactional, ownership-receipt based (replaces the old
+// rm-cleanup-subdirs + merge-copy contract):
+//   1. strict source receipt validation + digest re-verification (read-only)
+//   2. read-only dest survey: conflicts / root mismatch / legacy collisions collected
+//      up front; any hit aborts BEFORE the original destination is touched
+//   3. staged candidate: receipted source files + preserved user customs + preserved
+//      retired-modified files − pruned retired files; fresh receipt generated from the
+//      staged bytes
+//   4. rename-only backup of the existing dest, rename promote, promoted-receipt
+//      verification; backup removed only after verification (never the sole old bytes
+//      on a failure path — a failed restore keeps the backup and reports its path)
+//
+// `io.rename` is the only injection seam (used by failure-path tests); production callers
+// never pass it.
 export function install({
   sourceDir,
   destDir,
-  cleanupSubdirs = CLEANUP_SUBDIRS,
   dryRun = false,
+  io = { rename: (a, b) => withRetry(() => renameSync(a, b)) },
 }) {
   if (dryRun) return { success: true, dest: destDir, dryRun: true, warnings: [] };
 
+  const rename = io.rename;
   const lockPath = join(dirname(destDir), '.flow-skill.installing.lock');
   const warnings = [];
   let lockHeld = false;
 
   try {
+    // ---- strict input validation (nothing mutated, no dirs created yet) ------
+    // All source/dest type + path validation happens BEFORE the lock is acquired,
+    // because acquireLock() mkdirs the parent and we must not touch the filesystem
+    // before we know the inputs are sane.
+    if (!existsSync(join(sourceDir, 'SKILL.md'))) {
+      throw new Error(
+        `SKILL.md missing in sourceDir=${sourceDir} (did you run 'npm run sync'?)`
+      );
+    }
+    assertDisjoint(sourceDir, destDir);
+
+    const sourceSt = lstatSync(sourceDir);
+    if (sourceSt.isSymbolicLink()) throw new Error(`source is a symlink: ${sourceDir}`);
+    if (!sourceSt.isDirectory()) throw new Error(`source is not a directory: ${sourceDir}`);
+    if (resolve(sourceDir) === resolve(sep)) throw new Error(`source is the filesystem root`);
+
+    let destSt = null;
+    try {
+      destSt = lstatSync(destDir);
+    } catch {
+      /* fresh install */
+    }
+    if (destSt && destSt.isSymbolicLink()) {
+      throw new Error(`destination is a symlink: ${destDir}`);
+    }
+    if (destSt && !destSt.isDirectory()) {
+      throw new Error(`destination exists and is not a directory: ${destDir}`);
+    }
+    if (resolve(destDir) === resolve(sep)) throw new Error(`destination is the filesystem root`);
+    assertNoAncestorSymlinks(destDir);
+    assertNoSymlinks(sourceDir);
+
+    // Source ownership manifest. Policy (director-authorized): an authored source checkout
+    // WITHOUT a receipt is acceptable — build the manifest by hashing the read-only source
+    // bytes. A receipt that EXISTS must be strictly valid and digest-verified; invalid →
+    // reject. The installed dest gets no such allowance (legacy collision guard below).
+    let sourceFiles = null;
+    if (existsSync(join(sourceDir, RECEIPT_NAME))) {
+      sourceFiles = readOwnershipReceipt(sourceDir);
+      verifyTreeAgainstReceipt(sourceDir, sourceFiles, { rootLabel: 'source' });
+    } else {
+      sourceFiles = manifestFromTree(sourceDir);
+    }
+
+    // Receipt coverage completeness: the source manifest must describe EXACTLY the source
+    // tree (minus the receipt itself). A subset would silently skip phantom files; extras
+    // would be ownership lies. Either direction → reject.
+    {
+      const diskFiles = new Set(listRelativeFiles(sourceDir));
+      diskFiles.delete(RECEIPT_NAME);
+      const receiptKeys = new Set(Object.keys(sourceFiles));
+      for (const rel of diskFiles) {
+        if (!receiptKeys.has(rel)) {
+          throw new Error(
+            `source receipt does not cover the source tree (unreceiped file present): ${rel}`
+          );
+        }
+      }
+      for (const rel of receiptKeys) {
+        if (!diskFiles.has(rel)) {
+          throw new Error(
+            `source receipt lists a file the source tree does not have (phantom entry): ${rel}`
+          );
+        }
+      }
+    }
+
+    // Inputs are valid — acquire the per-destination advisory lock before the survey/build.
     const lock = acquireLock(lockPath);
     if (lock.held) {
       return {
@@ -140,59 +514,292 @@ export function install({
     }
     lockHeld = true;
 
-    if (!existsSync(join(sourceDir, 'SKILL.md'))) {
-      throw new Error(
-        `SKILL.md missing in sourceDir=${sourceDir} (did you run 'npm run sync'?)`
-      );
-    }
-    // Pre-scan source before touching dest.
-    assertNoSymlinks(sourceDir);
-
-    mkdirSync(destDir, { recursive: true });
-
-    // Cleanup the 6 subdirs — matches install.sh:25.
-    for (const sub of cleanupSubdirs) {
-      const p = join(destDir, sub);
-      if (existsSync(p)) rmRecursiveWithRetry(p);
-    }
-
-    // Merge copy — matches install.sh:26. External files outside CLEANUP_SUBDIRS are preserved.
-    withRetry(() =>
-      cpSync(sourceDir, destDir, {
-        recursive: true,
-        force: true,
-        dereference: false,
-        errorOnBrokenSymbolicLinks: true,
-        preserveTimestamps: true,
-      })
-    );
-
-    // (Post-copy symlink rescan removed) — the source scan above already vets every file we
-    // wrote; scanning the destination additionally rejects legitimate NTFS junctions users
-    // may have placed under `~/.claude/skills/flow/` for their own reasons. install.sh does
-    // not have this restriction (`cp -r` merges over junctions fine) and the parity contract
-    // says we don't either.
-
-    // chmod +x runner/flow.sh — matches install.sh:27. No-op on Windows (NTFS ignores the bit).
-    const runnerScript = join(destDir, 'runner', 'flow.sh');
-    if (existsSync(runnerScript)) {
-      try {
-        chmodSync(runnerScript, 0o755);
-      } catch (err) {
-        warnings.push(`chmod +x runner/flow.sh failed: ${err.message}`);
+    // ---- read-only dest survey ----------------------------------------------
+    const destExists = Boolean(destSt);
+    let oldFiles = null; // null = no old receipt (fresh or legacy dest)
+    let legacyDest = false;
+    if (destExists) {
+      // Refuse ANY symlink in the destination tree BEFORE reading the old receipt or hashing
+      // anything — hashing through a link would validate the redirect target, not the tree,
+      // and a skipped user symlink would be destroyed by the swap.
+      assertNoDestSymlinks(destDir);
+      // Receipt presence must use lstat (no-follow): a broken symlink at the receipt path is
+      // still a receipt-shaped file and must be rejected, never downgraded to "legacy dest".
+      const receiptSt = lstatSync(join(destDir, RECEIPT_NAME), { throwIfNoEntry: false });
+      if (receiptSt !== undefined) {
+        oldFiles = readOwnershipReceipt(destDir); // throws on invalid → dest untouched
+        delete oldFiles[RECEIPT_NAME]; // old receipt is replaced, never a custom
+      } else {
+        legacyDest = true; // genuinely no receipt at all
       }
     }
 
-    return { success: true, dest: destDir, warnings };
+    const conflicts = [];
+    const retiredRemoved = [];
+    const retiredPreserved = [];
+    const preserved = [];
+    const newSet = new Set(Object.keys(sourceFiles));
+    newSet.delete(RECEIPT_NAME); // the candidate always gets a freshly generated receipt
+
+    if (destExists) {
+      // Non-regular, non-directory special files (FIFOs, sockets, devices) cannot be copied
+      // into the candidate; ignoring them would destroy them in the swap. Refuse explicitly.
+      for (const rel of listSpecialFiles(destDir)) {
+        conflicts.push(`destination special file refused: ${rel}`);
+      }
+      for (const rel of Object.keys(oldFiles ?? {})) {
+        const destPath = join(destDir, rel);
+        const st = lstatSync(destPath, { throwIfNoEntry: false });
+        if (st === undefined) {
+          conflicts.push(`receipted file missing from destination (receipt/root mismatch): ${rel}`);
+          continue;
+        }
+        if (!st.isFile()) {
+          conflicts.push(`receipted path is not a regular file: ${rel}`);
+          continue;
+        }
+        const disk = sha256File(destPath);
+        if (disk !== oldFiles[rel]) {
+          if (!newSet.has(rel)) {
+            // retired and user-modified → preserved into candidate (reported, not deleted)
+            retiredPreserved.push(rel);
+          } else {
+            // still shipped, user modified an owned file → hard conflict
+            conflicts.push(`user-modified owned file: ${rel}`);
+          }
+        } else if (!newSet.has(rel)) {
+          retiredRemoved.push(rel);
+        }
+      }
+      // Unowned-dest-path collision guard, applied for receipted AND legacy dests alike:
+      // a dest file at a path the OLD receipt does not own but the NEW source ships must
+      // either match the new source bytes exactly (idempotent) or refuse as a conflict.
+      for (const rel of newSet) {
+        if (oldFiles && Object.hasOwn(oldFiles, rel)) continue; // owned path handled above
+        const destPath = join(destDir, rel);
+        if (existsSync(destPath) && sha256File(destPath) !== sourceFiles[rel]) {
+          conflicts.push(
+            `${legacyDest ? 'legacy destination' : 'unowned destination file'} collision with differing bytes: ${rel}`
+          );
+        }
+      }
+    }
+    if (conflicts.length) {
+      const err = new Error(
+        `install refused before touching ${destDir}:\n  - ${conflicts.join('\n  - ')}\n` +
+          `Resolve manually (no --force exists by design).`
+      );
+      err.code = 'ECONFLICT';
+      throw err;
+    }
+
+    // ---- build staged candidate ---------------------------------------------
+    const destParent = dirname(destDir);
+    ensureDir(destParent);
+    const stageDir = mkdtempSync(join(destParent, '.flow-skill-stage-')); // private 0700, random
+    const backupSlot = join(destParent, `.flow-skill-backup-${randomBytes(8).toString('hex')}`);
+    const failedSlot = join(destParent, `.flow-skill-failed-${randomBytes(8).toString('hex')}`);
+
+    try {
+      // Copy ONLY the new source-owned files; verify every staged copy byte-for-byte against
+      // the source manifest (guards against disk/copy corruption before any swap happens).
+      const stagedReceipt = Object.create(null);
+      for (const rel of newSet) {
+        const src = join(sourceDir, rel);
+        const dst = join(stageDir, rel);
+        ensureDir(dirname(dst));
+        writeFileSync(dst, readFileSync(src));
+        const stagedDigest = sha256File(dst);
+        if (stagedDigest !== sourceFiles[rel]) {
+          throw new Error(`staged copy of ${rel} does not match verified source bytes`);
+        }
+        stagedReceipt[rel] = stagedDigest;
+      }
+      if (destExists) {
+        // preserve user-modified retired files + all unowned customs (anywhere in dest) —
+        // for receipted AND legacy (no-old-receipt) destinations alike; the old receipt
+        // file itself is replaced by the fresh one, never preserved
+        for (const rel of retiredPreserved) {
+          const dst = join(stageDir, rel);
+          ensureDir(dirname(dst));
+          writeFileSync(dst, readFileSync(join(destDir, rel)));
+        }
+        for (const rel of listRelativeFiles(destDir)) {
+          if (
+            rel === RECEIPT_NAME ||
+            (oldFiles && Object.hasOwn(oldFiles, rel)) ||
+            newSet.has(rel) ||
+            retiredPreserved.includes(rel)
+          ) {
+            continue;
+          }
+          const dst = join(stageDir, rel);
+          ensureDir(dirname(dst));
+          writeFileSync(dst, readFileSync(join(destDir, rel)));
+          preserved.push(rel);
+        }
+      }
+      // The fresh receipt owns ONLY the new source-owned files (digests from the staged
+      // copies). Preserved customs / modified-retired files are deliberately NOT in it —
+      // otherwise a future upgrade would prune the user's own files as stale.
+      writeFileSync(
+        join(stageDir, RECEIPT_NAME),
+        JSON.stringify({ schema_version: 1, files: stagedReceipt }, null, 2) + '\n'
+      );
+      const runnerScript = join(stageDir, 'runner', 'flow.sh');
+      if (existsSync(runnerScript)) {
+        try {
+          chmodSync(runnerScript, 0o755);
+        } catch (err) {
+          warnings.push(`chmod +x runner/flow.sh failed: ${err.message}`);
+        }
+      }
+
+      // ---- atomic swap with recovery ----------------------------------------
+      // Promote AND verify inside one recovery scope: any failure (rename or post-promote
+      // receipt verification) first quarantines the known bad candidate, then restores the
+      // original via rename. The backup is NEVER cleaned up on a failure path.
+      let backupPath = null;
+      if (destExists) {
+        rename(destDir, backupSlot);
+        backupPath = backupSlot;
+      }
+      try {
+        rename(stageDir, destDir);
+        // Verify the promoted tree against the IMMUTABLE expected receipt (stagedReceipt):
+        // self-consistency of whatever JSON sits in dest would accept a corrupted or
+        // substituted candidate. Keyset equality + per-key digest equality + byte digests.
+        const promoted = readOwnershipReceipt(destDir);
+        const promotedKeys = Object.keys(promoted).sort();
+        const expectedKeys = Object.keys(stagedReceipt).sort();
+        if (
+          promotedKeys.length !== expectedKeys.length ||
+          promotedKeys.some((k, i) => k !== expectedKeys[i])
+        ) {
+          throw new Error(
+            `promoted receipt keyset differs from staged expectation ` +
+              `(promoted ${promotedKeys.length}, expected ${expectedKeys.length})`
+          );
+        }
+        for (const rel of expectedKeys) {
+          if (promoted[rel] !== stagedReceipt[rel]) {
+            throw new Error(`promoted receipt digest differs from staged expectation: ${rel}`);
+          }
+        }
+        verifyTreeAgainstReceipt(destDir, stagedReceipt, { rootLabel: 'installed' });
+      } catch (swapErr) {
+        // Quarantine the known bad candidate by RENAME ONLY. If the rename fails, the
+        // candidate stays exactly where it is: we never restore onto an occupied
+        // destination and never recursively delete at the destination path (a same-uid
+        // concurrent actor must not be able to turn a recovery path into a deletion).
+        let quarantined = false;
+        let candidateGone = !existsSync(destDir);
+        if (!candidateGone) {
+          try {
+            rename(destDir, failedSlot);
+            quarantined = true;
+            candidateGone = true;
+          } catch {
+            // leave the failed candidate at destDir; report it as failedCandidatePath
+          }
+        }
+        let restored = false;
+        let restoreErr = null;
+        if (backupPath && candidateGone) {
+          // Restore only onto a now-empty destination path.
+          try {
+            rename(backupPath, destDir);
+            restored = true;
+          } catch (err) {
+            restoreErr = err;
+          }
+        }
+        if (backupPath && !restored) {
+          // Rollback impossible (restore rename failed, or destination still occupied by
+          // the quarantined candidate): KEEP the backup (sole old bytes) and report both
+          // paths as DATA — no executable inline command, no inferred state.
+          try {
+            rmSync(stageDir, { recursive: true, force: true });
+          } catch {
+            /* ignore */
+          }
+          return {
+            success: false,
+            dest: destDir,
+            code: 'EROLLBACK',
+            recoveryPath: backupPath,
+            failedCandidatePath: quarantined ? failedSlot : destDir,
+            partialState: quarantined
+              ? 'destination path empty; failed candidate at failedCandidatePath; original tree intact inside recoveryPath'
+              : 'failed candidate still at the destination path (quarantine rename failed); original tree intact inside recoveryPath',
+            error:
+              `transaction failed (${swapErr.message}); rollback not completed ` +
+              `(${restored ? '' : restoreErr?.message ?? (quarantined ? 'destination still occupied by failed candidate' : 'unknown')}); ` +
+              `ORIGINAL DESTINATION PRESERVED AT "${backupPath}"`,
+            warnings,
+          };
+        }
+        try {
+          rmSync(stageDir, { recursive: true, force: true });
+        } catch {
+          /* ignore */
+        }
+        if (quarantined) {
+          // failed candidate moved aside; on a successful restore it holds no user bytes we
+          // must keep beyond diagnosis — remove it, never touching the restored original.
+          try {
+            rmSync(failedSlot, { recursive: true, force: true });
+          } catch (err) {
+            warnings.push(`failed-candidate cleanup failed (kept at ${failedSlot}): ${err.message}`);
+          }
+        }
+        const e =
+          swapErr?.code === 'ECONFLICT' || swapErr?.code === 'EDUPKEY'
+            ? swapErr
+            : new Error(
+                `transaction failed (${swapErr.message}); ` +
+                  (restored
+                    ? 'original destination restored exactly; candidate removed'
+                    : 'fresh install: candidate removed; no destination remains (no prior destination existed)')
+              );
+        if (e !== swapErr) e.code = swapErr?.code ?? 'ESWAP';
+        throw e;
+      }
+
+      if (backupPath) {
+        try {
+          rmRecursiveWithRetry(backupPath);
+        } catch (err) {
+          warnings.push(`backup cleanup failed (kept at ${backupPath}): ${err.message}`);
+        }
+      }
+      return {
+        success: true,
+        dest: destDir,
+        warnings,
+        files: newSet.size,
+        receiptGenerated: true,
+        preserved,
+        retiredRemoved,
+        retiredPreserved,
+      };
+    } catch (err) {
+      // Best-effort stage cleanup; never remove a backup here (sole old bytes).
+      try {
+        rmSync(stageDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+      throw err;
+    }
   } catch (err) {
     return {
       success: false,
       dest: destDir,
       error: String(err?.message ?? err),
-      warnings: [
-        ...warnings,
-        'state may be inconsistent (partial write); re-run to fix',
-      ],
+      code: err?.code ?? null,
+      recoveryPath: err?.recoveryPath ?? null,
+      warnings,
     };
   } finally {
     if (lockHeld) releaseLock(lockPath);
@@ -200,10 +807,10 @@ export function install({
 }
 
 // L28 (revised per phase-01 review F1) — Antigravity has 2 destinations under one target.
-// install.sh:52-53 makes 2 separate install_to calls with no rollback if the 2nd fails; we
-// mirror that. Rolling back dest 1 destroys the freshly-installed content there and also
-// risks harming anything the user had before install started, so we intentionally do NOT roll
-// back. On dest-2 failure we report partial success and let the user re-run.
+// Each destination is an independent transaction with its own receipt and backup. If the
+// second fails after the first succeeded we do NOT roll back the first; the result says
+// exactly which destinations are installed (per-destination truth, never a global
+// atomic claim). Rolling back dest 1 would destroy freshly-installed valid content.
 export function installAntigravity({ sourceDir, dests, dryRun = false }) {
   if (!Array.isArray(dests) || dests.length === 0) {
     return { success: false, error: 'no destinations provided' };
@@ -213,10 +820,19 @@ export function installAntigravity({ sourceDir, dests, dryRun = false }) {
   const attempts = [];
   for (let i = 0; i < dests.length; i++) {
     const r = install({ sourceDir, destDir: dests[i] });
-    attempts.push({ dest: dests[i], success: r.success, error: r.error ?? null });
+    attempts.push({
+      dest: dests[i],
+      success: r.success,
+      error: r.error ?? null,
+      preserved: r.preserved ?? [],
+      retiredRemoved: r.retiredRemoved ?? [],
+      retiredPreserved: r.retiredPreserved ?? [],
+    });
     if (!r.success) {
       const warnings = attempts.flatMap((a, idx) =>
-        idx < i ? [`dest ${idx + 1} (${dests[idx]}) already installed; not rolled back`] : []
+        idx < i
+          ? [`dest ${idx + 1} (${dests[idx]}) installed successfully with its own receipt; not rolled back`]
+          : []
       );
       return {
         success: false,

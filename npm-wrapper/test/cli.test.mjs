@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
-import { mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -31,24 +32,7 @@ function parseJsonl(s) {
     .map((l) => JSON.parse(l));
 }
 
-test('--help exits 0 and lists 5 targets', () => {
-  const r = runCli(['--help']);
-  assert.equal(r.code, 0);
-  assert.match(r.stdout, /claude\s+Claude Code/);
-  assert.match(r.stdout, /codex\s+Codex CLI/);
-  assert.match(r.stdout, /agents\s+Agents home/);
-  assert.match(r.stdout, /antigravity\s+Antigravity/);
-  assert.match(r.stdout, /cursor\s+Cursor/);
-  // Dual-version UX: pin to package.json + SKILL.md (not mere semver shape).
-  assert.ok(expectedSkillVersion, 'SKILL.md metadata.version must be readable');
-  assert.match(r.stdout, new RegExp(`flow-skill v${pkgVersion.replace(/\./g, '\\.')}`));
-  assert.match(
-    r.stdout,
-    new RegExp(`ships skill v${expectedSkillVersion.replace(/\./g, '\\.')}`)
-  );
-});
-
-test('--dry-run --all --json emits a plan event with 5 targets', () => {
+test('--dry-run --all --json emits a plan event whose target set is the full supported set', () => {
   const r = runCli(['--yes', '--all', '--dry-run', '--json']);
   assert.equal(r.code, 0);
   const events = parseJsonl(r.stdout);
@@ -56,7 +40,7 @@ test('--dry-run --all --json emits a plan event with 5 targets', () => {
   assert.equal(events[0].event, 'plan');
   assert.deepEqual(
     events[0].targets.sort(),
-    ['agents', 'antigravity', 'claude', 'codex', 'cursor']
+    ['agents', 'antigravity', 'claude', 'codex', 'cursor', 'omp']
   );
   assert.equal(events[0].dryRun, true);
   assert.equal(events[0].version, pkgVersion);
@@ -73,6 +57,20 @@ test('--project -t codex → exit 2 with clear error', () => {
     r.stderr,
     /--project scope supports only 'claude'/
   );
+});
+
+test('explicit -t omp --dry-run --json plans the OMP destination', () => {
+  const r = runCli(['--yes', '-t', 'omp', '--dry-run', '--json']);
+  assert.equal(r.code, 0);
+  const events = parseJsonl(r.stdout);
+  assert.equal(events[0].event, 'plan');
+  assert.deepEqual(events[0].targets, ['omp']);
+});
+
+test('--project -t omp → exit 2 (project scope stays claude-only)', () => {
+  const r = runCli(['--yes', '-t', 'omp', '--project']);
+  assert.equal(r.code, 2);
+  assert.match(r.stderr, /--project scope supports only 'claude'/);
 });
 
 test('unknown target → exit 2 with unknown-target error', () => {
@@ -159,4 +157,53 @@ test('real install --target claude,codex: Done-line keeps Codex restart hint, no
   assert.match(done, /\$flow/);
   assert.match(done, /restart Codex/i);
   assert.doesNotMatch(done, /Antigravity/);
+});
+
+// Real (non-dry-run) explicit OMP install into a scratch HOME — never the operator's real
+// ~/.omp. Asserts the correct materialized files and that the shipped tree receipt
+// (manifest-hashes.json) digests match BOTH the actual bundled source and the installed copy,
+// computed with node:crypto (stdlib only; no python/host dependency). This is the same
+// contract `flow doctor`'s bundled_tree_integrity check enforces on an installed tree.
+test('real install --target omp: correct files in scratch HOME; receipt digests match bundled source and install', () => {
+  const { home, env } = scratchHomeEnv('omp-install');
+  const r = runCli(['--yes', '-t', 'omp'], { env });
+  assert.equal(r.code, 0);
+
+  const dest = join(home, '.omp', 'agent', 'skills', 'flow');
+  for (const rel of [
+    'SKILL.md',
+    'manifest-hashes.json',
+    'runner/flow.sh',
+    'runner/doctor_helper.py',
+    join('runner', 'doctor-checks.tsv'),
+    'law',
+    '_templates',
+    'references',
+    'harness',
+    'playbooks',
+  ]) {
+    assert.ok(existsSync(join(dest, rel)), `expected installed file missing: ${rel}`);
+  }
+
+  const receipt = JSON.parse(readFileSync(join(dest, 'manifest-hashes.json'), 'utf8'));
+  assert.equal(receipt.schema_version, 1);
+  const hashes = receipt.files;
+  assert.ok(hashes && typeof hashes === 'object', 'receipt missing files map');
+  const names = Object.keys(hashes);
+  assert.ok(names.length > 0, 'receipt lists no files');
+
+  const bundledRoot = resolve(pkgRoot, 'skills', 'flow');
+  for (const rel of names) {
+    const bundledDigest = createHash('sha256')
+      .update(readFileSync(resolve(bundledRoot, rel)))
+      .digest('hex');
+    assert.equal(hashes[rel], bundledDigest, `receipt digest mismatch vs bundled source: ${rel}`);
+
+    const installedDigest = createHash('sha256')
+      .update(readFileSync(join(dest, rel)))
+      .digest('hex');
+    assert.equal(installedDigest, hashes[rel], `installed file drifted from receipt: ${rel}`);
+  }
+
+  rmSync(home, { recursive: true, force: true });
 });

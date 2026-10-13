@@ -163,6 +163,7 @@ const RESTART_HINTS = {
   // correct advice (same discovery-on-reload mechanism), just without our own live confirmation
   // that the Agent panel picks it up. See README's "After install" section for the caveat.
   cursor: 'Cursor: restart/reload Cursor to load the new skill, then check the Agent panel for flow',
+  omp: 'OMP: restart/reload the runtime to load the new skill, then invoke flow',
 };
 
 function doneLine(targets) {
@@ -342,10 +343,24 @@ async function main() {
         dests: step.dests,
         result: result.success ? 'success' : 'failed',
         error: result.error ?? null,
+        code: result.code ?? null,
+        recoveryPath: result.recoveryPath ?? null,
+        failedCandidatePath: result.failedCandidatePath ?? null,
+        partialState: result.partialState ?? null,
+        preserved: result.preserved ?? [],
+        retiredRemoved: result.retiredRemoved ?? [],
+        retiredPreserved: result.retiredPreserved ?? [],
         warnings: result.warnings ?? [],
       },
       opts.json
     );
+    if (!result.success && result.recoveryPath && !opts.json) {
+      warn(
+        `Recovery: the original destination tree is preserved at "${result.recoveryPath}" — ` +
+          `move it back to the destination path manually.`,
+        false
+      );
+    }
 
     log(humanResult(step.target, { ...result, dests: step.dests }), opts.json);
 

@@ -88,6 +88,7 @@ npx @manhquy/flow-skill@latest --yes --all --dry-run --json
 | `agents` | `~/.agents/skills/flow` | `~/.agents/skills` |
 | `antigravity` | `~/.gemini/antigravity-cli/skills/flow` **và** `~/.gemini/config/skills/flow` | một trong hai path |
 | `cursor` | `~/.cursor/skills/flow` | `~/.cursor/skills` |
+| `omp` | `~/.omp/agent/skills/flow` | `~/.omp/agent/skills` (bare `~/.omp` không bao giờ trigger — chỉ là runtime state) |
 
 `--project` **chỉ** hỗ trợ `claude`. Kết hợp target khác → exit `2`.
 
@@ -133,6 +134,7 @@ rm -rf ~/.agents/skills/flow
 rm -rf ~/.cursor/skills/flow
 rm -rf ~/.gemini/antigravity-cli/skills/flow
 rm -rf ~/.gemini/config/skills/flow
+rm -rf ~/.omp/agent/skills/flow
 # project scope:
 rm -rf <project>/.claude/skills/flow
 ```

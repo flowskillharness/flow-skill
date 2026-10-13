@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "wave": "2",
+  "note": "Sanitized wave-2 evidence index. The raw 49,446,368-byte bundle with inline payloads stays external at /tmp/rea-evidence-bundle-agentkit-wave2.json (not committed). Wave-1 index remains plans/research/agentkit-engineer-installed/evidence-index.json (10 records); this file indexes only the wave-2 addition.",
+  "total_wave2_records": 1,
+  "unknowns_count": 4,
+  "records": [
+    {
+      "evidence_id": "ev_fcabdc1a35a2ac55423a4b67db60cfc19c193894157d8a4e0b2e8d466daabe9e",
+      "operation": "capture_process_scenario",
+      "provider": "rea-process v3",
+      "confidence": "observed",
+      "authority": "controlled-replay",
+      "target": "/home/manhquy/.local/bin/ak.bak backups --help",
+      "started_at_utc": "2026-10-13T04:58:47.774Z",
+      "observed_exit": "exit 0 (code 0, signal 0, elapsed 131 ms, quiesced)",
+      "observed_help_text_strings": [
+        "Examples: ak backups list | ak backups show <id> | ak backups restore <id>",
+        "Commands: create (Create a consistent operational.db snapshot via VACUUM INTO), list (List all rollback snapshots newest first), prune (Delete snapshots older than a threshold or beyond a retention count), restore (Restore AgentKit state from a snapshot), show (Print the manifest of a single snapshot), verify (Recompute manifest hashes and report ok | corrupt)",
+        "Options: -h/--help; --json (implies --no-interactive); --no-interactive"
+      ],
+      "binary_digest_sha256_verified_2026-10-13": "563a9bbd394c200406afd177599d86590d177be7bc3e3c6175683248fb71dce3",
+      "honesty_boundaries": [
+        "Help text strings only: no backup/kit-refresh mechanism was executed, no actual AgentKit rollback behavior is claimed from --help, no mutation and no auth-adjacent command was run.",
+        "Artifact identity unavailable for this observation; prelaunch file sample digest does not prove atomic OS image binding (provider limitation).",
+        "No filesystem observation paths were selected; filesystem effects remain unknown (provider limitation)."
+      ]
+    }
+  ],
+  "unchanged_wave1_state": {
+    "records": 10,
+    "unknowns": [
+      "unk_22be913d3be18ecdb11c1f9784a3c6d7a00514a421c98207b8e315c3109cba46 (process-filesystem)",
+      "unk_625c2d6cfb387c8926aaaf4dd0bb905628549f835e202e9ff37a7d5804aa75e6 (process-environment)",
+      "unk_6c8b4107edc1ce6c0a4b95264157ffa537c0af497569af7f36a624e04a81dd20 (process-process)",
+      "unk_7b81cc7431ae3e08759b85c393e153a6e9747d8befa7950bc75914a556a58a2a (process-network)"
+    ],
+    "native_decompilation": "NONE (missing toolchain: Ghidra needs JDK 21+, host has Temurin JDK 17; REA_PWNTOOLS_PYTHON unset) — narrative only, not an unknown ID"
+  }
+}

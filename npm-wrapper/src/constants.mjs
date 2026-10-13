@@ -1,4 +1,4 @@
-// 5 install targets. Antigravity has 2 destinations (CLI + IDE) driven by one target.
+// Install targets. Antigravity has 2 destinations (CLI + IDE) driven by one target.
 // Marker paths are relative to os.homedir() — no leading slash/backslash.
 export const TARGETS = [
   {
@@ -55,16 +55,21 @@ export const TARGETS = [
     alwaysInclude: false,
     projectScopeAllowed: false,
   },
-];
-
-// Subdirs the installer cleans out before merge-copying — parity with install.sh:25.
-export const CLEANUP_SUBDIRS = [
-  'runner',
-  '_templates',
-  'law',
-  'references',
-  'harness',
-  'playbooks',
+  {
+    name: 'omp',
+    label: 'OMP (~/.omp/agent/skills)',
+    // Same false-positive discipline as cursor/antigravity: bare `~/.omp` exists for every OMP
+    // runtime user (logs, cache, run state — none of it skills-related), so the marker must be
+    // the genuine skills dir `.omp/agent/skills`. Live probe (this host, 2026-10-13): the real
+    // skills home is `~/.omp/agent/skills/` (kit skills installed there, e.g. ak-*), while
+    // `~/.omp/skills` does not exist; ak adapter docs describing `.omp/skills/ak-<slug>` are a
+    // distribution convention, not this runtime's on-disk layout. Explicit `--target omp` still
+    // installs even when the home is absent (created on demand, same as explicit codex).
+    markers: ['.omp/agent/skills'],
+    destTemplates: ['~/.omp/agent/skills/flow'],
+    alwaysInclude: false,
+    projectScopeAllowed: false,
+  },
 ];
 
 export const TARGET_NAMES = TARGETS.map((t) => t.name);

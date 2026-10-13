@@ -100,6 +100,33 @@ test('~/.cursor/skills present: cursor detected, dest is ~/.cursor/skills/flow',
   assert.equal(cursor.dests[0], join(home, '.cursor', 'skills', 'flow'));
 });
 
+// OMP target. Same bare-dir guard as cursor/antigravity: bare `~/.omp` exists for every OMP
+// runtime user (logs, cache, run state — nothing skills-related), so the marker is the genuine
+// skills dir `.omp/agent/skills`. Live probe (this host): real skills home is
+// `~/.omp/agent/skills/`; `~/.omp/skills` does not exist and must not be a marker or dest.
+test('bare ~/.omp (no agent/skills) does NOT trigger omp detection', () => {
+  const home = fakeHome('omp-bare');
+  mkdirSync(join(home, '.omp', 'logs'), { recursive: true });
+  const entries = detectAll({ home });
+  const omp = entries.find((e) => e.name === 'omp');
+  assert.ok(omp, 'omp target must be registered in TARGETS');
+  assert.equal(omp.detected, false, 'bare ~/.omp (runtime state, no skills dir) must not trigger omp detection');
+  const defaults = defaultSelection(entries);
+  assert.equal(defaults.includes('omp'), false, 'omp must never enter default selection without its marker');
+});
+
+test('~/.omp/agent/skills present: omp detected, dest is ~/.omp/agent/skills/flow', () => {
+  const home = fakeHome('omp-skills');
+  mkdirSync(join(home, '.omp', 'agent', 'skills'), { recursive: true });
+  const entries = detectAll({ home });
+  const omp = entries.find((e) => e.name === 'omp');
+  assert.equal(omp.detected, true);
+  assert.equal(omp.dests.length, 1);
+  assert.equal(omp.dests[0], join(home, '.omp', 'agent', 'skills', 'flow'));
+  assert.equal(omp.projectScopeAllowed, false, 'project scope stays claude-only');
+  assert.equal(defaultSelection(entries).includes('omp'), true);
+});
+
 test('dests are resolved against the given home', () => {
   const home = fakeHome('dests');
   const entries = detectAll({ home });

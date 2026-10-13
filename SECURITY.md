@@ -34,18 +34,33 @@ without extra permission or user notification, and skill-lifecycle C2 weaponizin
 benign-looking skill — is exactly the attack surface flow refuses to carry. Reopening
 this requires a formal ADR: see `docs/adr/0001-discipline-layer-identity.md`.
 
-## Integrity model (receipt = drift detection, NOT authenticity)
+## Integrity model (receipt = ownership + drift detection, NOT authenticity)
 
-At prepack, `npm-wrapper/scripts/sync.mjs` writes `skills/flow/manifest-hashes.json`
-containing the SHA256 of the runner. `flow doctor` compares the installed runner bytes
-against that receipt and fails loudly on drift ("the harness may have been modified
-mid-project").
+At prepack, `npm-wrapper/scripts/sync.mjs` writes `skills/flow/manifest-hashes.json` — a
+SHA-256 map of the shipped tree. `flow doctor` compares installed bytes against that receipt
+and fails loudly on drift ("the harness may have been modified mid-project").
 
-Limits: an attacker who rewrites both the runner **and** the receipt together is
-invisible to `doctor`. The receipt is drift detection only — package **authenticity**
-remains the job of npm provenance and the registry.
+Since the wave-2 transactional installer (npm channel), the receipt is also the **ownership ledger** used
+at upgrade time:
 
-Older installs without the receipt print an informational skip line.
+- The installer refuses to proceed when a file the previous receipt owns has been edited
+  in place (explicit conflict listing, no `--force`), when a receipted path is missing
+  (root mismatch), when the destination tree contains symlinks or special files, or when a
+  legacy (unreceipted) destination collides with differing bytes.
+- User-created files — including inside previously-managed subdirs — are carried into the
+  new candidate and reported; retired owned files are pruned only when unmodified, and
+  preserved (never silently deleted) when the user modified them.
+- Updates run as a transaction: private random staging dir in the destination's parent,
+  rename-only backup of the old tree, rename-promote, verification of the promoted tree
+  against the staged expectation, and only then backup removal. Promotion or verification
+  failure restores the original; a failed restore keeps the backup and reports its path.
+  No crash/`SIGKILL` atomicity is promised — guarantees hold for returned failures.
+
+Limits: an attacker who rewrites both the runner **and** the receipt together is invisible
+to `doctor`. The receipt is drift detection and self-declared ownership only — package
+**authenticity** remains the job of npm provenance and the registry. The advisory lock path
+is predictable and same-uid local processes can race path operations; no malicious-same-uid
+filesystem safety is claimed. Empty directories are not carried across upgrades (files are).
 
 ## Install trusted path
 
