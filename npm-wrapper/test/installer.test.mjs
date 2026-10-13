@@ -293,6 +293,45 @@ test('ancestor symlink in dest path → refused before any filesystem change', (
   assert.match(r.error, /ancestor symlink refused/);
 });
 
+test('ancestor symlink with .. in dest path (e.g. link/../real/dest) → refused before any write', () => {
+  const tmp = scratch('ancestor-dotdot-dest');
+  const src = makeSource(join(tmp, 'src'));
+  const realDir = join(tmp, 'real');
+  mkdirSync(realDir, { recursive: true });
+  const linkDir = join(tmp, 'link');
+  try {
+    symlinkSync(realDir, linkDir);
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'ENOSYS') return;
+    throw err;
+  }
+  // Path spelling contains symlink followed by '..' which normalizes away under resolve():
+  const destWithDotDot = `${linkDir}/../real/skills/flow`;
+  const r = install({ sourceDir: src, destDir: destWithDotDot });
+  assert.equal(r.success, false);
+  assert.match(r.error, /destination ancestor symlink refused/);
+  assert.equal(existsSync(destWithDotDot), false, 'no directory must be created on refusal');
+});
+
+test('ancestor symlink with .. in source path (e.g. link/../src) → refused before any write', () => {
+  const tmp = scratch('ancestor-dotdot-src');
+  const src = makeSource(join(tmp, 'src'));
+  const dest = join(tmp, 'dest', '.claude', 'skills', 'flow');
+  const linkDir = join(tmp, 'src_link');
+  try {
+    symlinkSync(src, linkDir);
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'ENOSYS') return;
+    throw err;
+  }
+  // Source spelling contains symlink followed by '..':
+  const srcWithDotDot = `${linkDir}/../src`;
+  const r = install({ sourceDir: srcWithDotDot, destDir: dest });
+  assert.equal(r.success, false);
+  assert.match(r.error, /source ancestor symlink refused/);
+  assert.equal(existsSync(dest), false, 'no directory must be created on refusal');
+});
+
 test('injected rename failure at promote → rollback restores the original exactly', () => {
   const tmp = scratch('promote-fail');
   const src = makeSource(join(tmp, 'src'));

@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
-import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, parse, resolve, sep } from 'node:path';
 
 export const RECEIPT_NAME = 'manifest-hashes.json';
 
@@ -332,25 +332,46 @@ function assertDisjoint(sourceDir, destDir) {
   if (s.startsWith(d + sep)) throw new Error(`source ${s} is inside destination ${d}`);
 }
 
-// Refuse when any ancestor of targetPath (or targetPath itself) is a symlink.
-function assertNoAncestorSymlinks(targetPath) {
-  const abs = resolve(targetPath);
-  const segs = abs.split(sep).filter(Boolean);
-  let cur = abs.startsWith(sep) ? sep : '';
+// Refuse when any ancestor of rawPath (or rawPath itself) is a symlink.
+// Walks unnormalized path components as spelled BEFORE resolving '..' so that
+// bypasses like '/tmp/symlink/../dest' are caught when the symlink component is visited.
+function assertNoAncestorSymlinks(rawPath, label = 'destination') {
+  if (typeof rawPath !== 'string' || !rawPath) return;
+
+  const isAbs = isAbsolute(rawPath) || rawPath.startsWith('/') || rawPath.startsWith('\\');
+  const rawCombined = isAbs ? rawPath : join(process.cwd(), rawPath);
+
+  const parsedRoot = parse(rawCombined).root; // '/' on POSIX, 'C:\\' on Windows
+  const rest = rawCombined.slice(parsedRoot.length);
+  const segs = rest.split(/[/\\]+/).filter(Boolean);
+
+  let cur = parsedRoot;
   for (const seg of segs) {
-    cur = cur === sep || cur === '' ? join(cur, seg) : join(cur, seg);
-    let st;
-    try {
-      st = lstatSync(cur);
-    } catch {
-      return; // nonexistent tail — nothing more to check
+    if (seg === '.') continue;
+    if (seg === '..') {
+      try {
+        const st = lstatSync(cur);
+        if (st.isSymbolicLink()) {
+          throw new Error(`${label} ancestor symlink refused: ${cur}`);
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+      }
+      cur = dirname(cur);
+      continue;
     }
-    if (st.isSymbolicLink()) {
-      throw new Error(`ancestor symlink refused: ${cur}`);
+
+    cur = cur === parsedRoot ? join(cur, seg) : join(cur, seg);
+    try {
+      const st = lstatSync(cur);
+      if (st.isSymbolicLink()) {
+        throw new Error(`${label} ancestor symlink refused: ${cur}`);
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
     }
   }
 }
-
 // Refuse when any entry inside the destination tree (any depth) is a symlink. lstat-based —
 // a broken symlink is still a symlink and still refused. Runs BEFORE the old receipt is read
 // or any dest byte is hashed.
@@ -439,18 +460,28 @@ export function install({
     // All source/dest type + path validation happens BEFORE the lock is acquired,
     // because acquireLock() mkdirs the parent and we must not touch the filesystem
     // before we know the inputs are sane.
+    // 1. Ancestor symlink checks on raw path spellings BEFORE any file reads or collapses
+    assertNoAncestorSymlinks(sourceDir, 'source');
+    assertNoAncestorSymlinks(destDir, 'destination');
+
+    // 2. Disjoint check
+    assertDisjoint(sourceDir, destDir);
+
+    // 3. Source directory and symlink checks
+    const sourceSt = lstatSync(sourceDir);
+    if (sourceSt.isSymbolicLink()) throw new Error(`source is a symlink: ${sourceDir}`);
+    if (!sourceSt.isDirectory()) throw new Error(`source is not a directory: ${sourceDir}`);
+    if (resolve(sourceDir) === resolve(sep)) throw new Error(`source is the filesystem root`);
+    assertNoSymlinks(sourceDir);
+
+    // 4. Source SKILL.md presence check (safe now: source ancestry and tree are verified)
     if (!existsSync(join(sourceDir, 'SKILL.md'))) {
       throw new Error(
         `SKILL.md missing in sourceDir=${sourceDir} (did you run 'npm run sync'?)`
       );
     }
-    assertDisjoint(sourceDir, destDir);
 
-    const sourceSt = lstatSync(sourceDir);
-    if (sourceSt.isSymbolicLink()) throw new Error(`source is a symlink: ${sourceDir}`);
-    if (!sourceSt.isDirectory()) throw new Error(`source is not a directory: ${sourceDir}`);
-    if (resolve(sourceDir) === resolve(sep)) throw new Error(`source is the filesystem root`);
-
+    // 5. Destination checks
     let destSt = null;
     try {
       destSt = lstatSync(destDir);
@@ -464,8 +495,6 @@ export function install({
       throw new Error(`destination exists and is not a directory: ${destDir}`);
     }
     if (resolve(destDir) === resolve(sep)) throw new Error(`destination is the filesystem root`);
-    assertNoAncestorSymlinks(destDir);
-    assertNoSymlinks(sourceDir);
 
     // Source ownership manifest. Policy (director-authorized): an authored source checkout
     // WITHOUT a receipt is acceptable — build the manifest by hashing the read-only source
