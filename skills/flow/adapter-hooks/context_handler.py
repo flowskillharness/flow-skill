@@ -124,8 +124,9 @@ if os.name == 'nt':
         """Peek an open Windows named pipe handle without blocking.
         Returns (avail_bytes, is_eof, err_code)."""
         try:
-            h = wintypes.HANDLE(int(h_pipe))
-        except (ValueError, TypeError):
+            h_val = int(h_pipe) & 0xFFFFFFFFFFFFFFFF
+            h = wintypes.HANDLE(h_val)
+        except (ValueError, TypeError, OverflowError):
             return 0, False, 6  # ERROR_INVALID_HANDLE
         avail = wintypes.DWORD(0)
         res = kernel32.PeekNamedPipe(h, None, 0, None, byref(avail), None)
@@ -589,7 +590,7 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             if not did_read and streams and not drain_failed:
                 time.sleep(0.01)
 
-        timed_out = (time.monotonic() >= deadline) or bool(streams)
+        timed_out = (time.monotonic() >= deadline)
         rc = None
         try:
             rem = max(deadline - time.monotonic(), 0.1) if not timed_out else 0.1
@@ -616,7 +617,7 @@ WIN_GATE_SCRIPT = (
     "if go != b'G':\n"
     "    sys.exit(125)\n"
     "try:\n"
-    "    p = subprocess.Popen(sys.argv[1:])\n"
+    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL)\n"
     "    sys.exit(p.wait())\n"
     "except FileNotFoundError:\n"
     "    sys.exit(127)\n"

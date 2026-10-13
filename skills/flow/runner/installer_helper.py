@@ -93,6 +93,15 @@ def parse_raw_path_segments(raw_path_str: str) -> tuple[str, list[str]]:
         segments = [s for s in rest.replace("\\", "/").split("/") if s]
         return anchor, segments
 
+    # MSYS / Git Bash POSIX drive path: /c/... or /d/...
+    if len(raw_path_str) >= 2 and raw_path_str[0] == "/" and raw_path_str[1].isalpha() and (len(raw_path_str) == 2 or raw_path_str[2] in ("/")):
+        if os.name == "nt" or "WINDIR" in os.environ or "SYSTEMROOT" in os.environ:
+            drive = raw_path_str[1].upper() + ":"
+            rest = raw_path_str[2:].lstrip("/")
+            anchor = drive + "/"
+            segments = [s for s in rest.split("/") if s]
+            return anchor, segments
+
     # UNC path: \\server\share\...
     if raw_path_str.startswith(("\\\\", "//")):
         clean = raw_path_str[2:].replace("\\", "/")
@@ -111,7 +120,6 @@ def parse_raw_path_segments(raw_path_str: str) -> tuple[str, list[str]]:
         return anchor, segments
 
     return "", [s for s in raw_path_str.replace("\\", "/").split("/") if s]
-
 
 def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: bool = True) -> Path:
     """Validate path component-by-component BEFORE any normalization or abspath resolve.
@@ -155,7 +163,7 @@ def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: boo
             if not must_exist:
                 remaining = segments[idx + 1 :]
                 if ".." in remaining:
-                    raise Fail("env", f"{label} cannot traverse '..' through nonexistent component: {curr}")
+                    raise Fail("symlink", f"{label} cannot traverse '..' through nonexistent component: {curr}")
                 for rem in remaining:
                     if rem and rem != ".":
                         curr = curr / rem
@@ -165,16 +173,15 @@ def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: boo
             raise Fail("env", f"{label} path error on {curr}: {e}")
 
         if is_symlink_or_reparse(curr, st):
-            raise Fail("env", f"{label} symlink component refused: {curr}")
+            raise Fail("symlink", f"{label} symlink component refused: {curr}")
 
     try:
         st = curr.lstat()
         if is_symlink_or_reparse(curr, st):
-            raise Fail("env", f"{label} root is a symlink: {curr}")
+            raise Fail("symlink", f"{label} root is a symlink: {curr}")
     except FileNotFoundError:
         if must_exist:
             raise Fail("env", f"{label} path does not exist: {curr}")
-
     return curr
 
 
