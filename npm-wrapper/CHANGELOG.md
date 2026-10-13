@@ -2,7 +2,7 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.7.8] - 2026-10-14 — ships skill v0.34.1 (stable / latest)
 
 ### Added
 - **`omp` install target:** explicit `--target omp` installs the skill to `~/.omp/agent/skills/flow` (created on demand, same as explicit codex/claude); autodetection requires the genuine skills dir `~/.omp/agent/skills` — bare `~/.omp` (logs/cache/run state) never triggers detection, mirroring the cursor/antigravity bare-dir guards. Project scope unchanged (`claude` only; `--project -t omp` exits 2). OMP has its own post-install restart/reload hint. Marker and destination verified against a live OMP host (`~/.omp/agent/skills` is the real skills home; `~/.omp/skills` does not exist).

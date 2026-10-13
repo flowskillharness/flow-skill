@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.34.1] - 2026-10-14
 
 - **Transactional ownership installer (npm channel):** upgrades replace the destructive rm-then-copy contract with a receipt-driven transaction — strict input validation, read-only conflict/collision/root-mismatch survey (no `--force`), staged candidate preserving user files (inside managed dirs too), rename-only backup/promote with promoted-tree verification against the staged expectation, and `recoveryPath` reporting when a rollback rename fails. Installed receipts are regenerated from staged bytes and own only source files, so preserved customs are never pruned later. `CLEANUP_SUBDIRS` removed (clean cutover). Details: `npm-wrapper/SECURITY.md`, `docs/system-architecture.md`.
 - **Windows junction refusal & path parsing hardening:** `installer_helper.py` unifies symlink and NTFS reparse point / junction detection across all target, source, root, and receipt traversals using a shared `is_link_or_junction` predicate (refusing junctions with exit 7 before file modifications); component parsing preserves raw Windows drive letter prefixes (`C:\`) and UNC paths (`\\server\share`) without stripping or corruption; native capability detection skips FIFO assertions on platforms lacking `mkfifo` while enforcing link/junction rejection.
