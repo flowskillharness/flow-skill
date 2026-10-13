@@ -21,7 +21,7 @@ IS_WINDOWS=0
 case "$(uname -s 2>/dev/null)" in
   MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1 ;;
 esac
-
+PY_BIN="$(command -v python3 || command -v python)"
 to_native_path() {
   if command -v cygpath >/dev/null 2>&1; then
     cygpath -w "$1"
@@ -80,7 +80,7 @@ EOF
 check "sessionstart exit 0" "$rc" "0"
 te "fresh source labeled" "$out" '\[source: fresh'
 if [ "$IS_WINDOWS" -eq 1 ]; then
-  ok "Windows: snapshot citation absent (fresh-only)"
+  tne "Windows: snapshot citation absent (fresh-only)" "$out" "pre-compact snapshot: valid"
 else
   te "snapshot cited as reference only" "$out" 'pre-compact snapshot: valid'
 fi
@@ -110,7 +110,8 @@ EOF
 python3 -c "
 import os, sys
 p = sys.argv[1]
-assert os.path.islink(p) or os.path.isjunction(p)
+is_junc = getattr(os.path, 'isjunction', lambda _: False)
+assert os.path.islink(p) or is_junc(p)
 " "$(to_native_path "$P2/.flow")" && ok "symlink not replaced" || bad ".flow symlink tampered"
 P3="$(mkproj laxdir)"; mkdir -p "$P3/.flow/context-handoff"; chmod 755 "$P3/.flow/context-handoff"
 out=$("$HANDLER" <<EOF
@@ -118,7 +119,7 @@ out=$("$HANDLER" <<EOF
 EOF
 ) ; check "non-0700 private dir refused, exit 0" "$?" "0"
 if [ "$IS_WINDOWS" -eq 1 ]; then
-  ok "Windows: no snapshot into lax dir (snapshot skipped)"
+  [ ! -f "$P3/.flow/context-handoff/snapshot.json" ] && ok "Windows: no snapshot into lax dir (snapshot skipped)" || bad "Windows: snapshot written into lax dir"
 else
   [ -f "$P3/.flow/context-handoff/snapshot.json" ] && bad "snapshot written into lax dir" || ok "no snapshot into non-0700 dir"
 fi
@@ -345,7 +346,7 @@ fi
 
 # --- Silent held-stdin producer (bounded deadline, fail-open) --------------------
 t0=$(date +%s)
-out=$(python3 -c "import time; time.sleep(2.5)" | FLOW_HOOK_STDIN_DEADLINE=1 "$HANDLER")
+out=$("$PY_BIN" -c "import time; time.sleep(2.5)" | FLOW_HOOK_STDIN_DEADLINE=1 "$HANDLER")
 rc=$?
 t1=$(date +%s)
 elapsed=$((t1 - t0))

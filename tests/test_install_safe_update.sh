@@ -151,7 +151,7 @@ S1_BYPASS_LINK="$SCRATCH/s1_bypass_link"
 mkdir -p "$S1_BYPASS_TARGET"
 if make_link "$S1_BYPASS_TARGET" "$S1_BYPASS_LINK"; then
   set +e
-  out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  out="$(MSYS2_ARG_CONV_EXCL="*" "$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
   rc=$?
   set -e
   ck 7 "$rc" "traversal through symlink component (/tmp/link/../dest) refused with exit 7"
@@ -480,9 +480,25 @@ ck 3 "$s_conf_rc" "install.sh update conflict fails with exit code 3"
 # Run with a restricted PATH containing standard POSIX tools but NO python
 RESTRICTED_BIN="$SCRATCH/restricted_bin"
 mkdir -p "$RESTRICTED_BIN"
-for cmd in bash cp mv rm ls mkdir dirname find mktemp chmod cat echo test [ rmdir; do
-  p="$(command -v "$cmd" 2>/dev/null || true)"
-  [ -n "$p" ] && ln -s "$p" "$RESTRICTED_BIN/$cmd"
+for cmd in bash cp mv rm ls mkdir dirname find mktemp chmod cat rmdir; do
+  p="$(type -p "$cmd" 2>/dev/null || command -v "$cmd" 2>/dev/null || true)"
+  if [ -n "$p" ] && [ -f "$p" ]; then
+    ln -s "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || true
+  fi
+done
+# For shell builtins echo, test, [, provide safe wrapper scripts if no disk binary was found
+for builtin_cmd in echo test [; do
+  p="$(type -p "$builtin_cmd" 2>/dev/null || command -v "$builtin_cmd" 2>/dev/null || true)"
+  if [ -n "$p" ] && [ -f "$p" ]; then
+    ln -s "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || true
+  else
+    # Create minimal shell wrapper in restricted bin so non-builtin subshells can execute it
+    cat <<EOF > "$RESTRICTED_BIN/$builtin_cmd"
+#!/bin/sh
+builtin $builtin_cmd "\$@"
+EOF
+    chmod +x "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || true
+  fi
 done
 
 # Try update on existing install without python

@@ -123,15 +123,18 @@ if os.name == 'nt':
     def _win_peek_pipe(h_pipe):
         """Peek an open Windows named pipe handle without blocking.
         Returns (avail_bytes, is_eof, err_code)."""
+        try:
+            h = wintypes.HANDLE(int(h_pipe))
+        except (ValueError, TypeError):
+            return 0, False, 6  # ERROR_INVALID_HANDLE
         avail = wintypes.DWORD(0)
-        res = kernel32.PeekNamedPipe(h_pipe, None, 0, None, byref(avail), None)
+        res = kernel32.PeekNamedPipe(h, None, 0, None, byref(avail), None)
         if not res:
             err = ctypes.get_last_error()
             if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED):
                 return 0, True, 0
             return 0, False, err
         return avail.value, False, 0
-
 def utf8_cut(data, cap):
     """Byte cap that never splits a UTF-8 sequence."""
     if len(data) <= cap:
@@ -612,10 +615,12 @@ WIN_GATE_SCRIPT = (
     "go = sys.stdin.buffer.read(1)\n"
     "if go != b'G':\n"
     "    sys.exit(125)\n"
-    "p = subprocess.Popen(sys.argv[1:])\n"
-    "sys.exit(p.wait())\n"
+    "try:\n"
+    "    p = subprocess.Popen(sys.argv[1:])\n"
+    "    sys.exit(p.wait())\n"
+    "except FileNotFoundError:\n"
+    "    sys.exit(127)\n"
 )
-
 def run_flow(args):
     proc = None
     job_holder = None

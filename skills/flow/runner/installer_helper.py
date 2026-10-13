@@ -268,6 +268,9 @@ def special_files(root: Path) -> list[str]:
     Never opens FIFOs or devices.
     """
     out: list[str] = []
+    if is_symlink_or_reparse(root):
+        out.append(".")
+        return out
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
         dir_entries = list(dirnames)
         file_entries = list(filenames)
@@ -300,6 +303,8 @@ def special_files(root: Path) -> list[str]:
 
 
 def assert_no_symlinks(root: Path, label: str) -> None:
+    if is_symlink_or_reparse(root):
+        raise Fail("symlink", f"{label} root symlink refused: {root}")
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
         dir_entries = list(dirnames)
         file_entries = list(filenames)
@@ -322,6 +327,8 @@ def assert_no_symlinks(root: Path, label: str) -> None:
 
 def manifest_from_tree(root: Path) -> dict[str, str]:
     """Hash every regular file under root (excluding the receipt itself, pycache, .pyc)."""
+    if is_symlink_or_reparse(root):
+        raise Fail("source", f"symlink/reparse root refused before hashing: {root}")
     files: dict[str, str] = {}
     for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
         dir_entries = list(dirnames)

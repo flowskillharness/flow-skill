@@ -121,11 +121,13 @@ def test_job_assignment_failure_terminates_gate():
         os.chmod(runner_sh, 0o755)
         base_env = dict(os.environ)
         base_env["FLOW_SKILL_DIR"] = os.path.join(tmp, "fake_runner")
+        payload = json.dumps({"hook_event_name": "SessionStart", "cwd": proj}).encode("utf-8")
         p_base = subprocess.run([sys.executable, HANDLER_PY],
                                 input=payload, capture_output=True, env=base_env, timeout=10)
         diag = ("(rc=%d stderr=%s)" % (p_base.returncode, p_base.stderr[:200])) if not os.path.exists(marker) else ""
         check("healthy baseline creates marker", os.path.exists(marker), details=diag)
-
+        if os.path.exists(marker):
+            os.remove(marker)
         fail_env = dict(base_env)
         fail_env["FLOW_TEST_INJECT_WIN_ASSIGN_FAIL"] = "1"
         proc = subprocess.run([sys.executable, HANDLER_PY],
