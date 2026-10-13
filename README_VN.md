@@ -25,8 +25,8 @@ stage tiến. Kill tại một cổng là kết quả hợp lệ, được tôn 
 
 | | |
 |---|---|
-| **Skill product** | **v0.34.0** |
-| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) **0.7.x** (`@latest` 0.7.7 ship skill ở trên) |
+| **Skill product** | **v0.34.1** |
+| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) **0.7.x** (`@latest` 0.7.8 ship skill ở trên) |
 | **Website** | **[flowskill.io.vn](https://flowskill.io.vn)** |
 | **Test / CI** | [`tests/manifest.txt`](tests/manifest.txt) · Ubuntu · macOS · Windows |
 | **License** | MIT |
@@ -47,11 +47,11 @@ npx @manhquy/flow-skill@latest
 ```
 
 Luôn dùng `@latest`. Đừng chỉ `npm i` package — lệnh đó không copy skill.
-Đừng pin `@0.34.0` trên npm — đó là version skill, không phải installer.
+Đừng pin `@0.34.1` trên npm — đó là version skill, không phải installer.
 
 Hai số version (cố ý): package npm = installer CLI; skill product =
 `SKILL.md` `metadata.version`. `--help` in cả hai:
-`flow-skill v0.7.7 (ships skill v0.34.0)`.
+`flow-skill v0.7.8 (ships skill v0.34.1)`.
 
 Hướng dẫn: [Cài đặt và lần chạy đầu](https://flowskill.io.vn/vi/docs/tutorials/install-and-first-run/).
 Flag: [npm-wrapper/README_VN.md](./npm-wrapper/README_VN.md).
