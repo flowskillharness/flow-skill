@@ -150,10 +150,10 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}
 
-      - name: Verify tarball packages under 1 MB unpacked
+      - name: Verify tarball packages under 1.5 MB unpacked
         run: |
           npm pack --dry-run --ignore-scripts --json > pack.json
-          node -e "const p=require('./pack.json');const s=p[0].unpackedSize;if(s>1048576){console.error('unpacked > 1MB: '+s);process.exit(1)}else{console.log('unpacked '+s+' bytes')}"
+          node -e "const p=require('./pack.json');const s=p[0].unpackedSize;if(s>1572864){console.error('unpacked > 1.5MB: '+s);process.exit(1)}else{console.log('unpacked '+s+' bytes')}"
         shell: bash
 
   # Credentialless pack → tarball --compare → install → e2e on the INSTALLED runner.

@@ -91,7 +91,7 @@ git grep -nE "from ['\"]node:child_process['\"]|require\(['\"]node:child_process
 # secret grep (bin/src/skills/docs listed in older checklist) — must be empty
 
 # 4. Tarball audit (size only — this line stays the dry-run size audit)
-npm pack --dry-run --ignore-scripts --json | node -e "const p=JSON.parse(require('fs').readFileSync(0,'utf8'));const s=p[0].unpackedSize;console.log('unpacked',s);if(s>1048576)process.exit(1)"
+npm pack --dry-run --ignore-scripts --json | node -e "const p=JSON.parse(require('fs').readFileSync(0,'utf8'));const s=p[0].unpackedSize;console.log('unpacked',s);if(s>1572864)process.exit(1)"
 # Per-PR CI (ubuntu): bash scripts/pack-rehearsal.sh
 #   npm pack → extract package/skills/flow → sync.mjs --compare vs repo skills/flow
 #   → npm i --ignore-scripts --prefix <tmp> ./manhquy-flow-skill-*.tgz

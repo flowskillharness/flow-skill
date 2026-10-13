@@ -4,7 +4,7 @@
 //  - detect.mjs template expansion uses path.join (no mixed separators)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
@@ -12,7 +12,8 @@ import { acquireLock, releaseLock, withRetry } from '../src/installer.mjs';
 import { detectAll } from '../src/detect.mjs';
 
 function scratch(prefix) {
-  return mkdtempSync(join(tmpdir(), `flow-lock-${prefix}-`));
+  const baseTmp = realpathSync(tmpdir());
+  return mkdtempSync(join(baseTmp, `flow-lock-${prefix}-`));
 }
 
 test('acquireLock uses O_EXCL (wx) — writing to a pre-existing lock file yields EEXIST', () => {
@@ -99,7 +100,7 @@ test('withRetry still retries EBUSY / EPERM / ENOTEMPTY (Windows agent contentio
 });
 
 test('detect: dest paths use the OS separator (no mixed / and \\ on Windows)', () => {
-  const home = mkdtempSync(join(tmpdir(), 'flow-sep-'));
+  const home = mkdtempSync(join(realpathSync(tmpdir()), 'flow-sep-'));
   mkdirSync(join(home, '.claude'), { recursive: true });
   const entries = detectAll({ home });
   const claude = entries.find((e) => e.name === 'claude');
@@ -118,7 +119,7 @@ test('detect: dest paths use the OS separator (no mixed / and \\ on Windows)', (
 });
 
 test('detect: antigravity 2 dests each use OS separators', () => {
-  const home = mkdtempSync(join(tmpdir(), 'flow-sep-agr-'));
+  const home = mkdtempSync(join(realpathSync(tmpdir()), 'flow-sep-agr-'));
   const entries = detectAll({ home });
   const agr = entries.find((e) => e.name === 'antigravity');
   assert.equal(agr.dests.length, 2);

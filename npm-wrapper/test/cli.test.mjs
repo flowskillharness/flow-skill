@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
-import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, realpathSync, existsSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 
@@ -118,7 +118,8 @@ test('summary event fields present in JSONL after fail-fast on unknown target av
 // post-install summary line told only Claude+Codex users what to do (cli.mjs pre-fix). Real
 // (non-dry-run) install into a scratch HOME so we assert the actual printed guidance.
 function scratchHomeEnv(prefix) {
-  const home = mkdtempSync(join(tmpdir(), `flow-skill-cli-${prefix}-`));
+  const baseTmp = realpathSync(tmpdir());
+  const home = mkdtempSync(join(baseTmp, `flow-skill-cli-${prefix}-`));
   return { home, env: { HOME: home, USERPROFILE: home } };
 }
 

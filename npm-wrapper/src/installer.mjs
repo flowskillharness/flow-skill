@@ -339,8 +339,9 @@ function assertNoAncestorSymlinks(rawPath, label = 'destination') {
   if (typeof rawPath !== 'string' || !rawPath) return;
 
   const isAbs = isAbsolute(rawPath) || rawPath.startsWith('/') || rawPath.startsWith('\\');
-  const rawCombined = isAbs ? rawPath : join(process.cwd(), rawPath);
-
+  const cwd = process.cwd();
+  const sep = (process.platform === 'win32' && cwd.includes('\\')) ? '\\' : '/';
+  const rawCombined = isAbs ? rawPath : `${cwd.replace(/[/\\]+$/, '')}${sep}${rawPath}`;
   const parsedRoot = parse(rawCombined).root; // '/' on POSIX, 'C:\\' on Windows
   const rest = rawCombined.slice(parsedRoot.length);
   const segs = rest.split(/[/\\]+/).filter(Boolean);

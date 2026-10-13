@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -53,7 +54,8 @@ function mutateSource(src, rel, content) {
 }
 
 function scratch(prefix) {
-  const dir = mkdtempSync(join(tmpdir(), `flow-skill-test-${prefix}-`));
+  const baseTmp = realpathSync(tmpdir());
+  const dir = mkdtempSync(join(baseTmp, `flow-skill-test-${prefix}-`));
   SCRATCHES.push(dir);
   return dir;
 }
@@ -311,6 +313,31 @@ test('ancestor symlink with .. in dest path (e.g. link/../real/dest) → refused
   assert.equal(r.success, false);
   assert.match(r.error, /destination ancestor symlink refused/);
   assert.equal(existsSync(destWithDotDot), false, 'no directory must be created on refusal');
+});
+
+test('ancestor symlink with .. in RELATIVE dest path (e.g. link/../real/dest) → refused before any write', () => {
+  const tmp = scratch('ancestor-dotdot-rel-dest');
+  const src = makeSource(join(tmp, 'src'));
+  const realDir = join(tmp, 'real');
+  mkdirSync(realDir, { recursive: true });
+  const linkDir = join(tmp, 'link');
+  try {
+    symlinkSync(realDir, linkDir);
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'ENOSYS') return;
+    throw err;
+  }
+  const prevCwd = process.cwd();
+  try {
+    process.chdir(tmp);
+    const relDestWithDotDot = 'link/../real/skills/flow';
+    const r = install({ sourceDir: src, destDir: relDestWithDotDot });
+    assert.equal(r.success, false);
+    assert.match(r.error, /destination ancestor symlink refused/);
+    assert.equal(existsSync(join(tmp, 'real', 'skills', 'flow')), false, 'no directory must be created on refusal');
+  } finally {
+    process.chdir(prevCwd);
+  }
 });
 
 test('ancestor symlink with .. in source path (e.g. link/../src) → refused before any write', () => {

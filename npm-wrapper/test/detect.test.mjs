@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { defaultSelection, detectAll } from '../src/detect.mjs';
 
 function fakeHome(prefix) {
-  return mkdtempSync(join(tmpdir(), `flow-detect-home-${prefix}-`));
+  const baseTmp = realpathSync(tmpdir());
+  return mkdtempSync(join(baseTmp, `flow-detect-home-${prefix}-`));
 }
 
 test('empty home: only Claude is in default selection (alwaysInclude)', () => {

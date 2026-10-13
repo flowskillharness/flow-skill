@@ -9,6 +9,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -46,8 +47,9 @@ function runCompare(extracted, repo) {
 }
 
 test('--compare matching trees exits 0 and does not run the copy body', () => {
-  const extracted = mkdtempSync(join(tmpdir(), 'sync-cmp-a-'));
-  const repo = mkdtempSync(join(tmpdir(), 'sync-cmp-b-'));
+  const baseTmp = realpathSync(tmpdir());
+  const extracted = mkdtempSync(join(baseTmp, 'sync-cmp-a-'));
+  const repo = mkdtempSync(join(baseTmp, 'sync-cmp-b-'));
   const files = { 'SKILL.md': '# skill\n', 'runner/flow.sh': '#!/bin/bash\n' };
   writeTree(extracted, files);
   writeTree(repo, files);
@@ -67,8 +69,9 @@ test('--compare matching trees exits 0 and does not run the copy body', () => {
 });
 
 test('--compare fails on a 1-byte content drift', () => {
-  const extracted = mkdtempSync(join(tmpdir(), 'sync-cmp-d-'));
-  const repo = mkdtempSync(join(tmpdir(), 'sync-cmp-e-'));
+  const baseTmp = realpathSync(tmpdir());
+  const extracted = mkdtempSync(join(baseTmp, 'sync-cmp-d-'));
+  const repo = mkdtempSync(join(baseTmp, 'sync-cmp-e-'));
   writeTree(extracted, { 'SKILL.md': '# skill\n', 'a.txt': 'hello\n' });
   writeTree(repo, { 'SKILL.md': '# skill\n', 'a.txt': 'hallo\n' });
   try {
@@ -82,8 +85,9 @@ test('--compare fails on a 1-byte content drift', () => {
 });
 
 test('--compare ignores eval/replay in the repo tree (shouldShip twin)', () => {
-  const extracted = mkdtempSync(join(tmpdir(), 'sync-cmp-r-'));
-  const repo = mkdtempSync(join(tmpdir(), 'sync-cmp-s-'));
+  const baseTmp = realpathSync(tmpdir());
+  const extracted = mkdtempSync(join(baseTmp, 'sync-cmp-r-'));
+  const repo = mkdtempSync(join(baseTmp, 'sync-cmp-s-'));
   writeTree(extracted, { 'SKILL.md': '# skill\n', 'runner/flow.sh': '#!/bin/bash\n' });
   writeTree(repo, {
     'SKILL.md': '# skill\n',
