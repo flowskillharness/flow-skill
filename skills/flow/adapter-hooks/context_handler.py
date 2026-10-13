@@ -636,7 +636,12 @@ def drain_capped(proc, cap, pgid, job_holder=None):
         else:
             if job_holder and not job_holder.close():
                 rc = 124
-        return rc, bytes(out_buf), bytes(err_buf)
+        res_rc = rc if rc is not None else 1
+        res_out = bytes(out_buf)
+        res_err = bytes(err_buf)
+        if res_rc != 0:
+            note("DEBUG: run_flow exit %s, stdout=%r, stderr=%r" % (res_rc, res_out[:200], res_err[:200]))
+        return res_rc, res_out, res_err
 WIN_GATE_SCRIPT = (
     "import sys, subprocess\n"
     "go = sys.stdin.buffer.read(1)\n"
@@ -652,6 +657,20 @@ WIN_GATE_SCRIPT = (
     "    sys.stderr.flush()\n"
     "    sys.exit(126)\n"
 )
+def get_bash_executable():
+    cand = os.environ.get("FLOW_BASH")
+    if cand and os.path.isfile(cand):
+        return cand
+    if os.name == 'nt':
+        for git_bash in (
+            os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "Git", "bin", "bash.exe"),
+            os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "Git", "usr", "bin", "bash.exe"),
+            os.path.join(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"), "Git", "bin", "bash.exe"),
+        ):
+            if os.path.isfile(git_bash):
+                return git_bash
+    return "bash"
+
 def run_flow(args):
     proc = None
     job_holder = None
@@ -686,7 +705,8 @@ def run_flow(args):
             popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             popen_kwargs["stdin"] = subprocess.PIPE
             runner_arg = RUNNER.replace("\\", "/")
-            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, "bash", runner_arg] + args
+            bash_bin = get_bash_executable()
+            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, bash_bin, runner_arg] + args
             proc = subprocess.Popen(gate_cmd, **popen_kwargs)
             proc_handle = getattr(proc, "_handle", None)
             if not proc_handle or not assign_process_to_job(job_holder, proc_handle):
