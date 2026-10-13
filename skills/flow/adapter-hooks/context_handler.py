@@ -241,13 +241,17 @@ def read_event():
 payload, reason = read_event()
 if payload is None:
     fail_open("no usable event (%s) - ignoring" % reason)
+def _normalize_win_path(p):
+    if isinstance(p, str) and os.name == 'nt' and len(p) >= 3 and p.startswith('/') and p[1].isalpha() and p[2] == '/':
+        return p[1].upper() + ':' + p[2:]
+    return p
 
 kind = payload.get("hook_event_name")
 if kind not in ("SessionStart", "PreCompact"):
     fail_open("unsupported or missing event class - handles SessionStart and PreCompact "
               "only; ignoring")
 
-proj = payload.get("cwd")
+proj = _normalize_win_path(payload.get("cwd"))
 try:
     real = os.path.realpath(proj) if isinstance(proj, str) and proj else ""
     has_marker = bool(real) and os.path.isdir(real) and (
@@ -264,9 +268,9 @@ if not has_marker:
 
 PROJECT = real
 
-base = os.environ.get("FLOW_SKILL_DIR") or ""
+base = _normalize_win_path(os.environ.get("FLOW_SKILL_DIR") or "")
 if not base:
-    home = os.environ.get("HOME", "")
+    home = _normalize_win_path(os.environ.get("HOME", ""))
     for cand in (os.path.join(home, ".claude", "skills", "flow"),
                  os.path.join(home, ".codex", "skills", "flow"),
                  os.path.join(home, ".agents", "skills", "flow"),
@@ -639,12 +643,14 @@ WIN_GATE_SCRIPT = (
     "if go != b'G':\n"
     "    sys.exit(125)\n"
     "try:\n"
-    "    out_target = getattr(sys.stdout, 'fileno', None) and sys.stdout\n"
-    "    err_target = getattr(sys.stderr, 'fileno', None) and sys.stderr\n"
-    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=out_target, stderr=err_target, close_fds=False)\n"
+    "    p = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL)\n"
     "    sys.exit(p.wait())\n"
     "except FileNotFoundError:\n"
     "    sys.exit(127)\n"
+    "except Exception as ex:\n"
+    "    sys.stderr.write('GATE_ERROR: %s\\n' % ex)\n"
+    "    sys.stderr.flush()\n"
+    "    sys.exit(126)\n"
 )
 def run_flow(args):
     proc = None
