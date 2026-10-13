@@ -1,0 +1,27 @@
+{
+  "_read_me": "Opt-in template only. Flow never writes this file anywhere. Merge the hooks block into your Claude Code settings (.claude/settings.json or ~/.claude/settings.json) yourself, adjust the command path to your flow skill home, then restart the session. Full contract and per-host support: skills/flow/references/host-hooks.md",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/skills/flow/adapter-hooks/flow-context-handler"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/skills/flow/adapter-hooks/flow-context-handler"
+          }
+        ]
+      }
+    ]
+  }
+}

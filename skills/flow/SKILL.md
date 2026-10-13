@@ -108,6 +108,7 @@ only when `bash` is Git Bash.
 | parallel occupancy | `references/host-agnostic-parallel.md` |
 | agents | `references/agent-detection.md`, `references/agent-stage-mapping.md` |
 | skip / halt | `references/debt-and-halts.md` |
+| host context adapters (opt-in) | `references/host-hooks.md` |
 | harness | `harness/README.md` |
 | retro | `law/RETRO.md` |
 

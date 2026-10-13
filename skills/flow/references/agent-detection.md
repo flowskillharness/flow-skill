@@ -10,7 +10,10 @@ The host's inline/generic path is always available. Overlay named specialists on
 host registry actually lists them — do not assume a Task tool, ck: agents, or any one vendor.
 Detect by checking that registry. Specialist names may be **unprefixed** (e.g. `architect`),
 **ck-prefixed** (`ck:architect` / `ck-architect`), or the same token under another kit.
-Strip `ck:` / `ck-` / `ak:` / `ak-` before comparing. Also glob for project-local
+Strip `ck:` / `ck-` / `ak:` / `ak-` before comparing. Kit skills follow the same
+live-registry rule as `claudekit-skills.md`: resolve an exact name (`ak-loop`,
+`ak-security`) only when the live registry lists it — a directory on disk is not the
+registry, and an unmatched skill degrades to the native ritual. Also glob for project-local
 definitions when unsure:
 - specialists: `.claude/agents/*.md` (project) and the host agent registry.
 - bmad skills: the Skills list (`bmad-*`) and `.claude/skills/bmad-*`.

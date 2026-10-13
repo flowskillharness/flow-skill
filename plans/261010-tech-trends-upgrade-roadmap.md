@@ -31,7 +31,7 @@ degrade loudly, never lower a gate, doc budgets, untouchable eval STOP zones.
 
 1. **Resident MCP Server / Tool Interposition Wrapper**: Rejected; *requires reopening ADR 0001*.
 2. **Background Watcher / Resident Daemon**: Rejected; *requires reopening ADR 0001*.
-3. **Automatic Lifecycle Event Hooks**: Rejected; *requires reopening ADR 0001* and expands CBSE attack surface.
+3. **Automatic Lifecycle Event Hooks (flow-registered or gate-coupled)**: Rejected for those forms. *Narrow exception accepted*: operator-installed, host-fired, advisory context adapters (SessionStart/PreCompact class) are Accepted under the ADR-0001 Addendum (2026-10-13, user-authorized revision) in `docs/adr/0001-discipline-layer-identity.md`; interposition, flow-side registration, and gate coupling stay rejected.
 4. **Autonomous Orchestration Runtime (`flow-orch`)**: Rejected; *requires reopening ADR 0001* and tripwire 5 capacity.
 5. **Compiled/Native Dependencies** (tree-sitter, docker APIs): Rejected; violates zero new runtime deps.
 

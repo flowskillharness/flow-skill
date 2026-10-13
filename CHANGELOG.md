@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- **Named doctor registry & CLI flags:** `flow doctor` now provides 12 registered checks with `--list`, `--check <csv>`, and `--json`. Early validation rejects unknown or empty check names with exit 1 and valid JSON error envelopes.
+- **Full bundled-tree receipt integrity:** `sync.mjs` generates tree-wide `manifest-hashes.json` covering all packaged skill files (the receipt is generated from the current source tree at pack time, so the file count always matches what `sync.mjs` produces for the single install home — no second home). `flow doctor` verifies the entire installed tree with ancestor symlink checks, path traversal guards, duplicate key rejection, and SHA-256 validation (clean cutover, loud FAIL on drift, advisory skip on dev checkouts).
+- **Dedicated doctor test suite:** `tests/test_flow_doctor.sh` exercising registry listing, filtering, NUL record framing, JSON error envelopes, and tamper/symlink boundaries (40 tests).
+- **Opt-in host lifecycle context adapters:** Operator-installed context adapters (`skills/flow/adapter-hooks/`) under ADR-0001 addendum providing advisory SessionStart/PreCompact status handoff and private snapshot mutation (`.flow/context-handoff/snapshot.json`).
+
 ## 0.34.0 — 2026-10-12 — PIN v1 + runner hardening + brand identity
 
 Skill product bump to **v0.34.0** shipping PIN v1 status/resume contract,

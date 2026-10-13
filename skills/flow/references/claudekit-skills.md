@@ -3,8 +3,8 @@
 `/flow` already orchestrates specialists at the **agent layer** (`agent-detection.md` +
 `agent-stage-mapping.md`: host-native / ck: agents, then bmad, then built-in). This file
 extends that same seam to the **skill layer** — the curated set of build skills worth
-reaching for at each stage. It is a **whitelist, not a dump**: ClaudeKit (~87) and
-AgentKit (~100+) both ship marketing/content noise. Only the skills below ever get
+reaching for at each stage. It is a **whitelist, not a dump**: both kits ship
+marketing/content noise. Only the skills below ever get
 surfaced. ClaudeKit `ck-*` and AgentKit `ak:*` names are the **same rows** (Name
 resolution). This is the single source of truth for the skill map;
 `agent-stage-mapping.md` points here.
@@ -26,10 +26,12 @@ review natively.
    (`agent-detection.md`, `codex-integration.md`): a skill's output feeds your triage — it
    **never auto-passes and never auto-fails** a gate. The `flow.sh` exit code + the
    `gate-rules.md` challenge remain the only deciders. A skill that "looks good" is not a PASS.
-2. **Detection is Claude-side, and degrades silently.** You already know the host Skills list
-   (the available-skills registry) — check it; do not assume. `flow.sh` **cannot** see which
-   skills are loaded (bash has no view of the registry, and the 5 install homes — Claude,
-   Codex, Antigravity ×2, project — differ), so skill detection is never put in the runner. A
+2. **Detection is Claude-side, and degrades silently.** The hosting agent checks its own
+   **live skill registry** — the active catalog it actually dispatches against — and never
+   assumes from a name or a directory listing. Verify an exact installed name and, only when
+   the registry exposes it accessibly and safely, its SKILL description; active catalog
+   metadata is sufficient evidence, and no specific home layout, count, or root is required.
+   flow.sh cannot detect skills (runner has no view of any registry), so skill detection is never put in the runner. A
    missing skill **never lowers a gate** — it only changes whether the enrichment is offered.
    Rich where the skill exists, unbroken where it doesn't.
 
@@ -38,8 +40,12 @@ review natively.
 
 Host registries spell the same skill three ways: `ck-<slug>`, `ak:<slug>` /
 `ak-<slug>`, or bare `<slug>`. Strip `ck:` / `ck-` / `ak:` / `ak-` and match the
-slug. Offer the **first listed** alias; never offer two names for one verb.
-AgentKit is not a dependency — absence degrades to the native ritual.
+slug. **Resolution is live-registry-first and exact**: before offering a kit skill,
+verify it against the host's live skill registry and the installed `SKILL.md`
+(exact name + matching description). A directory on disk is not the registry, and
+name similarity is not equivalence. Offer the **first listed** alias; never offer
+two names for one verb; an unmatched row degrades to the native ritual — never
+invent an alias. AgentKit is not a dependency — absence degrades to the native ritual.
 
 | Whitelist row | Also detect |
 |---|---|
@@ -49,7 +55,7 @@ AgentKit is not a dependency — absence degrades to the native ritual.
 | ck-loop | ak:loop, ak-loop, loop |
 | ck-graphify | ak:graphify, ak-graphify, graphify |
 | review-pr | ak:review-pr, ak-review-pr |
-| security-scan | ak:security-scan, ak-security-scan |
+| security-scan | — no kit alias: AgentKit ships no `security-scan` export (2026-10-13 inventory); offer only what a live-registry probe actually verifies |
 | retro | ak:retro, ak-retro |
 | xia | ak:xia, ak-xia |
 | deploy | ak:deploy, ak-deploy |
@@ -59,6 +65,13 @@ AgentKit is not a dependency — absence degrades to the native ritual.
 | repomix | ak:repomix, ak-repomix |
 
 `gkg` / `ak:gkg` stay unwired (single graph pick = ck-graphify / ak:graphify).
+
+**A native ritual is not a scanner.** STRIDE (`native-rituals.md` §3) is semantic
+adversarial threat-modeling; it never substitutes for the mechanical secrets/deps
+scan in the `security-scan` row. If no scanning skill live-verifies, say so and let
+the operator run their own scan tooling — never relabel STRIDE as the scan, and
+never offer `ak-security-scan` (no such kit export; the kit's security skill is
+`ak-security`, the ck-security row, itself subject to per-skill verification).
 
 ## Cost gate — offer, don't impose
 

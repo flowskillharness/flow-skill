@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# flow host-context adapter — launcher. Opt-in, host-invoked, advisory only.
+# Boundary: ADR-0001 Addendum "Host-fired lifecycle context adapters" (2026-10-13).
+# Flow never registers this file, never interposes on tools, never enforces security,
+# never runs a loop or daemon. The operator installs it.
+# Docs + per-host support: skills/flow/references/host-hooks.md
+#
+# The event payload arrives on THIS process's stdin; it is passed through untouched to
+# the Python module (a heredoc would consume stdin, which is why the logic lives in a
+# standalone .py file). Requires python3 (stdlib only, already an optional flow
+# dependency); absent -> warn + exit 0 (fail-open).
+set -u
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+PY=""
+for cand in python3 python; do
+  if command -v "$cand" >/dev/null 2>&1 && "$cand" -c 'import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)' >/dev/null 2>&1; then
+    PY="$cand"
+    break
+  fi
+done
+if [ -z "$PY" ]; then
+  printf 'flow-context: WARNING no usable python3 found; adapter inactive (fail-open) - run /flow status manually\n' >&2
+  exit 0
+fi
+if [ ! -f "$HERE/context_handler.py" ]; then
+  printf 'flow-context: WARNING context_handler.py missing beside the launcher; adapter inactive\n' >&2
+  exit 0
+fi
+exec "$PY" "$HERE/context_handler.py"

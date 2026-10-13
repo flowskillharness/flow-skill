@@ -126,3 +126,48 @@ Deferred (not rejected; reopen only on the stated trigger):
   tripwire-4 adopter demand
 - i18n: EN+VI blob-hash record only; glossary at a third language
 - Own orchestration runtime (`flow-orch`) — a SEPARATE product for extensibility; reopen only on a named flip-tripwire **and** capacity (tripwire 5). If a separate `flow-orch` product ever exists, it invokes flow like any other host; flow-skill never holds the process token.
+
+## Addendum — Host-fired lifecycle context adapters (2026-10-13)
+
+**Status: Accepted (this addendum only; the base identity statement, invariant, and all other
+mechanical prohibitions are unchanged).**
+
+**Decision provenance.** The prior flat rejection of lifecycle hooks (roadmap non-goal 3,
+2026-10-10) is revised here. Decision owner: the product owner, by explicit session
+authorization to reconsider previously rejected hook/runtime/MCP candidates (2026-10-13).
+This is a recorded user-authorized revision — not a maintainer vote and not an inferred
+permission from any vendor license or "full source ownership" claim.
+
+**The exact exception granted (nothing more):**
+
+1. Flow MAY ship **operator-installed, host-fired lifecycle context adapters**: small files
+   that a hosting agent executes at its own lifecycle events (SessionStart, PreCompact, or
+   equivalents) to hand flow's existing read-only status into the session.
+2. **Invariant holds.** Adapter bytes run because the HOST fired the event, and terminate
+   when the event handler returns. No residency, no daemon, no owned agent loop, no hosted
+   scheduling of any work.
+3. **Zero tool interposition. No security enforcement.** Adapters never register for
+   PreToolUse or any equivalent, never block, deny, rewrite, or approve a tool call, and are
+   never a security boundary. The merge-train/pre-commit classes of host hooks stay out of
+   scope.
+4. **Advisory, fail-open, never gate-bearing.** Adapters exit 0 on every path, never pass or
+   fail a gate, and never mutate gate or card state. The ONLY permitted write is the
+   adapter's own private snapshot under `<project>/.flow/context-handoff/` (directory mode
+   0700, file mode 0600, symlink-rejected, size-bounded). That snapshot is not durable-layer
+   state and no gate reads it. The project's `.flow` tree itself is never chmodded or
+   restructured by an adapter.
+5. **Registration stays operator-owned.** Flow never registers hooks into any host config;
+   shipping a template plus a per-host support disclosure is not activation. Removing the
+   operator's config entry fully removes the feature.
+6. **No new runtime dependency.** Adapters use only what flow already requires (POSIX shell
+   plus an already-optional Python 3 stdlib). Absent adapters or an absent Python change
+   nothing — degrade loudly, never lower a gate.
+
+**Still mechanically forbidden (unchanged):** daemons/resident processes, owned agent loops,
+tool-execution wrappers or interposition, servers, flow-owned registration of host events,
+gate-coupled hooks.
+
+**Revision rule:** extending this boundary — more event classes, any additional write
+surface, any interposition or enforcement, or flow-side registration — requires a further
+explicit revision of this addendum with the same decision provenance. The eval fixture-pair
+rule is not triggered: adapters are never gate-enforced rules.
