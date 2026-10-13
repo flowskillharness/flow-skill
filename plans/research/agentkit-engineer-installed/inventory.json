@@ -1,0 +1,1745 @@
+{
+  "metadata": {
+    "workstream": "SOURCE FORENSICS",
+    "target_product": "AgentKit Engineer",
+    "kit_version": "0.2.0",
+    "kit_tier": "paid",
+    "kit_description": "Engineer-specialized kit. Extends core additively with engineer-unique agents, skills, hooks, schemas, scripts.",
+    "binary_version": "2.19.0",
+    "binary_path": "/home/manhquy/.local/bin/ak.bak",
+    "binary_sha256": "563a9bbd394c200406afd177599d86590d177be7bc3e3c6175683248fb71dce3",
+    "binary_build_id": "69b40ffe740ef96cd960ff230d80d46b2ef9560c",
+    "binary_commit": "1f79164e6dd197c957d2155a850cce0ca03a0adb",
+    "binary_build_date": "2026-09-28T07:32:00Z",
+    "binary_format": "ELF 64-bit LSB executable, x86-64, statically linked, stripped",
+    "license_status": {
+      "account_auth_status": "authenticated (email_otp, manhquydev@gmail.com)",
+      "license_grant": "active license grant for kitId 'engineer', productId 'engineer'",
+      "redistribution_boundary": "Active license entitlement does NOT grant redistribution rights; proprietary license text unavailable locally; raw source code must not be committed to repo or published."
+    },
+    "authoritative_roots": {
+      "cache_root": "/home/manhquy/.agentkit/cache/kits/engineer/omp/2.18.1/engineer",
+      "dsh_cache_root": "/home/manhquy/.agentkit/cache/kits/engineer/dsh/2.18.1/engineer",
+      "adapter_root": "/home/manhquy/.agentkit/adapters/omp/engineer",
+      "runtime_skills_root": "/home/manhquy/.omp/agent/skills",
+      "agents_skills_root": "/home/manhquy/.agents/skills"
+    },
+    "privacy_exclusions": {
+      "auth_path": "/home/manhquy/.agentkit/auth",
+      "auth_files_excluded_count": 2,
+      "exclusion_reason": "Contains plaintext API tokens and OTP session state"
+    },
+    "observation_date": "2026-10-13",
+    "binary_symlink_state": "Host /home/manhquy/.local/bin/ak was repointed to broken /usr/local/bin/ak -> /opt/ak-gui/ak-gui.AppImage; authoritative binary preserved at /home/manhquy/.local/bin/ak.bak",
+    "binary_runtime": "Go (statically linked ELF x86-64, Go runtime symbols verified)",
+    "rea_mcp_evidence": {
+      "exported_bundle_path": "plans/research/agentkit-engineer-installed/rea-evidence-bundle.json",
+      "exported_bundle_bytes": 49435238,
+      "records_retained": 10,
+      "unknowns_retained": 4,
+      "verified_evidence_ids": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3",
+        "ev_74643d62c09653f9b67d08d646792a58f59828f22508494f17f4ab19828f53c4",
+        "ev_deb05dfaa8ee9360de7c06f6f3ecda6e25f0508668d81c29d5e3e88467b93b8a",
+        "ev_cb4d036928c8798086ecf2b006cc6a17e94054dfd0cb338055f21d42ea7e0dd2"
+      ],
+      "diagnosed_provider_limitations": {
+        "ghidra": "not_configured (Java 17 installed; requires JDK 21+ and GHIDRA_INSTALL_DIR)",
+        "pwntools_elf": "not_configured (REA_PWNTOOLS_PYTHON unset)",
+        "single_file_cjs": "analyze_javascript_application explicitly rejects single file; accepts directory or .asar"
+      }
+    }
+  },
+  "counts": {
+    "total_ownership_claims": 1710,
+    "kit_skills": 102,
+    "kit_agents": 16,
+    "kit_hooks": 54,
+    "kit_output_styles": 6,
+    "kit_rules": 8,
+    "kit_schemas": 1,
+    "kit_scripts": 5,
+    "kit_statusline": 1,
+    "runtime_skills_omp_total": 149,
+    "runtime_skills_omp_engineer_exclusive": 65,
+    "runtime_skills_omp_shared_marketing": 37,
+    "runtime_skills_omp_marketing_exclusive": 44,
+    "runtime_skills_omp_third_party": 3,
+    "runtime_skills_agents_third_party": 4
+  },
+  "components": {
+    "skills": [
+      {
+        "name": "ak-agent-browser",
+        "export_path": "skills/ak-agent-browser/",
+        "exists": true,
+        "file_count": 5,
+        "total_bytes": 12662,
+        "entry_hash": "f92580dc881ad071ea261a2ede9828f31db3bb9750bb8f2dd62d3a42c5a66573",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f92580dc881ad071ea261a2ede9828f31db3bb9750bb8f2dd62d3a42c5a66573"
+      },
+      {
+        "name": "ak-agentkit",
+        "export_path": "skills/ak-agentkit/",
+        "exists": true,
+        "file_count": 4,
+        "total_bytes": 17654,
+        "entry_hash": "67909df07a738a989862c1bf524d08e1e9bd495f39615de4dbb3a847ce55c4ed",
+        "installed_in_omp": true,
+        "installed_entry_hash": "67909df07a738a989862c1bf524d08e1e9bd495f39615de4dbb3a847ce55c4ed"
+      },
+      {
+        "name": "ak-ai-multimodal",
+        "export_path": "skills/ak-ai-multimodal/",
+        "exists": true,
+        "file_count": 12,
+        "total_bytes": 22384,
+        "entry_hash": "019b3d904da7fed968d49215c2affb313a67d5c1163a25e9b9ddc5faf8de5805",
+        "installed_in_omp": true,
+        "installed_entry_hash": "019b3d904da7fed968d49215c2affb313a67d5c1163a25e9b9ddc5faf8de5805"
+      },
+      {
+        "name": "ak-ak",
+        "export_path": "skills/ak-ak/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 29722,
+        "entry_hash": "63584db3b058b10b1aad8c74dc9f76d9a60ac02e00b695107ed55794623c2853",
+        "installed_in_omp": true,
+        "installed_entry_hash": "63584db3b058b10b1aad8c74dc9f76d9a60ac02e00b695107ed55794623c2853"
+      },
+      {
+        "name": "ak-ask",
+        "export_path": "skills/ak-ask/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 3496,
+        "entry_hash": "a34cf68f5cbb0f49284471d14e83ba9d27398f4a03fb4050ceb654aa3cec4897",
+        "installed_in_omp": true,
+        "installed_entry_hash": "a34cf68f5cbb0f49284471d14e83ba9d27398f4a03fb4050ceb654aa3cec4897"
+      },
+      {
+        "name": "ak-brainstorm",
+        "export_path": "skills/ak-brainstorm/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 32739,
+        "entry_hash": "d1eaecb42d67906cbdb95699f7844e657d301299918bd8be191aeed9ebfa9c9e",
+        "installed_in_omp": true,
+        "installed_entry_hash": "d1eaecb42d67906cbdb95699f7844e657d301299918bd8be191aeed9ebfa9c9e"
+      },
+      {
+        "name": "ak-bro",
+        "export_path": "skills/ak-bro/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 1942,
+        "entry_hash": "4cabdf9f4129ce83c2b63cc0028c8acd3e46ffeac91475e70ccf952c6601a411",
+        "installed_in_omp": true,
+        "installed_entry_hash": "4cabdf9f4129ce83c2b63cc0028c8acd3e46ffeac91475e70ccf952c6601a411"
+      },
+      {
+        "name": "ak-codex-goal",
+        "export_path": "skills/ak-codex-goal/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 3137,
+        "entry_hash": "088a5e8a3d5d923cb1f06e31edc2ac547c53ba2f68a5f777acf305efb7b1cc74",
+        "installed_in_omp": true,
+        "installed_entry_hash": "088a5e8a3d5d923cb1f06e31edc2ac547c53ba2f68a5f777acf305efb7b1cc74"
+      },
+      {
+        "name": "ak-cook",
+        "export_path": "skills/ak-cook/",
+        "exists": true,
+        "file_count": 11,
+        "total_bytes": 34929,
+        "entry_hash": "fb1551b6faf8c5605483f7c5bd679afddaf87620cdfc75d40481d43312484ecd",
+        "installed_in_omp": true,
+        "installed_entry_hash": "fb1551b6faf8c5605483f7c5bd679afddaf87620cdfc75d40481d43312484ecd"
+      },
+      {
+        "name": "ak-copywriting",
+        "export_path": "skills/ak-copywriting/",
+        "exists": true,
+        "file_count": 11,
+        "total_bytes": 44389,
+        "entry_hash": "79a86c11a416783a360fa70028b5c526e202bb2e31144017a179e60eba41e9fe",
+        "installed_in_omp": true,
+        "installed_entry_hash": "79a86c11a416783a360fa70028b5c526e202bb2e31144017a179e60eba41e9fe"
+      },
+      {
+        "name": "ak-debug",
+        "export_path": "skills/ak-debug/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 46792,
+        "entry_hash": "4e2895bd21cba3988673d913eb6ec66383d7c7265394615b008f3bca4dfa4b12",
+        "installed_in_omp": true,
+        "installed_entry_hash": "4e2895bd21cba3988673d913eb6ec66383d7c7265394615b008f3bca4dfa4b12"
+      },
+      {
+        "name": "ak-design",
+        "export_path": "skills/ak-design/",
+        "exists": true,
+        "file_count": 169,
+        "total_bytes": 468392,
+        "entry_hash": "f1e3df070452e4fca4a87a610e0a5273791d06181608d6ca66fdf8ce776b1741",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f1e3df070452e4fca4a87a610e0a5273791d06181608d6ca66fdf8ce776b1741"
+      },
+      {
+        "name": "ak-docs",
+        "export_path": "skills/ak-docs/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 83055,
+        "entry_hash": "897928d9be200884330ea5c69a5edeffbbd0f59e5fe4cae94da28a04c7059669",
+        "installed_in_omp": true,
+        "installed_entry_hash": "897928d9be200884330ea5c69a5edeffbbd0f59e5fe4cae94da28a04c7059669"
+      },
+      {
+        "name": "ak-docs-seeker",
+        "export_path": "skills/ak-docs-seeker/",
+        "exists": true,
+        "file_count": 17,
+        "total_bytes": 45065,
+        "entry_hash": "a5b8960d2f181e92fc8348b04a6f0b5d288dc163f81ca5e011db9bae35d790f1",
+        "installed_in_omp": true,
+        "installed_entry_hash": "a5b8960d2f181e92fc8348b04a6f0b5d288dc163f81ca5e011db9bae35d790f1"
+      },
+      {
+        "name": "ak-explain",
+        "export_path": "skills/ak-explain/",
+        "exists": true,
+        "file_count": 4,
+        "total_bytes": 12804,
+        "entry_hash": "9d870348316686815bad71d7761b7b8c9756e31a317eb784966affc54ebf2e1b",
+        "installed_in_omp": true,
+        "installed_entry_hash": "9d870348316686815bad71d7761b7b8c9756e31a317eb784966affc54ebf2e1b"
+      },
+      {
+        "name": "ak-fix",
+        "export_path": "skills/ak-fix/",
+        "exists": true,
+        "file_count": 19,
+        "total_bytes": 47976,
+        "entry_hash": "638953a27f2baae50a7cf1ee31f23ab307717679a584e85461af9e364978eaa0",
+        "installed_in_omp": true,
+        "installed_entry_hash": "638953a27f2baae50a7cf1ee31f23ab307717679a584e85461af9e364978eaa0"
+      },
+      {
+        "name": "ak-folder-context",
+        "export_path": "skills/ak-folder-context/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 3707,
+        "entry_hash": "800a4982f8299965d43cd82c20414ae4ce0b18a830b22520e43730df6b5d8cca",
+        "installed_in_omp": true,
+        "installed_entry_hash": "800a4982f8299965d43cd82c20414ae4ce0b18a830b22520e43730df6b5d8cca"
+      },
+      {
+        "name": "ak-frontend-design",
+        "export_path": "skills/ak-frontend-design/",
+        "exists": true,
+        "file_count": 26,
+        "total_bytes": 122914,
+        "entry_hash": "cd23fd29d641b7e54670313fd97713b4c5b7a08e7efb636bd95f46871d78ffe3",
+        "installed_in_omp": true,
+        "installed_entry_hash": "cd23fd29d641b7e54670313fd97713b4c5b7a08e7efb636bd95f46871d78ffe3"
+      },
+      {
+        "name": "ak-git",
+        "export_path": "skills/ak-git/",
+        "exists": true,
+        "file_count": 11,
+        "total_bytes": 33299,
+        "entry_hash": "f5a3643f7ec423ca6573808e1cca0f5e08b7958a47062fa21c496b96a9a6b555",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f5a3643f7ec423ca6573808e1cca0f5e08b7958a47062fa21c496b96a9a6b555"
+      },
+      {
+        "name": "ak-google-adk-python",
+        "export_path": "skills/ak-google-adk-python/",
+        "exists": true,
+        "file_count": 9,
+        "total_bytes": 30873,
+        "entry_hash": "e5f4eda34ce90c1681fdd04f301fe8b60290c671d1f4c079119c20d308920dd5",
+        "installed_in_omp": true,
+        "installed_entry_hash": "e5f4eda34ce90c1681fdd04f301fe8b60290c671d1f4c079119c20d308920dd5"
+      },
+      {
+        "name": "ak-handoff",
+        "export_path": "skills/ak-handoff/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 42037,
+        "entry_hash": "309bfde0e6696cb2f4815989e5b08c3edbccd166217f11909095a8efb66bc414",
+        "installed_in_omp": true,
+        "installed_entry_hash": "309bfde0e6696cb2f4815989e5b08c3edbccd166217f11909095a8efb66bc414"
+      },
+      {
+        "name": "ak-interview-docs",
+        "export_path": "skills/ak-interview-docs/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 3771,
+        "entry_hash": "4ee01800e4e3ab49b5e17f309e6ff98d2c929924cf9942bf5394790dd6b7f09c",
+        "installed_in_omp": true,
+        "installed_entry_hash": "4ee01800e4e3ab49b5e17f309e6ff98d2c929924cf9942bf5394790dd6b7f09c"
+      },
+      {
+        "name": "ak-journal",
+        "export_path": "skills/ak-journal/",
+        "exists": true,
+        "file_count": 23,
+        "total_bytes": 153930,
+        "entry_hash": "22ec29cb51bffad10a6a92b205e494d1c2ed6242b8fa778cd63e44bc1ccb34d4",
+        "installed_in_omp": true,
+        "installed_entry_hash": "22ec29cb51bffad10a6a92b205e494d1c2ed6242b8fa778cd63e44bc1ccb34d4"
+      },
+      {
+        "name": "ak-mermaidjs-v11",
+        "export_path": "skills/ak-mermaidjs-v11/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 30511,
+        "entry_hash": "54462ee67e02d3188407017f097dca8d2dbfebb1cc74654ea1009ae3fef8de3f",
+        "installed_in_omp": true,
+        "installed_entry_hash": "54462ee67e02d3188407017f097dca8d2dbfebb1cc74654ea1009ae3fef8de3f"
+      },
+      {
+        "name": "ak-plan",
+        "export_path": "skills/ak-plan/",
+        "exists": true,
+        "file_count": 23,
+        "total_bytes": 90043,
+        "entry_hash": "81df1ab9fb73a0a90cfd8def643c3b856c12cd59def78d9014b329d134620813",
+        "installed_in_omp": true,
+        "installed_entry_hash": "81df1ab9fb73a0a90cfd8def643c3b856c12cd59def78d9014b329d134620813"
+      },
+      {
+        "name": "ak-preview",
+        "export_path": "skills/ak-preview/",
+        "exists": true,
+        "file_count": 23,
+        "total_bytes": 314731,
+        "entry_hash": "7d326b5371877adc478e60a19a379c1c24cb9512f50db905413b8849f2c4ba2a",
+        "installed_in_omp": true,
+        "installed_entry_hash": "7d326b5371877adc478e60a19a379c1c24cb9512f50db905413b8849f2c4ba2a"
+      },
+      {
+        "name": "ak-research-prompt",
+        "export_path": "skills/ak-research-prompt/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 3595,
+        "entry_hash": "80b0cff92789bfd05162ebf2e11e0ea68b17174473a431f4ca7e0565a2d65906",
+        "installed_in_omp": true,
+        "installed_entry_hash": "80b0cff92789bfd05162ebf2e11e0ea68b17174473a431f4ca7e0565a2d65906"
+      },
+      {
+        "name": "ak-scout",
+        "export_path": "skills/ak-scout/",
+        "exists": true,
+        "file_count": 3,
+        "total_bytes": 13861,
+        "entry_hash": "2516f8747a07e973db6e009358a2fb2b88affdd53934c568fe56d11e389cd035",
+        "installed_in_omp": true,
+        "installed_entry_hash": "2516f8747a07e973db6e009358a2fb2b88affdd53934c568fe56d11e389cd035"
+      },
+      {
+        "name": "ak-skill-creator",
+        "export_path": "skills/ak-skill-creator/",
+        "exists": true,
+        "file_count": 52,
+        "total_bytes": 306131,
+        "entry_hash": "fc0d97c6718f84e962fb5678f4ea7dd280dd6fcd1d5d96093807c18412ba69f4",
+        "installed_in_omp": true,
+        "installed_entry_hash": "fc0d97c6718f84e962fb5678f4ea7dd280dd6fcd1d5d96093807c18412ba69f4"
+      },
+      {
+        "name": "ak-sowat",
+        "export_path": "skills/ak-sowat/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 3087,
+        "entry_hash": "17ac546e43ef1588fd2a0b351fd8fd1dc99ab4be9e2b14bd5fa31e7d8246182e",
+        "installed_in_omp": true,
+        "installed_entry_hash": "17ac546e43ef1588fd2a0b351fd8fd1dc99ab4be9e2b14bd5fa31e7d8246182e"
+      },
+      {
+        "name": "ak-sumup",
+        "export_path": "skills/ak-sumup/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 2931,
+        "entry_hash": "bc0d6b8dfa6fe273113781ea0a148536b83257a0549798e835793de99d3954c8",
+        "installed_in_omp": true,
+        "installed_entry_hash": "bc0d6b8dfa6fe273113781ea0a148536b83257a0549798e835793de99d3954c8"
+      },
+      {
+        "name": "ak-tech-graph",
+        "export_path": "skills/ak-tech-graph/",
+        "exists": true,
+        "file_count": 39,
+        "total_bytes": 229523,
+        "entry_hash": "efa41e467fd560f0332a871ce32356a2e6ff581f96b0cfecd862dc3c4b12cd59",
+        "installed_in_omp": true,
+        "installed_entry_hash": "efa41e467fd560f0332a871ce32356a2e6ff581f96b0cfecd862dc3c4b12cd59"
+      },
+      {
+        "name": "ak-test",
+        "export_path": "skills/ak-test/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 30977,
+        "entry_hash": "ee8285da0ac02c64e857cb88f2b448d11f8d27f853e3d3228878138a3dbb3064",
+        "installed_in_omp": true,
+        "installed_entry_hash": "ee8285da0ac02c64e857cb88f2b448d11f8d27f853e3d3228878138a3dbb3064"
+      },
+      {
+        "name": "ak-ui-ux-pro-max",
+        "export_path": "skills/ak-ui-ux-pro-max/",
+        "exists": true,
+        "file_count": 25,
+        "total_bytes": 1533096,
+        "entry_hash": "1e42b9563807d7e9c3331d2e7b059210dfce02dcec5fa8b79930eabc08fa5926",
+        "installed_in_omp": true,
+        "installed_entry_hash": "1e42b9563807d7e9c3331d2e7b059210dfce02dcec5fa8b79930eabc08fa5926"
+      },
+      {
+        "name": "ak-watzup",
+        "export_path": "skills/ak-watzup/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 50413,
+        "entry_hash": "653a5dd62ef5ee1dfa634f7c8251c66ec358ecd515c66551bac403512e781998",
+        "installed_in_omp": true,
+        "installed_entry_hash": "653a5dd62ef5ee1dfa634f7c8251c66ec358ecd515c66551bac403512e781998"
+      },
+      {
+        "name": "ak-worktree",
+        "export_path": "skills/ak-worktree/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 134900,
+        "entry_hash": "217132059760fc43600c1bfab4ae43b1abe8ad9b6837b71fbbfe97c714b83c80",
+        "installed_in_omp": true,
+        "installed_entry_hash": "217132059760fc43600c1bfab4ae43b1abe8ad9b6837b71fbbfe97c714b83c80"
+      },
+      {
+        "name": "ak-advise",
+        "export_path": "skills/ak-advise/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 18559,
+        "entry_hash": "0210e5faed9d3d97c20ae80998ef47d1f78f7114e68f2dccf7afedd4f8993328",
+        "installed_in_omp": true,
+        "installed_entry_hash": "0210e5faed9d3d97c20ae80998ef47d1f78f7114e68f2dccf7afedd4f8993328"
+      },
+      {
+        "name": "ak-agentize",
+        "export_path": "skills/ak-agentize/",
+        "exists": true,
+        "file_count": 9,
+        "total_bytes": 49330,
+        "entry_hash": "cd791b31c6e7a34d89ebeaa057c0da4f08601a7cff444aaea998146254509006",
+        "installed_in_omp": true,
+        "installed_entry_hash": "cd791b31c6e7a34d89ebeaa057c0da4f08601a7cff444aaea998146254509006"
+      },
+      {
+        "name": "ak-ai-artist",
+        "export_path": "skills/ak-ai-artist/",
+        "exists": true,
+        "file_count": 16,
+        "total_bytes": 314901,
+        "entry_hash": "d106fe1b6d14f2f31d456937241cb34c439068d7b60f0e25086a434483d0172a",
+        "installed_in_omp": true,
+        "installed_entry_hash": "d106fe1b6d14f2f31d456937241cb34c439068d7b60f0e25086a434483d0172a"
+      },
+      {
+        "name": "ak-autoresearch",
+        "export_path": "skills/ak-autoresearch/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 2917,
+        "entry_hash": "85a658017acd55b6b2d9a6417da5fc8fb61781bf641c3d83fcf8e551e903b678",
+        "installed_in_omp": true,
+        "installed_entry_hash": "85a658017acd55b6b2d9a6417da5fc8fb61781bf641c3d83fcf8e551e903b678"
+      },
+      {
+        "name": "ak-backend-development",
+        "export_path": "skills/ak-backend-development/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 125970,
+        "entry_hash": "dfa1706fbbe118fc82511570c555e84a471baa9f5757b1e1165b404884b02097",
+        "installed_in_omp": true,
+        "installed_entry_hash": "dfa1706fbbe118fc82511570c555e84a471baa9f5757b1e1165b404884b02097"
+      },
+      {
+        "name": "ak-better-auth",
+        "export_path": "skills/ak-better-auth/",
+        "exists": true,
+        "file_count": 10,
+        "total_bytes": 80107,
+        "entry_hash": "6a270fd093180788ad02274f6dc095901141d7c671f7df2db40e7d00ec88ef35",
+        "installed_in_omp": true,
+        "installed_entry_hash": "6a270fd093180788ad02274f6dc095901141d7c671f7df2db40e7d00ec88ef35"
+      },
+      {
+        "name": "ak-bootstrap",
+        "export_path": "skills/ak-bootstrap/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 20006,
+        "entry_hash": "f5100d4450f9cd134f5d5466f3e4b370889b01ccb41062b76dd619ccef839b60",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f5100d4450f9cd134f5d5466f3e4b370889b01ccb41062b76dd619ccef839b60"
+      },
+      {
+        "name": "ak-chrome-profile",
+        "export_path": "skills/ak-chrome-profile/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 91170,
+        "entry_hash": "c5edb1d553014ba1090c7e0c0d9f139b773e2632f1059ce01b268d8b28283e0d",
+        "installed_in_omp": true,
+        "installed_entry_hash": "c5edb1d553014ba1090c7e0c0d9f139b773e2632f1059ce01b268d8b28283e0d"
+      },
+      {
+        "name": "ak-code-review",
+        "export_path": "skills/ak-code-review/",
+        "exists": true,
+        "file_count": 15,
+        "total_bytes": 41829,
+        "entry_hash": "ce1c47c1e56a5ff2bb1b90885a13ce2d38ce459a2b19d8268966a89e2f021978",
+        "installed_in_omp": true,
+        "installed_entry_hash": "ce1c47c1e56a5ff2bb1b90885a13ce2d38ce459a2b19d8268966a89e2f021978"
+      },
+      {
+        "name": "ak-coding-level",
+        "export_path": "skills/ak-coding-level/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 3338,
+        "entry_hash": "3c474c28c7e8e4273da45c14f48162e5237188cb320b13d21fd9581c76bb99a6",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3c474c28c7e8e4273da45c14f48162e5237188cb320b13d21fd9581c76bb99a6"
+      },
+      {
+        "name": "ak-context-engineering",
+        "export_path": "skills/ak-context-engineering/",
+        "exists": true,
+        "file_count": 30,
+        "total_bytes": 146025,
+        "entry_hash": "6a07b998f3a0690322da6f8e69c85f50138cf58722803d5634a3cb719123ae40",
+        "installed_in_omp": true,
+        "installed_entry_hash": "6a07b998f3a0690322da6f8e69c85f50138cf58722803d5634a3cb719123ae40"
+      },
+      {
+        "name": "ak-cti-expert",
+        "export_path": "skills/ak-cti-expert/",
+        "exists": true,
+        "file_count": 118,
+        "total_bytes": 1113481,
+        "entry_hash": "351820afdad0f2f7cfad4df820e6a8063e4b440c12da59acdf2c2984267152cf",
+        "installed_in_omp": true,
+        "installed_entry_hash": "351820afdad0f2f7cfad4df820e6a8063e4b440c12da59acdf2c2984267152cf"
+      },
+      {
+        "name": "ak-databases",
+        "export_path": "skills/ak-databases/",
+        "exists": true,
+        "file_count": 19,
+        "total_bytes": 216406,
+        "entry_hash": "f6241b23043e702fd2479d8fd46944622f56b7d75ecca238412981be1fd8d4da",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f6241b23043e702fd2479d8fd46944622f56b7d75ecca238412981be1fd8d4da"
+      },
+      {
+        "name": "ak-deep-swe",
+        "export_path": "skills/ak-deep-swe/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 4889,
+        "entry_hash": "3ee5ec582d205810f900ea85e0334bba92f857aab0dd4ebe100a6b673474f0cb",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3ee5ec582d205810f900ea85e0334bba92f857aab0dd4ebe100a6b673474f0cb"
+      },
+      {
+        "name": "ak-deploy",
+        "export_path": "skills/ak-deploy/",
+        "exists": true,
+        "file_count": 17,
+        "total_bytes": 20685,
+        "entry_hash": "7ede7082442e2a881ed0fb093a84df33a7707baf17666497b5c7d97ea1fe84c4",
+        "installed_in_omp": true,
+        "installed_entry_hash": "7ede7082442e2a881ed0fb093a84df33a7707baf17666497b5c7d97ea1fe84c4"
+      },
+      {
+        "name": "ak-devops",
+        "export_path": "skills/ak-devops/",
+        "exists": true,
+        "file_count": 20,
+        "total_bytes": 118635,
+        "entry_hash": "386de0f4307abf9aaf3aed586c706488078deb3ab5bbb6584b4cd6c7d25f94dc",
+        "installed_in_omp": true,
+        "installed_entry_hash": "386de0f4307abf9aaf3aed586c706488078deb3ab5bbb6584b4cd6c7d25f94dc"
+      },
+      {
+        "name": "ak-diagram",
+        "export_path": "skills/ak-diagram/",
+        "exists": true,
+        "file_count": 141,
+        "total_bytes": 3681226,
+        "entry_hash": "35d484f13600cb444f38c779975d820231f78d72e8f33942084d27b97f3cd138",
+        "installed_in_omp": true,
+        "installed_entry_hash": "35d484f13600cb444f38c779975d820231f78d72e8f33942084d27b97f3cd138"
+      },
+      {
+        "name": "ak-document-skills",
+        "export_path": "skills/ak-document-skills/",
+        "exists": true,
+        "file_count": 70,
+        "total_bytes": 547380,
+        "entry_hash": "e3df6befea3a2acd84dfec51d4f0e2f47385b610687fb346ea1f5cc23af880ad",
+        "installed_in_omp": true,
+        "installed_entry_hash": "e3df6befea3a2acd84dfec51d4f0e2f47385b610687fb346ea1f5cc23af880ad"
+      },
+      {
+        "name": "ak-excalidraw",
+        "export_path": "skills/ak-excalidraw/",
+        "exists": true,
+        "file_count": 12,
+        "total_bytes": 63226,
+        "entry_hash": "5ca943d68c2a42a49103cfe20f13a6f299f8663fc34d13627e5f4d0038bbaac6",
+        "installed_in_omp": true,
+        "installed_entry_hash": "5ca943d68c2a42a49103cfe20f13a6f299f8663fc34d13627e5f4d0038bbaac6"
+      },
+      {
+        "name": "ak-fable-thinking",
+        "export_path": "skills/ak-fable-thinking/",
+        "exists": true,
+        "file_count": 20,
+        "total_bytes": 215607,
+        "entry_hash": "1dd4579c3bf144bcfa190be7e66310bfb43a690e7eff88aae12ee8724530a422",
+        "installed_in_omp": true,
+        "installed_entry_hash": "1dd4579c3bf144bcfa190be7e66310bfb43a690e7eff88aae12ee8724530a422"
+      },
+      {
+        "name": "ak-find-skills",
+        "export_path": "skills/ak-find-skills/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 9772,
+        "entry_hash": "202fb7259783cf02478da45afefa15de4614021252bc796bb53b223b51084ba7",
+        "installed_in_omp": true,
+        "installed_entry_hash": "202fb7259783cf02478da45afefa15de4614021252bc796bb53b223b51084ba7"
+      },
+      {
+        "name": "ak-frontend-development",
+        "export_path": "skills/ak-frontend-development/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 132169,
+        "entry_hash": "340bff3a91faf896396bc58d6e95b86351ef03a22a5204f32fdb5e6a3501c29f",
+        "installed_in_omp": true,
+        "installed_entry_hash": "340bff3a91faf896396bc58d6e95b86351ef03a22a5204f32fdb5e6a3501c29f"
+      },
+      {
+        "name": "ak-github",
+        "export_path": "skills/ak-github/",
+        "exists": true,
+        "file_count": 10,
+        "total_bytes": 31578,
+        "entry_hash": "1c8a4eed17adc56d83cf3e2075d2953234829809321beb08a66b0992adeae11b",
+        "installed_in_omp": true,
+        "installed_entry_hash": "1c8a4eed17adc56d83cf3e2075d2953234829809321beb08a66b0992adeae11b"
+      },
+      {
+        "name": "ak-gkg",
+        "export_path": "skills/ak-gkg/",
+        "exists": true,
+        "file_count": 5,
+        "total_bytes": 10646,
+        "entry_hash": "f44612b07cfa97de9f2ba119bcfd04886fb31b8aec2bc723d79235f5551047d6",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f44612b07cfa97de9f2ba119bcfd04886fb31b8aec2bc723d79235f5551047d6"
+      },
+      {
+        "name": "ak-goal-warmup",
+        "export_path": "skills/ak-goal-warmup/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 24315,
+        "entry_hash": "40260709f24bb83dddb3c28bddf99cf161053c3ec6787dd6b5dd26094fc65e7c",
+        "installed_in_omp": true,
+        "installed_entry_hash": "40260709f24bb83dddb3c28bddf99cf161053c3ec6787dd6b5dd26094fc65e7c"
+      },
+      {
+        "name": "ak-graphify",
+        "export_path": "skills/ak-graphify/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 5652,
+        "entry_hash": "173deecb21694b39a95f0c41d3b283114f18ea8eda0f6eed05814aec37ce7dc7",
+        "installed_in_omp": true,
+        "installed_entry_hash": "173deecb21694b39a95f0c41d3b283114f18ea8eda0f6eed05814aec37ce7dc7"
+      },
+      {
+        "name": "ak-help",
+        "export_path": "skills/ak-help/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 1478,
+        "entry_hash": "7493789754756d55b9d0d6e803d091eef39c5339ebbf76eda7c6720a4f8dd09e",
+        "installed_in_omp": true,
+        "installed_entry_hash": "7493789754756d55b9d0d6e803d091eef39c5339ebbf76eda7c6720a4f8dd09e"
+      },
+      {
+        "name": "ak-hyperframes",
+        "export_path": "skills/ak-hyperframes/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 27224,
+        "entry_hash": "eb3c8726a55b23c1df8f3374952dd50c4883b813038a447aa37c1eab2950b360",
+        "installed_in_omp": true,
+        "installed_entry_hash": "eb3c8726a55b23c1df8f3374952dd50c4883b813038a447aa37c1eab2950b360"
+      },
+      {
+        "name": "ak-issue-to-plan",
+        "export_path": "skills/ak-issue-to-plan/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 12733,
+        "entry_hash": "639408527f6081874c0705b048c5ca0a70bd6c6ca11556284e38f13989aab070",
+        "installed_in_omp": true,
+        "installed_entry_hash": "639408527f6081874c0705b048c5ca0a70bd6c6ca11556284e38f13989aab070"
+      },
+      {
+        "name": "ak-llms",
+        "export_path": "skills/ak-llms/",
+        "exists": true,
+        "file_count": 3,
+        "total_bytes": 17494,
+        "entry_hash": "09da351368a7a31b2984e3cb74cb6189b19638f27433d7323f05929369818811",
+        "installed_in_omp": true,
+        "installed_entry_hash": "09da351368a7a31b2984e3cb74cb6189b19638f27433d7323f05929369818811"
+      },
+      {
+        "name": "ak-loop",
+        "export_path": "skills/ak-loop/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 30148,
+        "entry_hash": "9eaa6d1835a1b07bcd57bbed078a13b02eb8f409a7cf1ce72f51e4ca174d704f",
+        "installed_in_omp": true,
+        "installed_entry_hash": "9eaa6d1835a1b07bcd57bbed078a13b02eb8f409a7cf1ce72f51e4ca174d704f"
+      },
+      {
+        "name": "ak-markdown-novel-viewer",
+        "export_path": "skills/ak-markdown-novel-viewer/",
+        "exists": true,
+        "file_count": 29,
+        "total_bytes": 167819,
+        "entry_hash": "723e6077a4db3760b0966abbc55997c3849db65946b73e708127289dcb4506b1",
+        "installed_in_omp": true,
+        "installed_entry_hash": "723e6077a4db3760b0966abbc55997c3849db65946b73e708127289dcb4506b1"
+      },
+      {
+        "name": "ak-mcp-builder",
+        "export_path": "skills/ak-mcp-builder/",
+        "exists": true,
+        "file_count": 12,
+        "total_bytes": 139648,
+        "entry_hash": "6fefd39caecd48b7beca8342f9cecd2d50db45c659045fa9fe672015b7c7e7bc",
+        "installed_in_omp": true,
+        "installed_entry_hash": "6fefd39caecd48b7beca8342f9cecd2d50db45c659045fa9fe672015b7c7e7bc"
+      },
+      {
+        "name": "ak-media-processing",
+        "export_path": "skills/ak-media-processing/",
+        "exists": true,
+        "file_count": 22,
+        "total_bytes": 151164,
+        "entry_hash": "1db4884bc4da94716ee7a176f1e76a1f607a2c47ce43a5b17741dac8c75425ae",
+        "installed_in_omp": true,
+        "installed_entry_hash": "1db4884bc4da94716ee7a176f1e76a1f607a2c47ce43a5b17741dac8c75425ae"
+      },
+      {
+        "name": "ak-mintlify",
+        "export_path": "skills/ak-mintlify/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 81049,
+        "entry_hash": "cb0fd0ec324a522f9d5346750d567d84aaf6585bf9233a2f57a03e0008518f8b",
+        "installed_in_omp": true,
+        "installed_entry_hash": "cb0fd0ec324a522f9d5346750d567d84aaf6585bf9233a2f57a03e0008518f8b"
+      },
+      {
+        "name": "ak-mobile-development",
+        "export_path": "skills/ak-mobile-development/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 98114,
+        "entry_hash": "ce9480a59d0b85c07c16254e6e1f941b0f25fc0e16776d2790f4762b9b2af0b5",
+        "installed_in_omp": true,
+        "installed_entry_hash": "ce9480a59d0b85c07c16254e6e1f941b0f25fc0e16776d2790f4762b9b2af0b5"
+      },
+      {
+        "name": "ak-orchestrate",
+        "export_path": "skills/ak-orchestrate/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 93752,
+        "entry_hash": "2737138785f720f47bf92591f84c98e160b4decc4e0e6fdf3a9a12385e075f30",
+        "installed_in_omp": true,
+        "installed_entry_hash": "2737138785f720f47bf92591f84c98e160b4decc4e0e6fdf3a9a12385e075f30"
+      },
+      {
+        "name": "ak-page-builder",
+        "export_path": "skills/ak-page-builder/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 55490,
+        "entry_hash": "98526d4397130ba91a6f5533c347b0f330db54ba14f02c0594fd2b9bf784ab79",
+        "installed_in_omp": true,
+        "installed_entry_hash": "98526d4397130ba91a6f5533c347b0f330db54ba14f02c0594fd2b9bf784ab79"
+      },
+      {
+        "name": "ak-payment-integration",
+        "export_path": "skills/ak-payment-integration/",
+        "exists": true,
+        "file_count": 28,
+        "total_bytes": 209117,
+        "entry_hash": "d524b61cd2e416a7a0f330095f9ee9871b2c7a457314d258a43afbd7c075be89",
+        "installed_in_omp": true,
+        "installed_entry_hash": "d524b61cd2e416a7a0f330095f9ee9871b2c7a457314d258a43afbd7c075be89"
+      },
+      {
+        "name": "ak-plans-kanban",
+        "export_path": "skills/ak-plans-kanban/",
+        "exists": true,
+        "file_count": 8,
+        "total_bytes": 49456,
+        "entry_hash": "82c45b62b7b1958dd6462748dc66cd9f1bf1b5f3df8fee9151a68777e83ae73f",
+        "installed_in_omp": true,
+        "installed_entry_hash": "82c45b62b7b1958dd6462748dc66cd9f1bf1b5f3df8fee9151a68777e83ae73f"
+      },
+      {
+        "name": "ak-predict",
+        "export_path": "skills/ak-predict/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 7070,
+        "entry_hash": "c70785265accf940d8a1df9657b96d38734fd24e055153afd5d6b7d13ed6ba78",
+        "installed_in_omp": true,
+        "installed_entry_hash": "c70785265accf940d8a1df9657b96d38734fd24e055153afd5d6b7d13ed6ba78"
+      },
+      {
+        "name": "ak-problem-solving",
+        "export_path": "skills/ak-problem-solving/",
+        "exists": true,
+        "file_count": 9,
+        "total_bytes": 26293,
+        "entry_hash": "4873a814bb65bc52186fe7f531aff202d4743b6a4c2a2daef8d0d0027d63de15",
+        "installed_in_omp": true,
+        "installed_entry_hash": "4873a814bb65bc52186fe7f531aff202d4743b6a4c2a2daef8d0d0027d63de15"
+      },
+      {
+        "name": "ak-project-management",
+        "export_path": "skills/ak-project-management/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 15761,
+        "entry_hash": "277b90f75b52ba47d17e294a1b871fcf3ca17fdf8dd0c0c5778d97eecfdad414",
+        "installed_in_omp": true,
+        "installed_entry_hash": "277b90f75b52ba47d17e294a1b871fcf3ca17fdf8dd0c0c5778d97eecfdad414"
+      },
+      {
+        "name": "ak-project-organization",
+        "export_path": "skills/ak-project-organization/",
+        "exists": true,
+        "file_count": 4,
+        "total_bytes": 25939,
+        "entry_hash": "e1d47afebda8ebe79b616dd4d55084a814c98e567459afe54e156e7609a09c61",
+        "installed_in_omp": true,
+        "installed_entry_hash": "e1d47afebda8ebe79b616dd4d55084a814c98e567459afe54e156e7609a09c61"
+      },
+      {
+        "name": "ak-react-best-practices",
+        "export_path": "skills/ak-react-best-practices/",
+        "exists": true,
+        "file_count": 51,
+        "total_bytes": 132874,
+        "entry_hash": "3763dd129c00e98b7896f23281b47775a944a03bceb20755b96a1a725cc9ddd0",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3763dd129c00e98b7896f23281b47775a944a03bceb20755b96a1a725cc9ddd0"
+      },
+      {
+        "name": "ak-remotion",
+        "export_path": "skills/ak-remotion/",
+        "exists": true,
+        "file_count": 33,
+        "total_bytes": 79925,
+        "entry_hash": "5afea899143540e3a0be605a409ec51b4368b871b0fc03dfff39fe0771b9e485",
+        "installed_in_omp": true,
+        "installed_entry_hash": "5afea899143540e3a0be605a409ec51b4368b871b0fc03dfff39fe0771b9e485"
+      },
+      {
+        "name": "ak-repomix",
+        "export_path": "skills/ak-repomix/",
+        "exists": true,
+        "file_count": 9,
+        "total_bytes": 54986,
+        "entry_hash": "bdc42723c0a9abad8715a86ca85bb20464cc2da31f6a74524c80d3043eadf5f6",
+        "installed_in_omp": true,
+        "installed_entry_hash": "bdc42723c0a9abad8715a86ca85bb20464cc2da31f6a74524c80d3043eadf5f6"
+      },
+      {
+        "name": "ak-research",
+        "export_path": "skills/ak-research/",
+        "exists": true,
+        "file_count": 2,
+        "total_bytes": 8519,
+        "entry_hash": "924e4d5b4df66821a2406fc9bc644f603d65396f1a54c63564e2fa8d0ac99f44",
+        "installed_in_omp": true,
+        "installed_entry_hash": "924e4d5b4df66821a2406fc9bc644f603d65396f1a54c63564e2fa8d0ac99f44"
+      },
+      {
+        "name": "ak-retro",
+        "export_path": "skills/ak-retro/",
+        "exists": true,
+        "file_count": 5,
+        "total_bytes": 21131,
+        "entry_hash": "97c92e895bb3f5f00593f3f691cace121b7f116668b5efc94f55c9084b103809",
+        "installed_in_omp": true,
+        "installed_entry_hash": "97c92e895bb3f5f00593f3f691cace121b7f116668b5efc94f55c9084b103809"
+      },
+      {
+        "name": "ak-review-pr",
+        "export_path": "skills/ak-review-pr/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 67192,
+        "entry_hash": "9110fdb39a96bf705df0d01d2c48f850f1005dc816ee23f10dcc5865cffc88ec",
+        "installed_in_omp": true,
+        "installed_entry_hash": "9110fdb39a96bf705df0d01d2c48f850f1005dc816ee23f10dcc5865cffc88ec"
+      },
+      {
+        "name": "ak-scenario",
+        "export_path": "skills/ak-scenario/",
+        "exists": true,
+        "file_count": 1,
+        "total_bytes": 9681,
+        "entry_hash": "fd5b2a5c6d6666737601f5af3bdf5748121add1085425dc4bdc633ce64d91ed2",
+        "installed_in_omp": true,
+        "installed_entry_hash": "fd5b2a5c6d6666737601f5af3bdf5748121add1085425dc4bdc633ce64d91ed2"
+      },
+      {
+        "name": "ak-security",
+        "export_path": "skills/ak-security/",
+        "exists": true,
+        "file_count": 5,
+        "total_bytes": 29247,
+        "entry_hash": "58aaf413d7894c2750c529f606ed61146f1123aa704551fc51aee20a93899a15",
+        "installed_in_omp": true,
+        "installed_entry_hash": "58aaf413d7894c2750c529f606ed61146f1123aa704551fc51aee20a93899a15"
+      },
+      {
+        "name": "ak-shader",
+        "export_path": "skills/ak-shader/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 39096,
+        "entry_hash": "4be14c6555bf2e9ba87078d6ede4d3feaa5ab797f61cb966df97166067559748",
+        "installed_in_omp": true,
+        "installed_entry_hash": "4be14c6555bf2e9ba87078d6ede4d3feaa5ab797f61cb966df97166067559748"
+      },
+      {
+        "name": "ak-ship",
+        "export_path": "skills/ak-ship/",
+        "exists": true,
+        "file_count": 9,
+        "total_bytes": 56770,
+        "entry_hash": "465cf5f8f8e88138013efba19b2010575904809ae5d0295eeb7852ea149244ce",
+        "installed_in_omp": true,
+        "installed_entry_hash": "465cf5f8f8e88138013efba19b2010575904809ae5d0295eeb7852ea149244ce"
+      },
+      {
+        "name": "ak-shopify",
+        "export_path": "skills/ak-shopify/",
+        "exists": true,
+        "file_count": 10,
+        "total_bytes": 67138,
+        "entry_hash": "75f083dd7a959f635e5086c8464e8a6d78138e382186f8696a06649f2e1c59e2",
+        "installed_in_omp": true,
+        "installed_entry_hash": "75f083dd7a959f635e5086c8464e8a6d78138e382186f8696a06649f2e1c59e2"
+      },
+      {
+        "name": "ak-show-off",
+        "export_path": "skills/ak-show-off/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 34103,
+        "entry_hash": "6c781c2b45b223d698030d25357af0c1cb457438fd8b634d10d82dd720655209",
+        "installed_in_omp": true,
+        "installed_entry_hash": "6c781c2b45b223d698030d25357af0c1cb457438fd8b634d10d82dd720655209"
+      },
+      {
+        "name": "ak-stitch",
+        "export_path": "skills/ak-stitch/",
+        "exists": true,
+        "file_count": 10,
+        "total_bytes": 40315,
+        "entry_hash": "0e1ae5291aee7573be1d76c4f3596252401edd5d3b419cd3fd047f8b13343d54",
+        "installed_in_omp": true,
+        "installed_entry_hash": "0e1ae5291aee7573be1d76c4f3596252401edd5d3b419cd3fd047f8b13343d54"
+      },
+      {
+        "name": "ak-tanstack",
+        "export_path": "skills/ak-tanstack/",
+        "exists": true,
+        "file_count": 5,
+        "total_bytes": 15513,
+        "entry_hash": "6e1d0100ea355939b922aad0fa6aee6f42490e2cbd0e5eb78d5d747959d33390",
+        "installed_in_omp": true,
+        "installed_entry_hash": "6e1d0100ea355939b922aad0fa6aee6f42490e2cbd0e5eb78d5d747959d33390"
+      },
+      {
+        "name": "ak-team",
+        "export_path": "skills/ak-team/",
+        "exists": true,
+        "file_count": 6,
+        "total_bytes": 23891,
+        "entry_hash": "12136488416061b9566a32da0e332bc6830e74fc7d0bc0b3b6f9008b2ccc8106",
+        "installed_in_omp": true,
+        "installed_entry_hash": "12136488416061b9566a32da0e332bc6830e74fc7d0bc0b3b6f9008b2ccc8106"
+      },
+      {
+        "name": "ak-threejs",
+        "export_path": "skills/ak-threejs/",
+        "exists": true,
+        "file_count": 29,
+        "total_bytes": 352882,
+        "entry_hash": "967b355c7ebe120516f8aca727211aa5f5125d2cae12d0429fd1bbccfb2574b2",
+        "installed_in_omp": true,
+        "installed_entry_hash": "967b355c7ebe120516f8aca727211aa5f5125d2cae12d0429fd1bbccfb2574b2"
+      },
+      {
+        "name": "ak-ui-styling",
+        "export_path": "skills/ak-ui-styling/",
+        "exists": true,
+        "file_count": 18,
+        "total_bytes": 167420,
+        "entry_hash": "3858e5ec61ba1b60783faea936cd102ee8d4d0737c2764a2828d02662b8fbb64",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3858e5ec61ba1b60783faea936cd102ee8d4d0737c2764a2828d02662b8fbb64"
+      },
+      {
+        "name": "ak-vibe",
+        "export_path": "skills/ak-vibe/",
+        "exists": true,
+        "file_count": 4,
+        "total_bytes": 33250,
+        "entry_hash": "3582096b1761bb7f7cddc7f0b85f514c9c704cef49fd9c0dc1e2302e73eaec35",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3582096b1761bb7f7cddc7f0b85f514c9c704cef49fd9c0dc1e2302e73eaec35"
+      },
+      {
+        "name": "ak-web-frameworks",
+        "export_path": "skills/ak-web-frameworks/",
+        "exists": true,
+        "file_count": 19,
+        "total_bytes": 177787,
+        "entry_hash": "54ce97ddba9ba0c519a3162889f1e618f50320051cbda432ecbe342f82f76e2a",
+        "installed_in_omp": true,
+        "installed_entry_hash": "54ce97ddba9ba0c519a3162889f1e618f50320051cbda432ecbe342f82f76e2a"
+      },
+      {
+        "name": "ak-web-testing",
+        "export_path": "skills/ak-web-testing/",
+        "exists": true,
+        "file_count": 28,
+        "total_bytes": 76816,
+        "entry_hash": "5358b090e7c9707d3f3925338b3ee1e28245640ddde70a9eb1fa6d79faa96b58",
+        "installed_in_omp": true,
+        "installed_entry_hash": "5358b090e7c9707d3f3925338b3ee1e28245640ddde70a9eb1fa6d79faa96b58"
+      },
+      {
+        "name": "ak-webmcp",
+        "export_path": "skills/ak-webmcp/",
+        "exists": true,
+        "file_count": 13,
+        "total_bytes": 82516,
+        "entry_hash": "f514ce7c49139ec0496a141fc8a68115060f7276d6fb1e53d3aadce972060fb7",
+        "installed_in_omp": true,
+        "installed_entry_hash": "f514ce7c49139ec0496a141fc8a68115060f7276d6fb1e53d3aadce972060fb7"
+      },
+      {
+        "name": "ak-xia",
+        "export_path": "skills/ak-xia/",
+        "exists": true,
+        "file_count": 4,
+        "total_bytes": 32121,
+        "entry_hash": "3511fcf2463af2b3718adc223d9e86d01d302ed1b53e6d576a76c35da02a7bb1",
+        "installed_in_omp": true,
+        "installed_entry_hash": "3511fcf2463af2b3718adc223d9e86d01d302ed1b53e6d576a76c35da02a7bb1"
+      }
+    ],
+    "agents": [
+      {
+        "name": "Explore",
+        "export_path": "agents/explore.md",
+        "exists": true,
+        "size_bytes": 1314,
+        "sha256": "23dabad459d635e94013bda45b65b92888d1d47b692b06e05e25ebc7bbd44129"
+      },
+      {
+        "name": "debugger",
+        "export_path": "agents/debugger.md",
+        "exists": true,
+        "size_bytes": 10835,
+        "sha256": "27d5128ce5ff699d81f178d198e81d0695801234081ba9e6d81e852011378edf"
+      },
+      {
+        "name": "docs-manager",
+        "export_path": "agents/docs-manager.md",
+        "exists": true,
+        "size_bytes": 5825,
+        "sha256": "9c3713a6ad5e856c6b28dbb659c6f21d2c504d3b9f2fb511a625e6c77d2cf55d"
+      },
+      {
+        "name": "fullstack-developer",
+        "export_path": "agents/fullstack-developer.md",
+        "exists": true,
+        "size_bytes": 6621,
+        "sha256": "a7d6a328f0fd6836df00d05d2f47e6fc8fd5dce911f1a6c7815916cde1e0cb39"
+      },
+      {
+        "name": "journal-writer",
+        "export_path": "agents/journal-writer.md",
+        "exists": true,
+        "size_bytes": 9081,
+        "sha256": "7af8ca769c80d2b9a6d1496dd4851c1e21d43524bad615efb5ac71d41d35c15c"
+      },
+      {
+        "name": "kongming",
+        "export_path": "agents/kongming.md",
+        "exists": true,
+        "size_bytes": 4280,
+        "sha256": "3ca638aabcf793ecbf35fcb45f7a4d89fd37a78effc7c5100779d878bb39b0ab"
+      },
+      {
+        "name": "planner",
+        "export_path": "agents/planner.md",
+        "exists": true,
+        "size_bytes": 11446,
+        "sha256": "b8ae8216319b72221ae36e45dc4dcf82cdeca00d8852c6ce588fb31348d0007e"
+      },
+      {
+        "name": "project-manager",
+        "export_path": "agents/project-manager.md",
+        "exists": true,
+        "size_bytes": 3657,
+        "sha256": "8f81544788ba7aa0b2869bbae85d6d13c1011df498cb673844d97448bcad0334"
+      },
+      {
+        "name": "researcher",
+        "export_path": "agents/researcher.md",
+        "exists": true,
+        "size_bytes": 6299,
+        "sha256": "028517a92c92d3743a0ba918cc936ff29bbd9fbd4c41c2afe209b0cfaddfa776"
+      },
+      {
+        "name": "tester",
+        "export_path": "agents/tester.md",
+        "exists": true,
+        "size_bytes": 10078,
+        "sha256": "293f085d4afc8a7242d172cdb53adb3869ab412dd5ac0018da570af8185b766f"
+      },
+      {
+        "name": "advisor",
+        "export_path": "agents/advisor.md",
+        "exists": true,
+        "size_bytes": 6851,
+        "sha256": "7a43bd0cd62a83586b7bb57dabd78c9adb912ddc368f894c035fc733f1d6cde1"
+      },
+      {
+        "name": "brainstormer",
+        "export_path": "agents/brainstormer.md",
+        "exists": true,
+        "size_bytes": 8088,
+        "sha256": "037098c2520abd689ae76b129fb6b74543085bb70244d8a598b26eb122b35a29"
+      },
+      {
+        "name": "code-simplifier",
+        "export_path": "agents/code-simplifier.md",
+        "exists": true,
+        "size_bytes": 3384,
+        "sha256": "7e1a031112a72fd39bd5f7b9ca8c127f8b7928c13b6fa6061b07d90a73580862"
+      },
+      {
+        "name": "code-reviewer",
+        "export_path": "agents/code-reviewer.md",
+        "exists": true,
+        "size_bytes": 7460,
+        "sha256": "bba174ebcad52eb221767c222d4d6287cf83a59b0a93f6a07f99469bf19bd01f"
+      },
+      {
+        "name": "git-manager",
+        "export_path": "agents/git-manager.md",
+        "exists": true,
+        "size_bytes": 1397,
+        "sha256": "405b0d836d8fe48d3d4bdf54bc0a9746e7b10f234569c348cb978fe2785abdd4"
+      },
+      {
+        "name": "ui-ux-designer",
+        "export_path": "agents/ui-ux-designer.md",
+        "exists": true,
+        "size_bytes": 15104,
+        "sha256": "fa5f1fb85b45573f7c0225477950637e2ab7c366db8a46a3570927ad7f9cd03a"
+      }
+    ],
+    "hooks": [
+      {
+        "name": "hooks.json",
+        "export_path": "hooks/hooks.json",
+        "exists": true,
+        "size_bytes": 6111,
+        "sha256": "d44d4626ae29213fc0636fea374127626895ecec56dfe92de85a6ac912a1acfc"
+      },
+      {
+        "name": "descriptive-name",
+        "export_path": "hooks/descriptive-name.cjs",
+        "exists": true,
+        "size_bytes": 1799,
+        "sha256": "82664af2da0f3e72c82f60cd2430988011258474bcc05c846dd8bec9ec722bc4"
+      },
+      {
+        "name": "dev-rules-reminder",
+        "export_path": "hooks/dev-rules-reminder.cjs",
+        "exists": true,
+        "size_bytes": 3381,
+        "sha256": "52e06750423ee3eebedf7ad66afded7494d629bddca4be798cdb44749c59b1ff"
+      },
+      {
+        "name": "privacy-block",
+        "export_path": "hooks/privacy-block.cjs",
+        "exists": true,
+        "size_bytes": 5394,
+        "sha256": "2201764e710297dab6f71ed7dc1b99d4c4eb8cec3a357fe5b87bbb79d8e29500"
+      },
+      {
+        "name": "context-firewall",
+        "export_path": "hooks/context-firewall.cjs",
+        "exists": true,
+        "size_bytes": 5520,
+        "sha256": "b8ffc58ff24dce12cb4ffa4e9e89a73ce1906d582edb39e8bc36626e1ae4d10a"
+      },
+      {
+        "name": "scout-block",
+        "export_path": "hooks/scout-block.cjs",
+        "exists": true,
+        "size_bytes": 5272,
+        "sha256": "922537dde576406f7e751b1e16cd6973604e9071902db9b7379357f42fb42044"
+      },
+      {
+        "name": "secret-output-guardrail",
+        "export_path": "hooks/secret-output-guardrail.cjs",
+        "exists": true,
+        "size_bytes": 2485,
+        "sha256": "df44ae2a978fc14e162c957c7b626ebfa182fd97e507b10f7e0cc2a39aa644b7"
+      },
+      {
+        "name": "agent-behavior-linter",
+        "export_path": "hooks/agent-behavior-linter.cjs",
+        "exists": true,
+        "size_bytes": 3504,
+        "sha256": "3ead5204000027ba2a2d93946a34d1b81f61cfaa47517adbd59f303434914e1a"
+      },
+      {
+        "name": "cook-after-plan-reminder",
+        "export_path": "hooks/cook-after-plan-reminder.cjs",
+        "exists": true,
+        "size_bytes": 4703,
+        "sha256": "0e631328ed8b29b6cd389a4b1d50d45c15c01ac77278d5983b8b6b6e49bc113d"
+      },
+      {
+        "name": "plan-format-kanban",
+        "export_path": "hooks/plan-format-kanban.cjs",
+        "exists": true,
+        "size_bytes": 4106,
+        "sha256": "e70376a5a7f156d8ee17470e2f1ac9a15766dc83797ef1bd9cf2dbb79de93bef"
+      },
+      {
+        "name": "precompact-capture",
+        "export_path": "hooks/precompact-capture.cjs",
+        "exists": true,
+        "size_bytes": 7469,
+        "sha256": "6d7fbba069e02e94d7c7949e1d93bedf430736ac18b4d304f76b079598d5ebeb"
+      },
+      {
+        "name": "session-state",
+        "export_path": "hooks/session-state.cjs",
+        "exists": true,
+        "size_bytes": 1412,
+        "sha256": "c09eddfa6d656e64f508170c514ee90687e256047e9d4d875cd94a6ff404d66a"
+      },
+      {
+        "name": "simplify-gate",
+        "export_path": "hooks/simplify-gate.cjs",
+        "exists": true,
+        "size_bytes": 6825,
+        "sha256": "147b0d3acecd7ee4d05be6f41c4c359fba3fe9eaa6f929d4f1b68ac0b4e7efd5"
+      },
+      {
+        "name": "team-context-inject",
+        "export_path": "hooks/team-context-inject.cjs",
+        "exists": true,
+        "size_bytes": 5975,
+        "sha256": "539c9c1a71cd90cc56bbe9a175c7d294ec3b9c6db79e15c51e0f944d50875c97"
+      },
+      {
+        "name": "usage-quota-cache-refresh",
+        "export_path": "hooks/usage-quota-cache-refresh.cjs",
+        "exists": true,
+        "size_bytes": 3012,
+        "sha256": "71560a572ffffc20be12466d6f801c174c71fc8cd17a82c7f9d1eadffdbc96ff"
+      },
+      {
+        "name": "session-init",
+        "export_path": "hooks/session-init.cjs",
+        "exists": true,
+        "size_bytes": 28201,
+        "sha256": "5ee791f4f9c42c978eaedf38874b0b1921d76437e9e3af1aef95dfd4ca1db2c4"
+      },
+      {
+        "name": "subagent-init",
+        "export_path": "hooks/subagent-init.cjs",
+        "exists": true,
+        "size_bytes": 9206,
+        "sha256": "71653675fdf6c3d67a691e70856ce024fbe68fa98ae404d3af9c90c0ead2f1b4"
+      },
+      {
+        "name": "lib/ck-config-utils",
+        "export_path": "hooks/lib/ck-config-utils.cjs",
+        "exists": true,
+        "size_bytes": 30585,
+        "sha256": "faf08fc50fa4fd4e2c85ea58218d6bdbf0827ae153c03fa8580bed6cef0f2573"
+      },
+      {
+        "name": "lib/bounded-json-file",
+        "export_path": "hooks/lib/bounded-json-file.cjs",
+        "exists": true,
+        "size_bytes": 6717,
+        "sha256": "302bab5b0a9ef69afb6d0fdfb7013bf1f55812937f2bf4c746a7eddc8d0af1e7"
+      },
+      {
+        "name": "lib/immutable-revision-journal",
+        "export_path": "hooks/lib/immutable-revision-journal.cjs",
+        "exists": true,
+        "size_bytes": 5963,
+        "sha256": "b0bf5c0b2c9b87eac1bc43b4b9511b2b4cf6742948cc16db051eef9d552e2fa6"
+      },
+      {
+        "name": "lib/private-json-store",
+        "export_path": "hooks/lib/private-json-store.cjs",
+        "exists": true,
+        "size_bytes": 9935,
+        "sha256": "784043b723fa6a9db041d5e2707b49a40a754b25e7b388287951372ffa8396e6"
+      },
+      {
+        "name": "lib/runtime-state-identity",
+        "export_path": "hooks/lib/runtime-state-identity.cjs",
+        "exists": true,
+        "size_bytes": 6997,
+        "sha256": "e4b60d98abe087e47e61cb52a7caa376e1f83aec426f4551a03cb6d0d3d0a280"
+      },
+      {
+        "name": "lib/session-state-renderer",
+        "export_path": "hooks/lib/session-state-renderer.cjs",
+        "exists": true,
+        "size_bytes": 3661,
+        "sha256": "089d541283b6a5584cb85880cf15da1464396ee51232069470afba61be2bd63f"
+      },
+      {
+        "name": "lib/colors",
+        "export_path": "hooks/lib/colors.cjs",
+        "exists": true,
+        "size_bytes": 5836,
+        "sha256": "4841b5b0786727c841295bca123e25ac1a530b77fd1c9a932ddc36152b59e8c1"
+      },
+      {
+        "name": "lib/config-counter",
+        "export_path": "hooks/lib/config-counter.cjs",
+        "exists": true,
+        "size_bytes": 3493,
+        "sha256": "b44d9f4cb6a6a77648b318ecc7fa50f2f8c3f9d6e2dffc875eda226cba2e5f22"
+      },
+      {
+        "name": "lib/context-builder",
+        "export_path": "hooks/lib/context-builder.cjs",
+        "exists": true,
+        "size_bytes": 28161,
+        "sha256": "58935649bef93fe07371d8a19df45d0a292560d54e7d1079bca407317ec6165f"
+      },
+      {
+        "name": "lib/git-info-cache",
+        "export_path": "hooks/lib/git-info-cache.cjs",
+        "exists": true,
+        "size_bytes": 5764,
+        "sha256": "d54b164ca22ac3881f3ca9a240fdd1301ac67fb2b5715523a4f5db499d46d18f"
+      },
+      {
+        "name": "lib/hook-logger",
+        "export_path": "hooks/lib/hook-logger.cjs",
+        "exists": true,
+        "size_bytes": 4141,
+        "sha256": "b92b525e7859553133c9cbec30de2930bf44c80fa98d0a4b64d636d053fac571"
+      },
+      {
+        "name": "lib/privacy-checker",
+        "export_path": "hooks/lib/privacy-checker.cjs",
+        "exists": true,
+        "size_bytes": 18949,
+        "sha256": "8c1df974e4474b3aad881633a2cc236d4385e51479b1fe957850eda1cf72843b"
+      },
+      {
+        "name": "lib/project-detector",
+        "export_path": "hooks/lib/project-detector.cjs",
+        "exists": true,
+        "size_bytes": 17812,
+        "sha256": "7403e4d9133a5651f8200187d034ecc6ab3d66717379fd55a451139b0c54adec"
+      },
+      {
+        "name": "lib/context-firewall/journal",
+        "export_path": "hooks/lib/context-firewall/journal.cjs",
+        "exists": true,
+        "size_bytes": 5344,
+        "sha256": "86c297826eded90125832b52fcac7062c200fce10280b29264fb801b838e7761"
+      },
+      {
+        "name": "lib/context-firewall/policy",
+        "export_path": "hooks/lib/context-firewall/policy.cjs",
+        "exists": true,
+        "size_bytes": 6017,
+        "sha256": "9be1e2c17b5074def68a5525a8c373f967085016a1bb19614f7fa285f7f65b44"
+      },
+      {
+        "name": "lib/context-firewall/signals",
+        "export_path": "hooks/lib/context-firewall/signals.cjs",
+        "exists": true,
+        "size_bytes": 14787,
+        "sha256": "c4d4ef695bfec2f9040b68939e81622dca0580a6cb5e86cb6085564496cfe627"
+      },
+      {
+        "name": "lib/context-firewall/thresholds",
+        "export_path": "hooks/lib/context-firewall/thresholds.cjs",
+        "exists": true,
+        "size_bytes": 1500,
+        "sha256": "2353f189a54ff1606b27a4c1a0879f5e7620a4332f81477436956ebad365c75a"
+      },
+      {
+        "name": "lib/scout-checker",
+        "export_path": "hooks/lib/scout-checker.cjs",
+        "exists": true,
+        "size_bytes": 15283,
+        "sha256": "014d0570a9f8b0a0abf91384cd6bfd83b0c8682a40edf91cd835b6e7409d9386"
+      },
+      {
+        "name": "lib/secret-keywords",
+        "export_path": "hooks/lib/secret-keywords.cjs",
+        "exists": true,
+        "size_bytes": 1299,
+        "sha256": "ce947cffc2b19d0e3ed76aa3843949d9362264343c6e60f0d141aa65f31c58c3"
+      },
+      {
+        "name": "lib/transcript-parser",
+        "export_path": "hooks/lib/transcript-parser.cjs",
+        "exists": true,
+        "size_bytes": 9170,
+        "sha256": "7f85ba3a4a1c95291cfaa9c1fef4a988327e89c4eee853ebf7861d55df86d7bc"
+      },
+      {
+        "name": "lib/agent-behavior-linter/detectors",
+        "export_path": "hooks/lib/agent-behavior-linter/detectors.cjs",
+        "exists": true,
+        "size_bytes": 10174,
+        "sha256": "7871d793013edfebfce1b1e869bdb4937ac526974c0c4e9e4d4cf177c2230f2e"
+      },
+      {
+        "name": "lib/agent-behavior-linter/event-schema",
+        "export_path": "hooks/lib/agent-behavior-linter/event-schema.cjs",
+        "exists": true,
+        "size_bytes": 18610,
+        "sha256": "0599aa58bde91767477fe7c373540d7416e5651ed39b7be05d12c683fd95e1f9"
+      },
+      {
+        "name": "lib/agent-behavior-linter/report",
+        "export_path": "hooks/lib/agent-behavior-linter/report.cjs",
+        "exists": true,
+        "size_bytes": 3187,
+        "sha256": "52d725e3edb62b1ee842bf6143ef3c83fd9d617c61b02e1393519d8e6de789b9"
+      },
+      {
+        "name": "lib/agent-behavior-linter/store",
+        "export_path": "hooks/lib/agent-behavior-linter/store.cjs",
+        "exists": true,
+        "size_bytes": 7481,
+        "sha256": "c7b35fda67316e837b46587f9318dc5c0ae8bd44288e3e1ade6c1cb3f1c25f33"
+      },
+      {
+        "name": "scout-block/broad-pattern-detector",
+        "export_path": "hooks/scout-block/broad-pattern-detector.cjs",
+        "exists": true,
+        "size_bytes": 7384,
+        "sha256": "f44871a523f72bcc9a152e9587e12acb2d160a9f3156a454aeca397d69b0583c"
+      },
+      {
+        "name": "scout-block/error-formatter",
+        "export_path": "hooks/scout-block/error-formatter.cjs",
+        "exists": true,
+        "size_bytes": 4259,
+        "sha256": "d0500460c84fbbb1e86f9046632e89ea8e10b867993b6281d9fe8c3328d42def"
+      },
+      {
+        "name": "scout-block/path-extractor",
+        "export_path": "hooks/scout-block/path-extractor.cjs",
+        "exists": true,
+        "size_bytes": 13968,
+        "sha256": "e31de13d2afc08d72f5a633afff3f3b4b7c8112944a63d0c9258dc357e15255d"
+      },
+      {
+        "name": "scout-block/pattern-matcher",
+        "export_path": "hooks/scout-block/pattern-matcher.cjs",
+        "exists": true,
+        "size_bytes": 6089,
+        "sha256": "5e66529678b2f2ad1cdc1d24806fb49fbefaa296116b6fbadd9ef0edf307d0e2"
+      },
+      {
+        "name": "scout-block/vendor/ignore",
+        "export_path": "hooks/scout-block/vendor/ignore.cjs",
+        "exists": true,
+        "size_bytes": 16344,
+        "sha256": "4cff82236576c96a22b4f52c43835735511b39d7f095553101128b817e079355"
+      },
+      {
+        "name": "lib/session-state-manager",
+        "export_path": "hooks/lib/session-state-manager.cjs",
+        "exists": true,
+        "size_bytes": 10917,
+        "sha256": "f84524f4db0a85bd61fe62b1322d04f133fa9c66c2c0ff1043e583d6b8a10c7e"
+      },
+      {
+        "name": "lib/project-handoff-store",
+        "export_path": "hooks/lib/project-handoff-store.cjs",
+        "exists": true,
+        "size_bytes": 6200,
+        "sha256": "131175833d5e60a60db6a6bdf70130a0f907bf38f2b20210bd41734652cb499d"
+      },
+      {
+        "name": "lib/statusline-activity-renderers",
+        "export_path": "hooks/lib/statusline-activity-renderers.cjs",
+        "exists": true,
+        "size_bytes": 6094,
+        "sha256": "9bdd8351946b7e865391488b3af1a322c072230a546f3fffe4c757207680b22f"
+      },
+      {
+        "name": "lib/statusline-render-modes",
+        "export_path": "hooks/lib/statusline-render-modes.cjs",
+        "exists": true,
+        "size_bytes": 9057,
+        "sha256": "cd1be39422825ec6dfb30e45c20de96ae06bee6595dab76b808f16c03214bddb"
+      },
+      {
+        "name": "lib/statusline-section-registry",
+        "export_path": "hooks/lib/statusline-section-registry.cjs",
+        "exists": true,
+        "size_bytes": 9503,
+        "sha256": "7ceac74fe7aaa0405234cf7f2b081e248f34bc2c618f278440dcc07e0507497a"
+      },
+      {
+        "name": "lib/statusline-session-cache",
+        "export_path": "hooks/lib/statusline-session-cache.cjs",
+        "exists": true,
+        "size_bytes": 2704,
+        "sha256": "d1868e55a7a6114767e502998ba29aac5202716b1f4307031b99de1b01676991"
+      },
+      {
+        "name": "lib/statusline-string-utils",
+        "export_path": "hooks/lib/statusline-string-utils.cjs",
+        "exists": true,
+        "size_bytes": 4377,
+        "sha256": "b785c5d601009222737067ba9f5956b25e2f72f7de2455a5bc726db10730cd7c"
+      },
+      {
+        "name": "lib/usage-limits-cache",
+        "export_path": "hooks/lib/usage-limits-cache.cjs",
+        "exists": true,
+        "size_bytes": 9157,
+        "sha256": "454636bb6153ecf3c52529cbe0d8a70855ef771f48a53c54ecafea4e8dc57f0f"
+      }
+    ],
+    "output_styles": [
+      {
+        "name": "coding-level-0-eli5",
+        "export_path": "output-styles/coding-level-0-eli5.md",
+        "exists": true,
+        "size_bytes": 3693,
+        "sha256": "42c10d09b46f07465222a095076c1357d0ea96d35a7172f17b4bccce45d6f997"
+      },
+      {
+        "name": "coding-level-1-junior",
+        "export_path": "output-styles/coding-level-1-junior.md",
+        "exists": true,
+        "size_bytes": 4521,
+        "sha256": "fcd54907a388ad3a67c668748711ff41d143888b848aed7adc8c79e8d3588939"
+      },
+      {
+        "name": "coding-level-2-mid",
+        "export_path": "output-styles/coding-level-2-mid.md",
+        "exists": true,
+        "size_bytes": 5399,
+        "sha256": "446843e86bbda33ffabe45320b3b02c097a5dde530c0cfc0339d0effddd436eb"
+      },
+      {
+        "name": "coding-level-3-senior",
+        "export_path": "output-styles/coding-level-3-senior.md",
+        "exists": true,
+        "size_bytes": 5209,
+        "sha256": "fddaf5e8533c07049ffa277a361d51864c8542d0434c32dc641321022af050f3"
+      },
+      {
+        "name": "coding-level-4-lead",
+        "export_path": "output-styles/coding-level-4-lead.md",
+        "exists": true,
+        "size_bytes": 5701,
+        "sha256": "8ec2106a32168b0388c41fc67077a654bb82eff7d83b146e06777eefabe896a8"
+      },
+      {
+        "name": "coding-level-5-god",
+        "export_path": "output-styles/coding-level-5-god.md",
+        "exists": true,
+        "size_bytes": 3174,
+        "sha256": "78e0e5fd2d6beefbe2d84def90c0ad3917e4aef5de7ee2ce1897a6f1f2dd7f20"
+      }
+    ],
+    "rules": [
+      {
+        "name": "development-rules",
+        "export_path": "rules/development-rules.md",
+        "exists": true,
+        "size_bytes": 1641,
+        "sha256": "4c93039aa1f6210f3126a1c9e30fe857ed6d041d1684b245891c42794878fad3"
+      },
+      {
+        "name": "documentation-management",
+        "export_path": "rules/documentation-management.md",
+        "exists": true,
+        "size_bytes": 1533,
+        "sha256": "cf6a484f4e878de9570c6b82ccfc780b28239b034c3c2e2a3616e07294e075f9"
+      },
+      {
+        "name": "orchestration-protocol",
+        "export_path": "rules/orchestration-protocol.md",
+        "exists": true,
+        "size_bytes": 2160,
+        "sha256": "1b73f930bcd0422407376b0377d06e44a2d0174a53de03385dee8cd64123e919"
+      },
+      {
+        "name": "primary-workflow",
+        "export_path": "rules/primary-workflow.md",
+        "exists": true,
+        "size_bytes": 2367,
+        "sha256": "e8943072e63e5e7d70094430925227407c2a780a3447fe8c578fd7073b9a5d2e"
+      },
+      {
+        "name": "process-management",
+        "export_path": "rules/process-management.md",
+        "exists": true,
+        "size_bytes": 2018,
+        "sha256": "5f0405ab2ed57ed6adb8e75443c036520cb957aba788d96af3bfa244ce9b2e52"
+      },
+      {
+        "name": "review-audit-self-decision",
+        "export_path": "rules/review-audit-self-decision.md",
+        "exists": true,
+        "size_bytes": 1428,
+        "sha256": "d571762de2dc78c67c1f48e1c68a64fce776e116e8f79fc24c8ec9c6b0377bcb"
+      },
+      {
+        "name": "skill-domain-routing",
+        "export_path": "rules/skill-domain-routing.md",
+        "exists": true,
+        "size_bytes": 3876,
+        "sha256": "de0ec9be51e9cb632e75d08d0b0b8c1c14c4207759a507ef81a01ce18458f0c7"
+      },
+      {
+        "name": "skill-workflow-routing",
+        "export_path": "rules/skill-workflow-routing.md",
+        "exists": true,
+        "size_bytes": 1844,
+        "sha256": "f89368e4180917e4e82ba332d46233e43978916628dd5dab07dcf7482326374b"
+      }
+    ],
+    "schemas": [
+      {
+        "name": "ck-config",
+        "export_path": "schemas/ck-config.schema.json",
+        "exists": true,
+        "size_bytes": 19491,
+        "sha256": "7ade0f1c31331cd19b42a6f40cc20b69b4a0b53658fe61aade9fc8ec27715402"
+      }
+    ],
+    "scripts": [
+      {
+        "name": "resolve_env",
+        "export_path": "scripts/resolve_env.py",
+        "exists": true,
+        "size_bytes": 10977,
+        "sha256": "5540b61baddc265a3097060df5036cceea454ea55f25fccb907a9230d6feda90"
+      },
+      {
+        "name": "set-active-plan",
+        "export_path": "scripts/set-active-plan.cjs",
+        "exists": true,
+        "size_bytes": 3037,
+        "sha256": "19c728a32ad8e0b551d44ba0103a23b6f2247bba065cc07b1c1f53a2b9a43785"
+      },
+      {
+        "name": "validate-skill-crossrefs",
+        "export_path": "scripts/validate-skill-crossrefs.py",
+        "exists": true,
+        "size_bytes": 6360,
+        "sha256": "6f9e93c69601214dda0525f91a13668818fcb4c0ea0b5801af52ba5cdfe4abb3"
+      },
+      {
+        "name": "worktree",
+        "export_path": "scripts/worktree.cjs",
+        "exists": true,
+        "size_bytes": 218,
+        "sha256": "1980a15178eba9830d82a9e19dd6dd80dbc05e748ccd331634b0bfe6979ef648"
+      },
+      {
+        "name": "worktree.test",
+        "export_path": "scripts/worktree.test.cjs",
+        "exists": true,
+        "size_bytes": 226,
+        "sha256": "9295aa512aacbaebfb9f4c04376210ea82ab86e31bde93546b62fbd19e21db9d"
+      }
+    ],
+    "statusline": [
+      {
+        "name": "statusline",
+        "export_path": ".config/statusline.cjs",
+        "exists": true,
+        "size_bytes": 8775,
+        "sha256": "49f241699617ae5e0ac93456955670c5bffdedda9781dac08f6695c84659da48"
+      }
+    ]
+  }
+}

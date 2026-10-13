@@ -1,0 +1,431 @@
+{
+  "schema_version": "1.0",
+  "bundle_raw_external_path": "/tmp/rea-evidence-bundle-agentkit-engineer.json",
+  "bundle_size_bytes": 49435238,
+  "total_records": 10,
+  "unknowns_count": 4,
+  "records": [
+    {
+      "evidence_id": "ev_06b98305930cc46cac3687b5e84471e9273301dfd54679690ceede7d47d26daa",
+      "operation": "inspect_analysis_view",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-analysis-view",
+        "name": "REA analysis view projection",
+        "version": "1"
+      },
+      "subject": {
+        "architecture": null,
+        "digest": {
+          "sha256": "73ad134017de211dd03b47e25f9d7bcabccb59118fa9b7d109b7ef1e0f6f86e3"
+        },
+        "format": "directory",
+        "local_path": "/home/manhquy/.agentkit/cache/kits/engineer/omp/2.18.1/engineer/hooks",
+        "name": "hooks"
+      },
+      "limitations": [
+        "Boundary extraction covers unshadowed JSON/global coercions plus parse and validation method candidates.",
+        "Child-process extraction covers asynchronous node:child_process creation, literal argv/env/stdio options, exit/error listeners, and kill signals.",
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "Configuration extraction covers process.env, process.argv, node:fs reads, and direct logical defaults.",
+        "Event extraction covers EventEmitter-style literal registrations, removals, and dispatch candidates; dynamic names remain unknown.",
+        "Function fingerprints are static candidates; equal digests can remain ambiguous and do not prove behavioral equivalence.",
+        "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Local data flow does not claim control-flow-sensitive reaching definitions or arbitrary dynamic property resolution.",
+        "Promise ownership covers explicit unshadowed Promise construction, static factories, aggregation, chaining, and await syntax only.",
+        "Request extraction covers fetch, WebSocket, node:http/node:https construction, direct option fields, and exact local response consumers.",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for session-init.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for subagent-init.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for team-context-inject.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Resource extraction covers built-in filesystem/network acquisition and exact local close/destroy/end handles.",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "The semantic graph contains static syntax observations and conservative relationship candidates; it does not claim runtime execution.",
+        "Timer extraction covers global or node:timers scheduling and exact local-handle cancellation.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code.",
+        "scout-block/error-formatter.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/error-formatter.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/path-extractor.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/path-extractor.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/pattern-matcher.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/pattern-matcher.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/vendor/ignore.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/vendor/ignore.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "secret-output-guardrail.cjs: Resource constraint during analyze_javascript_application: Semantic graph for secret-output-guardrail.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "session-init.cjs: Resource constraint during analyze_javascript_application: session-init.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of session-init.cjs was not started",
+        "session-state.cjs: Resource constraint during analyze_javascript_application: Semantic graph for session-state.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "simplify-gate.cjs: Resource constraint during analyze_javascript_application: Semantic graph for simplify-gate.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "subagent-init.cjs: Resource constraint during analyze_javascript_application: subagent-init.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of subagent-init.cjs was not started",
+        "team-context-inject.cjs: Resource constraint during analyze_javascript_application: team-context-inject.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of team-context-inject.cjs was not started"
+      ],
+      "evidence_links": [
+        "ev_5760d4c19da91bd89b4f4e0de09a4c9399df8ef16af5247216a0146096d75cfb"
+      ]
+    },
+    {
+      "evidence_id": "ev_1393ceef548ad082bb8a4f505770ea27dbaad3e76d22fa36a8a32827e3693b82",
+      "operation": "record_unknown",
+      "authority": "analyst-inference",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-unknown-registry",
+        "name": "REA residual unknown registry",
+        "version": "1"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "Registry mutation evidence records analyst intent, not proof of the answer."
+      ],
+      "evidence_links": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ]
+    },
+    {
+      "evidence_id": "ev_43cc49a4a90a4fde722cb8dca23a76aa9ebe508fb80e7075832cf3d708f684d7",
+      "operation": "record_unknown",
+      "authority": "analyst-inference",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-unknown-registry",
+        "name": "REA residual unknown registry",
+        "version": "1"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "Registry mutation evidence records analyst intent, not proof of the answer."
+      ],
+      "evidence_links": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ]
+    },
+    {
+      "evidence_id": "ev_5760d4c19da91bd89b4f4e0de09a4c9399df8ef16af5247216a0146096d75cfb",
+      "operation": "analyze_javascript_application",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-javascript-application",
+        "name": "REA JavaScript application analyzer",
+        "version": "1"
+      },
+      "subject": {
+        "architecture": null,
+        "digest": {
+          "sha256": "73ad134017de211dd03b47e25f9d7bcabccb59118fa9b7d109b7ef1e0f6f86e3"
+        },
+        "format": "directory",
+        "local_path": "/home/manhquy/.agentkit/cache/kits/engineer/omp/2.18.1/engineer/hooks",
+        "name": "hooks"
+      },
+      "limitations": [
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for session-init.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for subagent-init.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Resource constraint during analyze_javascript_application: Expanded application relationships for team-context-inject.cjs exceed the parent's result budget; complete static facts were retained on the file node",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code.",
+        "scout-block/error-formatter.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/error-formatter.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/path-extractor.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/path-extractor.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/pattern-matcher.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/pattern-matcher.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "scout-block/vendor/ignore.cjs: Resource constraint during analyze_javascript_application: Semantic graph for scout-block/vendor/ignore.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "secret-output-guardrail.cjs: Resource constraint during analyze_javascript_application: Semantic graph for secret-output-guardrail.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "session-init.cjs: Resource constraint during analyze_javascript_application: session-init.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of session-init.cjs was not started",
+        "session-state.cjs: Resource constraint during analyze_javascript_application: Semantic graph for session-state.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "simplify-gate.cjs: Resource constraint during analyze_javascript_application: Semantic graph for simplify-gate.cjs exceeds the parent's remaining result budget; static and module facts were retained",
+        "subagent-init.cjs: Resource constraint during analyze_javascript_application: subagent-init.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of subagent-init.cjs was not started",
+        "team-context-inject.cjs: Resource constraint during analyze_javascript_application: team-context-inject.cjs: Resource constraint during analyze_javascript_application: The parent reserved its remaining result capacity for static observations; semantic analysis of team-context-inject.cjs was not started"
+      ],
+      "evidence_links": []
+    },
+    {
+      "evidence_id": "ev_5f8f5f48c6cc95986e63f7cba88fc308239fca475c8778f3158f32bae2b13198",
+      "operation": "record_unknown",
+      "authority": "analyst-inference",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-unknown-registry",
+        "name": "REA residual unknown registry",
+        "version": "1"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "Registry mutation evidence records analyst intent, not proof of the answer."
+      ],
+      "evidence_links": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ]
+    },
+    {
+      "evidence_id": "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3",
+      "operation": "capture_process_scenario",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": {
+        "id": "rea-process",
+        "name": "REA process capture",
+        "version": "3"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "The executable digest is a prelaunch file sample; matching path metadata immediately after spawn does not prove an atomic operating-system image binding.",
+        "Process trees are sampled and may omit short-lived descendants.",
+        "Filesystem observations are before/after snapshots, not syscall traces.",
+        "Inherited host environment variables are not recorded and may affect results.",
+        "No filesystem observation paths were selected; filesystem effects remain unknown."
+      ],
+      "evidence_links": []
+    },
+    {
+      "evidence_id": "ev_74643d62c09653f9b67d08d646792a58f59828f22508494f17f4ab19828f53c4",
+      "operation": "capture_process_scenario",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": {
+        "id": "rea-process",
+        "name": "REA process capture",
+        "version": "3"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "The executable digest is a prelaunch file sample; matching path metadata immediately after spawn does not prove an atomic operating-system image binding.",
+        "Process trees are sampled and may omit short-lived descendants.",
+        "Filesystem observations are before/after snapshots, not syscall traces.",
+        "Inherited host environment variables are not recorded and may affect results.",
+        "No filesystem observation paths were selected; filesystem effects remain unknown."
+      ],
+      "evidence_links": []
+    },
+    {
+      "evidence_id": "ev_cb4d036928c8798086ecf2b006cc6a17e94054dfd0cb338055f21d42ea7e0dd2",
+      "operation": "analyze_javascript_application",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-javascript-application",
+        "name": "REA JavaScript application analyzer",
+        "version": "1"
+      },
+      "subject": {
+        "architecture": null,
+        "digest": {
+          "sha256": "d474d954e9b95d69c841201cf491304c991564cea82d5e8e7e1602e91f342e4d"
+        },
+        "format": "directory",
+        "local_path": "/home/manhquy/.agentkit/cache/kits/engineer/omp/2.18.1/engineer/hooks/notifications",
+        "name": "notifications"
+      },
+      "limitations": [
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+      ],
+      "evidence_links": []
+    },
+    {
+      "evidence_id": "ev_deb05dfaa8ee9360de7c06f6f3ecda6e25f0508668d81c29d5e3e88467b93b8a",
+      "operation": "inspect_analysis_view",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-analysis-view",
+        "name": "REA analysis view projection",
+        "version": "1"
+      },
+      "subject": {
+        "architecture": null,
+        "digest": {
+          "sha256": "d474d954e9b95d69c841201cf491304c991564cea82d5e8e7e1602e91f342e4d"
+        },
+        "format": "directory",
+        "local_path": "/home/manhquy/.agentkit/cache/kits/engineer/omp/2.18.1/engineer/hooks/notifications",
+        "name": "notifications"
+      },
+      "limitations": [
+        "Boundary extraction covers unshadowed JSON/global coercions plus parse and validation method candidates.",
+        "Child-process extraction covers asynchronous node:child_process creation, literal argv/env/stdio options, exit/error listeners, and kill signals.",
+        "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+        "Configuration extraction covers process.env, process.argv, node:fs reads, and direct logical defaults.",
+        "Event extraction covers EventEmitter-style literal registrations, removals, and dispatch candidates; dynamic names remain unknown.",
+        "Function fingerprints are static candidates; equal digests can remain ambiguous and do not prove behavioral equivalence.",
+        "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+        "Local data flow does not claim control-flow-sensitive reaching definitions or arbitrary dynamic property resolution.",
+        "Promise ownership covers explicit unshadowed Promise construction, static factories, aggregation, chaining, and await syntax only.",
+        "Request extraction covers fetch, WebSocket, node:http/node:https construction, direct option fields, and exact local response consumers.",
+        "Resource extraction covers built-in filesystem/network acquisition and exact local close/destroy/end handles.",
+        "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+        "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+        "The semantic graph contains static syntax observations and conservative relationship candidates; it does not claim runtime execution.",
+        "Timer extraction covers global or node:timers scheduling and exact local-handle cancellation.",
+        "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+      ],
+      "evidence_links": [
+        "ev_cb4d036928c8798086ecf2b006cc6a17e94054dfd0cb338055f21d42ea7e0dd2"
+      ]
+    },
+    {
+      "evidence_id": "ev_f8bb4277265aeb52b48815b091b294d0e811c0650c7f9773416136aa4523274b",
+      "operation": "record_unknown",
+      "authority": "analyst-inference",
+      "confidence": "derived",
+      "provider": {
+        "id": "rea-unknown-registry",
+        "name": "REA residual unknown registry",
+        "version": "1"
+      },
+      "subject": null,
+      "limitations": [
+        "Artifact identity is unavailable for this observation.",
+        "Registry mutation evidence records analyst intent, not proof of the answer."
+      ],
+      "evidence_links": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "contradicting_evidence_ids": [],
+      "domain": "process-filesystem",
+      "mutation_evidence_ids": [
+        "ev_43cc49a4a90a4fde722cb8dca23a76aa9ebe508fb80e7075832cf3d708f684d7"
+      ],
+      "previous_revision_digest": null,
+      "question": "Was filesystem behavior fully observed during capture?",
+      "recommended_probes": [
+        {
+          "operation": "capture_process_scenario",
+          "rationale": "Repeat with a scenario that observes the missing behavior."
+        }
+      ],
+      "relationships": [],
+      "required_authority": "controlled-replay",
+      "required_confidence": "observed",
+      "required_environment": {
+        "architecture": "x64",
+        "id": "linux-x64",
+        "isolation": "process",
+        "platform": "linux"
+      },
+      "resolution": null,
+      "revision": 1,
+      "revision_digest": "9ee06280d280a6f38ffeb5b8abbc1be728ad84df33dd0689c96be362c9bba370",
+      "scope_digest": null,
+      "severity": "medium",
+      "status": "open",
+      "supporting_evidence_ids": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ],
+      "unknown_id": "unk_22be913d3be18ecdb11c1f9784a3c6d7a00514a421c98207b8e315c3109cba46"
+    },
+    {
+      "contradicting_evidence_ids": [],
+      "domain": "process-environment",
+      "mutation_evidence_ids": [
+        "ev_5f8f5f48c6cc95986e63f7cba88fc308239fca475c8778f3158f32bae2b13198"
+      ],
+      "previous_revision_digest": null,
+      "question": "Was environment behavior fully observed during capture?",
+      "recommended_probes": [
+        {
+          "operation": "capture_process_scenario",
+          "rationale": "Repeat with a scenario that observes the missing behavior."
+        }
+      ],
+      "relationships": [],
+      "required_authority": "controlled-replay",
+      "required_confidence": "observed",
+      "required_environment": {
+        "architecture": "x64",
+        "id": "linux-x64",
+        "isolation": "process",
+        "platform": "linux"
+      },
+      "resolution": null,
+      "revision": 1,
+      "revision_digest": "f855e4e5ea294207648dc837f9d4b4b9d80da4909a5dcdd1a6520764c8f15941",
+      "scope_digest": null,
+      "severity": "medium",
+      "status": "open",
+      "supporting_evidence_ids": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ],
+      "unknown_id": "unk_625c2d6cfb387c8926aaaf4dd0bb905628549f835e202e9ff37a7d5804aa75e6"
+    },
+    {
+      "contradicting_evidence_ids": [],
+      "domain": "process-process",
+      "mutation_evidence_ids": [
+        "ev_1393ceef548ad082bb8a4f505770ea27dbaad3e76d22fa36a8a32827e3693b82"
+      ],
+      "previous_revision_digest": null,
+      "question": "Was process behavior fully observed during capture?",
+      "recommended_probes": [
+        {
+          "operation": "capture_process_scenario",
+          "rationale": "Repeat with a scenario that observes the missing behavior."
+        }
+      ],
+      "relationships": [],
+      "required_authority": "controlled-replay",
+      "required_confidence": "observed",
+      "required_environment": {
+        "architecture": "x64",
+        "id": "linux-x64",
+        "isolation": "process",
+        "platform": "linux"
+      },
+      "resolution": null,
+      "revision": 1,
+      "revision_digest": "b89498a1cb0e186430c351724baa5f91c183181b6ec6f5f4eaa0193dcc90a510",
+      "scope_digest": null,
+      "severity": "medium",
+      "status": "open",
+      "supporting_evidence_ids": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ],
+      "unknown_id": "unk_6c8b4107edc1ce6c0a4b95264157ffa537c0af497569af7f36a624e04a81dd20"
+    },
+    {
+      "contradicting_evidence_ids": [],
+      "domain": "process-network",
+      "mutation_evidence_ids": [
+        "ev_f8bb4277265aeb52b48815b091b294d0e811c0650c7f9773416136aa4523274b"
+      ],
+      "previous_revision_digest": null,
+      "question": "Was network behavior fully observed during capture?",
+      "recommended_probes": [
+        {
+          "operation": "capture_process_scenario",
+          "rationale": "Repeat with a scenario that observes the missing behavior."
+        }
+      ],
+      "relationships": [],
+      "required_authority": "controlled-replay",
+      "required_confidence": "observed",
+      "required_environment": {
+        "architecture": "x64",
+        "id": "linux-x64",
+        "isolation": "process",
+        "platform": "linux"
+      },
+      "resolution": null,
+      "revision": 1,
+      "revision_digest": "c030fe73a9a081d76dbe8e79472660fd230fc3d12338df3a4bfbc90686a0b16d",
+      "scope_digest": null,
+      "severity": "medium",
+      "status": "open",
+      "supporting_evidence_ids": [
+        "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3"
+      ],
+      "unknown_id": "unk_7b81cc7431ae3e08759b85c393e153a6e9747d8befa7950bc75914a556a58a2a"
+    }
+  ]
+}
