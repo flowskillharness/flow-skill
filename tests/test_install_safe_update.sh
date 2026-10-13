@@ -41,7 +41,7 @@ ck() {
   fi
 }
 
-SCRATCH="$(mktemp -d)"
+SCRATCH="$(cd "$(mktemp -d)" && pwd -P)"
 cleanup() {
   rm -rf "$SCRATCH"
 }

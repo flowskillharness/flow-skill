@@ -1,10 +1,11 @@
 # Wave 2 Release Execution Record & CI Verification Ledger
 
 **Date:** 2026-10-13  
-**Target Commit SHA:** `c052b4e` (`c052b4ea174e5e40798be1284d720272b1555a60`)  
-**Commit Message:** `fix(installer): preserve raw spelling on relative inputs, canonicalize test tmpdir, and record i18n pair`  
-**GitHub Actions Run ID:** `38364821630`  
-**GitHub Run URL:** https://github.com/manhquydev/flow-skill/actions/runs/38364821630  
+**Superseded Candidate SHA:** `c052b4e` (Run `38364821630` — Node 6/6 PASS, Ubuntu PASS, macOS 43/1 FAIL)  
+**Current Active Candidate SHA:** `4827774` (`48277741639f72782ea2559ef3b95a86ce9b3fe1`)  
+**Commit Message:** `fix(hooks): canonicalize project path when evaluating snapshot on systems with aliased roots`  
+**Active GitHub Actions Run ID:** `38367426700`  
+**Active GitHub Run URL:** https://github.com/manhquydev/flow-skill/actions/runs/38367426700  
 
 ---
 
@@ -95,7 +96,8 @@ Commit `c052b4e` triggered matrix run `38364821630` (https://github.com/manhquyd
 
 ---
 
-## 4. Release Candidate Gate & Next Commit Push
+## 4. Release Candidate Gate & Active Run Tracking
 
-Because run `38364821630` contained the macOS failure, commit `c052b4e` is **NOT releasable**.
-The repair will be committed and pushed to `master` as a new commit SHA. Release version tags (`v0.34.1`, `npm@0.7.8`) remain strictly held until the new SHA completes 100% green across all matrix jobs including Windows PowerShell.
+Because run `38364821630` contained the macOS failure, commit `c052b4e` was **SUPERSEDED** and marked un-releasable.
+The repair was committed and pushed to `master` as commit SHA `4827774` (triggering active run `38367426700`: https://github.com/manhquydev/flow-skill/actions/runs/38367426700).
+Release version tags (`v0.34.1`, `npm@0.7.8`) remain strictly held until run `38367426700` completes 100% green across all matrix jobs including Windows PowerShell.
