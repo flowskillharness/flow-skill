@@ -85,7 +85,7 @@ fi
 # the sha256 of the extracted runner.
 RECEIPT="$EXTRACTED/manifest-hashes.json"
 [ -f "$RECEIPT" ] || { echo "FAIL: tarball missing skills/flow/manifest-hashes.json (receipt not shipped)" >&2; exit 1; }
-RECEIPT_HASH="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$RECEIPT" | head -1)"
+RECEIPT_HASH="$(sed -nE 's/.*"runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$RECEIPT" | head -1)"
 [ -n "$RECEIPT_HASH" ] && [ "$RECEIPT_HASH" = "$GOT" ] || {
   echo "FAIL: manifest-hashes.json receipt hash mismatch (receipt ${RECEIPT_HASH:-missing} vs packaged ${GOT%"${GOT#????????}"})" >&2
   exit 1
@@ -125,21 +125,21 @@ bash "$ROOT/tests/e2e-installed-drive.sh" "$RUN"
 INSTALLED_RECEIPT="$DEST/.claude/skills/flow/manifest-hashes.json"
 [ -f "$INSTALLED_RECEIPT" ] || { echo "FAIL: install missing manifest-hashes.json receipt at $INSTALLED_RECEIPT" >&2; exit 1; }
 OUT="$(bash "$RUN" doctor 2>&1)" || { echo "FAIL: doctor failed on clean install:$NL$OUT" >&2; exit 1; }
-printf '%s\n' "$OUT" | grep -q "runner integrity: ok" || { echo "FAIL: doctor did not print 'runner integrity: ok' on clean install:$NL$OUT" >&2; exit 1; }
-echo "doctor on installed artifact: runner integrity: ok"
+printf '%s\n' "$OUT" | grep -q "bundled tree integrity: ok" || { echo "FAIL: doctor did not print 'bundled tree integrity: ok' on clean install:$NL$OUT" >&2; exit 1; }
+echo "doctor on installed artifact: bundled tree integrity: ok"
 
 cp "$RUN" "$RUN.bak"
 printf '\n' >> "$RUN"
 rc=0; OUT="$(bash "$RUN" doctor 2>&1)" || rc=$?
 if [ "$rc" -eq 0 ]; then echo "FAIL: doctor exited 0 on tampered installed runner" >&2; exit 1; fi
-if ! printf '%s\n' "$OUT" | grep -q "FAIL: runner integrity"; then
+if ! printf '%s\n' "$OUT" | grep -q "FAIL: bundled tree integrity"; then
   echo "FAIL: doctor did not flag tampered installed runner:$NL$OUT" >&2
   exit 1
 fi
 echo "doctor on installed artifact: tamper detected -> FAIL + nonzero (rc=$rc)"
 mv "$RUN.bak" "$RUN" || exit 1
 OUT="$(bash "$RUN" doctor 2>&1)" || { echo "FAIL: doctor failed after restore:$NL$OUT" >&2; exit 1; }
-printf '%s\n' "$OUT" | grep -q "runner integrity: ok" || { echo "FAIL: doctor not ok after restore:$NL$OUT" >&2; exit 1; }
-echo "doctor on installed artifact: restored -> runner integrity: ok"
+printf '%s\n' "$OUT" | grep -q "bundled tree integrity: ok" || { echo "FAIL: doctor not ok after restore:$NL$OUT" >&2; exit 1; }
+echo "doctor on installed artifact: restored -> bundled tree integrity: ok"
 
 echo "pack-rehearsal OK (runner=$RUN)"

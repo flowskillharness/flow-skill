@@ -85,7 +85,7 @@ On-disk artifacts (in the project being built):
 | Path | Responsibility |
 |---|---|
 | `skills/flow/SKILL.md` | semantic-layer entry: dispatch + gatekeeper + orchestration |
-| `skills/flow/runner/flow.sh` | mechanical engine: lifecycle, gates, debt, design, harness passthrough, loop-engineering (ck-loop wrapper) |
+| `skills/flow/runner/flow.sh` | mechanical engine: lifecycle, gates, debt, design, harness passthrough, loop-engineering, doctor registry + bundled tree integrity |
 | `skills/flow/harness/` | durable layer (Python CLI + sqlite + Rust toggle) |
 | `skills/flow/_templates/` | the 7 gated artifacts (verbatim buildflow) |
 | `skills/flow/law/` | CLAUDE.md (build-session law), DESIGN.md (UI law), RETRO.md |
@@ -105,6 +105,12 @@ Two parallel installation paths, both syncing the same canonical `skills/flow/` 
 | **install.sh** (reference) | `bash install.sh global` + doctor step | Direct from repo via Git | UNIX shell (Bash 3.2+) | Dev machines, local skill setup, preserves diagnostic doctor |
 
 The npm channel is the **canonical distribution** for cross-platform adoption (pure Node.js, no `bash`/`git` requirement, fast tarball extraction). The `install.sh` channel is the **reference implementation** used in development and CI matrix testing; it includes the `doctor` diagnostic step to verify the local environment. Both write to the same skill home (`~/.claude/skills/flow`, `~/.codex/skills/flow`, etc.), so a project can switch channels without re-issuing any gates or cards.
+
+### Bundled Tree Receipt Integrity
+The npm installer co-ships `skills/flow/manifest-hashes.json` generated during `sync.mjs`. `flow doctor` validates every bundled file against this receipt (detecting missing files, post-install drift, symlink substitutions, or unsafe path traversals with loud FAIL, while skipping with an advisory message on un-receipted local dev checkouts).
+
+### Host Lifecycle Context Adapters (ADR-0001 Addendum)
+Flow provides opt-in, operator-installed lifecycle context adapters (`skills/flow/adapter-hooks/`) invoked by hosting agents (e.g. SessionStart, PreCompact). Handlers execute with zero tool interposition, zero residency/daemons, and fail-open. The sole permitted write is an advisory private snapshot under `<project>/.flow/context-handoff/snapshot.json` (mode 0600 in a 0700 dir, symlink-rejected, size-bounded), enabling post-compaction status continuity without gate mutation.
 
 ## Deep-wired skills (pluggable agents + decision matrix)
 

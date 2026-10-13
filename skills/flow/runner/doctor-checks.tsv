@@ -1,0 +1,12 @@
+os	environment	Operating system identification and support
+bash	environment	Bash shell version and compatibility
+python	runtime	Python 3 interpreter for durable layer
+sqlite3	runtime	Python sqlite3 standard library module
+grep_p	tools	Perl-compatible regex support (grep -P) for design scan
+git	tools	Git CLI for worktree and branch operations
+cargo	tools	Cargo CLI for optional Rust harness backend
+templates	assets	Flow template directory presence
+harness	assets	Flow durable harness script presence
+timeout	tools	GNU timeout or gtimeout command for bounded eval
+bundled_tree_integrity	integrity	Bundled tree receipt integrity (manifest-hashes.json)
+install_homes	install	Static detection of installed agent skill targets

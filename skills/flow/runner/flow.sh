@@ -2682,80 +2682,387 @@ cmd_promote() {
 
 cmd_doctor() {
   # Cross-platform environment + quality check (macOS / Linux / Windows Git Bash).
-  echo "flow doctor - environment check"
-  local ok=1
-  echo "  os:        $(uname -s 2>/dev/null || echo unknown)"
-  local bv; bv="$(bash --version 2>/dev/null | head -1 | sed -n 's/.*version \([0-9][0-9.]*\).*/\1/p')"
-  case "$bv" in
-    3.*) echo "  bash:      $bv  (works; 3.x is the macOS default - 'brew install bash' for 4+ if you hit issues)" ;;
-    "")  echo "  bash:      unknown (assuming ok)" ;;
-    *)   echo "  bash:      $bv  ok" ;;
-  esac
+  local opt_list=0
+  local opt_json=0
+  local opt_check=""
+  local has_check=0
+  local err_msg=""
+  local helper="$SCRIPT_DIR/doctor_helper.py"
   local py; py="$(_python)"
-  if [ -n "$py" ] && "$py" --version >/dev/null 2>&1; then
-    echo "  python:    $("$py" --version 2>&1 | awk '{print $2}') ($py)  -> durable layer ENABLED"
-    if "$py" -c 'import sqlite3' >/dev/null 2>&1; then
-      echo "  sqlite3:   ok (python stdlib)"
-    else
-      echo "  sqlite3:   MISSING from python - durable layer needs it"; ok=0
+
+  # Pre-scan arguments for --json so any error emits valid JSON if requested
+  local a
+  for a in "$@"; do
+    if [ "$a" = "--json" ]; then
+      opt_json=1
+      break
     fi
-  else
-    echo "  python:    not found  -> durable layer DISABLED (gate engine still works fully)"
-    echo "             install: macOS 'brew install python' | Ubuntu 'sudo apt install python3' | Windows python.org"
+  done
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --list)
+        opt_list=1
+        ;;
+      --json)
+        opt_json=1
+        ;;
+      --check)
+        has_check=1
+        if [ $# -lt 2 ]; then
+          err_msg="--check requires an argument"
+          break
+        fi
+        shift
+        opt_check="$1"
+        ;;
+      --check=*)
+        has_check=1
+        opt_check="${1#--check=}"
+        ;;
+      -h|--help|help)
+        echo "Usage: flow doctor [--list] [--check <csv>] [--json]"
+        return 0
+        ;;
+      *)
+        err_msg="unrecognized option: $1"
+        break
+        ;;
+    esac
+    shift
+  done
+
+  # Flag compatibility
+  if [ -z "$err_msg" ] && [ "$opt_list" -eq 1 ] && [ "$has_check" -eq 1 ]; then
+    err_msg="--list and --check cannot be combined"
   fi
-  if printf 'a' | LC_ALL=C.UTF-8 grep -qP 'a' 2>/dev/null; then
-    echo "  grep -P:   ok (design emoji check available)"
-  else
-    echo "  grep -P:   unsupported (macOS BSD grep) - 'flow design' emoji check skips gracefully"
+
+  # Validate and canonicalize --check list if provided using single-source TSV registry
+  local canonical_checks=""
+  local tsv_reg="$SCRIPT_DIR/doctor-checks.tsv"
+  if [ -z "$err_msg" ] && [ "$has_check" -eq 1 ]; then
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+      local val_out val_rc=0
+      val_out="$("$py" "$helper" validate-checks "$opt_check" 2>&1)" || val_rc=$?
+      if [ "$val_rc" -eq 0 ]; then
+        canonical_checks="$val_out"
+      else
+        err_msg="${val_out#ERROR:}"
+      fi
+    else
+      local known_checks
+      if [ -f "$tsv_reg" ]; then
+        known_checks="$(awk -F'\t' '{printf "%s,", $1}' "$tsv_reg" | sed 's/,$//')"
+      else
+        known_checks="os,bash,python,sqlite3,grep_p,git,cargo,templates,harness,timeout,bundled_tree_integrity,install_homes"
+      fi
+      local count=0
+      local unknown_checks=""
+      set -f
+      local old_ifs="$IFS"
+      IFS=','
+      for c in $opt_check; do
+        c="$(printf '%s' "$c" | tr -d '[:space:]')"
+        [ -n "$c" ] || continue
+        count=$((count + 1))
+        case ",$known_checks," in
+          *",$c,"*)
+            case ",$canonical_checks," in
+              *",$c,"*) ;; # deduplicate
+              *) canonical_checks="${canonical_checks:+$canonical_checks,}$c" ;;
+            esac
+            ;;
+          *)
+            case ",$unknown_checks," in
+              *",$c,"*) ;;
+              *) unknown_checks="${unknown_checks:+$unknown_checks, }$c" ;;
+            esac
+            ;;
+        esac
+      done
+      IFS="$old_ifs"
+      set +f
+
+      if [ "$count" -eq 0 ]; then
+        err_msg="--check requires at least one non-empty check name"
+      elif [ -n "$unknown_checks" ]; then
+        err_msg="unknown check name(s): $unknown_checks (run 'flow doctor --list' for available checks)"
+      fi
+    fi
   fi
-  command -v git >/dev/null 2>&1 && echo "  git:       ok (worktree parallel + auto-merge available)" || echo "  git:       not found (worktree/auto unavailable; serial builds still work)"
-  command -v cargo >/dev/null 2>&1 && echo "  cargo:     ok (optional Rust harness power-path)" || true
-  [ -d "$TEMPLATE_DIR" ] && echo "  templates: ok" || { echo "  templates: MISSING ($TEMPLATE_DIR)"; ok=0; }
-  [ -f "$HARNESS_PY" ] && echo "  harness:   present ($HARNESS_PY)" || echo "  harness:   absent (durable layer off)"
-  if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
-    echo "  timeout:   full (timeout|gtimeout present)"
-  else
-    case "$(uname -s 2>/dev/null)" in
-      Darwin) echo "  timeout:   absent (no timeout/gtimeout; live eval REFUSED)" ;;
-      *)      echo "  timeout:   partial (watchdog fallback; live eval not GNU-bounded)" ;;
+
+  # Render error if any
+  if [ -n "$err_msg" ]; then
+    if [ "$opt_json" -eq 1 ]; then
+      if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+        "$py" "$helper" format-error "$err_msg"
+      else
+        echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+      fi
+    else
+      echo "flow doctor: $err_msg" >&2
+    fi
+    return 1
+  fi
+
+  # Handle --list
+  if [ "$opt_list" -eq 1 ]; then
+    if [ "$opt_json" -eq 1 ]; then
+      if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+        "$py" "$helper" list-json
+        return $?
+      else
+        echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+        return 1
+      fi
+    else
+      if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+        "$py" "$helper" list
+        return $?
+      elif [ -f "$tsv_reg" ]; then
+        echo "flow doctor - available checks:"
+        awk -F'\t' '{printf "  %-24s %s\n", $1, $3}' "$tsv_reg"
+        return 0
+      else
+        echo "flow doctor: registry file missing: $tsv_reg" >&2
+        return 1
+      fi
+    fi
+  fi
+
+  # If --json requested without python, fail explicitly with unsupported interpreter
+  if [ "$opt_json" -eq 1 ]; then
+    if [ -z "$py" ] || ! "$py" --version >/dev/null 2>&1 || [ ! -f "$helper" ]; then
+      echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+      return 1
+    fi
+  fi
+
+  local ok=1
+  local rec_file; rec_file="$(mktemp 2>/dev/null || echo "$ROOT/.flow/.doc-rec.$$")"
+  : > "$rec_file"
+
+  _record() {
+    printf '%s\0%s\0%s\0%s\0' "$1" "$2" "$3" "$4" >> "$rec_file"
+  }
+
+  _run_check() {
+    if [ "$has_check" -eq 0 ]; then return 0; fi
+    case ",$canonical_checks," in
+      *",$1,"*) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
+
+  [ "$opt_json" -eq 0 ] && echo "flow doctor - environment check"
+
+  # 1. os
+  if _run_check "os"; then
+    local os_val; os_val="$(uname -s 2>/dev/null || echo unknown)"
+    [ "$opt_json" -eq 0 ] && echo "  os:        $os_val"
+    _record "os" "environment" "ok" "$os_val"
+  fi
+
+  # 2. bash
+  if _run_check "bash"; then
+    local bv; bv="$(bash --version 2>/dev/null | head -1 | sed -n 's/.*version \([0-9][0-9.]*\).*/\1/p')"
+    case "$bv" in
+      3.*)
+        [ "$opt_json" -eq 0 ] && echo "  bash:      $bv  (works; 3.x is the macOS default - 'brew install bash' for 4+ if you hit issues)"
+        _record "bash" "environment" "warn" "$bv (works; macOS default - brew install bash for 4+ if you hit issues)"
+        ;;
+      "")
+        [ "$opt_json" -eq 0 ] && echo "  bash:      unknown (assuming ok)"
+        _record "bash" "environment" "ok" "unknown (assuming ok)"
+        ;;
+      *)
+        [ "$opt_json" -eq 0 ] && echo "  bash:      $bv  ok"
+        _record "bash" "environment" "ok" "$bv ok"
+        ;;
     esac
   fi
-  echo
-  # Runner integrity (pack-time reference hash). Preferred source is the receipt sync.mjs writes
-  # INSIDE the bundled skill (skills/flow/manifest-hashes.json) - present on real npm installs;
-  # portable-manifest.json only exists in dev checkouts. First existing file wins; no file / no
-  # hashes entry (older installs) => informational skip only.
-  local mf="" _mf
-  for _mf in "$SCRIPT_DIR/../manifest-hashes.json" "$SCRIPT_DIR/../../../portable-manifest.json" "$SCRIPT_DIR/../../portable-manifest.json"; do
-    if [ -f "$_mf" ]; then mf="$_mf"; break; fi
-  done
-  local want=""
-  [ -n "$mf" ] && want="$(sed -nE 's/.*"skills\/flow\/runner\/flow\.sh"[[:space:]]*:[[:space:]]*"([0-9a-f]{64})".*/\1/p' "$mf" 2>/dev/null | head -1)"
-  if [ -z "$want" ]; then
-    echo "  runner integrity: no reference hash in manifest (older install) - skipped"
-  else
-    local have=""
-    if command -v shasum >/dev/null 2>&1; then
-      have="$(shasum -a 256 "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
-    elif command -v sha256sum >/dev/null 2>&1; then
-      have="$(sha256sum "$SCRIPT_DIR/flow.sh" 2>/dev/null | awk '{print $1}')"
-    fi
-    if [ -z "$have" ]; then
-      echo "  runner integrity: no shasum/sha256sum available - skipped"
-    elif [ "$have" = "$want" ]; then
-      echo "  runner integrity: ok (${want%"${want#????????}"}...)"
+
+  # 3. python
+  if _run_check "python"; then
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1; then
+      local py_v; py_v="$("$py" --version 2>&1 | awk '{print $2}')"
+      [ "$opt_json" -eq 0 ] && echo "  python:    $py_v ($py)  -> durable layer ENABLED"
+      _record "python" "runtime" "ok" "$py_v ($py) -> durable layer ENABLED"
     else
-      echo "  FAIL: runner integrity - flow.sh does not match the installed manifest hash (expected ${want%"${want#????????}"}..., got ${have%"${have#????????}"}...) - the harness may have been modified mid-project"
+      [ "$opt_json" -eq 0 ] && {
+        echo "  python:    not found  -> durable layer DISABLED (gate engine still works fully)"
+        echo "             install: macOS 'brew install python' | Ubuntu 'sudo apt install python3' | Windows python.org"
+      }
+      _record "python" "runtime" "warn" "not found -> durable layer DISABLED"
+    fi
+  fi
+
+  # 4. sqlite3
+  if _run_check "sqlite3"; then
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1; then
+      if "$py" -c 'import sqlite3' >/dev/null 2>&1; then
+        [ "$opt_json" -eq 0 ] && echo "  sqlite3:   ok (python stdlib)"
+        _record "sqlite3" "runtime" "ok" "ok (python stdlib)"
+      else
+        [ "$opt_json" -eq 0 ] && echo "  sqlite3:   MISSING from python - durable layer needs it"
+        _record "sqlite3" "runtime" "fail" "MISSING from python stdlib"
+        ok=0
+      fi
+    else
+      _record "sqlite3" "runtime" "skip" "python not found"
+    fi
+  fi
+
+  # 5. grep_p
+  if _run_check "grep_p"; then
+    if printf 'a' | LC_ALL=C.UTF-8 grep -qP 'a' 2>/dev/null; then
+      [ "$opt_json" -eq 0 ] && echo "  grep -P:   ok (design emoji check available)"
+      _record "grep_p" "tools" "ok" "ok (design emoji check available)"
+    else
+      [ "$opt_json" -eq 0 ] && echo "  grep -P:   unsupported (macOS BSD grep) - 'flow design' emoji check skips gracefully"
+      _record "grep_p" "tools" "warn" "unsupported (macOS BSD grep) - flow design emoji check skips gracefully"
+    fi
+  fi
+
+  # 6. git
+  if _run_check "git"; then
+    if command -v git >/dev/null 2>&1; then
+      [ "$opt_json" -eq 0 ] && echo "  git:       ok (worktree parallel + auto-merge available)"
+      _record "git" "tools" "ok" "ok (worktree parallel + auto-merge available)"
+    else
+      [ "$opt_json" -eq 0 ] && echo "  git:       not found (worktree/auto unavailable; serial builds still work)"
+      _record "git" "tools" "warn" "not found (worktree/auto unavailable; serial builds still work)"
+    fi
+  fi
+
+  # 7. cargo
+  if _run_check "cargo"; then
+    if command -v cargo >/dev/null 2>&1; then
+      [ "$opt_json" -eq 0 ] && echo "  cargo:     ok (optional Rust harness power-path)"
+      _record "cargo" "tools" "ok" "ok (optional Rust harness power-path)"
+    else
+      _record "cargo" "tools" "skip" "absent (optional Rust harness power-path)"
+    fi
+  fi
+
+  # 8. templates
+  if _run_check "templates"; then
+    if [ -d "$TEMPLATE_DIR" ]; then
+      [ "$opt_json" -eq 0 ] && echo "  templates: ok"
+      _record "templates" "assets" "ok" "present ($TEMPLATE_DIR)"
+    else
+      [ "$opt_json" -eq 0 ] && echo "  templates: MISSING ($TEMPLATE_DIR)"
+      _record "templates" "assets" "fail" "MISSING ($TEMPLATE_DIR)"
       ok=0
     fi
   fi
-  echo
-  if [ "$ok" -eq 1 ]; then
-    echo "READY. Gate engine works$([ -n "$py" ] && echo '; durable layer on.' || echo '; durable layer off (no python).')"
-    return 0
+
+  # 9. harness
+  if _run_check "harness"; then
+    if [ -f "$HARNESS_PY" ]; then
+      [ "$opt_json" -eq 0 ] && echo "  harness:   present ($HARNESS_PY)"
+      _record "harness" "assets" "ok" "present ($HARNESS_PY)"
+    else
+      [ "$opt_json" -eq 0 ] && echo "  harness:   absent (durable layer off)"
+      _record "harness" "assets" "warn" "absent (durable layer off)"
+    fi
   fi
-  echo "DEGRADED - resolve the MISSING item(s) above."
-  return 1
+
+  # 10. timeout
+  if _run_check "timeout"; then
+    if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
+      [ "$opt_json" -eq 0 ] && echo "  timeout:   full (timeout|gtimeout present)"
+      _record "timeout" "tools" "ok" "full (timeout|gtimeout present)"
+    else
+      case "$(uname -s 2>/dev/null)" in
+        Darwin)
+          [ "$opt_json" -eq 0 ] && echo "  timeout:   absent (no timeout/gtimeout; live eval REFUSED)"
+          _record "timeout" "tools" "warn" "absent (no timeout/gtimeout; live eval REFUSED)"
+          ;;
+        *)
+          [ "$opt_json" -eq 0 ] && echo "  timeout:   partial (watchdog fallback; live eval not GNU-bounded)"
+          _record "timeout" "tools" "warn" "partial (watchdog fallback; live eval not GNU-bounded)"
+          ;;
+      esac
+    fi
+  fi
+
+  # 11. bundled_tree_integrity
+  if _run_check "bundled_tree_integrity"; then
+    [ "$opt_json" -eq 0 ] && echo
+    local mf="$SCRIPT_DIR/../manifest-hashes.json"
+    if [ ! -f "$mf" ]; then
+      [ "$opt_json" -eq 0 ] && echo "  bundled tree integrity: dev checkout (install receipt not present) - skipped"
+      _record "bundled_tree_integrity" "integrity" "skip" "dev checkout (install receipt not present)"
+    else
+      local v_out=""
+      if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+        v_out="$("$py" "$helper" verify-receipt "$SCRIPT_DIR/.." "$mf" 2>/dev/null || echo "FAIL:execution error during integrity verification")"
+      else
+        v_out="FAIL:python 3.8+ interpreter unavailable for receipt verification"
+      fi
+
+      case "$v_out" in
+        OK:*)
+          local n_v="${v_out#OK:}"
+          [ "$opt_json" -eq 0 ] && echo "  bundled tree integrity: ok ($n_v files verified)"
+          _record "bundled_tree_integrity" "integrity" "ok" "ok ($n_v files verified)"
+          ;;
+        FAIL:*)
+          local reason="${v_out#FAIL:}"
+          [ "$opt_json" -eq 0 ] && echo "  FAIL: bundled tree integrity - $reason"
+          _record "bundled_tree_integrity" "integrity" "fail" "$reason"
+          ok=0
+          ;;
+        SKIP:*)
+          local reason="${v_out#SKIP:}"
+          [ "$opt_json" -eq 0 ] && echo "  bundled tree integrity: $reason - skipped"
+          _record "bundled_tree_integrity" "integrity" "skip" "$reason"
+          ;;
+        *)
+          [ "$opt_json" -eq 0 ] && echo "  FAIL: bundled tree integrity - unknown verification error"
+          _record "bundled_tree_integrity" "integrity" "fail" "unknown verification error"
+          ok=0
+          ;;
+      esac
+    fi
+  fi
+
+  # 12. install_homes
+  if _run_check "install_homes"; then
+    local homes_found=""
+    [ -d "$HOME/.claude/skills/flow" ] && homes_found="${homes_found:+$homes_found, }claude ($HOME/.claude/skills/flow)"
+    [ -d "$HOME/.codex/skills/flow" ] && homes_found="${homes_found:+$homes_found, }codex ($HOME/.codex/skills/flow)"
+    [ -d "$HOME/.agents/skills/flow" ] && homes_found="${homes_found:+$homes_found, }agents ($HOME/.agents/skills/flow)"
+    [ -d "$HOME/.omp/agent/skills/flow" ] && homes_found="${homes_found:+$homes_found, }omp ($HOME/.omp/agent/skills/flow)"
+    [ -d "$HOME/.gemini/antigravity-cli/skills/flow" ] && homes_found="${homes_found:+$homes_found, }antigravity-cli ($HOME/.gemini/antigravity-cli/skills/flow)"
+    [ -d "$HOME/.gemini/config/skills/flow" ] && homes_found="${homes_found:+$homes_found, }antigravity-config ($HOME/.gemini/config/skills/flow)"
+    [ -d "$ROOT/.claude/skills/flow" ] && homes_found="${homes_found:+$homes_found, }project ($ROOT/.claude/skills/flow)"
+
+    if [ -n "$homes_found" ]; then
+      [ "$opt_json" -eq 0 ] && echo "  install homes: $homes_found"
+      _record "install_homes" "install" "ok" "$homes_found"
+    else
+      [ "$opt_json" -eq 0 ] && echo "  install homes: none detected (local project or custom path)"
+      _record "install_homes" "install" "skip" "none detected (local project or custom path)"
+    fi
+  fi
+
+  if [ "$opt_json" -eq 1 ]; then
+    local fmt_rc=0
+    "$py" "$helper" format-report "$ok" < "$rec_file" || fmt_rc=$?
+    rm -f "$rec_file" 2>/dev/null || true
+    [ "$fmt_rc" -ne 0 ] && return "$fmt_rc"
+  else
+    echo
+    if [ "$ok" -eq 1 ]; then
+      echo "READY. Gate engine works$([ -n "$py" ] && echo '; durable layer on.' || echo '; durable layer off (no python).')"
+    else
+      echo "DEGRADED - resolve the MISSING item(s) above."
+    fi
+  fi
+
+  [ "$ok" -eq 1 ] && return 0 || return 1
 }
 
 cmd_constitution() {
@@ -5676,7 +5983,7 @@ case "$cmd" in
   clarify)        cmd_clarify ;;
   converge)       cmd_converge "$@" ;;
   promote)        cmd_promote "$@" ;;
-  doctor)         cmd_doctor ;;
+  doctor)         cmd_doctor "$@" ;;
   eval)           cmd_eval "$@" ;;
   usage)          cmd_usage "$@" ;;
   -h|--help|help) usage ;;

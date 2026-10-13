@@ -156,45 +156,22 @@ IT="$(mktemp -d)"
 cp -R "$HERE/../skills/flow" "$IT/src"
 RUNX="$IT/src/runner/flow.sh"
 LIVE="$(sha_bin "$RUNX")"
-# (a) correct hash -> ok line, doctor still exits per convention (0 when nothing else fails)
-printf '{\n  "name": "flow",\n  "hashes": {\n    "skills/flow/runner/flow.sh": "%s"\n  }\n}\n' "$LIVE" > "$IT/portable-manifest.json"
+# (a) bundled receipt matching -> ok line
+printf '{\n  "schema_version": 1,\n  "files": {\n    "runner/flow.sh": "%s"\n  }\n}\n' "$LIVE" > "$IT/src/manifest-hashes.json"
 out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "runner integrity: ok (${LIVE%"${LIVE#????????}"}...)" "matching hash -> ok line"
-ck 0 $rc "matching hash -> doctor exit 0"
-# (b) tamper: record hash of DIFFERENT bytes -> loud FAIL + nonzero
-printf '{\n  "hashes": {\n    "skills/flow/runner/flow.sh": "%s"\n  }\n}\n' "0000000000000000000000000000000000000000000000000000000000000000" > "$IT/portable-manifest.json"
-out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "FAIL: runner integrity - flow.sh does not match the installed manifest hash" "tampered hash -> loud FAIL"
-has "$out" "expected 00000000..., got ${LIVE%"${LIVE#????????}"}..." "tampered hash -> expected/got echo"
-ck 1 $rc "tampered hash -> doctor nonzero"
-# (c) manifest without hashes entry -> informational skip, exit convention unchanged
-printf '{\n  "name": "flow"\n}\n' > "$IT/portable-manifest.json"
-out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "runner integrity: no reference hash in manifest (older install) - skipped" "no hashes entry -> skip line"
-ck 0 $rc "no hashes entry -> doctor exit unchanged (0)"
-# (d) no manifest at all -> skip, no crash
-rm -f "$IT/portable-manifest.json"
-out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "runner integrity: no reference hash in manifest (older install) - skipped" "no manifest -> skip line"
-ck 0 $rc "no manifest -> doctor exit unchanged, no crash"
-# (a2) installed-layout receipt: sibling manifest-hashes.json preferred over repo manifest
-rm -f "$IT/portable-manifest.json"
-printf '{\n  "skills/flow/runner/flow.sh": "%s"\n}\n' "$LIVE" > "$IT/src/manifest-hashes.json"
-out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "runner integrity: ok (${LIVE%"${LIVE#????????}"}...)" "bundled receipt matching -> ok line"
+has "$out" "bundled tree integrity: ok (1 files verified)" "bundled receipt matching -> ok line"
 ck 0 $rc "bundled receipt matching -> doctor exit 0"
-# (b2) tampered bytes vs receipt -> loud FAIL + nonzero
+# (b) tampered bytes vs receipt -> loud FAIL + nonzero
 printf '\n' >> "$RUNX"
 out="$(bash "$RUNX" doctor 2>&1)"; rc=0; bash "$RUNX" doctor >/dev/null 2>&1 || rc=$?
-has "$out" "FAIL: runner integrity - flow.sh does not match the installed manifest hash" "tampered bytes vs receipt -> loud FAIL"
-[ "$rc" -ne 0 ] && { echo "  ok   [tampered bytes vs receipt -> doctor nonzero]"; pass=$((pass+1)); } || { echo "  FAIL [tampered bytes vs receipt -> doctor nonzero]"; fail=$((fail+1)); }
-printf '%s' "${LIVE}" >/dev/null # keep LIVE stable for later asserts
+has "$out" "FAIL: bundled tree integrity" "tampered bytes vs receipt -> loud FAIL"
+ck 1 $rc "tampered bytes vs receipt -> doctor nonzero"
 cp "$HERE/../skills/flow/runner/flow.sh" "$RUNX"
 rm -f "$IT/src/manifest-hashes.json"
-# (c2) receipt absent and no portable-manifest -> skip line (installed layout)
+# (c) receipt absent -> dev checkout skip line
 out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
-has "$out" "runner integrity: no reference hash in manifest (older install) - skipped" "receipt absent + no manifest -> skip line"
-ck 0 $rc "receipt absent + no manifest -> doctor exit 0"
+has "$out" "bundled tree integrity: dev checkout (install receipt not present) - skipped" "receipt absent -> skip line"
+ck 0 $rc "receipt absent -> doctor exit 0"
 # (e) hash generation deterministic: sync.mjs run twice => byte-identical manifest
 cp "$HERE/../portable-manifest.json" "$IT/pm.before"
 node "$HERE/../npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1
