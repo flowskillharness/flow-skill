@@ -51,6 +51,26 @@ jobs:
         run: bash tests/run_all.sh
         shell: bash
 
+      - name: Run PowerShell installer suite (Windows only)
+        if: matrix.os == 'windows-latest'
+        run: |
+          if (Test-Path tests/test_install_safe_update.ps1) {
+            pwsh tests/test_install_safe_update.ps1
+          } elseif (Test-Path install.ps1) {
+            Write-Host "Running install.ps1 smoke check..."
+            $scratch = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "flow-ps1-smoke-$([System.Guid]::NewGuid())")
+            try {
+              $env:USERPROFILE = $scratch.FullName
+              pwsh install.ps1 global claude
+              if (-not (Test-Path (Join-Path $scratch.FullName '.claude\skills\flow\SKILL.md'))) {
+                throw "install.ps1 failed to install SKILL.md"
+              }
+            } finally {
+              Remove-Item -Recurse -Force $scratch.FullName -ErrorAction SilentlyContinue
+            }
+          }
+        shell: pwsh
+
   # The engine must still gate a project when the durable layer is unavailable. This job
   # is the executable proof of that promise (README/system-architecture both claim it),
   # and it is what a future python-mandatory release would have to consciously replace.
