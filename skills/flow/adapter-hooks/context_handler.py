@@ -32,11 +32,18 @@ Env: FLOW_SKILL_DIR, FLOW_HOOK_TIMEOUT (1..120 s, default 10), FLOW_HOOK_MAX_BYT
 (1024..1048576, default 4000), FLOW_HOOK_SNAPSHOT=0 disables the snapshot write.
 Requires python3 (stdlib only, already an optional flow dependency).
 """
-import errno, json, os, re, secrets, select, signal, stat as stat_mod, subprocess, sys, time
+import errno, json, os, queue, re, secrets, select, signal, stat as stat_mod, subprocess, sys, threading, time
 
 TIMEOUT_DEF, TIMEOUT_MAX = 10, 120
 BYTES_DEF, BYTES_MIN, BYTES_MAX = 4000, 1024, 1048576
-STDIN_MAX, STDIN_DEADLINE = 65536, 5.0
+STDIN_MAX = 65536
+STDIN_DEADLINE = 5.0
+try:
+    _env_dl = float(os.environ.get("FLOW_HOOK_STDIN_DEADLINE", "5.0"))
+    if 0.1 <= _env_dl <= 30.0:
+        STDIN_DEADLINE = _env_dl
+except (TypeError, ValueError):
+    pass
 LABEL_BUDGET = 512
 MAGIC = "flow-compact-handoff/v1"
 FLOW_DIR = ".flow"
@@ -74,11 +81,56 @@ def env_int(name, default, hard_min, hard_max):
 
 TIMEOUT = env_int("FLOW_HOOK_TIMEOUT", TIMEOUT_DEF, 1, TIMEOUT_MAX)
 MAX_OUT = env_int("FLOW_HOOK_MAX_BYTES", BYTES_DEF, BYTES_MIN, BYTES_MAX)
-
 # Snapshot features need O_NOFOLLOW (symlink refusal at open) and O_DIRECTORY dir_fd
 # walking. On a platform without them the snapshot is refused on BOTH read and write
 # (fail-open: fresh-only handoff still works, with a warning).
 HAS_NOFOLLOW = hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+
+if os.name == 'nt':
+    import ctypes, msvcrt
+    from ctypes import wintypes, c_void_p, c_int, c_wchar_p, POINTER, byref, sizeof
+
+    ERROR_BROKEN_PIPE = 109
+    ERROR_NO_DATA = 232
+    ERROR_PIPE_NOT_CONNECTED = 233
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.CreateJobObjectW.argtypes = [c_void_p, c_wchar_p]
+
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, c_int, c_void_p, wintypes.DWORD]
+
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+
+    kernel32.TerminateJobObject.restype = wintypes.BOOL
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.PeekNamedPipe.restype = wintypes.BOOL
+    kernel32.PeekNamedPipe.argtypes = [
+        wintypes.HANDLE,
+        c_void_p,
+        wintypes.DWORD,
+        POINTER(wintypes.DWORD),
+        POINTER(wintypes.DWORD),
+        POINTER(wintypes.DWORD),
+    ]
+
+    def _win_peek_pipe(h_pipe):
+        """Peek an open Windows named pipe handle without blocking.
+        Returns (avail_bytes, is_eof, err_code)."""
+        avail = wintypes.DWORD(0)
+        res = kernel32.PeekNamedPipe(h_pipe, None, 0, None, byref(avail), None)
+        if not res:
+            err = ctypes.get_last_error()
+            if err in (ERROR_BROKEN_PIPE, ERROR_NO_DATA, ERROR_PIPE_NOT_CONNECTED):
+                return 0, True, 0
+            return 0, False, err
+        return avail.value, False, 0
 
 def utf8_cut(data, cap):
     """Byte cap that never splits a UTF-8 sequence."""
@@ -93,25 +145,62 @@ def read_event():
     """Bounded stdin: byte cap AND total deadline. Strict UTF-8, duplicate JSON keys
     rejected, oversize rejected in full. Returns (payload, None) or (None, reason)."""
     try:
-        fd = sys.stdin.fileno()
-        if os.isatty(fd):
-            return None, "interactive stdin (no piped event)"
-        start, chunks, total = time.monotonic(), [], 0
-        while True:
-            left = STDIN_DEADLINE - (time.monotonic() - start)
-            if left <= 0:
-                return None, "stdin deadline exceeded before a complete event"
-            ready, _, _ = select.select([fd], [], [], min(left, 0.5))
-            if not ready:
-                continue
-            chunk = os.read(fd, 65536)
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > STDIN_MAX + 1:
-                return None, "event payload oversize (rejected in full)"
-            chunks.append(chunk)
-        data = b"".join(chunks)
+        if os.name != 'nt':
+            fd = sys.stdin.fileno()
+            if os.isatty(fd):
+                return None, "interactive stdin (no piped event)"
+            start, chunks, total = time.monotonic(), [], 0
+            while True:
+                left = STDIN_DEADLINE - (time.monotonic() - start)
+                if left <= 0:
+                    return None, "stdin deadline exceeded before a complete event"
+                ready, _, _ = select.select([fd], [], [], min(left, 0.5))
+                if not ready:
+                    continue
+                chunk = os.read(fd, 65536)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > STDIN_MAX + 1:
+                    return None, "event payload oversize (rejected in full)"
+                chunks.append(chunk)
+            data = b"".join(chunks)
+        else:
+            # Windows: select() raises WinError 10038 on pipes. Bounded synchronous polling via PeekNamedPipe.
+            fd = sys.stdin.fileno()
+            if os.isatty(fd):
+                return None, "interactive stdin (no piped event)"
+            try:
+                h_pipe = msvcrt.get_osfhandle(fd)
+            except (OSError, ValueError) as ex:
+                return None, "invalid stdin handle (%s)" % type(ex).__name__
+
+            start, chunks, total = time.monotonic(), [], 0
+            while True:
+                left = STDIN_DEADLINE - (time.monotonic() - start)
+                if left <= 0:
+                    return None, "stdin deadline exceeded before a complete event"
+                avail, is_eof, err = _win_peek_pipe(h_pipe)
+                if is_eof:
+                    break
+                if err != 0:
+                    # NEVER fallback to blocking os.read; report safe error code
+                    return None, "stdin pipe peek failed (OS error %d)" % err
+                if avail > 0:
+                    to_read = min(avail, min(65536, STDIN_MAX + 1 - total))
+                    try:
+                        chunk = os.read(fd, to_read)
+                    except OSError as ex:
+                        return None, "stdin read failed (%s)" % type(ex).__name__
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > STDIN_MAX + 1:
+                        return None, "event payload oversize (rejected in full)"
+                    chunks.append(chunk)
+                else:
+                    time.sleep(0.01)
+            data = b"".join(chunks)
         if len(data) > STDIN_MAX:
             return None, "event payload oversize (rejected in full)"
         try:
@@ -136,7 +225,6 @@ def read_event():
         return payload, None
     except Exception as exc:
         return None, "stdin read failed (%s)" % type(exc).__name__
-
 payload, reason = read_event()
 if payload is None:
     fail_open("no usable event (%s) - ignoring" % reason)
@@ -289,63 +377,248 @@ def load_snapshot():
     finally:
         os.close(priv_fd)
 
-def drain_capped(proc, cap, pgid):
-    """Drain child stdout/stderr via select into capped buffers (surplus discarded,
-    nothing unbounded retained). On the deadline - or if the child outlives its closed
-    pipes - kill the SAVED process group (known from spawn time, so the kill works even
-    after the root has exited while pipe-holding descendants remain), then reap the
-    root. rc is always bound; 124 marks a timeout kill."""
-    bufs = {proc.stdout.fileno(): bytearray(), proc.stderr.fileno(): bytearray()}
-    open_fds = list(bufs)
-    deadline = time.monotonic() + TIMEOUT
-    while open_fds:
-        left = deadline - time.monotonic()
-        if left <= 0:
-            break
-        try:
-            ready, _, _ = select.select(open_fds, [], [], min(left, 0.5))
-        except (OSError, InterruptedError):
-            ready = []
-        for fd in ready:
-            try:
-                chunk = os.read(fd, 65536)
-            except OSError:
-                chunk = b""
-            if not chunk:
-                open_fds.remove(fd)
-                continue
-            buf = bufs[fd]
-            if len(buf) < cap:
-                buf.extend(chunk[:cap - len(buf)])
-    rc = None
+class JobHolder:
+    def __init__(self, handle):
+        self.handle = handle
+
+    def close(self):
+        if self.handle:
+            if os.name == 'nt':
+                try:
+                    res = kernel32.CloseHandle(self.handle)
+                    if not res:
+                        err = ctypes.get_last_error()
+                        note("WARNING CloseHandle on Job Object returned error %d; terminating job" % err)
+                        try:
+                            kernel32.TerminateJobObject(self.handle, 124)
+                        except Exception:
+                            pass
+                        return False
+                    self.handle = None
+                    return True
+                except Exception as ex:
+                    note("WARNING CloseHandle failed (%s)" % type(ex).__name__)
+                    return False
+            else:
+                self.handle = None
+                return True
+        return True
+
+def create_windows_job():
+    """Create an anonymous Windows Job Object configured with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE.
+    Contains the trusted gate child and all spawned descendants."""
+    if os.name != 'nt':
+        return None
+    if os.environ.get("FLOW_TEST_INJECT_WIN_JOB_FAIL") == "1":
+        return None
     try:
-        rc = proc.wait(timeout=max(deadline - time.monotonic(), 0.1))
-    except subprocess.TimeoutExpired:
-        pass
-    if rc is None or proc.poll() is None:
-        killed = True
-        if pgid is not None:
+        h_job = kernel32.CreateJobObjectW(None, None)
+        if not h_job:
+            return None
+
+        class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("PerProcessUserTimeLimit", ctypes.c_int64),
+                ("PerJobUserTimeLimit", ctypes.c_int64),
+                ("LimitFlags", wintypes.DWORD),
+                ("MinimumWorkingSetSize", ctypes.c_size_t),
+                ("MaximumWorkingSetSize", ctypes.c_size_t),
+                ("ActiveProcessLimit", wintypes.DWORD),
+                ("Affinity", ctypes.c_size_t),
+                ("PriorityClass", wintypes.DWORD),
+                ("SchedulingClass", wintypes.DWORD),
+            ]
+
+        class IO_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("ReadOperationCount", ctypes.c_uint64),
+                ("WriteOperationCount", ctypes.c_uint64),
+                ("OtherOperationCount", ctypes.c_uint64),
+                ("ReadTransferCount", ctypes.c_uint64),
+                ("WriteTransferCount", ctypes.c_uint64),
+                ("OtherTransferCount", ctypes.c_uint64),
+            ]
+
+        class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+                ("IoInfo", IO_COUNTERS),
+                ("ProcessMemoryLimit", ctypes.c_size_t),
+                ("JobMemoryLimit", ctypes.c_size_t),
+                ("PeakProcessMemoryLimit", ctypes.c_size_t),
+                ("PeakJobMemoryLimit", ctypes.c_size_t),
+            ]
+
+        info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+        info.BasicLimitInformation.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        res = kernel32.SetInformationJobObject(
+            h_job,
+            9,  # JobObjectExtendedLimitInformation
+            byref(info),
+            sizeof(info),
+        )
+        if not res:
+            kernel32.CloseHandle(h_job)
+            return None
+        return JobHolder(h_job)
+    except Exception:
+        return None
+def assign_process_to_job(job_holder, proc_handle):
+    if not job_holder or not job_holder.handle or os.name != 'nt':
+        return False
+    if os.environ.get("FLOW_TEST_INJECT_WIN_ASSIGN_FAIL") == "1":
+        return False
+    try:
+        raw_handle = int(proc_handle)
+        if raw_handle <= 0:
+            return False
+        h_proc = wintypes.HANDLE(raw_handle)
+        return bool(kernel32.AssignProcessToJobObject(job_holder.handle, h_proc))
+    except Exception:
+        return False
+
+def drain_capped(proc, cap, pgid, job_holder=None):
+    """Drain child stdout/stderr via select (POSIX) or synchronous PeekNamedPipe (Windows) into capped
+    buffers (surplus discarded, nothing unbounded retained). On deadline, kill process group/job."""
+    if os.name != 'nt':
+        bufs = {proc.stdout.fileno(): bytearray(), proc.stderr.fileno(): bytearray()}
+        open_fds = list(bufs)
+        deadline = time.monotonic() + TIMEOUT
+        while open_fds:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                break
             try:
-                os.killpg(pgid, signal.SIGKILL)  # saved group: covers surviving descendants
-            except OSError:
+                ready, _, _ = select.select(open_fds, [], [], min(left, 0.5))
+            except (OSError, InterruptedError):
+                ready = []
+            for fd in ready:
+                try:
+                    chunk = os.read(fd, 65536)
+                except OSError:
+                    chunk = b""
+                if not chunk:
+                    open_fds.remove(fd)
+                    continue
+                buf = bufs[fd]
+                if len(buf) < cap:
+                    buf.extend(chunk[:cap - len(buf)])
+        rc = None
+        try:
+            rc = proc.wait(timeout=max(deadline - time.monotonic(), 0.1))
+        except subprocess.TimeoutExpired:
+            pass
+        timed_out = (time.monotonic() >= deadline) or bool(open_fds)
+        if timed_out or rc is None or proc.poll() is None:
+            killed = True
+            if pgid is not None:
+                try:
+                    os.killpg(pgid, signal.SIGKILL)  # saved group: covers surviving descendants
+                except OSError:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+            else:
                 try:
                     proc.kill()
                 except Exception:
                     pass
-        else:
+            try:
+                rc = proc.wait(timeout=5)  # reap the root: no zombie
+            except Exception:
+                rc = 124
+            if killed or timed_out:
+                rc = 124  # content from a killed run is marked as a timeout
+        elif pgid is not None:
+            # Process exited cleanly within deadline, but clean up any background descendants
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except OSError:
+                pass
+        return rc, bytes(bufs[proc.stdout.fileno()]), bytes(bufs[proc.stderr.fileno()])
+    else:
+        # Windows: select() unsupported on process pipes. Synchronous polling via PeekNamedPipe.
+        out_buf = bytearray()
+        err_buf = bytearray()
+        out_fd = proc.stdout.fileno()
+        err_fd = proc.stderr.fileno()
+        drain_failed = False
+        try:
+            h_out = msvcrt.get_osfhandle(out_fd)
+            h_err = msvcrt.get_osfhandle(err_fd)
+            streams = {out_fd: (h_out, out_buf), err_fd: (h_err, err_buf)}
+        except (OSError, ValueError):
+            streams = {}
+            drain_failed = True
+
+        deadline = time.monotonic() + TIMEOUT
+        while streams and not drain_failed:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                break
+            did_read = False
+            for fd, (h, buf) in list(streams.items()):
+                avail, is_eof, err = _win_peek_pipe(h)
+                if is_eof:
+                    del streams[fd]
+                    continue
+                if err != 0:
+                    drain_failed = True
+                    del streams[fd]
+                    break
+                if avail > 0:
+                    did_read = True
+                    to_read = min(avail, 65536)
+                    try:
+                        chunk = os.read(fd, to_read)
+                    except OSError:
+                        drain_failed = True
+                        del streams[fd]
+                        break
+                    if not chunk:
+                        drain_failed = True
+                        del streams[fd]
+                        break
+                    if len(buf) < cap:
+                        buf.extend(chunk[:cap - len(buf)])
+                # Root-exit does NOT drop stream; keep polling until real is_eof (BROKEN_PIPE) or deadline!
+            if not did_read and streams and not drain_failed:
+                time.sleep(0.01)
+
+        timed_out = (time.monotonic() >= deadline) or bool(streams)
+        rc = None
+        try:
+            rem = max(deadline - time.monotonic(), 0.1) if not timed_out else 0.1
+            rc = proc.wait(timeout=rem)
+        except subprocess.TimeoutExpired:
+            pass
+
+        if timed_out or rc is None or drain_failed:
+            rc = 124 if (timed_out or rc is None) else 1
+            if job_holder:
+                job_holder.close()
             try:
                 proc.kill()
+                proc.wait(timeout=5)
             except Exception:
                 pass
-        try:
-            rc = proc.wait(timeout=5)  # reap the root: no zombie
-        except Exception:
-            rc = 124
-        if killed:
-            rc = 124  # content from a killed run is marked as a timeout
-    return rc, bytes(bufs[proc.stdout.fileno()]), bytes(bufs[proc.stderr.fileno()])
+        else:
+            if job_holder and not job_holder.close():
+                rc = 124
+        return rc, bytes(out_buf), bytes(err_buf)
+WIN_GATE_SCRIPT = (
+    "import sys, subprocess\n"
+    "go = sys.stdin.buffer.read(1)\n"
+    "if go != b'G':\n"
+    "    sys.exit(125)\n"
+    "p = subprocess.Popen(sys.argv[1:])\n"
+    "sys.exit(p.wait())\n"
+)
 
 def run_flow(args):
+    proc = None
+    job_holder = None
     try:
         # Documented invocation shape is `bash <skill>/runner/flow.sh <cmd>` (command-
         # dispatch.md); repo checkouts may lack the exec bit, so run through bash.
@@ -358,25 +631,71 @@ def run_flow(args):
         env = dict(os.environ)
         env["FLOW_PROJECT_ROOT"] = PROJECT
         env["FLOW_LOG_DISABLE"] = "1"
-        proc = subprocess.Popen(["bash", RUNNER] + args, cwd=PROJECT, env=env,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                stdin=subprocess.DEVNULL, start_new_session=True)
-    except Exception as exc:
-        return 127, b"", ("spawn failed: %s" % type(exc).__name__).encode()
-    try:
-        pgid = os.getpgid(proc.pid)  # saved at spawn: group-kill stays possible even if
-    except OSError:                  # the root exits while descendants hold the pipes
-        pgid = None
-    try:
-        return drain_capped(proc, MAX_OUT, pgid)
-    finally:
-        for stream in (proc.stdout, proc.stderr, proc.stdin):
+        popen_kwargs = {
+            "cwd": PROJECT,
+            "env": env,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+            "stdin": subprocess.DEVNULL,
+        }
+        if os.name != 'nt':
+            popen_kwargs["start_new_session"] = True
+            proc = subprocess.Popen(["bash", RUNNER] + args, **popen_kwargs)
+        else:
+            job_holder = create_windows_job()
+            if job_holder is None:
+                # Abort BEFORE spawn: no uncontained Windows fallback
+                note("WARNING Windows Job Object creation failed; spawn aborted (fail-open)")
+                return 127, b"", b""
+            popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            popen_kwargs["stdin"] = subprocess.PIPE
+            gate_cmd = [sys.executable, "-c", WIN_GATE_SCRIPT, "bash", RUNNER] + args
+            proc = subprocess.Popen(gate_cmd, **popen_kwargs)
+            proc_handle = getattr(proc, "_handle", None)
+            if not proc_handle or not assign_process_to_job(job_holder, proc_handle):
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
+                job_holder.close()
+                note("WARNING Windows Job Object assignment failed; process terminated (fail-open)")
+                return 127, b"", b""
             try:
-                if stream:
-                    stream.close()
+                proc.stdin.write(b"G")
+                proc.stdin.flush()
+                proc.stdin.close()
             except Exception:
-                pass
-
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
+                job_holder.close()
+                note("WARNING failed to unblock launch gate; process terminated (fail-open)")
+                return 127, b"", b""
+    except Exception as exc:
+        if job_holder:
+            job_holder.close()
+        return 127, b"", ("spawn failed: %s" % type(exc).__name__).encode()
+    pgid = None
+    if os.name != 'nt' and hasattr(os, "getpgid") and proc:
+        try:
+            pgid = os.getpgid(proc.pid)  # saved at spawn: group-kill stays possible
+        except OSError:
+            pgid = None
+    try:
+        return drain_capped(proc, MAX_OUT, pgid, job_holder=job_holder)
+    finally:
+        if job_holder:
+            job_holder.close()
+        if proc:
+            for stream in (proc.stdout, proc.stderr, proc.stdin):
+                try:
+                    if stream:
+                        stream.close()
+                except Exception:
+                    pass
 def write_snapshot(doc, total_cap):
     """Write the snapshot entirely through validated dir fds: no path-based chmod (no
     symlink race), no .flow mutation, existing-unsafe private dir is REJECTED rather

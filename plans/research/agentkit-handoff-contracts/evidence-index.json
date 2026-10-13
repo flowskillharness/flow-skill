@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-10-13",
+  "target_system": "AgentKit CLI ak 2.19.0 (observed via capture ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3; kit cache installation path ~/.agentkit/cache/kits/engineer/omp/2.18.1/engineer)",
+  "scope_summary": "Retained REA evidence strictly covers static AST inspection (hooks/scout-block, hooks/notifications) and controlled CLI process scenarios (version, help). Dynamic runtime trace of ak:handoff and project-handoff-store is unobserved. Runtime daemons, persistent servers, and resident loops remain unobserved.",
+  "external_raw_bundle_path": "/tmp/rea-evidence-bundle-wave3.json",
+  "external_raw_bundle_bytes": 4037481,
+  "records": [
+    {
+      "evidence_id": "ev_7773c2b267566769dfd9707c5334b6c800feea890ea62688f7fe6beed47e3934",
+      "operation": "inspect_analysis_view",
+      "parent_evidence_id": "ev_231a9a8e777ddbe28083bff49d49788242f1211be5fc10e4088ae59e0cd359a2",
+      "target_path": "hooks/scout-block",
+      "target_sha256": "56d7b07125fdc49000aaaeabb1667251b3760350c28b482893a442784f2d61a8",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": "rea-analysis-view v1",
+      "coverage": "bounded-within-view (5 JavaScript files parsed, 3,764 AST nodes visited, 48,044 text bytes read; does not claim complete context recovery or unmeasured <100ms execution latency)",
+      "semantic_findings": 15,
+      "limitations": [
+        "Static syntax observations and conservative relationship candidates only; does not claim runtime execution or daemon presence.",
+        "Local data flow does not claim control-flow-sensitive reaching definitions.",
+        "No live ak:handoff dynamic trace or project-handoff-store dynamic execution observed."
+      ]
+    },
+    {
+      "evidence_id": "ev_231a9a8e777ddbe28083bff49d49788242f1211be5fc10e4088ae59e0cd359a2",
+      "operation": "analyze_javascript_application",
+      "target_path": "hooks/scout-block",
+      "target_sha256": "56d7b07125fdc49000aaaeabb1667251b3760350c28b482893a442784f2d61a8",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": "JavaScript AST source analyzer",
+      "unknowns_count": 773,
+      "limitations": [
+        "Static AST graph extraction only; does not represent dynamic execution, live ak:handoff trace, or project-handoff-store runtime trace.",
+        "Daemon, server, or resident loop behavior remains unobserved."
+      ]
+    },
+    {
+      "evidence_id": "ev_fcabdc1a35a2ac55423a4b67db60cfc19c193894157d8a4e0b2e8d466daabe9e",
+      "operation": "capture_process_scenario",
+      "target": "ak.bak backups --help",
+      "target_sha256": "563a9bbd394c200406afd177599d86590d177be7bc3e3c6175683248fb71dce3",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": "rea-process v3",
+      "observed_exit": 0,
+      "observed_output_summary": "Manage rollback snapshots (create, list, prune, restore, show, verify)",
+      "limitations": [
+        "CLI help process scenario under controlled replay; does not observe live background daemon or runtime orchestrator."
+      ]
+    },
+    {
+      "evidence_id": "ev_656890bbacb42575d39110398965fa5c81c07d9d31c112174cdc16ad33359ef3",
+      "operation": "capture_process_scenario",
+      "target": "ak.bak --version",
+      "target_sha256": "563a9bbd394c200406afd177599d86590d177be7bc3e3c6175683248fb71dce3",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": "rea-process v3",
+      "observed_exit": 0,
+      "observed_output": "ak 2.19.0",
+      "limitations": [
+        "CLI version process scenario under controlled replay observing 'ak 2.19.0'; does not observe daemon or live handoff trace."
+      ]
+    },
+    {
+      "evidence_id": "ev_74643d62c09653f9b67d08d646792a58f59828f22508494f17f4ab19828f53c4",
+      "operation": "capture_process_scenario",
+      "target": "ak.bak --help",
+      "target_sha256": "563a9bbd394c200406afd177599d86590d177be7bc3e3c6175683248fb71dce3",
+      "authority": "controlled-replay",
+      "confidence": "observed",
+      "provider": "rea-process v3",
+      "limitations": [
+        "Retained partial stdout frame due to terminal cell render bounds; does not prove trailing command topology without scrolling; does not observe live background daemon."
+      ]
+    },
+    {
+      "evidence_id": "ev_deb05dfaa8ee9360de7c06f6f3ecda6e25f0508668d81c29d5e3e88467b93b8a",
+      "operation": "inspect_analysis_view",
+      "parent_evidence_id": "ev_cb4d036928c8798086ecf2b006cc6a17e94054dfd0cb338055f21d42ea7e0dd2",
+      "target_path": "hooks/notifications",
+      "target_sha256": "d474d954e9b95d69c841201cf491304c991564cea82d5e8e7e1602e91f342e4d",
+      "authority": "shipped-artifact",
+      "confidence": "derived",
+      "provider": "rea-analysis-view v1",
+      "limitations": [
+        "Static AST analysis view of hooks/notifications; does not observe runtime event dispatch, daemon loop, or dynamic handoff store trace."
+      ]
+    }
+  ],
+  "unresolved_native_toolchain": {
+    "status": "blocked_prerequisites",
+    "details": "Ghidra requires full JDK 21+ (host provides Temurin JDK 17.0.20.1) and GHIDRA_INSTALL_DIR; pwntools requires REA_PWNTOOLS_PYTHON; deep native CFG and binary layout analysis remain unobserved."
+  }
+}

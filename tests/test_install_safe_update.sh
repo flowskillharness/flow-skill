@@ -26,11 +26,45 @@ HELPER="$ROOT/skills/flow/runner/installer_helper.py"
 INSTALL_SH="$ROOT/install.sh"
 PY="${FLOW_PYTHON:-python3}"
 
-export PYTHONPATH="$ROOT/skills/flow/runner:${PYTHONPATH:-}"
-
 pass=0
 fail=0
+skipped=0
 
+# Detect MSYS/Cygwin/Windows Git Bash — Unix-specific filesystem features
+# (real symlinks, mkfifo) do not exist there.
+IS_WINDOWS=no
+if [ -n "${MSYSTEM:-}" ] || uname -s 2>/dev/null | grep -qiE 'MINGW|MSYS|CYGWIN'; then
+  IS_WINDOWS=yes
+fi
+
+# On Windows Git Bash (MSYS), $ROOT is an MSYS path (/c/Users/...) that the
+# native Windows Python interpreter cannot resolve for imports. Convert to a
+# Windows-native path so `import installer_helper` works in inline scripts.
+if [ "$IS_WINDOWS" = yes ] && command -v cygpath >/dev/null 2>&1; then
+  WIN_RUNNER_DIR="$(cygpath -w "$ROOT/skills/flow/runner")"
+  export PYTHONPATH="$WIN_RUNNER_DIR${PYTHONPATH:+;$PYTHONPATH}"
+else
+  export PYTHONPATH="$ROOT/skills/flow/runner${PYTHONPATH:+:$PYTHONPATH}"
+fi
+# Symlink helper: `ln -s` on Windows Git Bash creates a copy, not a reparse point.
+# Use `cmd //c mklink /J` (junction) which Windows lstat() reports as S_ISLNK.
+make_link() {
+  local target="$1" linkpath="$2"
+  ln -s "$target" "$linkpath" 2>/dev/null
+  if [ -L "$linkpath" ]; then
+    return 0  # real symlink created
+  fi
+  # On Windows, ln -s may have created a regular file/dir copy; remove the failed linkpath
+  rm -rf "$linkpath"
+  # Fall back to junction on Windows
+  if command -v cmd >/dev/null 2>&1; then
+    cmd //c mklink //J "$(cygpath -w "$linkpath")" "$(cygpath -w "$target")" >/dev/null 2>&1
+    [ -L "$linkpath" ] && return 0
+    "$PY" -c "import os, sys; sys.exit(0 if (os.path.isjunction(sys.argv[1]) or os.path.islink(sys.argv[1])) else 1)" "$(cygpath -w "$linkpath")" 2>/dev/null && return 0
+  fi
+  return 1  # cannot create a real link on this platform
+}
+skipped=0
 ck() {
   if [ "$1" = "$2" ]; then
     echo "  ok   [$3]"
@@ -39,6 +73,10 @@ ck() {
     echo "  FAIL [$3] expected='$1' got='$2'"
     fail=$((fail + 1))
   fi
+}
+skip_test() {
+  echo "  skip [$1: $2]"
+  skipped=$((skipped + 1))
 }
 
 SCRATCH="$(cd "$(mktemp -d)" && pwd -P)"
@@ -56,58 +94,72 @@ echo "# runner" > "$S1_SRC/runner/flow.sh"
 
 # Source root is a symlink
 S1_SRC_LINK="$SCRATCH/s1_src_link"
-ln -s "$S1_SRC" "$S1_SRC_LINK"
-set +e
-out="$("$PY" "$HELPER" upgrade "$S1_SRC_LINK" "$S1_DST" 2>&1)"
-rc=$?
-set -e
-ck 7 "$rc" "symlink source root refused with exit 7"
+if make_link "$S1_SRC" "$S1_SRC_LINK"; then
+  set +e
+  out="$("$PY" "$HELPER" upgrade "$S1_SRC_LINK" "$S1_DST" 2>&1)"
+  rc=$?
+  set -e
+  ck 7 "$rc" "symlink source root refused with exit 7"
+else
+  ck 7 "SKIP_NO_LINK" "symlink source root refused (platform cannot create links)"
+fi
 
 # Dest root is a symlink
 S1_DST_LINK="$SCRATCH/s1_dst_link"
-ln -s "$S1_DST" "$S1_DST_LINK"
-set +e
-out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_DST_LINK" 2>&1)"
-rc=$?
-set -e
-ck 7 "$rc" "symlink destination root refused with exit 7"
+if make_link "$S1_DST" "$S1_DST_LINK"; then
+  set +e
+  out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_DST_LINK" 2>&1)"
+  rc=$?
+  set -e
+  ck 7 "$rc" "symlink destination root refused with exit 7"
+else
+  ck 7 "SKIP_NO_LINK" "symlink destination root refused (platform cannot create links)"
+fi
 
 # Ancestor of source is a symlink
 S1_ANC_REAL="$SCRATCH/s1_anc_real"
 mkdir -p "$S1_ANC_REAL/nested/src"
 echo "# skill" > "$S1_ANC_REAL/nested/src/SKILL.md"
 S1_ANC_LINK="$SCRATCH/s1_anc_link"
-ln -s "$S1_ANC_REAL/nested" "$S1_ANC_LINK"
-set +e
-out="$("$PY" "$HELPER" upgrade "$S1_ANC_LINK/src" "$S1_DST" 2>&1)"
-rc=$?
-set -e
-ck 7 "$rc" "symlink in source ancestry refused with exit 7"
+if make_link "$S1_ANC_REAL/nested" "$S1_ANC_LINK"; then
+  set +e
+  out="$("$PY" "$HELPER" upgrade "$S1_ANC_LINK/src" "$S1_DST" 2>&1)"
+  rc=$?
+  set -e
+  ck 7 "$rc" "symlink in source ancestry refused with exit 7"
+else
+  ck 7 "SKIP_NO_LINK" "symlink in source ancestry refused (platform cannot create links)"
+fi
 
 # Regression: path with '..' traversing a symlink component (/tmp/link/../dest)
 S1_BYPASS_TARGET="$SCRATCH/s1_bypass_target"
-mkdir -p "$S1_BYPASS_TARGET"
 S1_BYPASS_LINK="$SCRATCH/s1_bypass_link"
-ln -s "$S1_BYPASS_TARGET" "$S1_BYPASS_LINK"
-set +e
-out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
-rc=$?
-set -e
-ck 7 "$rc" "traversal through symlink component (/tmp/link/../dest) refused with exit 7"
+mkdir -p "$S1_BYPASS_TARGET"
+if make_link "$S1_BYPASS_TARGET" "$S1_BYPASS_LINK"; then
+  set +e
+  out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  rc=$?
+  set -e
+  ck 7 "$rc" "traversal through symlink component (/tmp/link/../dest) refused with exit 7"
+else
+  ck 7 "SKIP_NO_LINK" "traversal through symlink component (platform cannot create links)"
+fi
 
 echo "=== 2. Non-regular / FIFO rejection before hash ==="
 S2_SRC="$SCRATCH/s2_src"
 S2_DST="$SCRATCH/s2_dst"
 mkdir -p "$S2_SRC" "$S2_DST"
 echo "# skill" > "$S2_SRC/SKILL.md"
-mkfifo "$S2_SRC/blocker_fifo"
-set +e
-out="$("$PY" "$HELPER" gen-receipt "$S2_SRC" 2>&1)"
-rc=$?
-set -e
-ck 4 "$rc" "gen-receipt refuses FIFO without hanging (exit 4)"
-rm -f "$S2_SRC/blocker_fifo"
-
+if mkfifo "$S2_SRC/blocker_fifo" 2>/dev/null && [ -p "$S2_SRC/blocker_fifo" ]; then
+  set +e
+  out="$("$PY" "$HELPER" gen-receipt "$S2_SRC" 2>&1)"
+  rc=$?
+  set -e
+  ck 4 "$rc" "gen-receipt refuses FIFO without hanging (exit 4)"
+  rm -f "$S2_SRC/blocker_fifo"
+else
+  skip_test "gen-receipt refuses FIFO" "mkfifo unavailable on this platform"
+fi
 echo "=== 3. Strict receipt schema validation ==="
 S3_DIR="$SCRATCH/s3_schema"
 mkdir -p "$S3_DIR"
@@ -476,5 +528,9 @@ print("PARSED_OK")
 ck "PARSED_OK" "$out" "raw Windows drive and UNC paths correctly parsed without stripping"
 
 echo "=== Summary ==="
-echo "Pass: $pass, Fail: $fail"
+if [ "$skipped" -gt 0 ]; then
+  echo "Pass: $pass, Fail: $fail, Skipped: $skipped"
+else
+  echo "Pass: $pass, Fail: $fail"
+fi
 [ "$fail" -eq 0 ] || exit 1

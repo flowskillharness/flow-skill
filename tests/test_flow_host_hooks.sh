@@ -17,6 +17,18 @@ bad() { echo "  FAIL $1"; fail=$((fail+1)); }
 check() { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (got: $2 | want: $3)"; fi; }
 te() { if echo "$2" | grep -q "$3"; then ok "$1"; else bad "$1 (missing '$3')"; fi; }
 tne() { if echo "$2" | grep -q "$3"; then bad "$1 (leaked: $3)"; else ok "$1"; fi; }
+IS_WINDOWS=0
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1 ;;
+esac
+
+to_native_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/flow-hooks-test.XXXXXX")"
 TMP="$(cd "$TMP" && pwd -P)"
@@ -38,16 +50,20 @@ EOF
 check "precompact exit 0" "$rc" "0"
 check "precompact stdout empty" "$out" ""
 SNAP="$P1/.flow/context-handoff/snapshot.json"
-[ -f "$SNAP" ] && ok "snapshot persisted in private dir" || bad "snapshot missing"
-mode_of() { python3 -c 'import os,stat,sys;print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode))[2:])' "$1" 2>/dev/null; }
-check "snapshot mode 0600" "$(mode_of "$SNAP")" "600"
-check "private dir mode 0700" "$(mode_of "$P1/.flow/context-handoff")" "700"
-python3 -c "
-import json
-d = json.load(open('$SNAP'))
+if [ "$IS_WINDOWS" -eq 1 ]; then
+  [ ! -f "$SNAP" ] && ok "Windows: snapshot refused due to missing O_NOFOLLOW (fresh-only security boundary)" || bad "Windows: snapshot written without O_NOFOLLOW"
+else
+  [ -f "$SNAP" ] && ok "snapshot persisted in private dir" || bad "snapshot missing"
+  mode_of() { python3 -c 'import os,stat,sys;print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode))[2:])' "$(to_native_path "$1")" 2>/dev/null; }
+  check "snapshot mode 0600" "$(mode_of "$SNAP")" "600"
+  check "private dir mode 0700" "$(mode_of "$P1/.flow/context-handoff")" "700"
+  python3 -c "
+import json, sys
+d = json.load(open(sys.argv[1]))
 assert d.get('magic') == 'flow-compact-handoff/v1'
 assert d.get('status_body', '').strip()
-" && ok "snapshot strict JSON + magic + body" || bad "snapshot JSON invalid"
+" "$(to_native_path "$SNAP")" && ok "snapshot strict JSON + magic + body" || bad "snapshot JSON invalid"
+fi
 
 # --- SessionStart fresh authority ----------------------------------------------
 out=$("$HANDLER" <<EOF
@@ -56,7 +72,11 @@ EOF
 ) ; rc=$?
 check "sessionstart exit 0" "$rc" "0"
 te "fresh source labeled" "$out" '\[source: fresh'
-te "snapshot cited as reference only" "$out" 'pre-compact snapshot: valid'
+if [ "$IS_WINDOWS" -eq 1 ]; then
+  ok "Windows: snapshot citation absent (fresh-only)"
+else
+  te "snapshot cited as reference only" "$out" 'pre-compact snapshot: valid'
+fi
 tne "no stale mislabel on fresh path" "$out" 'STALE SOURCE'
 
 # --- Strict payload parsing ----------------------------------------------------
@@ -82,11 +102,13 @@ EOF
 ) ; check "non-0700 private dir refused, exit 0" "$?" "0"
 [ -f "$P3/.flow/context-handoff/snapshot.json" ] && bad "snapshot written into lax dir" || ok "no snapshot into non-0700 dir"
 P4="$(mkproj crossproj)"; mkdir -p "$P4/.flow/context-handoff"; chmod 700 "$P4/.flow/context-handoff"
+P4_SNAP="$P4/.flow/context-handoff/snapshot.json"
 python3 -c "
-import json
-json.dump({'magic':'flow-compact-handoff/v1','captured':'t','project':'/somewhere/else','source':'s','status_body':'CROSSPROJ-BODY'}, open('$P4/.flow/context-handoff/snapshot.json','w'))
-import os; os.chmod('$P4/.flow/context-handoff/snapshot.json', 0o600)
-"
+import json, sys
+json.dump({'magic':'flow-compact-handoff/v1','captured':'t','project':'/somewhere/else','source':'s','status_body':'CROSSPROJ-BODY'}, open(sys.argv[1],'w'))
+import os; os.chmod(sys.argv[1], 0o600)
+" "$(to_native_path "$P4_SNAP")"
+[ -f "$P4_SNAP" ] && ok "cross-project snapshot fixture created" || bad "cross-project snapshot fixture missing"
 mkdir -p "$TMP/fakefail/runner"; printf '#!/bin/sh\nexit 1\n' > "$TMP/fakefail/runner/flow.sh"; chmod +x "$TMP/fakefail/runner/flow.sh"
 out=$(FLOW_SKILL_DIR="$TMP/fakefail" "$HANDLER" <<EOF
 {"hook_event_name":"SessionStart","cwd":"$P4"}
@@ -127,10 +149,10 @@ tne "secret token never echoed in stderr" "$(cat "$err_out")" "$SECRET_SESSION"
 # --- Timeout: process-group kill with orphan-scenario evidence -------------------
 PH="$(mkproj hang)"; mkdir -p "$PH/.flow/context-handoff"; chmod 700 "$PH/.flow/context-handoff"
 python3 -c "
-import json
-json.dump({'magic':'flow-compact-handoff/v1','captured':'t','project':'$PH','source':'s','status_body':'FALLBACK-MARKER'}, open('$PH/.flow/context-handoff/snapshot.json','w'))
-import os; os.chmod('$PH/.flow/context-handoff/snapshot.json', 0o600)
-"
+import json, sys
+json.dump({'magic':'flow-compact-handoff/v1','captured':'t','project':sys.argv[2],'source':'s','status_body':'FALLBACK-MARKER'}, open(sys.argv[1],'w'))
+import os; os.chmod(sys.argv[1], 0o600)
+" "$(to_native_path "$PH/.flow/context-handoff/snapshot.json")" "$PH"
 mkdir -p "$TMP/hanghome/runner"
 PIDFILE="$TMP/hanghome/child.pids"
 printf '#!/bin/sh\nsleep 30 & echo $! >> "%s"\nwait\n' "$PIDFILE" > "$TMP/hanghome/runner/flow.sh"
@@ -158,6 +180,44 @@ else
   bad "orphan scenario: pidfile empty - owned-pid evidence not collected"
 fi
 [ "$survivors" -eq 0 ] && ok "orphan scenario: all recorded child pids reaped by group kill (owned-pid evidence)" || bad "orphan scenario: $survivors owned child pid(s) survived"
+
+# --- Root exits while descendant holds pipe (deadline + group kill) -------------
+PH2="$(mkproj rootexit)"; mkdir -p "$PH2/.flow/context-handoff"; chmod 700 "$PH2/.flow/context-handoff"
+python3 -c "
+import json, sys
+json.dump({'magic':'flow-compact-handoff/v1','captured':'t','project':sys.argv[2],'source':'s','status_body':'FALLBACK-ROOTEXIT'}, open(sys.argv[1],'w'))
+" "$(to_native_path "$PH2/.flow/context-handoff/snapshot.json")" "$PH2"
+mkdir -p "$TMP/rootexithome/runner"
+PIDFILE2="$TMP/rootexithome/child.pids"
+# Root exits immediately with 0; background child sleeps 30 inheriting stdout/stderr pipe
+printf '#!/bin/sh\nsleep 30 & echo $! >> "%s"\nexit 0\n' "$PIDFILE2" > "$TMP/rootexithome/runner/flow.sh"
+chmod +x "$TMP/rootexithome/runner/flow.sh"
+out=$(FLOW_SKILL_DIR="$TMP/rootexithome" FLOW_HOOK_TIMEOUT=2 "$HANDLER" <<EOF
+{"hook_event_name":"SessionStart","cwd":"$PH2"}
+EOF
+) ; rc=$?
+check "root-exit held-pipe exit 0" "$rc" "0"
+sleep 1
+survivors2=0
+if [ -s "$PIDFILE2" ]; then
+  while read -r pid; do
+    [ -n "$pid" ] || continue
+    if kill -0 "$pid" 2>/dev/null; then
+      survivors2=$((survivors2 + 1))
+    fi
+  done < "$PIDFILE2"
+fi
+[ "$survivors2" -eq 0 ] && ok "root-exit held pipe: descendant child killed by group on deadline" || bad "root-exit held pipe: descendant child survived ($survivors2)"
+
+# --- Silent held-stdin producer (bounded deadline, fail-open) --------------------
+t0=$(date +%s)
+out=$(python3 -c "import time; time.sleep(2.5)" | FLOW_HOOK_STDIN_DEADLINE=1 "$HANDLER")
+rc=$?
+t1=$(date +%s)
+elapsed=$((t1 - t0))
+check "silent held-stdin exit 0" "$rc" "0"
+check "silent held-stdin stdout empty" "$out" ""
+[ "$elapsed" -le 3 ] && ok "silent held-stdin bounded by deadline (${elapsed}s <= 3s)" || bad "silent held-stdin exceeded deadline (${elapsed}s)"
 
 # --- No-side-effect guarantees ---------------------------------------------------
 P5="$(mkproj noflow)"; rmdir "$P5/.flow"

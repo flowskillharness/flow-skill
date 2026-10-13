@@ -1,11 +1,10 @@
 # Wave 2 Release Execution Record & CI Verification Ledger
 
 **Date:** 2026-10-13  
-**Superseded Candidate SHA:** `c052b4e` (Run `38364821630` — Node 6/6 PASS, Ubuntu PASS, macOS 43/1 FAIL)  
-**Current Active Candidate SHA:** `4827774` (`48277741639f72782ea2559ef3b95a86ce9b3fe1`)  
-**Commit Message:** `fix(hooks): canonicalize project path when evaluating snapshot on systems with aliased roots`  
-**Active GitHub Actions Run ID:** `38367426700`  
-**Active GitHub Run URL:** https://github.com/manhquydev/flow-skill/actions/runs/38367426700  
+**Prior Superseded Candidate SHAs:** `c052b4e` (run `38364821630` - macos context_handler path alias fail), `4827774` (run `38367426700` - macos uncanonicalized test scratch fail), `005e659` (run `38369511454` - Windows context_handler stdin pipe & test_flow_host_hooks MSYS path fail)  
+**Terminal Failed Base SHA:** `005e65963872c27f04e2400b22bd2aaf21449d8b` (CI run `38369511454` FAILURE; working tree holds uncommitted repairs awaiting new candidate commit)  
+**Current Candidate Status:** Uncommitted repair in progress; no Git commit/publish performed; awaiting commit to produce new active candidate SHA.  
+**Failed Base GitHub Actions Run URL:** https://github.com/manhquydev/flow-skill/actions/runs/38369511454  
 
 ---
 
@@ -51,53 +50,43 @@ All local suites pass green:
 8. **i18n Pairs (`tests/test_i18n_pairs.sh`):** **18 passed, 0 failed**.
 
 ---
+## 3. GitHub Actions Matrix Run Evidence (`run 38369511454` on SHA `005e659`)
 
-## 3. GitHub Actions Matrix Run Evidence (`run 38364821630` on SHA `c052b4e`)
+Commit `005e659` triggered matrix run `38369511454` (https://github.com/manhquydev/flow-skill/actions/runs/38369511454):
 
-Commit `c052b4e` triggered matrix run `38364821630` (https://github.com/manhquydev/flow-skill/actions/runs/38364821630):
-
-### 3.1 Completed Jobs Breakdown
+### 3.1 Observed Matrix Jobs Status
 * **Node Matrix (6/6 PASS):**
-  - `test (22, ubuntu-latest)`: **SUCCESS** (14s)
-  - `test (24, ubuntu-latest)`: **SUCCESS** (13s)
-  - `test (22, macos-latest)`: **SUCCESS** (16s)
-  - `test (24, macos-latest)`: **SUCCESS** (15s)
-  - `test (22, windows-latest)`: **SUCCESS** (39s)
-  - `test (24, windows-latest)`: **SUCCESS** (23s)
+  - `test (22, ubuntu-latest)`: **SUCCESS** (13s)
+  - `test (24, ubuntu-latest)`: **SUCCESS** (10s)
+  - `test (22, macos-latest)`: **SUCCESS** (17s)
+  - `test (24, macos-latest)`: **SUCCESS** (16s)
+  - `test (22, windows-latest)`: **SUCCESS** (37s)
+  - `test (24, windows-latest)`: **SUCCESS** (25s)
 * **Auxiliary Jobs (3/3 PASS):**
-  - `no-python-degradation`: **SUCCESS** (5s)
-  - `eval-replay`: **SUCCESS** (8s)
+  - `no-python-degradation`: **SUCCESS** (6s)
+  - `eval-replay`: **SUCCESS** (7s)
   - `pack-rehearsal`: **SUCCESS** (18s)
-* **Linux Bash Suite (1/1 PASS):**
-  - `bash-suite (ubuntu-latest)`: **SUCCESS** (6m26s) — all 68 suites passed including `test_i18n_pairs.sh`!
-
-### 3.2 macOS Failure Diagnosis (Job ID 115187508327)
-* **Status:** `failure` (wall_s=10m06s, exit code 1)
-* **Summary:** `RESULT: 43 passed, 1 failed`
-* **Exact Failing Test & Line:**
-  - Suite: `tests/test_flow_host_hooks.sh`
-  - Line 142: `te "stale fallback after timeout" "$out" "STALE SOURCE"`
-  - Terminal log evidence:
-    ```text
-    2026-10-13T07:57:08.4150020Z flow-context: WARNING fresh flow.sh status failed (exit 124, 0 stderr bytes suppressed)
-    2026-10-13T07:57:08.4152020Z flow-context: WARNING no usable pre-compact snapshot (cross-project (refused)); run /flow status or /flow resume manually
-    2026-10-13T07:57:08.4255140Z   ok   timeout exit 0 (fail-open)
-    2026-10-13T07:57:08.4320100Z   FAIL stale fallback after timeout (missing 'STALE SOURCE')
-    ```
-* **Root-Cause Analysis:**
-  - On macOS, `mktemp -d` generates a path under `/var/folders/...`, which is an OS-level symlink to `/private/var/folders/...`.
-  - In `tests/test_flow_host_hooks.sh`, `$PH` was assigned the un-canonicalized path (`/var/folders/...`), which was serialized into `snapshot.json`.
-  - When `context_handler.py` runs, it resolves `cwd` via `os.path.realpath(proj)`, yielding `/private/var/folders/...`.
-  - In `context_handler.py:274`, `doc.get("project") != PROJECT` performed a raw string inequality check (`/var/folders/...` vs `/private/var/folders/...`), falsely treating the snapshot from the exact same physical project as a cross-project violation and refusing to emit the fallback status.
-* **Fix Implemented:**
-  1. In `skills/flow/adapter-hooks/context_handler.py`: updated `load_snapshot()` to compare both `snap_project != PROJECT` and `os.path.realpath(snap_project) != PROJECT`. True foreign projects remain strictly refused, while system path aliases (such as macOS `/var` -> `/private/var`) resolve to the same canonical project identity.
-  2. In `tests/test_flow_host_hooks.sh`: updated `$TMP` creation to canonicalize via `pwd -P`: `TMP="$(cd "$TMP" && pwd -P)"`.
-  3. Local regression test confirms: **44 passed, 0 failed** (all tests green).
+* **Linux & macOS Bash Suites (2/2 PASS):**
+  - `bash-suite (ubuntu-latest)`: **SUCCESS** (6m45s) — all 68 suites passed including `test_i18n_pairs.sh` and `test_install_safe_update.sh`.
+  - `bash-suite (macos-latest)`: **SUCCESS** (9m58s) — previous macOS scratch symlink failure is **RESOLVED**; all suites pass green.
+* **Windows Git Bash Suite (FAILED) & PowerShell Suite (PENDING):**
+  - `bash-suite (windows-latest)`: **FAILURE** (Job ID `115202817558`, completed at 09:08:35Z).
+  - **Failure Summary:** `tests/test_flow_host_hooks.sh` failed with `RESULT: 33 passed, 11 failed`.
+  - **Terminal Log Evidence & Root Cause:**
+    1. **`select.select()` on Windows Stdin Pipe:**
+       In `skills/flow/adapter-hooks/context_handler.py:104`, `select.select([fd], ...)` was called on standard input. On Windows, `select.select()` only supports network sockets, raising `OSError: [WinError 10038] An operation was attempted on something that is not a socket` on pipes, causing all event reads to fail with `flow-context: no usable event (stdin read failed (OSError)) - ignoring`.
+    2. **MSYS POSIX Path in Native Windows Python:**
+       In `tests/test_flow_host_hooks.sh:130`, `python3 -c "open('$PH/.../snapshot.json','w')"` passed a `/c/Users/...` path to native Windows Python, which failed with `FileNotFoundError: [Errno 2] No such file or directory: '/c/Users/...'`.
+  - Step 6 `Run PowerShell installer suite (Windows only)` was skipped due to step 5 failure.
 
 ---
 
-## 4. Release Candidate Gate & Active Run Tracking
+## 4. Release Candidate Gate & Status
 
-Because run `38364821630` contained the macOS failure, commit `c052b4e` was **SUPERSEDED** and marked un-releasable.
-The repair was committed and pushed to `master` as commit SHA `4827774` (triggering active run `38367426700`: https://github.com/manhquydev/flow-skill/actions/runs/38367426700).
-Release version tags (`v0.34.1`, `npm@0.7.8`) remain strictly held until run `38367426700` completes 100% green across all matrix jobs including Windows PowerShell.
+* **Conclusion:** Prior base commit `005e65963872c27f04e2400b22bd2aaf21449d8b` is **FAILED & NOT RELEASABLE** (CI run `38369511454` red on Windows).
+* **Repairs Applied Locally:**
+  - Windows `context_handler.py`: synchronous `_win_peek_pipe` / `PeekNamedPipe` polling on stdin and process pipes; launch gate with Job Object containment (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) before `GO`; explicit typed `int(proc_handle)` -> `wintypes.HANDLE` conversion; `JobHolder.close()` verification with `TerminateJobObject` fallback; failure in `drain_capped` cleans up and fails closed.
+  - `tests/test_flow_host_hooks.sh`: P4 snapshot fixture converts path via `to_native_path` before Python open and verifies `[ -f "$P4_SNAP" ]` fixture existence before assertion (50/50 pass).
+  - `tests/test_flow_windows_lifecycle.py`: baseline runners use `sys.executable` with normalized forward slashes and `shlex.quote` for argv safety (14 pass, 0 fail, 2 Windows skips). Registered in `tests/manifest.txt` via `tests/test_flow_windows_lifecycle.sh`.
+  - `tests/test_install_safe_update.sh`: unsupported FIFO capability branch uses `skip_test` counter instead of fake `ck` pass; required link fixtures still fail strictly if link capability is missing.
+* **Terminal Release Gate:** Release version tags (`v0.34.1`, `npm@0.7.8`) and registry publications remain **STRICTLY HELD** until a new commit is minted and native Windows CI passes green.
