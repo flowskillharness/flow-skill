@@ -151,7 +151,12 @@ S1_BYPASS_LINK="$SCRATCH/s1_bypass_link"
 mkdir -p "$S1_BYPASS_TARGET"
 if make_link "$S1_BYPASS_TARGET" "$S1_BYPASS_LINK"; then
   set +e
-  out="$(MSYS2_ARG_CONV_EXCL="*" "$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  if [ "$IS_WINDOWS" = yes ]; then
+    s1_dst_arg="$(to_native_path "$S1_BYPASS_LINK")\\..\\s1_dst"
+    out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$s1_dst_arg" 2>&1)"
+  else
+    out="$("$PY" "$HELPER" upgrade "$S1_SRC" "$S1_BYPASS_LINK/../s1_dst" 2>&1)"
+  fi
   rc=$?
   set -e
   ck 7 "$rc" "traversal through symlink component (/tmp/link/../dest) refused with exit 7"
@@ -480,10 +485,13 @@ ck 3 "$s_conf_rc" "install.sh update conflict fails with exit code 3"
 # Run with a restricted PATH containing standard POSIX tools but NO python
 RESTRICTED_BIN="$SCRATCH/restricted_bin"
 mkdir -p "$RESTRICTED_BIN"
-for cmd in bash cp mv rm ls mkdir dirname basename find mktemp chmod cat rmdir sed grep uname tr head cut printf awk sort wc tail env; do
+for cmd in sh bash cp mv rm ls mkdir dirname basename find mktemp chmod cat rmdir sed grep uname tr head cut printf awk sort wc tail env; do
   p="$(type -p "$cmd" 2>/dev/null || command -v "$cmd" 2>/dev/null || true)"
   if [ -n "$p" ] && [ -f "$p" ]; then
     ln -s "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || true
+    if [ "$IS_WINDOWS" = yes ]; then
+      cp "$p" "$RESTRICTED_BIN/${cmd}.exe" 2>/dev/null || true
+    fi
   fi
 done
 # For shell builtins echo, test, [, provide safe wrapper scripts if no disk binary was found
@@ -491,6 +499,9 @@ for builtin_cmd in echo test [; do
   p="$(type -p "$builtin_cmd" 2>/dev/null || command -v "$builtin_cmd" 2>/dev/null || true)"
   if [ -n "$p" ] && [ -f "$p" ]; then
     ln -s "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$builtin_cmd" 2>/dev/null || true
+    if [ "$IS_WINDOWS" = yes ]; then
+      cp "$p" "$RESTRICTED_BIN/${builtin_cmd}.exe" 2>/dev/null || true
+    fi
   else
     # Create minimal shell wrapper in restricted bin so non-builtin subshells can execute it
     cat <<EOF > "$RESTRICTED_BIN/$builtin_cmd"
