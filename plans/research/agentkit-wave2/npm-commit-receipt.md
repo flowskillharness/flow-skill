@@ -4,10 +4,12 @@
 
 ## Commit Details
 
-- **Commit Hash:** `5474907543c2d77c0fc779209cff7fa151ce8020`
+- **Feature Commit Hash:** `5474907543c2d77c0fc779209cff7fa151ce8020`
+- **Follow-up Repair Commit:** `1b64427cd2c6bb102b1cf269ce191639b84af55c` (path inspection before '..' collapse; source ancestry before reads)
 - **Branch:** `master`
-- **Subject:** `feat(installer): transactional ownership upgrades and OMP target for npm channel`
-- **Files Committed:** 20 files (+1883, −186):
+- **Subjects:**
+  - `feat(installer): transactional ownership upgrades and OMP target for npm channel` (20 files, +1883, −186)
+  - `fix(installer): inspect uncollapsed path segments before resolving '..' and check source ancestry before reads` (2 files, +90, −22)
   1. `npm-wrapper/src/constants.mjs` (OMP target added, CLEANUP_SUBDIRS deleted)
   2. `npm-wrapper/src/installer.mjs` (transactional ownership engine)
   3. `npm-wrapper/bin/cli.mjs` (OMP restart hint, install:done recovery fields)
@@ -46,8 +48,9 @@
 
 ## Verification Evidence (Reusable Unchanged)
 
-- `node --test test/installer.test.mjs`: 26/26 pass.
-- `npm test` (npm-wrapper full suite): 63/63 pass.
+- `node --test test/installer.test.mjs`: 28/28 pass (includes 2 targeted regression tests for ancestor symlink with '..' traversal on source and destination).
+- `npm test` (npm-wrapper full suite): 65/65 pass.
+- `scripts/pack-rehearsal.sh`: 22/22 pass (package builds, clean install, tamper detection, and doctor integrity verified).
 - Adversarial JSON receipt parser battery: 13/13 pass (duplicate keys, unicode escapes, proto keys, digest length/pattern).
 - Real CLI temp-HOME e2e: fresh install, idempotent custom preservation, and conflict refusal verified on disk without real HOME mutation.
 - `scripts/check-doc-budgets.sh`: PASS (5/5 files).
