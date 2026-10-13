@@ -271,7 +271,14 @@ def load_snapshot():
                 return "", "malformed (ignored)"
             if not isinstance(doc, dict) or doc.get("magic") != MAGIC:
                 return "", "malformed (unrecognized magic; ignored)"
-            if doc.get("project") != PROJECT:
+            snap_project = doc.get("project")
+            if not isinstance(snap_project, str):
+                return "", "malformed (missing project; ignored)"
+            try:
+                real_snap_project = os.path.realpath(snap_project)
+            except (OSError, ValueError):
+                real_snap_project = snap_project
+            if snap_project != PROJECT and real_snap_project != PROJECT:
                 return "", "cross-project (refused)"
             body = doc.get("status_body")
             if not isinstance(body, str):

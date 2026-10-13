@@ -19,6 +19,7 @@ te() { if echo "$2" | grep -q "$3"; then ok "$1"; else bad "$1 (missing '$3')"; 
 tne() { if echo "$2" | grep -q "$3"; then bad "$1 (leaked: $3)"; else ok "$1"; fi; }
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/flow-hooks-test.XXXXXX")"
+TMP="$(cd "$TMP" && pwd -P)"
 trap 'rm -rf "$TMP"' EXIT
 export FLOW_SKILL_DIR="$REAL_SKILL"
 
