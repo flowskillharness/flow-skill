@@ -480,7 +480,7 @@ ck 3 "$s_conf_rc" "install.sh update conflict fails with exit code 3"
 # Run with a restricted PATH containing standard POSIX tools but NO python
 RESTRICTED_BIN="$SCRATCH/restricted_bin"
 mkdir -p "$RESTRICTED_BIN"
-for cmd in bash cp mv rm ls mkdir dirname basename find mktemp chmod cat rmdir sed grep uname tr head cut printf; do
+for cmd in bash cp mv rm ls mkdir dirname basename find mktemp chmod cat rmdir sed grep uname tr head cut printf awk sort wc tail env; do
   p="$(type -p "$cmd" 2>/dev/null || command -v "$cmd" 2>/dev/null || true)"
   if [ -n "$p" ] && [ -f "$p" ]; then
     ln -s "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || cp "$p" "$RESTRICTED_BIN/$cmd" 2>/dev/null || true

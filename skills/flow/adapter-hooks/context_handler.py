@@ -186,6 +186,15 @@ def read_event():
                     return None, "stdin deadline exceeded before a complete event"
                 avail, is_eof, err = _win_peek_pipe(h_pipe)
                 if is_eof:
+                    try:
+                        while total <= STDIN_MAX + 1:
+                            chunk = os.read(fd, min(65536, STDIN_MAX + 1 - total))
+                            if not chunk:
+                                break
+                            chunks.append(chunk)
+                            total += len(chunk)
+                    except OSError:
+                        pass
                     break
                 if err != 0:
                     # NEVER fallback to blocking os.read; report safe error code
@@ -566,6 +575,15 @@ def drain_capped(proc, cap, pgid, job_holder=None):
             for fd, (h, buf) in list(streams.items()):
                 avail, is_eof, err = _win_peek_pipe(h)
                 if is_eof:
+                    try:
+                        while True:
+                            chunk = os.read(fd, 65536)
+                            if not chunk:
+                                break
+                            if len(buf) < cap:
+                                buf.extend(chunk[:cap - len(buf)])
+                    except OSError:
+                        pass
                     del streams[fd]
                     continue
                 if err != 0:

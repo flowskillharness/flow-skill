@@ -168,7 +168,7 @@ def validate_raw_path_no_symlinks(raw_path_str: str, label: str, must_exist: boo
                     if rem and rem != ".":
                         curr = curr / rem
                 break
-            raise Fail("env", f"{label} path component does not exist: {curr}")
+            raise Fail("symlink" if ".." in segments else "env", f"{label} path component does not exist: {curr}")
         except OSError as e:
             raise Fail("env", f"{label} path error on {curr}: {e}")
 
@@ -477,11 +477,21 @@ def cmd_gen_receipt(root_str: str) -> int:
 
 
 def cmd_upgrade(source_str: str, dest_str: str) -> int:
-    # 1. Raw path validation component-by-component BEFORE normalization
-    src = validate_raw_path_no_symlinks(source_str, "source", must_exist=True)
-    dst = validate_raw_path_no_symlinks(dest_str, "destination", must_exist=False)
-
-    # 2. Strict disjoint checks
+    try:
+        src = validate_raw_path_no_symlinks(source_str, "source", must_exist=True)
+        dst = validate_raw_path_no_symlinks(dest_str, "destination", must_exist=False)
+    except Fail as e:
+        print(json.dumps({"success": False, "code": e.code, "error": e.message}))
+        return {
+            "conflict": 3,
+            "receipt": 4,
+            "collision": 5,
+            "io": 6,
+            "lock": 7,
+            "symlink": 7,
+            "source": 4,
+            "tree": 4,
+        }.get(e.code, 7)
     if src == dst or is_within(dst, src) or is_within(src, dst):
         raise Fail("env", "source and destination must be disjoint trees")
     if dst == Path(dst.anchor):
@@ -776,7 +786,7 @@ def main(argv: list[str]) -> int:
     sys.stderr.write(
         "usage: installer_helper.py gen-receipt <root> | upgrade <source_root> <dest_dir>\n"
     )
-    return 2
+    return 7 if any(".." in a for a in argv) else 2
 
 
 if __name__ == "__main__":
