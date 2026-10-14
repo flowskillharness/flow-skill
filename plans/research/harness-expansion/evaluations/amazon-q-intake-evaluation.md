@@ -84,8 +84,8 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
-- **Category B (Workspace Rule Scaffolding for IDE /dev Agent):** In VS Code and JetBrains IDEs, the Amazon Q `/dev` agent operates as an autonomous feature development assistant. It reads the workspace, formulates plans, edits files, and invokes terminal commands to verify builds. Flow integrates via project-level workspace rule scaffolding that instructs `/dev` to invoke `bash skills/flow/runner/flow.sh`.
-- **Category D (Deferred for Standalone `q` CLI):** The `q` CLI utility (`q chat`, `q translate`) is designed for interactive command suggestions, inline shell completions, and developer Q&A. It possesses no autonomous multi-turn tool invocation loop, cannot ingest workspace rule scaffolding, and cannot enforce Flow's build lifecycle. It is classified as Category D (Deferred). (Legacy query-only; successor transition pending current-source verification)
+- **Category B (Workspace Rule Scaffolding for IDE /dev Agent):** In VS Code and JetBrains IDEs, the Amazon Q `/dev` agent operates as an autonomous feature development assistant. It is hypothesized in desk review to plan, edit files, and invoke terminal commands. Any prospective Flow integration is proposed via manual prompt/workspace context instructing `/dev` to invoke a repository-vendored runner (no `.amazonq/` template exists in Flow).
+- **Category D (Deferred for Standalone `q` CLI):** The `q` CLI utility (`q chat`, `q translate`) is designed for interactive command suggestions, inline shell completions, and developer Q&A. It historically functioned as an interactive command assistant without an autonomous multi-turn tool invocation loop; current status is unassessed pending current AWS/Kiro tooling verification (provisional Category D).
 
 ---
 

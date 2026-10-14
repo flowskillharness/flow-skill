@@ -50,7 +50,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 ├─────────────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────┤
 │ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)                       │ • GitHub Copilot CLI (no loop)   │
 │ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)                         │ • Zed Inline Editor (no bash)    │
-│                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (no loop)         │
+│                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (Unassessed query utility)         │
 │                                     │ • Aider (Test Hook)                          │                                  │
 │                                     │ • OpenHands (Docker)                         │                                  │
 │                                     │ • Copilot VSCode Agent                       │                                  │
@@ -408,7 +408,7 @@ Goose (developed by Block, Inc.; open-source under Apache-2.0, repository: https
 #### 1. System Overview & Harness Architecture: Dual Modality
 Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws.amazon.com/q/developer/, documentation: https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/) is an AI-powered software development assistant integrated across IDEs (VS Code, JetBrains IDEs via AWS Toolkit), command-line environments (`q` CLI), and AWS cloud workspaces. Under Flow's architecture taxonomy, Amazon Q Developer exhibits two distinct execution modalities:
 1. **IDE `/dev` Agent (Category B: Workspace Rule Scaffolding):** In VS Code and JetBrains IDEs, invoking `/dev` engages an autonomous feature development agent. The `/dev` agent ingests workspace context, generates structured multi-step plans, modifies codebase files, and dispatches terminal and build commands to validate changes within workspace or cloud sandbox execution boundaries.
-2. **Standalone `q` CLI (Category D: Deferred / Incompatible):** The standalone `q` CLI utility (`q chat`, `q translate`) is designed strictly for interactive developer Q&A, code completions, and shell translations. It lacks an autonomous multi-turn tool invocation loop, cannot ingest workspace rule scaffolding, and cannot mechanically enforce build gating.
+2. **Standalone `q` CLI (Category D: Deferred / Incompatible):** The standalone `q` CLI utility (`q chat`, `q translate`) is designed strictly for interactive developer Q&A, code completions, and shell translations. It historically functioned as an interactive query utility; current CLI capability remains unassessed pending current AWS/Kiro documentation.
 
 #### 2. Extension & Integration Mechanism
 - **Workspace Instruction Scaffolding & Prompt Context:**
@@ -426,7 +426,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 #### 4. Execution Capability & Mechanical Gate Enforcement
 - **Terminal & Build Tool Invocation:** In `/dev` mode, the agent dispatches Flow lifecycle commands (`status`, `next`, `check C-NNN`) via its workspace terminal execution tool.
 - **Gate-Stop Invariant:** Non-zero exit codes ($exit \neq 0$) from `flow.sh` are captured and returned to the `/dev` agent loop, requiring the agent to halt immediately, inspect errors, and repair issues rather than hallucinating gate passes.
-- **CLI Limitation:** The standalone `q` CLI has no command execution or verification loop, precluding any mechanical gate enforcement.
+- **CLI Limitation:** The standalone `q` CLI has not demonstrated an autonomous multi-turn tool execution loop in verified testing (unassessed pending current AWS/Kiro documentation).
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:**
@@ -438,7 +438,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
   - Referencing unreachable host paths (`~/.agents/skills/...`) inside cloud containerized sandboxes.
 - **Feasibility Verdict:**
   - **Amazon Q (/dev Agent): Tier 2 Priority Candidate (Provisional Un-implemented Design Proposal; Score 66/100; Live Host Trial Pending).**
-  - **Amazon Q CLI: Tier 3 Deferred / Incompatible (Category D: Interactive Query & Translation Only; Non-agentic; Legacy/query-only; successor transition pending).**
+  - **Amazon Q CLI: Tier 3 Deferred / Unassessed (Category D: Legacy query utility; successor transition pending current-source verification).**
 ---
 
 ## 3. Cross-Harness Comparison & Technical Matrix
