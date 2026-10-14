@@ -22,8 +22,8 @@ export const TARGETS = [
     name: 'agents',
     // v0.23: this is also the universal Agent-Skills home — the open standard
     // (agentskills.io) directory 32-40 spec-compliant tools (incl. Cursor, Devin) read.
-    label: 'Agents home (~/.agents) — universal Agent-Skills home',
-    markers: ['.agents/skills'],
+    label: 'Agents home (~/.agents) — universal Agent-Skills home (Zed, Antigravity, Open Runtimes)',
+    markers: ['.agents/skills', '.config/zed'],
     destTemplates: ['~/.agents/skills/flow'],
     alwaysInclude: false,
     projectScopeAllowed: false,

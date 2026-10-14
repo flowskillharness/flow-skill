@@ -74,7 +74,8 @@
     "tests/test_flow_status_legibility.sh",
     "tests/test_flow_concierge.sh",
     "tests/test_flow_native_rituals.sh",
-    "tests/test_flow_forge_idea.sh"
+    "tests/test_flow_forge_idea.sh",
+    "tests/test_flow_rules.sh"
   ],
   "provenance": {
     "methodology": "ai20k-build-phase/buildflow (Tony, arealisticdreamer.com)",
@@ -84,6 +85,6 @@
     "principles": "research-report-agent-orchestration-2026.md"
   },
   "hashes": {
-    "skills/flow/runner/flow.sh": "abfe0e0509dd01b6022e888d8a429e59caf68910641cba767b12a446b79613d2"
+    "skills/flow/runner/flow.sh": "358c0c687e3b2642cdf71209b4f19f03934972ce0197b643b14b13e7460d1e62"
   }
 }

@@ -157,7 +157,7 @@ const RESTART_HINTS = {
   antigravity:
     'Antigravity: restart/reload the IDE (or restart `agy`) to load the new skill, then type /flow',
   agents:
-    'Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills',
+    'Agents home / Zed (~/.agents/skills/): reload your tool (or Zed Agent Panel) to auto-detect flow',
   // Cursor has no headless CLI probe (unlike Antigravity's `agy -p` or Codex's `codex exec`) to
   // independently verify the runner loads post-install — restart/reload guidance is still the
   // correct advice (same discovery-on-reload mechanism), just without our own live confirmation

@@ -252,7 +252,7 @@ done_line() {
       claude)      out="$out Claude Code: type /flow |" ;;
       codex)       out="$out Codex CLI: type \$flow (restart Codex once to load a new skill) |" ;;
       antigravity) out="$out Antigravity: restart/reload the IDE (or restart agy) to load the new skill, then type /flow |" ;;
-      agents)      out="$out Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills |" ;;
+      agents)      out="$out Agents home / Zed (~/.agents/skills/): restart your tool (or Zed Agent Panel) to auto-detect flow |" ;;
       omp)         out="$out OMP: restart/reload your agent to load the new skill, then invoke flow |" ;;
       cursor)      out="$out Cursor: restart/reload Cursor to load the new skill, then check the Agent panel for flow |" ;;
     esac
@@ -274,8 +274,8 @@ case "$MODE" in
       install_to "${HOME}/.codex/skills/flow"
       INSTALLED="$INSTALLED codex"
     fi
-    # agents: same rule
-    if [ "$TARGET" = "agents" ] || { [ "$TARGET" = "all" ] && [ -d "${HOME}/.agents/skills" ]; }; then
+    # agents: same rule; also autodetects ~/.config/zed
+    if [ "$TARGET" = "agents" ] || { [ "$TARGET" = "all" ] && { [ -d "${HOME}/.agents/skills" ] || [ -d "${HOME}/.config/zed" ]; }; }; then
       install_to "${HOME}/.agents/skills/flow"
       INSTALLED="$INSTALLED agents"
     fi

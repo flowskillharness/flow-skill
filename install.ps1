@@ -202,7 +202,7 @@ $RestartHints = @{
   claude      = 'Claude Code: type /flow'
   codex       = 'Codex CLI: type $flow (restart Codex once to load a new skill)'
   antigravity = 'Antigravity: restart/reload the IDE (or restart agy) to load the new skill, then type /flow'
-  agents      = 'Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills'
+  agents      = 'Agents home / Zed (~/.agents/skills/): restart your tool (or Zed Agent Panel) to auto-detect flow'
   omp         = 'OMP: restart/reload your agent to load the new skill, then invoke flow'
   cursor      = 'Cursor: restart/reload Cursor to load the new skill, then check the Agent panel for flow'
 }
@@ -226,7 +226,7 @@ if ($Mode -eq 'global') {
     $last = Install-To (Join-Path $UserHome '.codex/skills/flow')
     $installed += 'codex'
   }
-  if ($target -eq 'agents' -or ($target -eq 'all' -and (Test-Path (Join-Path $UserHome '.agents/skills')))) {
+  if ($target -eq 'agents' -or ($target -eq 'all' -and ((Test-Path (Join-Path $UserHome '.agents/skills')) -or (Test-Path (Join-Path $UserHome '.config/zed'))))) {
     $last = Install-To (Join-Path $UserHome '.agents/skills/flow')
     $installed += 'agents'
   }

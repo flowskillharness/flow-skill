@@ -128,6 +128,18 @@ test('~/.omp/agent/skills present: omp detected, dest is ~/.omp/agent/skills/flo
   assert.equal(defaultSelection(entries).includes('omp'), true);
 });
 
+test('~/.config/zed present: agents target detected, dest is ~/.agents/skills/flow', () => {
+  const home = fakeHome('zed-marker');
+  mkdirSync(join(home, '.config', 'zed'), { recursive: true });
+  const entries = detectAll({ home });
+  const agents = entries.find((e) => e.name === 'agents');
+  assert.ok(agents, 'agents target must be registered in TARGETS');
+  assert.equal(agents.detected, true, 'agents must be detected when ~/.config/zed exists');
+  assert.equal(agents.dests.length, 1);
+  assert.equal(agents.dests[0], join(home, '.agents', 'skills', 'flow'));
+  assert.equal(defaultSelection(entries).includes('agents'), true);
+});
+
 test('dests are resolved against the given home', () => {
   const home = fakeHome('dests');
   const entries = detectAll({ home });
