@@ -29,9 +29,10 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Status:** **PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)**.
 - **Qualification Rationale:**
   - Amazon Q Developer exhibits a split architectural modality. When operating in an IDE via the `/dev` autonomous feature development agent, it can ingest workspace instructions and execute build and terminal commands within the workspace environment, qualifying it as **Category B (Workspace Rule Scaffolding)**.
-  - Conversely, the standalone `q` CLI operates strictly as an interactive conversational query utility and shell translation helper, lacking an autonomous multi-turn tool invocation loop or deterministic build gating engine, qualifying it as **Category D (Deferred / Incompatible)**.
+  - Conversely, the standalone `q` CLI operates strictly as an interactive conversational query utility and shell translation helper, lacking an autonomous multi-turn tool invocation loop or deterministic build gating engine, qualifying it as **Category D (Deferred / Incompatible)** (Legacy query-only; successor transition pending current-source verification).
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), claiming "Amazon Q support" without disambiguating the IDE `/dev` agent from the `q` CLI is marketing deception ("quảng cáo ảo").
   - Furthermore, Amazon Q Developer does not implement directory-based skill discovery (Category A) such as `~/.agents/skills/` or `~/.claude/skills/`. All Flow integration must occur via workspace rule scaffolding paired with a repository-vendored runner (`skills/flow/runner/flow.sh`).
+  - **Template Clarification:** Flow's `flow rules` command does **NOT** implement an Amazon Q template. Per the compatibility matrix (§3.4), Amazon Q is locked to **seven verified templates**; Amazon Q integration is currently a **proposed design** relying on manual prompt/workspace context or generic root instruction files (such as `AGENTS.md`).
   - Because Amazon Q Developer does not offer an unauthenticated, local headless evaluation CLI for automated CI qualification, full verification requires an interactive host session executing the Four-Point Live Verification Protocol with raw tool transcripts, exit codes, and receipts archived to `plans/research/harness-expansion/evidence/`.
 
 ```
@@ -84,7 +85,7 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 ```
 
 - **Category B (Workspace Rule Scaffolding for IDE /dev Agent):** In VS Code and JetBrains IDEs, the Amazon Q `/dev` agent operates as an autonomous feature development assistant. It reads the workspace, formulates plans, edits files, and invokes terminal commands to verify builds. Flow integrates via project-level workspace rule scaffolding that instructs `/dev` to invoke `bash skills/flow/runner/flow.sh`.
-- **Category D (Deferred for Standalone `q` CLI):** The `q` CLI utility (`q chat`, `q translate`) is designed for interactive command suggestions, inline shell completions, and developer Q&A. It possesses no autonomous multi-turn tool invocation loop, cannot ingest workspace rule scaffolding, and cannot enforce Flow's build lifecycle. It is classified as Category D (Deferred).
+- **Category D (Deferred for Standalone `q` CLI):** The `q` CLI utility (`q chat`, `q translate`) is designed for interactive command suggestions, inline shell completions, and developer Q&A. It possesses no autonomous multi-turn tool invocation loop, cannot ingest workspace rule scaffolding, and cannot enforce Flow's build lifecycle. It is classified as Category D (Deferred). (Legacy query-only; successor transition pending current-source verification)
 
 ---
 
@@ -113,6 +114,9 @@ When a developer initiates a feature task using `/dev` in the Amazon Q chat pane
 
 #### 2.2.2 Rule Ingestion Mechanism: Workspace Context & Rules
 Amazon Q Developer ingests workspace context through two primary mechanisms:
+
+> **Design-Proposal Status:** `.amazonq/rules/` is an **un-implemented design proposal** rather than an authoritative vendor schema. It does not reflect a verified, vendor-documented ingestion path.
+
 1. **Project-Level Instruction Scaffolding (Workspace Rules):**
    - Amazon Q reads project instruction files located in the workspace repository (e.g., `.amazonq/rules/`, `.aws/amazonq-rules.md`, or root `AGENTS.md` / markdown instructions referenced in the workspace).
    - In standard IDE workspaces, markdown-based rule files provide explicit guidance to the `/dev` agent regarding repository build requirements, allowed files, and verification commands.
