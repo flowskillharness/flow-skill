@@ -40,11 +40,11 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │                      AMAZON Q DEVELOPER EVALUATION SUMMARY                             │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B (Workspace Rule Scaffolding for IDE /dev)    │
-│                              │ Category D (Deferred for Standalone CLI Chat)           │
+│                              │ Deferred / Unassessed (Standalone CLI Chat; Successor Transition Pending)           │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism (IDE)    │ Workspace Rule Scaffolding / Markdown Prompt Context     │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Ingestion Mechanism (CLI)    │ None (Category D: Interactive Query & Translation Only) │
+│ Ingestion Mechanism (CLI)    │ Unassessed (Interactive query utility; pending current-source verification) │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Execution Tool API (/dev)    │ Workspace terminal / build tool subshell execution      │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -73,14 +73,14 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 │                      AMAZON Q DEVELOPER MODALITY SEPARATION                            │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: IDE /dev Agent               │ Modality 2: Standalone `q` CLI              │
-│ (Category B: Workspace Rule Scaffolding) │ (Category D: Deferred / Incompatible)       │
+│ (Category B: Workspace Rule Scaffolding) │ (Deferred / Unassessed; Successor Transition Pending)       │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & JetBrains IDEs    │ Environment: Terminal shell (`q chat`)      │
 │ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Single-turn or chat question    │
 │ Tool Capability: Workspace terminal &    │ Tool Capability: None (suggests commands,   │
 │ file edits via AWS Toolkit engine        │ but does not own an autonomous tool loop)   │
 │ Ingestion: Workspace rules & prompt context│ Ingestion: Interactive CLI queries only   │
-│ Status: Provisional Candidate            │ Status: Deferred / Incompatible             │
+│ Status: Provisional Candidate            │ Status: Deferred / Unassessed               │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 

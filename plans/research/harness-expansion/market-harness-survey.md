@@ -456,7 +456,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Autonomous (/dev mode) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
-| **Amazon Q CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3 (Deferred / Unknown (Legacy query-only; successor transition pending))** |
+| **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; successor transition pending)** |
 
 ---
 

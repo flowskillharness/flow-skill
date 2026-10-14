@@ -123,7 +123,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 | **Amazon Q (/dev)** | B | PROVISIONAL (Desk-Reviewed) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
-| **Amazon Q CLI** | D | DEFERRED | Standalone interactive CLI query/translation utility; lacks autonomous tool loop. | Deferred / Unknown (Legacy query-only; successor transition pending current-source verification) |
+| **Amazon Q CLI** | Deferred | DEFERRED | Standalone interactive CLI query/translation utility; lacks autonomous tool loop. | Legacy query utility; tool loop unassessed pending current AWS/Kiro documentation. |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
