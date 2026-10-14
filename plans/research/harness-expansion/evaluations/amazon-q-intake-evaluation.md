@@ -42,11 +42,11 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │ Architectural Classification │ Category B (Workspace Rule Scaffolding for IDE /dev)    │
 │                              │ Deferred / Unassessed (Standalone CLI Chat; Successor Transition Pending)           │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Ingestion Mechanism (IDE)    │ Workspace Rule Scaffolding / Markdown Prompt Context     │
+│ Ingestion Mechanism (IDE)    │ Hypothesized manual prompt context / AGENTS.md (no template) │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism (CLI)    │ Unassessed (Interactive query utility; pending current-source verification) │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Execution Tool API (/dev)    │ Workspace terminal / build tool subshell execution      │
+│ Execution Tool API (/dev)    │ Hypothesized workspace terminal / build subshell execution │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -77,11 +77,11 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & JetBrains IDEs    │ Environment: Terminal shell (`q chat`)      │
 │ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Unassessed (Historically        │
-│ Tool Capability: Workspace terminal &    │ conversational; successor loop unassessed)  │
-│ file edits via AWS Toolkit engine        │ Tool Capability: Unassessed (Historically   │
+│ Tool Capability: Hypothesized terminal & │ Tool Capability: Unassessed (Historically   │
+│ file edits (desk-reviewed hypothesis)    │ query/translation only; current Kiro        │
 │                                          │ query/translation only; current Kiro        │
 │                                          │ successor capability unassessed)            │
-│ Ingestion: Workspace rules & prompt context│ Ingestion: Interactive CLI queries only   │
+│ Ingestion: Hypothesized prompt context   │ Ingestion: Interactive CLI queries only   │
 │ Status: Provisional Candidate            │ Status: Unassessed / Pending Verification   │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
