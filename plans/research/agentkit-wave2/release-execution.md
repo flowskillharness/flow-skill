@@ -107,3 +107,7 @@ Commit `005e659` triggered matrix run `38369511454` (https://github.com/manhquyd
 * **Registry Dist-Tag & Live Verification:**
   - `npm view @manhquy/flow-skill dist-tags --json`: `{"rc": "0.1.0-rc.3", "next": "0.7.1-next.0", "latest": "0.7.8"}`.
   - `npx --yes @manhquy/flow-skill@latest --help`: prints `flow-skill v0.7.8 (ships skill v0.34.1)`.
+* **Production Website Verification (https://flowskill.io.vn):**
+  - Workflow run `38506897588` (`website-scheduled-rebuild.yml`) completed with **success** (Cloudflare Pages deploy).
+  - Production domain `https://flowskill.io.vn/` (EN) and `https://flowskill.io.vn/vi/` (VI) verified returning `HTTP/2 200 OK` via Cloudflare.
+  - Live colophon version verified: `skill 0.34.1 · npm installer 0.7.8`.
