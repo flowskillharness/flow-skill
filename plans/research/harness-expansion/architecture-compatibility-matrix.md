@@ -73,7 +73,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ (Deterministic test command binding)     │ (No autonomous loop / query-only tools)                          │
 ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────┤
 │ • Aider (.aider.conf.yml test-cmd)       │ • GitHub Copilot CLI (query only, no loop)                       │
-│                                          │ • Amazon Q CLI (Unassessed query utility; successor transition pending) │
+│                                          │ • Amazon Q CLI (Unassessed / Pending Verification; successor transition pending) │
 │                                          │ • Continue.dev (unverified tool schema)                          │
 │ Nature: Non-agentic test execution hook. │ Nature: Conversational or single-turn only.                      │
 │ Mechanical gate check on file change.    │ Lacks multi-turn autonomous tool execution.                      │
@@ -83,7 +83,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 - **Category A (Native Skill Targets):** Direct directory installation of Flow's skill bundle (`SKILL.md`). The agent discovers and dispatches Flow commands natively.
 - **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot, Aider), plus provisional candidate design profiles (Goose, and proposed un-implemented Amazon Q Developer /dev agent).
 - **Category C (Automated Hook / Test Gate Scaffolding):** Harnesses providing deterministic test command binding (e.g., Aider's `test-cmd`).
-- **Category D (Deferred / Incompatible):** Tools lacking an autonomous multi-turn tool execution loop, such as GitHub Copilot CLI, Continue.dev (unverified schema), and standalone **Amazon Q CLI** (`q chat`, `q translate`) (unassessed query utility; successor transition pending current-source verification).
+- **Category D (Deferred / Incompatible):** Tools lacking an autonomous multi-turn tool execution loop, such as GitHub Copilot CLI and Continue.dev (unverified schema). Standalone **Amazon Q CLI** (`q chat`, `q translate`) is listed here only provisionally as **Unassessed / Pending Verification (Successor transition pending current-source verification)**, not as a confirmed Category D verdict.
 
 ---
 
@@ -123,7 +123,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 | **Amazon Q (/dev)** | B | PROVISIONAL (Desk-Reviewed) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
-| **Amazon Q CLI** | Deferred | DEFERRED | Standalone interactive CLI query/translation utility; lacks autonomous tool loop. | Legacy query utility; tool loop unassessed pending current AWS/Kiro documentation. |
+| **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Standalone interactive CLI query/translation utility; lacks autonomous tool loop. | Unassessed / Pending Verification (Successor transition pending current-source verification) |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
@@ -403,7 +403,7 @@ Notice: This specification represents an un-implemented design proposal. As esta
   4. Respect Allowed Files: Modify only files listed in the active card's Scope.
   5. Never forge verification proof in `cards/C-NNN.md`.
   ```
-- **CLI Modality Note:** The standalone `q` CLI is **Category D (Deferred / Incompatible)** because it operates strictly as an interactive query/translation utility without an autonomous multi-turn tool execution loop.
+- **CLI Modality Note:** The standalone `q` CLI is **Unassessed / Pending Verification (successor transition pending current AWS/Kiro documentation)**; it historically operates strictly as an interactive query/translation utility without an autonomous multi-turn tool execution loop, but this remains unconfirmed.
 
 ---
 
