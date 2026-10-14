@@ -5941,6 +5941,156 @@ function cmd_eval {
   echo "FAIL: $total_mismatch mismatch(es), $total_unreliable unreliable batch(es) of $total_evaluated evaluated."
   return 1
 }
+cmd_rules() {
+  local target="${1:-list}"
+  local opt_write=0
+  if [ "${2:-}" = "--write" ]; then
+    opt_write=1
+  elif [ -n "${2:-}" ]; then
+    echo "usage: flow rules [list|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+    exit 2
+  fi
+
+  case "$target" in
+    list)
+      echo "flow rules - available harness templates:"
+      echo "  cursor      -> .cursor/rules/flow.mdc"
+      echo "  windsurf    -> .windsurf/rules/flow.md"
+      echo "  roo         -> .roomodes"
+      echo "  cline       -> .clinerules"
+      echo "  aider       -> .aider.conf.yml"
+      echo "  openhands   -> .openhands/microagents/flow.md"
+      echo "  copilot     -> .github/copilot-instructions.md"
+      echo
+      echo "use 'flow rules <harness>' to view or 'flow rules <harness> --write' to materialize."
+      return 0
+      ;;
+    cursor)
+      local tpl='---
+description: Flow buildflow discipline layer and gated execution engine
+globs: flow/**,cards/**,*.md,src/**
+alwaysApply: false
+---
+
+# Flow Discipline Rules for Cursor
+
+You are operating inside a repository managed by Flow (`/flow`).
+Flow turns coding agents into evidence-gated, kill-honest build processes.
+
+## Rules of Engagement
+1. **Never edit files without an active card.** Check in-flight cards via `bash skills/flow/runner/flow.sh status`.
+2. **Always inspect gates before coding.** Run `bash skills/flow/runner/flow.sh next` or `bash skills/flow/runner/flow.sh check C-NNN`.
+3. **Respect Allowed Files.** Only modify files explicitly listed in the active card'\''s `## Allowed files` section.
+4. **Never fake verify proof.** Paste real terminal output, exit codes, and URLs into `## Evidence`.'
+      local dest=".cursor/rules/flow.mdc"
+      ;;
+    windsurf)
+      local tpl='# Flow Discipline Rules for Windsurf Cascade
+
+Cascade must respect Flow repository gates and evidence requirements.
+
+1. **Orientation**: Before modifying code, run `bash skills/flow/runner/flow.sh resume` to inspect recent session transitions and active cards.
+2. **Stage Progression**: Planning advances through stages (`00-idea` through `05-contract`). Do not advance without passing gates (`bash skills/flow/runner/flow.sh next`).
+3. **Card Execution**: When implementing a card (`cards/C-NNN.md`):
+   - Confine changes to `## Allowed files`.
+   - Run verify commands listed in `## Verify`.
+   - Verify card passage with `bash skills/flow/runner/flow.sh check C-NNN`.
+4. **Clean Exit**: Do not claim work is complete until `flow check` returns exit code 0.'
+      local dest=".windsurf/rules/flow.md"
+      ;;
+    roo)
+      local tpl='{
+  "customModes": [
+    {
+      "slug": "flow",
+      "name": "Flow Discipline",
+      "roleDefinition": "You are a disciplined software engineer operating under Flow gates. You never write code without an active card and you verify all changes against card criteria.",
+      "groups": [
+        "read",
+        ["edit", { "fileRegex": "^(cards/.*|src/.*|tests/.*|flow/.*)$", "description": "Flow and source directories" }],
+        ["command", { "commandRegex": "^bash skills/flow/runner/flow\\.sh.*", "description": "Flow runner execution" }]
+      ]
+    }
+  ]
+}'
+      local dest=".roomodes"
+      ;;
+    cline)
+      local tpl='# Flow Discipline Rules for Cline
+
+1. Before starting tasks, execute `bash skills/flow/runner/flow.sh status` to identify the active stage and card.
+2. If planning is in progress, do not modify application code. Complete stage artifacts in `flow/` first.
+3. If building a card:
+   - Read `cards/C-NNN.md`.
+   - Strictly honor `## Allowed files`.
+   - Execute verification tests with `bash skills/flow/runner/flow.sh check C-NNN`.
+4. Never mark a card done without real, verified command output in `## Evidence`.'
+      local dest=".clinerules"
+      ;;
+    aider)
+      local tpl='# Aider configuration for Flow discipline layer
+test-cmd: "bash -c '\''cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'\''"
+auto-test: true'
+      local dest=".aider.conf.yml"
+      ;;
+    openhands)
+      local tpl='---
+name: flow
+triggers:
+  - "/flow"
+  - "flow"
+  - "card"
+  - "gate"
+---
+
+# Flow Microagent for OpenHands
+
+When working on this repository, execute all Flow commands using the project-local script inside the container:
+`bash skills/flow/runner/flow.sh <command>`
+
+Key commands:
+- `bash skills/flow/runner/flow.sh status` — inspect current stage and in-flight cards.
+- `bash skills/flow/runner/flow.sh next` — advance planning stage.
+- `bash skills/flow/runner/flow.sh check C-NNN` — verify card criteria and gates.'
+      local dest=".openhands/microagents/flow.md"
+      ;;
+    copilot)
+      local tpl='# GitHub Copilot Instructions for Flow
+
+This repository enforces Flow discipline:
+- Planning artifacts live under `flow/` (`00-idea.md` through `05-contract.md`).
+- Units of work are tracked as atomic markdown cards in `cards/C-NNN.md`.
+- Never modify files outside a card'\''s declared `## Allowed files`.
+- Verification requires reproducible commands documented under `## Verify`.
+- Mechanical ground truth is `bash skills/flow/runner/flow.sh check C-NNN`.'
+      local dest=".github/copilot-instructions.md"
+      ;;
+    *)
+      echo "unknown harness: $target" >&2
+      echo "usage: flow rules [list|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+      exit 2
+      ;;
+  esac
+
+  if [ "$opt_write" -eq 1 ]; then
+    local parent; parent="$(dirname "$ROOT/$dest")"
+    mkdir -p "$parent"
+    if [ -e "$ROOT/$dest" ] || [ -L "$ROOT/$dest" ]; then
+      echo "FAIL: destination already exists: $dest (refusing to overwrite or follow symlink)" >&2
+      return 1
+    fi
+    # Atomic O_EXCL write in subshell with noclobber to prevent TOCTOU race
+    if ! ( set -C; printf '%s\n' "$tpl" > "$ROOT/$dest" ) 2>/dev/null; then
+      echo "FAIL: destination already exists: $dest (refusing to overwrite or follow symlink)" >&2
+      return 1
+    fi
+    echo "created rule scaffolding: $dest"
+  else
+    printf '%s\n' "$tpl"
+  fi
+  return 0
+}
+
 
 usage() {
   cat <<'EOF'
@@ -6195,6 +6345,7 @@ case "$cmd" in
   doctor)         cmd_doctor "$@" ;;
   eval)           cmd_eval "$@" ;;
   usage)          cmd_usage "$@" ;;
+  rules)          cmd_rules "$@" ;;
   -h|--help|help) usage ;;
   *) echo "unknown command: $cmd"; echo; usage; exit 1 ;;
 esac

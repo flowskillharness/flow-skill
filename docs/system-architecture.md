@@ -5,6 +5,7 @@ three cooperating layers plus on-disk artifacts, so a fast deterministic engine 
 cheatable mechanics while the model handles judgment, and durable records survive sessions.
 
 Identity (gates and receipts, never the runtime): [`adr/0001-discipline-layer-identity.md`](adr/0001-discipline-layer-identity.md).
+Harness qualification SOP ("Support Thật" mandate): [`harness-qualification-process.md`](harness-qualification-process.md).
 
 ## Layers
 
@@ -94,6 +95,7 @@ On-disk artifacts (in the project being built):
 | `skills/flow/playbooks/` | paid-for stack knowledge (read before, harvest after) |
 | `tests/` | Suites listed in `tests/manifest.txt` (runner / harness / scenarios / loop / eval / resume / status-legibility / concierge / native-rituals / forge-idea / harness trust-align / graph executor / doc budgets). GitHub Actions `bash-suite` job (ubuntu+macos+windows) is the source of truth. |
 | `install.sh` / `install.ps1` | install to ~/.claude or a project |
+| `docs/harness-qualification-process.md` | standard operating procedure for market harness intake, live 4-point verification, anti-illusion catalog, and disclosure categorization |
 
 ## Distribution channels
 
@@ -114,6 +116,9 @@ The installer's receipt is also the upgrade ownership ledger: each install/updat
 
 ### Host Lifecycle Context Adapters (ADR-0001 Addendum)
 Flow provides opt-in, operator-installed lifecycle context adapters (`skills/flow/adapter-hooks/`) invoked by hosting agents (e.g. SessionStart, PreCompact). Handlers execute with zero tool interposition, zero residency/daemons, and fail-open. The sole permitted write is an advisory private snapshot under `<project>/.flow/context-handoff/snapshot.json` (mode 0600 in a 0700 dir, symlink-rejected, size-bounded), enabling post-compaction status continuity without gate mutation.
+
+### Harness Research & Qualification Process (Anti-Illusion Architecture)
+Flow documents an evidence-first qualification standard for candidate coding-agent harnesses (e.g. Claude Code, Codex, Cursor, Windsurf, Roo Code, Cline, Zed, Aider). To prevent hollow compatibility claims ("quảng cáo ảo") and latent runtime bugs (container isolation failures, Windows WSL path traps, context truncation, phantom pass hallucinations), all integrations must satisfy the 6-phase intake procedure and the Four-Point Live Verification Protocol detailed in [`harness-qualification-process.md`](harness-qualification-process.md). Candidate targets are strictly partitioned into Category A (Native Skills), Category B (Workspace Rule Scaffolding), Category C (Automated Test Gates), and Category D (Incompatible/Deferred).
 
 ## Deep-wired skills (pluggable agents + decision matrix)
 
