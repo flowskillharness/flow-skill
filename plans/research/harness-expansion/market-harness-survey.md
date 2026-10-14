@@ -431,9 +431,9 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:**
   - Manual prompt or workspace context directing `/dev` to invoke a repository-vendored runner (`skills/flow/runner/flow.sh`), since no `.amazonq/` template exists in `flow rules`.
-  - In IDE `/dev` mode, Amazon Q autonomously runs `flow.sh status` and `flow.sh check C-NNN`, halting on exit code 1.
+  - In IDE `/dev` mode, Amazon Q is hypothesized to run `flow.sh status` and `flow.sh check C-NNN` (empirical verification pending live trial).
 - **The Marketing Illusion to Avoid:**
-  - Advertising universal "Amazon Q support" without disambiguating the IDE `/dev` agent from the `q` CLI (which cannot run tool loops).
+  - Advertising universal "Amazon Q support" without disambiguating the IDE `/dev` agent from the standalone `q` CLI (whose autonomous tool loop has not been verified in testing).
   - Claiming an `.amazonq/rules/` rule template or generator exists in Flow when `flow rules` is locked to seven verified templates.
   - Referencing unreachable host paths (`~/.agents/skills/...`) inside cloud containerized sandboxes.
 - **Feasibility Verdict:**
@@ -455,7 +455,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 | **Copilot (VSCode)**| `copilot-instructions.md` | Settings | `.github/copilot-instructions.md` | Terminal proposal | Semi-autonomous (Prompted) | **Tier 2** |
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
-| **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Autonomous (/dev mode) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
+| **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
