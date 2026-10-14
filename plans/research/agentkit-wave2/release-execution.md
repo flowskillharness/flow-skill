@@ -96,5 +96,14 @@ Commit `005e659` triggered matrix run `38369511454` (https://github.com/manhquyd
 
 * **Terminal Windows Verification & Master Green:** All Windows defects repaired and verified 100% green on native Windows Server 2025 runners (Smoke run `38431842785`). Master CI run `38434237203` (SHA `4e4b1131e8e191991db7e43f4e2042bcafd877e4`) completed 13/13 jobs with SUCCESS. Canonical release CI run `38443263113` (SHA `82eca0f04c673ebf1b885c301c238b1be6b5a374`) completed 13/13 matrix jobs with terminal SUCCESS, confirming Ubuntu, macOS, and Windows bash-suite and PowerShell suites pass green under `all-checks-passed`.
 * **Skill Product Release v0.34.1:** Tag `v0.34.1` minted and pushed to origin. GitHub Release v0.34.1 published at https://github.com/manhquydev/flow-skill/releases/tag/v0.34.1.
-* **npm Installer Release 0.7.8:** Tag `npm@0.7.8` minted and pushed to origin, triggering `publish-npm-wrapper.yml` run `38450043704` (https://github.com/manhquydev/flow-skill/actions/runs/38450043704). The workflow is currently in `waiting` status awaiting manual reviewer authorization for the `npm-publish` environment gate.
-* **Registry Dist-Tag State:** The npm registry currently serves `@manhquy/flow-skill@latest` at version `0.7.7` (`{"rc": "0.1.0-rc.3", "next": "0.7.1-next.0", "latest": "0.7.7"}`); upon human approval of the environment gate, OIDC trusted publishing will publish package `0.7.8` with provenance attestations and update `latest` to `0.7.8`.
+* **npm Installer Release 0.7.8 (Published & Verified Live):**
+  - First attempt (Run `38450043704` on tag `npm@0.7.8`) stopped at `Tarball audit (< 1MB unpacked)` because the materialized tree was 1,112,768 bytes (~1.06 MB), tripping the un-updated 1 MB workflow threshold.
+  - Corrected retry branch `release/npm-0.7.8` (commit `f3087a0`, rooted at exact release commit `82eca0f`, updating threshold to 1.5 MB per `RELEASE_CHECKLIST.md:94`) dispatched Run `38504877349` (https://github.com/manhquydev/flow-skill/actions/runs/38504877349).
+  - Reviewer approved the `npm-publish` environment gate.
+  - `Tarball audit (< 1.5MB unpacked; no symlinks)`: **SUCCESS**.
+  - `Publish (OIDC + provenance)`: **SUCCESS** — `@manhquy/flow-skill@0.7.8` published to npm registry with SLSA v1 provenance attestations.
+  - `Verify provenance visible from registry`: **SUCCESS**.
+  - Post-publish step `Create git tag` failed with benign `fatal: tag 'npm@0.7.8' already exists` (exit 128) because the tag was already pushed earlier, setting job conclusion to failure after successful publish.
+* **Registry Dist-Tag & Live Verification:**
+  - `npm view @manhquy/flow-skill dist-tags --json`: `{"rc": "0.1.0-rc.3", "next": "0.7.1-next.0", "latest": "0.7.8"}`.
+  - `npx --yes @manhquy/flow-skill@latest --help`: prints `flow-skill v0.7.8 (ships skill v0.34.1)`.

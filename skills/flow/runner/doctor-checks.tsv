@@ -11,3 +11,5 @@ timeout	tools	GNU timeout or gtimeout command for bounded eval
 bundled_tree_integrity	integrity	Bundled tree receipt integrity (manifest-hashes.json)
 install_homes	install	Static detection of installed agent skill targets
 bounded_json	integrity	Bounded JSON and context-handoff directory integrity (modes, nofollow)
+privacy_guard	security	Unencrypted sensitive files (.env, .pem, keys) present without .gitignore coverage
+scout_bounds	performance	Verification scripts and card checks bounded against runaway sweeps

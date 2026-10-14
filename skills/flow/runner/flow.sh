@@ -2850,7 +2850,7 @@ cmd_doctor() {
       if [ -f "$tsv_reg" ]; then
         known_checks="$(awk -F'\t' '{printf "%s,", $1}' "$tsv_reg" | sed 's/,$//')"
       else
-        known_checks="os,bash,python,sqlite3,grep_p,git,cargo,templates,harness,timeout,bundled_tree_integrity,install_homes,bounded_json"
+        known_checks="os,bash,python,sqlite3,grep_p,git,cargo,templates,harness,timeout,bundled_tree_integrity,install_homes,bounded_json,privacy_guard,scout_bounds"
       fi
       local count=0
       local unknown_checks=""
@@ -3173,6 +3173,84 @@ cmd_doctor() {
       *)
         [ "$opt_json" -eq 0 ] && echo "  FAIL: bounded state - unknown verification error"
         _record "bounded_json" "integrity" "fail" "unknown verification error"
+        ok=0
+        ;;
+    esac
+  fi
+
+  # 14. privacy_guard
+  if _run_check "privacy_guard"; then
+    local pg_out=""
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+      pg_out="$("$py" "$helper" verify-privacy-guard "$ROOT" 2>/dev/null || echo "FAIL:execution error during privacy guard check")"
+    else
+      pg_out="FAIL:python 3.8+ interpreter unavailable for privacy guard check"
+    fi
+
+    case "$pg_out" in
+      OK:*)
+        local det="${pg_out#OK:}"
+        [ "$opt_json" -eq 0 ] && echo "  privacy guard:   ok ($det)"
+        _record "privacy_guard" "security" "ok" "ok ($det)"
+        ;;
+      WARN:*)
+        local reason="${pg_out#WARN:}"
+        [ "$opt_json" -eq 0 ] && echo "  WARN: privacy guard - $reason"
+        _record "privacy_guard" "security" "warn" "$reason"
+        ;;
+      SKIP:*)
+        local reason="${pg_out#SKIP:}"
+        [ "$opt_json" -eq 0 ] && echo "  privacy guard:   $reason - skipped"
+        _record "privacy_guard" "security" "skip" "$reason"
+        ;;
+      FAIL:*)
+        local reason="${pg_out#FAIL:}"
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: privacy guard - $reason"
+        _record "privacy_guard" "security" "fail" "$reason"
+        ok=0
+        ;;
+      *)
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: privacy guard - unknown error"
+        _record "privacy_guard" "security" "fail" "unknown error"
+        ok=0
+        ;;
+    esac
+  fi
+
+  # 15. scout_bounds
+  if _run_check "scout_bounds"; then
+    local sb_out=""
+    if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
+      sb_out="$("$py" "$helper" verify-scout-bounds "$ROOT" 2>/dev/null || echo "FAIL:execution error during scout bounds check")"
+    else
+      sb_out="FAIL:python 3.8+ interpreter unavailable for scout bounds check"
+    fi
+
+    case "$sb_out" in
+      OK:*)
+        local det="${sb_out#OK:}"
+        [ "$opt_json" -eq 0 ] && echo "  scout bounds:    ok ($det)"
+        _record "scout_bounds" "performance" "ok" "ok ($det)"
+        ;;
+      WARN:*)
+        local reason="${sb_out#WARN:}"
+        [ "$opt_json" -eq 0 ] && echo "  WARN: scout bounds - $reason"
+        _record "scout_bounds" "performance" "warn" "$reason"
+        ;;
+      SKIP:*)
+        local reason="${sb_out#SKIP:}"
+        [ "$opt_json" -eq 0 ] && echo "  scout bounds:    $reason - skipped"
+        _record "scout_bounds" "performance" "skip" "$reason"
+        ;;
+      FAIL:*)
+        local reason="${sb_out#FAIL:}"
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: scout bounds - $reason"
+        _record "scout_bounds" "performance" "fail" "$reason"
+        ok=0
+        ;;
+      *)
+        [ "$opt_json" -eq 0 ] && echo "  FAIL: scout bounds - unknown error"
+        _record "scout_bounds" "performance" "fail" "unknown error"
         ok=0
         ;;
     esac

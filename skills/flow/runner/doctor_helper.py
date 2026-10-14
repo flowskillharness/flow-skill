@@ -400,6 +400,126 @@ def cmd_verify_bounded_json(project_root_str):
 
     print("OK:bounded state verified (private modes, no symlinks)")
 
+def _check_privacy_guard(project_root_str):
+    root = Path(project_root_str).resolve()
+    if not root.exists() or not root.is_dir():
+        print("SKIP:project root not found")
+        return
+
+    # Load .gitignore patterns if available
+    gitignore_path = root / ".gitignore"
+    ignored_patterns = []
+    if gitignore_path.exists() and gitignore_path.is_file():
+        try:
+            with open(str(gitignore_path), "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        ignored_patterns.append(line)
+        except Exception:
+            pass
+
+    def is_ignored(rel_p):
+        import fnmatch
+        rel_str = str(rel_p).replace("\\", "/")
+        name = Path(rel_str).name
+        for pat in ignored_patterns:
+            pat_clean = pat.rstrip("/")
+            if fnmatch.fnmatch(name, pat_clean) or fnmatch.fnmatch(rel_str, pat_clean) or fnmatch.fnmatch(rel_str, "*/" + pat_clean):
+                return True
+            # Prefix match e.g. .env*
+            if pat_clean.endswith("*") and (name.startswith(pat_clean[:-1]) or rel_str.startswith(pat_clean[:-1])):
+                return True
+        return False
+
+    safe_suffixes = (".example", ".sample", ".template")
+    skip_dirs = {".git", "node_modules", "__pycache__", ".flow"}
+
+    sensitive_found = []
+
+    for dirpath, dirnames, filenames in os.walk(str(root)):
+        # Depth limit: calculate depth relative to root
+        rel_dir = os.path.relpath(dirpath, str(root))
+        if rel_dir == ".":
+            depth = 0
+        else:
+            depth = len(Path(rel_dir).parts)
+
+        # Filter out skip_dirs in-place
+        dirnames[:] = [d for d in dirnames if d not in skip_dirs]
+
+        if depth >= 3:
+            dirnames[:] = []  # Do not descend further
+
+        for fname in filenames:
+            if any(fname.endswith(sfx) for sfx in safe_suffixes):
+                continue
+
+            # Sensitive patterns: .env, .env.*, *.pem, *.key, id_rsa, id_ed25519, credentials.json, secrets.yaml
+            is_sensitive = False
+            if fname == ".env" or fname.startswith(".env."):
+                is_sensitive = True
+            elif fname.endswith(".pem") or fname.endswith(".key"):
+                is_sensitive = True
+            elif fname == "id_rsa" or fname == "id_ed25519":
+                is_sensitive = True
+            elif fname == "credentials.json" or fname == "secrets.yaml" or fname == "secrets.yml":
+                is_sensitive = True
+
+            if is_sensitive:
+                full_p = Path(dirpath) / fname
+                rel_f = os.path.relpath(str(full_p), str(root))
+                if not is_ignored(rel_f):
+                    sensitive_found.append(rel_f.replace("\\", "/"))
+
+    if sensitive_found:
+        sample = ", ".join(sensitive_found[:3])
+        print("WARN:unencrypted sensitive file(s) without .gitignore coverage: %s" % (sample,))
+    else:
+        print("OK:no unignored sensitive files detected")
+
+
+def _check_scout_bounds(project_root_str):
+    root = Path(project_root_str).resolve()
+    cards_dir = root / "cards"
+    if not cards_dir.exists() or not cards_dir.is_dir():
+        print("OK:no cards directory (clean bounds)")
+        return
+
+    unbounded_sweeps = []
+    dangerous_patterns = [
+        re.compile(r"\bfind\s+(?:/[^a-zA-Z0-9_-]|/\s|/\Z)"),
+        re.compile(r"\bgrep\s+-[a-zA-Z]*r[a-zA-Z]*\s+(?:/[^a-zA-Z0-9_-]|/\s|/\Z)"),
+        re.compile(r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\s+/(?:\s|\Z|/[^a-zA-Z0-9_-])")
+    ]
+
+    for card_file in cards_dir.glob("C-*.md"):
+        if not card_file.is_file() or os.path.islink(str(card_file)):
+            continue
+        try:
+            with open(str(card_file), "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            for pat in dangerous_patterns:
+                if pat.search(content):
+                    unbounded_sweeps.append(card_file.name)
+                    break
+        except Exception:
+            pass
+
+    if unbounded_sweeps:
+        sample = ", ".join(unbounded_sweeps[:3])
+        print("WARN:unbounded root sweep detected in card(s): %s" % (sample,))
+    else:
+        print("OK:card checks bounded against runaway root sweeps")
+
+
+def cmd_verify_privacy_guard(project_root_str):
+    _check_privacy_guard(project_root_str)
+
+
+def cmd_verify_scout_bounds(project_root_str):
+    _check_scout_bounds(project_root_str)
+
 
 def main():
     if len(sys.argv) < 2:
@@ -429,6 +549,16 @@ def main():
             print("FAIL:insufficient arguments for verify-bounded-json")
             return
         cmd_verify_bounded_json(sys.argv[2])
+    elif cmd == "verify-privacy-guard":
+        if len(sys.argv) < 3:
+            print("FAIL:insufficient arguments for verify-privacy-guard")
+            return
+        cmd_verify_privacy_guard(sys.argv[2])
+    elif cmd == "verify-scout-bounds":
+        if len(sys.argv) < 3:
+            print("FAIL:insufficient arguments for verify-scout-bounds")
+            return
+        cmd_verify_scout_bounds(sys.argv[2])
     else:
         sys.exit(1)
 

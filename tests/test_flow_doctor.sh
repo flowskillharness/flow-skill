@@ -348,6 +348,48 @@ ck "fail" "$ck_status" "duplicate JSON keys produce fail status"
 
 rm -rf "$SB_DOC"
 unset FLOW_PROJECT_ROOT
+echo "G) Privacy guard and scout bounds checks"
+SB_G="$(mktemp -d)"
+export FLOW_PROJECT_ROOT="$SB_G"
+mkdir -p "$SB_G/flow"
+
+# G1: privacy_guard on repo without unignored secrets -> ok
+out_g1="$(bash "$RUN" doctor --check privacy_guard --json 2>&1)"; rc_g1=$?
+ck 0 "$rc_g1" "doctor --check privacy_guard on clean repo exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g1")"
+ck "ok" "$ck_status" "clean repo produces ok status"
+
+# G2: privacy_guard when an unignored .env is created -> warn
+echo "SECRET=123" > "$SB_G/.env"
+out_g2="$(bash "$RUN" doctor --check privacy_guard --json 2>&1)"; rc_g2=$?
+ck 0 "$rc_g2" "doctor --check privacy_guard with unignored .env exits 0 (warn is non-blocking)"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g2")"
+ck "warn" "$ck_status" "unignored .env produces warn status"
+
+# G3: privacy_guard when .env is covered by .gitignore -> ok
+echo ".env" > "$SB_G/.gitignore"
+out_g3="$(bash "$RUN" doctor --check privacy_guard --json 2>&1)"; rc_g3=$?
+ck 0 "$rc_g3" "doctor --check privacy_guard with ignored .env exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g3")"
+ck "ok" "$ck_status" "ignored .env produces ok status"
+
+# G4: privacy_guard with .env.example -> ok (safe template exempt)
+rm -f "$SB_G/.env" "$SB_G/.gitignore"
+echo "SECRET=example" > "$SB_G/.env.example"
+echo "SAMPLE=1" > "$SB_G/.env.sample"
+out_g4="$(bash "$RUN" doctor --check privacy_guard --json 2>&1)"; rc_g4=$?
+ck 0 "$rc_g4" "doctor --check privacy_guard with .env.example/.env.sample exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g4")"
+ck "ok" "$ck_status" "safe templates produce ok status"
+
+# G5: scout_bounds on clean repo -> ok
+out_g5="$(bash "$RUN" doctor --check scout_bounds --json 2>&1)"; rc_g5=$?
+ck 0 "$rc_g5" "doctor --check scout_bounds on clean repo exits 0"
+ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g5")"
+ck "ok" "$ck_status" "clean repo produces ok scout_bounds status"
+
+rm -rf "$SB_G"
+unset FLOW_PROJECT_ROOT
 
 echo
 echo "RESULT: $pass passed, $fail failed"
