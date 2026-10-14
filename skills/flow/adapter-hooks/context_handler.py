@@ -274,7 +274,8 @@ if not base:
     for cand in (os.path.join(home, ".claude", "skills", "flow"),
                  os.path.join(home, ".codex", "skills", "flow"),
                  os.path.join(home, ".agents", "skills", "flow"),
-                 os.path.join(home, ".omp", "agent", "skills", "flow")):
+                 os.path.join(home, ".omp", "agent", "skills", "flow"),
+                 os.path.join(home, ".cursor", "skills", "flow")):
         if os.path.isfile(os.path.join(cand, "runner", "flow.sh")):
             base = cand
             break

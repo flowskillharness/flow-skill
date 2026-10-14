@@ -204,6 +204,7 @@ $RestartHints = @{
   antigravity = 'Antigravity: restart/reload the IDE (or restart agy) to load the new skill, then type /flow'
   agents      = 'Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills'
   omp         = 'OMP: restart/reload your agent to load the new skill, then invoke flow'
+  cursor      = 'Cursor: restart/reload Cursor to load the new skill, then check the Agent panel for flow'
 }
 function Get-DoneLine([string[]]$installed) {
   $hints = $installed | ForEach-Object { $RestartHints[$_] } | Where-Object { $_ }
@@ -240,7 +241,12 @@ if ($Mode -eq 'global') {
     $last = Install-To (Join-Path $UserHome '.omp/agent/skills/flow')
     $installed += 'omp'
   }
-  if (-not $last) { Write-Error "unknown target '$target' (use claude|codex|agents|antigravity|omp|all)"; exit 1 }
+  # cursor: explicit target or autodetected when ~/.cursor/skills exists
+  if ($target -eq 'cursor' -or ($target -eq 'all' -and (Test-Path (Join-Path $UserHome '.cursor/skills')))) {
+    $last = Install-To (Join-Path $UserHome '.cursor/skills/flow')
+    $installed += 'cursor'
+  }
+  if (-not $last) { Write-Error "unknown target '$target' (use claude|codex|agents|antigravity|omp|cursor|all)"; exit 1 }
 } else {
   $dir = if ($Arg2 -ne '') { $Arg2 } else { (Get-Location).Path }
   $last = Install-To (Join-Path $dir '.claude/skills/flow')

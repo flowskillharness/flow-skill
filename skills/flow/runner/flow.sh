@@ -3131,6 +3131,7 @@ cmd_doctor() {
     [ -d "$HOME/.codex/skills/flow" ] && homes_found="${homes_found:+$homes_found, }codex ($HOME/.codex/skills/flow)"
     [ -d "$HOME/.agents/skills/flow" ] && homes_found="${homes_found:+$homes_found, }agents ($HOME/.agents/skills/flow)"
     [ -d "$HOME/.omp/agent/skills/flow" ] && homes_found="${homes_found:+$homes_found, }omp ($HOME/.omp/agent/skills/flow)"
+    [ -d "$HOME/.cursor/skills/flow" ] && homes_found="${homes_found:+$homes_found, }cursor ($HOME/.cursor/skills/flow)"
     [ -d "$HOME/.gemini/antigravity-cli/skills/flow" ] && homes_found="${homes_found:+$homes_found, }antigravity-cli ($HOME/.gemini/antigravity-cli/skills/flow)"
     [ -d "$HOME/.gemini/config/skills/flow" ] && homes_found="${homes_found:+$homes_found, }antigravity-config ($HOME/.gemini/config/skills/flow)"
     [ -d "$ROOT/.claude/skills/flow" ] && homes_found="${homes_found:+$homes_found, }project ($ROOT/.claude/skills/flow)"

@@ -73,6 +73,12 @@ try {
   Check "explicit global omp installs cleanly" ($LASTEXITCODE -eq 0)
   Check "OMP destination contains SKILL.md" (Test-Path -LiteralPath (Join-Path $ompDest "SKILL.md"))
 
+  # 3.1b Explicit cursor target
+  $outCursor = & pwsh -File $TestInstallScript global cursor 2>&1
+  $cursorDest = Join-Path $FakeHome ".cursor/skills/flow"
+  Check "explicit global cursor installs cleanly" ($LASTEXITCODE -eq 0)
+  Check "Cursor destination contains SKILL.md" (Test-Path -LiteralPath (Join-Path $cursorDest "SKILL.md"))
+
   # 3.2 OMP genuine autodetection
   $FakeHome2 = Join-Path $Scratch "home2"
   New-Item -ItemType Directory -Path (Join-Path $FakeHome2 ".omp/agent/skills") | Out-Null

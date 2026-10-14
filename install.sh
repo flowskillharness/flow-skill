@@ -241,7 +241,7 @@ install_to() {
 }
 
 usage() {
-  echo "usage: bash install.sh [global [claude|codex|agents|antigravity|omp|all] | project [dir]]"
+  echo "usage: bash install.sh [global [claude|codex|agents|antigravity|omp|cursor|all] | project [dir]]" >&2
 }
 
 INSTALLED=""
@@ -254,6 +254,7 @@ done_line() {
       antigravity) out="$out Antigravity: restart/reload the IDE (or restart agy) to load the new skill, then type /flow |" ;;
       agents)      out="$out Agents home (~/.agents/skills/): restart/reload your tool if it does not auto-detect new skills |" ;;
       omp)         out="$out OMP: restart/reload your agent to load the new skill, then invoke flow |" ;;
+      cursor)      out="$out Cursor: restart/reload Cursor to load the new skill, then check the Agent panel for flow |" ;;
     esac
   done
   echo "${out% |}"
@@ -288,6 +289,11 @@ case "$MODE" in
     if [ "$TARGET" = "omp" ] || { [ "$TARGET" = "all" ] && [ -d "${HOME}/.omp/agent/skills" ]; }; then
       install_to "${HOME}/.omp/agent/skills/flow"
       INSTALLED="$INSTALLED omp"
+    fi
+    # cursor: install when explicitly targeted, or when ~/.cursor/skills exists
+    if [ "$TARGET" = "cursor" ] || { [ "$TARGET" = "all" ] && [ -d "${HOME}/.cursor/skills" ]; }; then
+      install_to "${HOME}/.cursor/skills/flow"
+      INSTALLED="$INSTALLED cursor"
     fi
     [ -n "$LAST" ] || { echo "FAIL: unknown target '$TARGET'"; usage; exit 1; }
     ;;

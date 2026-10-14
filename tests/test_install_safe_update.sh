@@ -453,6 +453,11 @@ HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global omp >/dev/null
 [ -f "$FAKE_HOME/.omp/agent/skills/flow/manifest-hashes.json" ] && s_omp="yes" || s_omp="no"
 ck "yes" "$s_omp" "install.sh global omp installs to ~/.omp/agent/skills/flow"
 
+# 10.2b Explicit Cursor target
+HOME="$FAKE_HOME" bash "$TEST_REPO/install.sh" global cursor >/dev/null
+[ -f "$FAKE_HOME/.cursor/skills/flow/manifest-hashes.json" ] && s_cur="yes" || s_cur="no"
+ck "yes" "$s_cur" "install.sh global cursor installs to ~/.cursor/skills/flow"
+
 # 10.3 OMP autodetect with genuine marker
 FAKE_HOME2="$SCRATCH/fake_home2"
 mkdir -p "$FAKE_HOME2/.omp/agent/skills"

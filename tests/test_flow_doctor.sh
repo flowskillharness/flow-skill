@@ -388,6 +388,17 @@ ck 0 "$rc_g5" "doctor --check scout_bounds on clean repo exits 0"
 ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out_g5")"
 ck "ok" "$ck_status" "clean repo produces ok scout_bounds status"
 
+# G6: install_homes detects cursor target when ~/.cursor/skills/flow exists
+FAKE_DOC_HOME="$(mktemp -d)"
+mkdir -p "$FAKE_DOC_HOME/.cursor/skills/flow/runner"
+touch "$FAKE_DOC_HOME/.cursor/skills/flow/runner/flow.sh"
+out_g6="$(HOME="$FAKE_DOC_HOME" bash "$RUN" doctor --check install_homes --json 2>&1)"; rc_g6=$?
+ck 0 "$rc_g6" "doctor --check install_homes with fake cursor home exits 0"
+case "$out_g6" in
+  *"cursor ($FAKE_DOC_HOME/.cursor/skills/flow)"*) ck 0 0 "install_homes output includes cursor target" ;;
+  *) ck 0 1 "install_homes output includes cursor target" ;;
+esac
+rm -rf "$FAKE_DOC_HOME"
 rm -rf "$SB_G"
 unset FLOW_PROJECT_ROOT
 
