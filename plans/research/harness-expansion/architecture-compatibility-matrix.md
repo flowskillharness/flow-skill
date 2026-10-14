@@ -112,18 +112,18 @@ The following table presents the architectural evaluation of candidate harnesses
 
 | Candidate Harness | Category | Constitutional Compliance | Invariant Adherence Analysis | Provisional Status |
 | :--- | :---: | :---: | :--- | :---: |
-| **Cursor Native** | A | **PASS** | Installer, doctor, and hook parity implemented on master (`c050950a`). | **Provisional Candidate (Code Parity Verified; Host Trial Pending)** |
-| **Zed Assistant** | A | **PASS** | Evaluated as native Agent Skills target (`~/.agents/skills/flow`) + `AGENTS.md`. No pseudo-rules. | **Category A Native Standard (Not Category B Rules)** |
-| **Cursor Rules** | B | **PASS** | Workspace rule scaffolding (`.cursor/rules/flow.mdc`). Directs Composer/Agent to run `flow.sh`. | **Provisional Candidate (Rule Scaffold)** |
-| **Roo Code** | B | **PASS** | Custom mode prompt (`.roomodes`) with explicit `command` execution group permissions. | **Provisional Candidate (Rule Scaffold)** |
-| **Cline** | B | **PASS** | Workspace prompt instructions (`.clinerules`) requesting terminal approval for runner calls. | **Provisional Candidate (Rule Scaffold)** |
-| **Windsurf** | B | **PASS** | Compact project rules (`.windsurf/rules/flow.md`, <6,000 chars) directing Cascade execution tool. | **Provisional Candidate (Rule Scaffold)** |
-| **Aider** | C | **PASS** | Config hook (`.aider.conf.yml`) setting `test-cmd: "bash runner/flow.sh check"` with `auto-test: true`. | **Provisional Candidate (Test Hook Scaffold)** |
+| **Cursor Native** | A | PROVISIONAL (Desk-Reviewed) | Installer, doctor, and hook parity implemented on master (`c050950a`). | **Provisional Candidate (Code Parity Verified; Host Trial Pending)** |
+| **Zed Assistant** | A | PROVISIONAL (Desk-Reviewed) | Evaluated as native Agent Skills target (`~/.agents/skills/flow`) + `AGENTS.md`. No pseudo-rules. | **Category A Native Standard (Not Category B Rules)** |
+| **Cursor Rules** | B | PROVISIONAL (Desk-Reviewed) | Workspace rule scaffolding (`.cursor/rules/flow.mdc`). Directs Composer/Agent to run `flow.sh`. | **Provisional Candidate (Rule Scaffold)** |
+| **Roo Code** | B | PROVISIONAL (Desk-Reviewed) | Custom mode prompt (`.roomodes`) with explicit `command` execution group permissions. | **Provisional Candidate (Rule Scaffold)** |
+| **Cline** | B | PROVISIONAL (Desk-Reviewed) | Workspace prompt instructions (`.clinerules`) requesting terminal approval for runner calls. | **Provisional Candidate (Rule Scaffold)** |
+| **Windsurf** | B | PROVISIONAL (Desk-Reviewed) | Compact project rules (`.windsurf/rules/flow.md`, <6,000 chars) directing Cascade execution tool. | **Provisional Candidate (Rule Scaffold)** |
+| **Aider** | C | PROVISIONAL (Desk-Reviewed) | Config hook (`.aider.conf.yml`) setting `test-cmd: "bash runner/flow.sh check"` with `auto-test: true`. | **Provisional Candidate (Test Hook Scaffold)** |
 | **OpenHands** | B | **CONDITIONAL** | Microagent prompt (`.openhands/microagents/flow.md`) restricted to project-local paths inside Docker. | **Provisional Candidate (Container Scaffold)** |
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
-| **Goose** | B | **PASS** | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
-| **Amazon Q (/dev)** | B | **PASS** | Workspace rule scaffolding (`.amazonq/rules/` / prompt); ephemeral runner, zero cloud daemons. | **Provisional Candidate (Priority Rule Scaffold Candidate)** |
-| **Amazon Q CLI** | D | **INCOMPATIBLE** | Standalone interactive CLI query/translation utility; lacks autonomous multi-turn tool execution loop. | **Deferred / Incompatible (Category D: Query Only)** |
+| **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
+| **Amazon Q (/dev)** | B | PROVISIONAL (Desk-Reviewed) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **Amazon Q CLI** | D | DEFERRED | Standalone interactive CLI query/translation utility; lacks autonomous tool loop. | Deferred / Unknown (Subject to Current-Source Verification) |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
@@ -379,7 +379,9 @@ Action 1 has been implemented on master in commit `c050950a` and verified locall
   4. Never advise skipping security-class checks or modifying `runner/flow.sh`.
   ```
 
-#### 5. Amazon Q Developer (/dev Agent) (Category B: Rule Scaffold)
+#### 5. Amazon Q Developer (/dev Agent) (Category B: Proposed Rule Scaffold — Unimplemented)
+Notice: This specification represents an un-implemented design proposal. As established in §3.4, `flow rules` is locked to seven verified templates (cursor, windsurf, roo, cline, aider, openhands, copilot). No `.amazonq/` template is currently generated by `flow rules`, and empirical verification remains pending.
+
 - **Context Budget Guard:** Strictly under **1,000 characters** and 150 words to prevent context dilution during `/dev` planning.
 - **Specification:** `<project-root>/.amazonq/rules/flow.md` (~750 characters):
   ```markdown
