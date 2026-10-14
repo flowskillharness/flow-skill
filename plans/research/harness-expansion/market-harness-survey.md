@@ -50,11 +50,12 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 ├─────────────────────────────────────┼──────────────────────────┼──────────────────────────────────┤
 │ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)   │ • GitHub Copilot CLI (no loop)   │
 │ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)     │ • Zed Inline Editor (no bash)    │
-│                                     │ • Cline (.clinerules)    │                                  │
+│                                     │ • Cline (.clinerules)    │ • Amazon Q CLI (no loop)         │
 │                                     │ • Aider (Test Hook)      │                                  │
 │                                     │ • OpenHands (Docker)     │                                  │
 │                                     │ • Copilot VSCode Agent   │                                  │
 │                                     │ • Goose (.goosehints)    │                                  │
+│                                     │ • Amazon Q Developer (/dev)│                                │
 └─────────────────────────────────────┴──────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -401,6 +402,43 @@ Goose (developed by Block, Inc.; open-source under Apache-2.0, repository: https
 - **The Marketing Illusion to Avoid:**
   - Building a resident MCP daemon that runs in the background, violating ADR-0001 and causing state-desynchronization traps.
 - **Feasibility Verdict:** **Tier 2 Priority Candidate (Provisional Category B Instruction Scaffold; Score 72/100; Live Host Trial Pending).**
+
+### Candidate 9: Amazon Q Developer (IDE /dev Agent vs CLI)
+
+#### 1. System Overview & Harness Architecture: Dual Modality
+Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws.amazon.com/q/developer/, documentation: https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/) is an AI-powered software development assistant integrated across IDEs (VS Code, JetBrains IDEs via AWS Toolkit), command-line environments (`q` CLI), and AWS cloud workspaces. Under Flow's architecture taxonomy, Amazon Q Developer exhibits two distinct execution modalities:
+1. **IDE `/dev` Agent (Category B: Workspace Rule Scaffolding):** In VS Code and JetBrains IDEs, invoking `/dev` engages an autonomous feature development agent. The `/dev` agent ingests workspace context, generates structured multi-step plans, modifies codebase files, and dispatches terminal and build commands to validate changes within workspace or cloud sandbox execution boundaries.
+2. **Standalone `q` CLI (Category D: Deferred / Incompatible):** The standalone `q` CLI utility (`q chat`, `q translate`) is designed strictly for interactive developer Q&A, code completions, and shell translations. It lacks an autonomous multi-turn tool invocation loop, cannot ingest workspace rule scaffolding, and cannot mechanically enforce build gating.
+
+#### 2. Extension & Integration Mechanism
+- **Workspace Instruction Scaffolding:**
+  - Amazon Q Developer does not support directory-based skill discovery (Category A) such as `~/.agents/skills/` or `~/.claude/skills/`.
+  - Flow integrates via project-level workspace rule scaffolding (`.amazonq/rules/` directory or prompt context, e.g., `.amazonq/rules/flow.md`).
+  - Scaffolding must remain compact (strictly under 1,000 characters and 150 words) to prevent context clipping and prompt dilution during multi-file `/dev` tasks.
+- **Project-Local Runner Requirement:**
+  - Because Amazon Q `/dev` tasks frequently execute within remote sandbox containers (such as AWS CodeCatalyst or isolated devcontainers), host global paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) produce `ENOENT` failures.
+  - The repository must vendor Flow locally (`skills/flow/runner/flow.sh` or `skills\flow\runner\flow.cmd` on Windows) for reliable execution.
+
+#### 3. Constitutional Audit: Rejection of AWS Cloud Daemons & Background Services
+- Attempting to implement Flow as a resident cloud daemon, persistent AWS Lambda background service, Amazon ECS background task, or resident socket daemon is **constitutionally forbidden** under ADR-0001 (Zero Resident Daemons, Process Token Ownership).
+- Flow maintains zero resident services. State lives strictly in Git, filesystem markdown artifacts (`flow/*.md`, `cards/C-NNN.md`), and deterministic exit codes.
+- Amazon Q Developer holds the process token and manages the `/dev` agent loop. Flow executes ephemerally as a subprocess when invoked via workspace terminal/build tools (`bash skills/flow/runner/flow.sh <command>`) and terminates immediately upon returning.
+
+#### 4. Execution Capability & Mechanical Gate Enforcement
+- **Terminal & Build Tool Invocation:** In `/dev` mode, the agent dispatches Flow lifecycle commands (`status`, `next`, `check C-NNN`) via its workspace terminal execution tool.
+- **Gate-Stop Invariant:** Non-zero exit codes ($exit \neq 0$) from `flow.sh` are captured and returned to the `/dev` agent loop, requiring the agent to halt immediately, inspect errors, and repair issues rather than hallucinating gate passes.
+- **CLI Limitation:** The standalone `q` CLI has no command execution or verification loop, precluding any mechanical gate enforcement.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:**
+  - Project-level rule scaffolding at `.amazonq/rules/flow.md` paired with a repository-vendored runner (`skills/flow/runner/flow.sh`).
+  - In IDE `/dev` mode, Amazon Q autonomously runs `flow.sh status` and `flow.sh check C-NNN`, halting on exit code 1.
+- **The Marketing Illusion to Avoid:**
+  - Advertising universal "Amazon Q support" without disambiguating the IDE `/dev` agent from the `q` CLI (which cannot run tool loops).
+  - Referencing unreachable host paths (`~/.agents/skills/...`) inside cloud containerized sandboxes.
+- **Feasibility Verdict:**
+  - **Amazon Q (/dev Agent): Tier 2 Priority Candidate (Provisional Category B Workspace Rule Scaffolding; Score 66/100; Live Host Trial Pending).**
+  - **Amazon Q CLI: Tier 3 Deferred / Incompatible (Category D: Interactive Query & Translation Only; Non-agentic).**
 ---
 
 ## 3. Cross-Harness Comparison & Technical Matrix
@@ -417,6 +455,8 @@ Goose (developed by Block, Inc.; open-source under Apache-2.0, repository: https
 | **Copilot (VSCode)**| `copilot-instructions.md` | Settings | `.github/copilot-instructions.md` | Terminal proposal | Semi-autonomous (Prompted) | **Tier 2** |
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
+| **Amazon Q (/dev)** | Workspace Rule Scaffolding | N/A | `.amazonq/rules/` / prompt | Terminal/Build tool | Autonomous (/dev mode) | **Tier 2 (Priority Rule Scaffold Candidate)** |
+| **Amazon Q CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
 
 ---
 
@@ -623,3 +663,7 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Zed AI Tool Permissions & Sandboxing: [https://zed.dev/docs/ai/sandboxing](https://zed.dev/docs/ai/sandboxing)
 8. **GitHub Copilot Documentation:**
    - Custom Instructions for GitHub Copilot in VS Code: [https://docs.github.com/en/copilot/customizing-copilot/adding-custom-instructions-for-github-copilot](https://docs.github.com/en/copilot/customizing-copilot/adding-custom-instructions-for-github-copilot)
+9. **Amazon Q Developer Documentation:**
+   - Amazon Q Developer User Guide: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/)
+   - Amazon Q /dev Software Development Agent: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/dev-agent.html](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/dev-agent.html)
+   - Amazon Q CLI Reference: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/command-line.html](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/command-line.html)

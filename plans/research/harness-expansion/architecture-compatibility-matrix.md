@@ -47,7 +47,7 @@ Before any harness or target can be promoted from *Provisional Candidate* to *Ve
 
 ## 2. Architectural Categorization: Skills vs. Rule Scaffolding
 
-To prevent confusion between directory-level tool extensions and prompt guidelines, all targets across Flow are strictly partitioned into two distinct architectural categories:
+To prevent confusion between directory-level tool extensions and prompt guidelines, all targets across Flow are strictly partitioned into distinct architectural categories:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -64,11 +64,26 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ • Cursor Native (~/.cursor/skills/flow)* │ • OpenHands (.openhands/microagents/*.md)   │
 │ • Zed (via ~/.agents/skills/flow)        │ • GitHub Copilot (.github/*instructions.md) │
 │   *Proposed parity target                │ • Goose (.goosehints)                       │
+│                                          │ • Amazon Q Developer (/dev) (.amazonq/)    │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.      │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill        │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context. │
+├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ Category C: Automated Test Gate Hooks    │ Category D: Deferred / Incompatible         │
+│ (Deterministic test command binding)     │ (No autonomous loop / query-only tools)     │
+├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ • Aider (.aider.conf.yml test-cmd)       │ • GitHub Copilot CLI (query only, no loop)  │
+│                                          │ • Amazon Q CLI (interactive query only)     │
+│                                          │ • Continue.dev (unverified tool schema)     │
+│ Nature: Non-agentic test execution hook. │ Nature: Conversational or single-turn only. │
+│ Mechanical gate check on file change.    │ Lacks multi-turn autonomous tool execution. │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
+
+- **Category A (Native Skill Targets):** Direct directory installation of Flow's skill bundle (`SKILL.md`). The agent discovers and dispatches Flow commands natively.
+- **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot, Goose, and **Amazon Q Developer (`/dev` agent)** via `.amazonq/rules/flow.md`.
+- **Category C (Automated Hook / Test Gate Scaffolding):** Harnesses providing deterministic test command binding (e.g., Aider's `test-cmd`).
+- **Category D (Deferred / Incompatible):** Tools lacking an autonomous multi-turn tool execution loop, such as GitHub Copilot CLI, Continue.dev (unverified schema), and standalone **Amazon Q CLI** (`q chat`, `q translate`).
 
 ---
 
@@ -107,6 +122,8 @@ The following table presents the architectural evaluation of candidate harnesses
 | **OpenHands** | B | **CONDITIONAL** | Microagent prompt (`.openhands/microagents/flow.md`) restricted to project-local paths inside Docker. | **Provisional Candidate (Container Scaffold)** |
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | **PASS** | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
+| **Amazon Q (/dev)** | B | **PASS** | Workspace rule scaffolding (`.amazonq/rules/` / prompt); ephemeral runner, zero cloud daemons. | **Provisional Candidate (Priority Rule Scaffold Candidate)** |
+| **Amazon Q CLI** | D | **INCOMPATIBLE** | Standalone interactive CLI query/translation utility; lacks autonomous multi-turn tool execution loop. | **Deferred / Incompatible (Category D: Query Only)** |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
@@ -136,6 +153,7 @@ In accordance with Flow's "Support Thật" (Honest Support) discipline, an empir
 | **Zed Editor** | `NOT DETECTED` on PATH | `~/.config/zed` ABSENT | **BLOCKED on this workstation:** Zed binary/config not detected by local probes. Live trials require an operator workstation running Zed. |
 | **Cursor** | `cursor` NOT DETECTED on PATH | `~/.cursor/skills` DETECTED | **PROVISIONAL:** Skills directory detected (Flow bundle presence not checked by probe); Composer live trial requires an interactive Cursor session. |
 | **Aider** | `aider` NOT DETECTED on PATH | `~/.aider.conf.yml` ABSENT | **BLOCKED on this workstation:** Aider binary/config not detected by local probes. Live test hook trial requires an Aider environment. |
+| **Amazon Q Developer** | `q` NOT DETECTED on PATH | `~/.aws` ABSENT | **BLOCKED on this workstation:** Amazon Q / AWS Toolkit not detected by local probes. Live trials require an operator workstation with VS Code/JetBrains AWS Toolkit. |
 
 **Constitutional Disclosure:**
 Desk evaluations and local test-suite passes (`tests/test_flow_rules.sh`, `pack-rehearsal.sh`) cannot substitute for empirical host verification. All non-Claude/Codex targets remain **Provisional Candidates** until genuine host trials are captured and committed to `plans/research/harness-expansion/evidence/`.
@@ -361,6 +379,30 @@ Action 1 has been implemented on master in commit `c050950a` and verified locall
   4. Never advise skipping security-class checks or modifying `runner/flow.sh`.
   ```
 
+#### 5. Amazon Q Developer (/dev Agent) (Category B: Rule Scaffold)
+- **Context Budget Guard:** Strictly under **1,000 characters** and 150 words to prevent context dilution during `/dev` planning.
+- **Specification:** `<project-root>/.amazonq/rules/flow.md` (~750 characters):
+  ```markdown
+  # Flow Discipline Rules for Amazon Q Developer (/dev)
+
+  You are operating inside a repository governed by Flow (`/flow`).
+  Flow turns coding agents into evidence-gated, kill-honest build processes.
+
+  ## Rules of Engagement
+  1. Inspect project status before modifying code:
+     - On POSIX: `bash skills/flow/runner/flow.sh status`
+     - On Windows: `skills\flow\runner\flow.cmd status`
+  2. Advance stages only when gates pass:
+     - Stage gate: `bash skills/flow/runner/flow.sh next`
+     - Card gate: `bash skills/flow/runner/flow.sh check C-NNN`
+  3. Exit Code Invariant:
+     - Exit 0 = PASS. You may proceed.
+     - Exit != 0 = FAIL. You MUST halt, inspect errors, and repair immediately.
+  4. Respect Allowed Files: Modify only files listed in the active card's Scope.
+  5. Never forge verification proof in `cards/C-NNN.md`.
+  ```
+- **CLI Modality Note:** The standalone `q` CLI is **Category D (Deferred / Incompatible)** because it operates strictly as an interactive query/translation utility without an autonomous multi-turn tool execution loop.
+
 ---
 
 ## 5. Detection Heuristics & False-Positive Guards
@@ -383,6 +425,7 @@ Action 1 has been implemented on master in commit `c050950a` and verified locall
 | **`windsurf`** | B | `.windsurf` | *None* | Scaffolds `.windsurf/rules/flow.md`. |
 | **`roo-code`** | B | Project `.roomodes` | *None* | Scaffolds `.roomodes`. |
 | **`cline`** | B | Project `.clinerules` | *None* | Scaffolds `.clinerules`. |
+| **`amazon-q`** | B | Project `.amazonq/rules` | *None* | Scaffolds `.amazonq/rules/flow.md` for `/dev` agent. |
 
 ---
 
