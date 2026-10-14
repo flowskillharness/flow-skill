@@ -23,7 +23,9 @@ Flow never runs as a persistent daemon or background process. Instead, it relies
 | **Agents Home** (`agents`) | **Full** (universal standard) | **Full** | **Full** | **Full** | Probed fallback path; hooks not supported | Tool-specific auto-discovery | `~/.agents/skills/flow` |
 | **Antigravity** (`antigravity`) | **Full** (dual dest: CLI + IDE) | **Full** (dual dest: CLI + IDE) | **Full** (dual dest: CLI + IDE) | **Full** (reports CLI & Config separately) | Not supported; missing from hook search | Slash command: `/flow <verb>` / `agy` prompt | `~/.gemini/antigravity-cli/skills/flow` & `~/.gemini/config/skills/flow` |
 | **OMP** (`omp`) | **Full** | **Full** | **Full** | **Full** | Probed fallback path; hooks inactive | Direct agent invocation: `flow` / `/flow` | `~/.omp/agent/skills/flow` |
-| **Cursor** (`cursor`) | **Full** (npm-wrapper only) | <span style="color:red">**MISSING**</span> | <span style="color:red">**MISSING**</span> | <span style="color:red">**MISSING**</span> | Not supported; missing from hook search | Agent panel / Composer prompt | `~/.cursor/skills/flow` |
+| **Cursor** (`cursor`) | **Full** | **Full** (implemented on master `c050950a`) | **Full** (implemented on master `c050950a`) | **Full** (implemented on master `c050950a`) | Probed fallback candidate (`~/.cursor/skills/flow`) | Agent panel / Composer prompt | `~/.cursor/skills/flow` |
+
+> **Limitation Notice:** This establishes installer, doctor, and hook candidate parity across tools. Live four-point verification against a running Cursor Composer/Agent host remains provisional / pending live trial.
 
 ---
 
@@ -161,7 +163,8 @@ The npm installer defines 6 distinct targets in `TARGETS`:
     - **Detection heuristic (`install.sh:283`):** `[ -d "${HOME}/.omp/agent/skills" ]`.
 - **Post-Install Verification (`install.sh:304-306`)**:
   Executes `bash "$LAST/runner/flow.sh" doctor || true`.
-- **Critical Gap:** `cursor` is **completely absent** from `install.sh`.
+- **Cursor Target Parity (Implemented on master `c050950a`):**
+  `cursor` is supported in `install.sh` (`install.sh:289-293`), installing to `${HOME}/.cursor/skills/flow` when targeted or when `~/.cursor/skills` exists. Verified locally via `tests/test_install_safe_update.sh:43 pass`.
 
 #### `install.ps1` Implementation
 - **Modes** (`install.ps1:10-11, 218-248`):
@@ -181,7 +184,8 @@ The npm installer defines 6 distinct targets in `TARGETS`:
   - `${env:ProgramFiles(x86)}\Git\bin\bash.exe`
   - `$env:LOCALAPPDATA\Programs\Git\bin\bash.exe`
   Warns if Git Bash is missing because Windows WSL bash cannot handle `C:/` paths.
-- **Critical Gap:** `cursor` is **completely absent** from `install.ps1`.
+- **Cursor Target Parity (Implemented on master `c050950a`):**
+  `cursor` is supported in `install.ps1` (`install.ps1:242-246`), installing to `Join-Path $UserHome '.cursor/skills/flow'` when targeted or when `~/.cursor/skills` exists. Verified locally via `tests/test_install_safe_update.ps1`.
 
 ---
 
@@ -223,9 +227,9 @@ The npm installer defines 6 distinct targets in `TARGETS`:
   ...
   ```
 - **Observations & Gaps**:
-  - `claude`, `codex`, `agents`, `omp`, `antigravity-cli`, and `antigravity-config` are checked.
-  - Project level is only checked for `$ROOT/.claude/skills/flow`.
-  - **`cursor` (`$HOME/.cursor/skills/flow`) is completely absent from `install_homes`.** Running `flow doctor` on a system with Flow installed only into Cursor reports: `install homes: none detected (local project or custom path)` (`skip`).
+  - `claude`, `codex`, `agents`, `omp`, `cursor`, `antigravity-cli`, and `antigravity-config` are checked.
+  - Project level is checked for `$ROOT/.claude/skills/flow`.
+  - **Cursor Check Parity (Implemented on master `c050950a`):** `[ -d "$HOME/.cursor/skills/flow" ]` is integrated into `flow.sh:3134`, verified locally via `tests/test_flow_doctor.sh:62 pass`. Running `flow doctor` on a system with Flow installed into Cursor now cleanly reports `cursor ($HOME/.cursor/skills/flow)`.
 
 ---
 
@@ -396,12 +400,12 @@ The npm installer defines 6 distinct targets in `TARGETS`:
   - Bare `~/.cursor` rejected (editor settings, caches, telemetry).
 - **Invocation Style**:
   - Natural language or slash command inside Cursor Composer / Agent panel.
-- **Gaps & Discrepancies**:
-  - **Missing from `install.sh`**: Cannot be installed via bash script.
-  - **Missing from `install.ps1`**: Cannot be installed via PowerShell script.
-  - **Missing from `flow.sh doctor`**: `install_homes` check #12 does not inspect `~/.cursor/skills/flow`.
-  - **Missing from `adapter-hooks`**: `context_handler.py` does not include Cursor in candidate probing.
-  - No headless CLI probe exists for Cursor to verify skill discovery post-install (`cli.mjs:163-165`).
+- **Parity Status (Action 1 Implemented on Master `c050950a`):**
+  - **`install.sh`**: Parity resolved; installs to `${HOME}/.cursor/skills/flow`.
+  - **`install.ps1`**: Parity resolved; installs to `$UserHome\.cursor\skills\flow`.
+  - **`flow.sh doctor`**: Parity resolved; check #12 (`install_homes`) verifies `~/.cursor/skills/flow`.
+  - **`adapter-hooks`**: Parity resolved; `context_handler.py` probes `~/.cursor/skills/flow` as fallback.
+  - **Runtime Caveat:** No headless CLI probe exists for Cursor to verify skill discovery post-install (`cli.mjs:163-165`). Live four-point verification against a running Cursor Composer/Agent host remains provisional / pending live trial.
 
 ---
 
@@ -418,15 +422,14 @@ The following matrix highlights the exact implementation coverage and identifies
 │ Agents Home     │ YES (Marker)     │ YES (Marker)   │ YES (Marker)    │ YES             │ YES              │
 │ Antigravity     │ YES (Safe Subdir)│ YES (Bare Dir!)│ YES (Bare Dir!) │ YES (Dual Dest) │ NO (Missing)     │
 │ OMP             │ YES (Safe Subdir)│ YES (Safe Sub) │ YES (Safe Sub)  │ YES             │ YES              │
-│ Cursor          │ YES (Safe Subdir)│ NO (MISSING)   │ NO (MISSING)    │ NO (MISSING)    │ NO (Missing)     │
+│ Cursor          │ YES (Safe Subdir)│ YES (c050950a) │ YES (c050950a)  │ YES (c050950a)  │ YES (c050950a)   │
 └─────────────────┴──────────────────┴────────────────┴─────────────────┴─────────────────┴──────────────────┘
 ```
 
-### Key Technical Gaps Identified
-
-1. **Cursor Omission Across Native Scripts**:
-   - Cursor was added to `npm-wrapper` in v0.23 (`constants.mjs`, `detect.mjs`, `cli.mjs`), but the shell scripts (`install.sh`, `install.ps1`) and the doctor check (`skills/flow/runner/flow.sh:3127-3145`) were never updated.
-   - Consequence: Users installing via `bash install.sh global all` or checking health via `/flow doctor` get false-negative reporting on Cursor.
+1. **Cursor Parity Implemented (Master `c050950a`):**
+   - Cursor parity gap has been fully resolved across `install.sh`, `install.ps1`, `flow.sh` doctor check 12, and `context_handler.py`.
+   - Verified via `tests/test_install_safe_update.sh:43 pass` and `tests/test_flow_doctor.sh:62 pass`.
+   - Next step: Run live four-point verification against a running Cursor host.
 
 2. **Antigravity Marker Discrepancy**:
    - `npm-wrapper/src/constants.mjs:35` strictly requires `.gemini/antigravity-cli` or `.gemini/config/skills` to avoid false positives on systems with vanilla Google Gemini CLI.
@@ -450,6 +453,6 @@ The following matrix highlights the exact implementation coverage and identifies
 Flow's current codebase demonstrates high architectural discipline around immutability, receipt verification, and fail-open execution. However, harness support is unevenly synchronized between the modern npm installer and legacy shell/runner scripts.
 
 ### Priorities for Future Harness Expansion:
-1. **Synchronize Cursor**: Bring `install.sh`, `install.ps1`, `flow.sh` doctor check 12, and `context_handler.py` to parity with `npm-wrapper`.
+1. **Execute Live Verification for Cursor**: Validate the four-point runtime protocol against real Cursor Composer/Agent sessions.
 2. **Align Antigravity Marker**: Update `install.sh` and `install.ps1` to test subdirectories instead of bare `~/.gemini`.
 3. **Expand Tier-1 Market Harnesses**: Implement candidate profiles from `plans/research/harness-expansion/market-harness-survey.md` (Cursor rules, Windsurf Cascade, Roo Code, Cline) while adhering strictly to ADR-0001 principles (no daemons, no tool interposition, honest execution via `runner/flow.sh`).

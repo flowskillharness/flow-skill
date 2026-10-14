@@ -1,6 +1,6 @@
 # Market Harness Survey: Expanding Flow to Leading Coding-Agent Harnesses
 
-- **Status:** Complete Technical Deliverable
+- **Status:** Research Deliverable (Provisional Candidate Architecture Evaluation)
 - **Date:** 2026-10-14
 - **Author:** Flow Architecture Research Team
 - **Target File:** `plans/research/harness-expansion/market-harness-survey.md`
@@ -32,26 +32,29 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 | **Shell Awareness** | Explicitly accounts for OS differences (POSIX bash vs. Windows Git Bash via `flow.cmd`). | Blindly injecting `bash .../runner/flow.sh` on Windows cmd/PowerShell where `bash` resolves to WSL with unmapped drive paths. |
 
 ### 1.3 Feasibility Tier Classification
-- **Tier 1 (Immediate Native Harness Support):** Harness natively possesses clean file placement (global skills or project rule hooks) AND autonomous/semi-autonomous terminal tool execution. The agent can run `flow.sh` directly.
-- **Tier 2 (Project-Level Rule / Config Support):** Harness operates primarily via project-level configuration (`.windsurf/rules/`, `.roomodes`, `.aider.conf.yml`, `.github/copilot-instructions.md`) and can execute commands when operating in agent mode or paired with terminal hooks.
+- **Tier 1 (High Priority — Native Architecture Fit):** Harness natively possesses clean file placement (global skills or project rule hooks) AND autonomous/semi-autonomous terminal tool execution. The agent can run `flow.sh` directly.
+- **Tier 2 (Medium Priority — Workspace Rule Scaffolding):** Harness operates primarily via project-level configuration (`.windsurf/rules/`, `.roomodes`, `.aider.conf.yml`, `.github/copilot-instructions.md`) and can execute commands when operating in agent mode or paired with terminal hooks.
 - **Tier 3 (Incompatible or Deferred):** Harness lacks terminal execution capability, requires a persistent background daemon/server (forbidden by ADR 0001), or only supports conversational chat with no tool invocation.
+
+> **Empirical Support Mandate:** All tier assignments reflect architectural capability and market research priority. In accordance with Flow's Anti-Illusion Protocol (ADR-0001, SOP §4), no candidate is designated as "Verified Supported" until it successfully completes the Four-Point Live Verification Protocol on a running host runtime.
 
 ---
 
 ## 2. Comprehensive Candidate Investigations
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             MARKET HARNESS SPECTRUM                              │
-├──────────────────────┬────────────────────────┬──────────────────────────────────┤
-│ TIER 1: Native Auto  │ TIER 2: Project Rules  │ TIER 3: Deferred / Constrained   │
-├──────────────────────┼────────────────────────┼──────────────────────────────────┤
-│ • Cursor (Composer)  │ • Windsurf (Cascade)   │ • GitHub Copilot CLI (no loop)   │
-│ • Roo Code (Modes)   │ • Cline (.clinerules)  │ • Zed Inline Editor (no bash)    │
-│ • Zed Agent (Skills) │ • Aider (Test Hook)    │                                  │
-│                      │ • OpenHands (Docker)   │                                  │
-│                      │ • Copilot VSCode Agent │                                  │
-└──────────────────────┴────────────────────────┴──────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                      MARKET HARNESS SPECTRUM                                      │
+├─────────────────────────────────────┬──────────────────────────┬──────────────────────────────────┤
+│ TIER 1: Priority Native Fit         │ TIER 2: Project Rule Fit │ TIER 3: Deferred / Constrained   │
+├─────────────────────────────────────┼──────────────────────────┼──────────────────────────────────┤
+│ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)   │ • GitHub Copilot CLI (no loop)   │
+│ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)     │ • Zed Inline Editor (no bash)    │
+│                                     │ • Cline (.clinerules)    │                                  │
+│                                     │ • Aider (Test Hook)      │                                  │
+│                                     │ • OpenHands (Docker)     │                                  │
+│                                     │ • Copilot VSCode Agent   │                                  │
+└─────────────────────────────────────┴──────────────────────────┴──────────────────────────────────┘
 ```
 
 ---
@@ -73,10 +76,10 @@ Cursor (by Anysphere) is a leading AI-first code editor forked from VS Code. Its
       ---
       description: "Enforce Flow gated build discipline and runner verification"
       globs: "flow/**,cards/**,*.md,src/**"
-      alwaysApply: true
+      alwaysApply: false
       ---
       ```
-    - `alwaysApply: true` ensures the discipline rules are loaded into every Composer session regardless of open files.
+    - `alwaysApply: false` ensures the discipline rules are scoped specifically to the declared globs without becoming an unintended always-on global prompt.
   - **Legacy Standard:** `.cursorrules` located at the workspace root. Treated as plain markdown and appended to system instructions.
 
 #### 3. Execution Capability & Terminal Autonomy
@@ -97,12 +100,12 @@ Cursor (by Anysphere) is a leading AI-first code editor forked from VS Code. Its
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:**
-  - Global skill in `~/.cursor/skills/flow/SKILL.md` (or project rule `.cursor/rules/flow.mdc` with `alwaysApply: true`).
+  - Global skill in `~/.cursor/skills/flow/SKILL.md` (or project rule `.cursor/rules/flow.mdc` with `alwaysApply: false`).
   - Rule explicitly instructs Composer Agent: *"Before creating or modifying code, run `bash runner/flow.sh status` and `bash runner/flow.sh check`. When working on card C-NNN, verify gate exit codes. An exit code $\neq 0$ is a strict STOP."*
   - Tested in Composer Agent mode with terminal auto-run enabled.
 - **The Marketing Illusion to Avoid:**
   - Putting a generic `.cursorrules` file in a project where the user only uses basic Cursor Chat (Cmd+L) without Agent mode. In standard Chat, Cursor cannot execute shell commands, leading to hallucinated gate passes.
-- **Feasibility Verdict:** **Tier 1 (Immediate Native Support).**
+- **Feasibility Verdict:** **Tier 1 (High-Priority Candidate — Native Architecture Fit; Live Host Trials Pending).**
 
 ---
 
@@ -198,7 +201,7 @@ Cline (formerly Claude Dev) and its advanced fork Roo Code are autonomous AI cod
 - **The Marketing Illusion to Avoid:**
   - Promising an MCP server bridge: Building an MCP daemon to bridge Flow violates ADR 0001 invariants, adds latency, and creates sync bugs.
   - Creating a mode without the `"command"` tool group: If `"command"` is omitted, the agent cannot execute `flow.sh` and will simulate fake gates.
-- **Feasibility Verdict:** **Tier 1 for Roo Code (via `.roomodes`) / Tier 2 for Cline (via `.clinerules`).**
+- **Feasibility Verdict:** **Tier 2 (Priority Candidate — Workspace Rule Scaffolding) for Roo Code (via `.roomodes`) and Cline (via `.clinerules`) (Provisional Candidate; Live Trials Pending).**
 
 ---
 
@@ -213,11 +216,8 @@ Aider (by Paul Gauthier) is the premier terminal-based AI pair programming tool.
   - Key configuration directives:
     ```yaml
     # .aider.conf.yml
-    read:
-      - ".flow/rules.md"
-    test-cmd: "bash skills/flow/runner/flow.sh check"
+    test-cmd: "bash -c 'cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'"
     auto-test: true
-    lint-cmd: "bash skills/flow/runner/flow.sh status"
     ```
 - **Conventions File:** `CONVENTIONS.md` placed at repo root (standard conventions file read by Aider).
 - **Prompt Injection:** `--system-prompt-file` or `system-prompt-file` setting in `.aider.conf.yml`.
@@ -226,7 +226,7 @@ Aider (by Paul Gauthier) is the premier terminal-based AI pair programming tool.
 - Aider is an **interactive pair programmer**, not an unprompted autonomous loop agent.
 - It executes terminal commands through:
   1. `test-cmd`: Run via `/test` or automatically after file edits when `auto-test: true`.
-  2. `lint-cmd`: Run via `/lint`.
+  2. `lint-cmd`: Run via `/lint` (Flow intentionally omits `lint-cmd` to avoid assumptions about internal repo scripts).
   3. Direct shell execution: `/run <command>` or `!<command>`.
 - Aider does not autonomously run a multi-stage planning DAG without human input.
 
@@ -368,7 +368,7 @@ Zed is a high-performance, Rust-built code editor (Zed Industries). Its modern A
   - Zed Agent Panel executes `flow.sh` via its built-in `terminal` tool.
 - **The Marketing Illusion to Avoid:**
   - Claiming Zed Inline Assistant supports Flow. Inline Assistant only generates text diffs in editor buffers; it cannot invoke Flow gates.
-- **Feasibility Verdict:** **Tier 1 (Immediate Native Support via Universal `~/.agents/skills/flow` + Agent Panel).**
+- **Feasibility Verdict:** **Tier 1 Candidate (Provisional Native Skill Target via Universal `~/.agents/skills/flow` + `AGENTS.md`; Live Host Trial Pending).**
 
 ---
 
@@ -376,9 +376,9 @@ Zed is a high-performance, Rust-built code editor (Zed Industries). Its modern A
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cursor** | `.cursor/rules/*.mdc` | `~/.cursor/skills/` | `.cursor/rules/flow.mdc` | `run_terminal_cmd` | Autonomous (YOLO) / Prompted | **Tier 1** |
-| **Roo Code** | `.roomodes` (JSON) | N/A (VSCode Storage) | `.roomodes` / `.clinerules` | `execute_command` | Autonomous (Auto-approve) | **Tier 1** |
-| **Zed** | `SKILL.md` / `AGENTS.md` | `~/.agents/skills/` | `.agents/skills/` / `AGENTS.md`| `terminal` | Autonomous (Permissions) | **Tier 1** |
+| **Cursor** | `.cursor/rules/*.mdc` | `~/.cursor/skills/` | `.cursor/rules/flow.mdc` | `run_terminal_cmd` | Autonomous (YOLO) / Prompted | **Tier 1 (Priority Native Fit Candidate)** |
+| **Roo Code** | `.roomodes` (JSON) | N/A (VSCode Storage) | `.roomodes` | `execute_command` | Autonomous (Auto-approve) | **Tier 2 (Priority Rule Scaffold Candidate)** |
+| **Zed** | `SKILL.md` / `AGENTS.md` | `~/.agents/skills/` | `.agents/skills/` / `AGENTS.md`| `terminal` | Autonomous (Permissions) | **Tier 1 (Provisional Candidate)** |
 | **Windsurf** | `.windsurf/rules/*.md`| `global_rules.md` | `.windsurf/rules/flow.md` | `run_command` | Autonomous / Prompted | **Tier 2** |
 | **Cline** | `.clinerules` | N/A (VSCode Storage) | `.clinerules` | `execute_command` | Autonomous (Auto-approve) | **Tier 2** |
 | **Aider** | `.aider.conf.yml` | `~/.aider.conf.yml` | `.aider.conf.yml` | `test-cmd` / `/run` | Semi-autonomous (Pair hook) | **Tier 2** |
@@ -419,7 +419,7 @@ Zed is a high-performance, Rust-built code editor (Zed Industries). Its modern A
 ## 5. Architectural Implementation Plan
 
 ### 5.1 Updates to Installer Detection (`npm-wrapper/src/constants.mjs`)
-We expand `TARGETS` with accurate markers and labels:
+Cursor target parity has already landed (`c050950a`) in `npm-wrapper/src/constants.mjs`, while candidates like `zed` alias are design proposals:
 
 ```javascript
 // Additions to npm-wrapper/src/constants.mjs
@@ -473,36 +473,68 @@ export const TARGETS = [
 ];
 ```
 
-### 5.2 Project-Level Scaffolding Command (`flow init --harness <name>`)
-To guarantee "Support Thật", Flow's CLI should provide a command to generate verified project-level rule files:
+### 5.2 Project-Level Scaffolding Command (`flow rules <harness> [--write]`)
+To guarantee "Support Thật", Flow's CLI provides the scaffolding command `flow rules <harness> [--write]` (not `flow init`). Flow provides `flow rules <harness>` to preview verified rule templates, and `flow rules <harness> --write` creates the rule file with atomic write and strict overwrite refusal (exits 1 if file already exists) to protect user configuration.
 
-1. **For Cursor (`--harness cursor`):**
-   Writes `.cursor/rules/flow.mdc`:
+1. **For Cursor (`flow rules cursor [--write]`):**
+   Writes `.cursor/rules/flow.mdc` with the exact hardened template:
    ```markdown
    ---
-   description: "Flow Gated Build Discipline"
-   globs: "flow/**,cards/**,src/**,*.md"
-   alwaysApply: true
+   description: Flow buildflow discipline layer and gated execution engine
+   globs: flow/**,cards/**,*.md,src/**
+   alwaysApply: false
    ---
-   # Flow Discipline Layer
-   Before coding, run mechanical gates: `bash runner/flow.sh status` and `bash runner/flow.sh check`.
+
+   # Flow Discipline Rules for Cursor
+
+   You are operating inside a repository managed by Flow (`/flow`).
+   Flow turns coding agents into evidence-gated, kill-honest build processes.
+
+   ## Rules of Engagement
+   1. **Never edit files without an active card.** Check in-flight cards via `bash skills/flow/runner/flow.sh status`.
+   2. **Always inspect gates before coding.** Run `bash skills/flow/runner/flow.sh next` or `bash skills/flow/runner/flow.sh check C-NNN`.
+   3. **Respect Allowed Files.** Only modify files explicitly listed in the active card's `## Allowed files` section.
+   4. **Never fake verify proof.** Paste real terminal output, exit codes, and URLs into `## Evidence`.
    ```
 
-2. **For Roo Code (`--harness roo`):**
-   Generates or updates `.roomodes` with the dedicated `flow` mode and `"command"` permissions.
+2. **For Roo Code (`flow rules roo [--write]`):**
+   Materializes `.roomodes` with customMode `flow` and tool permissions if absent (refuses overwrite if exists):
+   ```json
+   {
+     "customModes": [
+       {
+         "slug": "flow",
+         "name": "Flow Discipline",
+         "roleDefinition": "You are a disciplined software engineer operating under Flow gates. You never write code without an active card and you verify all changes against card criteria.",
+         "groups": [
+           "read",
+           ["edit", { "fileRegex": "^(cards/.*|src/.*|tests/.*|flow/.*)$", "description": "Flow and source directories" }],
+           ["command", { "commandRegex": "^bash skills/flow/runner/flow\\.sh.*", "description": "Flow runner execution" }]
+         ]
+       }
+     ]
+   }
+   ```
 
-3. **For Windsurf (`--harness windsurf`):**
+3. **For Windsurf (`flow rules windsurf [--write]`):**
    Writes `.windsurf/rules/flow.md` with concise runner execution rules under 6,000 characters.
 
-4. **For Aider (`--harness aider`):**
-   Generates `.aider.conf.yml` with `test-cmd: "bash runner/flow.sh check"` and `auto-test: true`.
+4. **For Cline (`flow rules cline [--write]`):**
+   Writes `.clinerules` with runner execution rules.
 
-5. **For OpenHands (`--harness openhands`):**
-   Installs `skills/flow/` into project and writes `.openhands/microagents/flow.md`.
+5. **For Aider (`flow rules aider [--write]`):**
+   Generates `.aider.conf.yml` with the exact hardened `test-cmd` (and no `lint-cmd`):
+   ```yaml
+   # Aider configuration for Flow discipline layer
+   test-cmd: "bash -c 'cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'"
+   auto-test: true
+   ```
 
-6. **For GitHub Copilot (`--harness copilot`):**
+6. **For OpenHands (`flow rules openhands [--write]`):**
+   Writes project microagent guidance at `.openhands/microagents/flow.md` (requires a project-local runner `skills/flow/runner/flow.sh` already present inside the container).
+
+7. **For GitHub Copilot (`flow rules copilot [--write]`):**
    Writes `.github/copilot-instructions.md`.
-
 ---
 
 ## 6. Authenticity Verification Protocol (The 4-Point Gate Test)

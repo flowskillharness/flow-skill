@@ -38,8 +38,8 @@ Before any harness or target can be promoted from *Provisional Candidate* to *Ve
 │ 3. Gate-Stop Check      │ Host halts and initiates repair on mechanical exit != 0.     │
 │                         │ The agent NEVER hallucinates that a failed gate passed.       │
 ├─────────────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4. Receipt Integrity    │ Deterministic receipts (`manifest-hashes.json`,              │
-│                         │ `.flow/workspaces.jsonl`, etc.) are written and verifiable.  │
+│ 4. State Integrity      │ Verified stage progression artifacts (`flow/01-research.md`  │
+│                         │ unlocked, fresh `flow status` readback from disk/git).       │
 └─────────────────────────┴──────────────────────────────────────────────────────────────┘
 ```
 
@@ -62,8 +62,8 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ • Antigravity CLI & IDE (~/.gemini/...)  │ • Roo Code (.roomodes)                      │
 │ • OMP (~/.omp/agent/skills/flow)         │ • Aider (.aider.conf.yml test hook)         │
 │ • Cursor Native (~/.cursor/skills/flow)* │ • OpenHands (.openhands/microagents/*.md)   │
-│   *Proposed parity target                │ • GitHub Copilot (.github/*instructions.md) │
-├──────────────────────────────────────────┼─────────────────────────────────────────────┤
+│ • Zed (via ~/.agents/skills/flow)        │ • GitHub Copilot (.github/*instructions.md) │
+│   *Proposed parity target                │                                             │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.      │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill        │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context. │
@@ -97,26 +97,60 @@ The following table presents the architectural evaluation of candidate harnesses
 
 | Candidate Harness | Category | Constitutional Compliance | Invariant Adherence Analysis | Provisional Status |
 | :--- | :---: | :---: | :--- | :---: |
-| **Cursor Native** | A | **PASS** | Evaluated for skill discovery via `~/.cursor/skills/flow`. Uses standard POSIX/cmd execution. | **Provisional Candidate (Action 1 Parity)** |
-| **Zed Assistant** | A | **PASS** | Evaluated as an alias to the universal `~/.agents/skills/flow` standard. Uses native terminal tool. | **Provisional Candidate (Design Proposal)** |
+| **Cursor Native** | A | **PASS** | Installer, doctor, and hook parity implemented on master (`c050950a`). | **Provisional Candidate (Code Parity Verified; Host Trial Pending)** |
+| **Zed Assistant** | A | **PASS** | Evaluated as native Agent Skills target (`~/.agents/skills/flow`) + `AGENTS.md`. No pseudo-rules. | **Category A Native Standard (Not Category B Rules)** |
 | **Cursor Rules** | B | **PASS** | Workspace rule scaffolding (`.cursor/rules/flow.mdc`). Directs Composer/Agent to run `flow.sh`. | **Provisional Candidate (Rule Scaffold)** |
 | **Roo Code** | B | **PASS** | Custom mode prompt (`.roomodes`) with explicit `command` execution group permissions. | **Provisional Candidate (Rule Scaffold)** |
 | **Cline** | B | **PASS** | Workspace prompt instructions (`.clinerules`) requesting terminal approval for runner calls. | **Provisional Candidate (Rule Scaffold)** |
 | **Windsurf** | B | **PASS** | Compact project rules (`.windsurf/rules/flow.md`, <6,000 chars) directing Cascade execution tool. | **Provisional Candidate (Rule Scaffold)** |
-| **Aider** | B | **PASS** | Config hook (`.aider.conf.yml`) setting `test-cmd: "bash runner/flow.sh check"` with `auto-test: true`. | **Provisional Candidate (Test Hook Scaffold)** |
+| **Aider** | C | **PASS** | Config hook (`.aider.conf.yml`) setting `test-cmd: "bash runner/flow.sh check"` with `auto-test: true`. | **Provisional Candidate (Test Hook Scaffold)** |
 | **OpenHands** | B | **CONDITIONAL** | Microagent prompt (`.openhands/microagents/flow.md`) restricted to project-local paths inside Docker. | **Provisional Candidate (Container Scaffold)** |
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 
+
+### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
+
+Flow's constitutional integrity under ADR-0001 requires mechanical honesty. Inventing configuration files that a host runtime never loads constitutes false marketing ("quảng cáo ảo") and an **Illusion Trap**:
+
+#### 1. Why `.zed/rules.md` Was Constitutionally Rejected
+- **Non-Existent Target Path:** Zed Editor does not possess a `.zed/rules.md` configuration mechanism or arbitrary `.zed/rules/` directory (Zed documentation confirms no such rules engine; official rules URLs return 404). Creating `.zed/rules.md` produces an inert, unread file.
+- **Zed's Authentic Architecture (Category A Native Standard):** Zed integrates natively with the open Agent Skills standard. Zed's agent panel discovers skills from `~/.agents/skills/` (user-level) and `.agents/skills/` (project-level), paired with `AGENTS.md` at workspace root for global instruction prompts.
+- **Existing Flow Support:** Flow already installs to `~/.agents/skills/flow` via the `agents` installation target (`npx flow-skill -t agents` or `install.sh -t agents`). Zed uses its native terminal tool to execute `bash runner/flow.sh`.
+- **Architectural Verdict:** Zed is strictly **Category A (Native Skill Target + `AGENTS.md`)**. Adding a faux `.zed/rules.md` scaffolding in `flow rules` was rejected as an illusion trap that violates Flow's evidence-first discipline.
+
+#### 2. Why Continue.dev (`continue`) Was Deferred
+- **Unverified Schema & Tool-Loop Execution:** Continue.dev features multiple evolving configuration mechanisms (`config.yaml`, `.continue/rules/`, `.continue/prompts/`). More fundamentally, Continue.dev's active tool-loop execution capability (autonomous execution of terminal commands, parsing non-zero exit codes, and halting on gate failure) has not been empirically verified against real running hosts.
+- **Architectural Verdict:** Under the Four-Point Live Verification Protocol, scaffolding cannot be added to `flow rules` without authoritative schema documentation and live tool-loop execution verification. Speculative inclusion would introduce unverified, hollow compatibility.
+
+#### 3. Strict Boundary of `flow rules`
+`flow rules` is locked to the 7 implemented scaffolding templates (cursor, windsurf, roo, cline, openhands, copilot in Category B; aider in Category C), where templates are mechanically tested locally, while live host and schema behaviors remain provisional pending Phase 4 trials.
+### 3.5 Empirical Workstation Runtime Probe & Host-Access Blocker Disclosure
+
+In accordance with Flow's "Support Thật" (Honest Support) discipline, an empirical probe of the host development workstation (Linux x64, 2026-10-14) was executed to determine whether live Phase 4 trials could be run locally:
+
+| Candidate Harness | Host Binary Status | Configuration Path | Live Host Trial Feasibility on Current Workstation |
+| :--- | :--- | :--- | :--- |
+| **Windsurf Cascade** | `NOT DETECTED` on PATH | `~/.codeium` ABSENT | **BLOCKED on this workstation:** Windsurf binary/config not detected by local probes. Live trials require an operator workstation running Windsurf. |
+| **OpenHands** | `docker` NOT DETECTED on PATH | Daemon / socket ABSENT | **BLOCKED for local Docker trial:** Docker runtime not detected by local probes. Container live trials require an environment with Docker and OpenHands. |
+| **Zed Editor** | `NOT DETECTED` on PATH | `~/.config/zed` ABSENT | **BLOCKED on this workstation:** Zed binary/config not detected by local probes. Live trials require an operator workstation running Zed. |
+| **Cursor** | `cursor` NOT DETECTED on PATH | `~/.cursor/skills` DETECTED | **PROVISIONAL:** Skills directory detected (Flow bundle presence not checked by probe); Composer live trial requires an interactive Cursor session. |
+| **Aider** | `aider` NOT DETECTED on PATH | `~/.aider.conf.yml` ABSENT | **BLOCKED on this workstation:** Aider binary/config not detected by local probes. Live test hook trial requires an Aider environment. |
+
+**Constitutional Disclosure:**
+Desk evaluations and local test-suite passes (`tests/test_flow_rules.sh`, `pack-rehearsal.sh`) cannot substitute for empirical host verification. All non-Claude/Codex targets remain **Provisional Candidates** until genuine host trials are captured and committed to `plans/research/harness-expansion/evidence/`.
 ---
 
 ## 4. Target Expansion Specification (Design Proposals)
 
-*Notice: Actions 1, 2, and 3 below are architectural design specifications. They are not active in production code until Phase 3 execution and four-point verification are complete.*
+*Notice: Action 1 has been implemented and verified in code on master (`c050950a`). Actions 2 and 3 below remain architectural design specifications pending execution in Phase 3.*
 
-### Action 1: Fix Internal Parity Gap (Cursor Native Skill Target)
+### Action 1: Fix Internal Parity Gap (Cursor Native Skill Target) — [IMPLEMENTED & VERIFIED ON MASTER `c050950a`]
 *Category: Category A (Native Skill Target)*
 
 The Phase 1 audit revealed that Cursor was integrated into `npm-wrapper` (`constants.mjs:43-57`), but was omitted from shell scripts (`install.sh`), PowerShell scripts (`install.ps1`), doctor checks (`skills/flow/runner/flow.sh:3127-3145`), and adapter hook search paths (`context_handler.py:276-280`).
+
+**Implementation & Verification Status:**
+Action 1 has been implemented on master in commit `c050950a` and verified locally via `tests/test_install_safe_update.sh:43 pass` and `tests/test_flow_doctor.sh:62 pass`. Live four-point runtime gate enforcement remains provisional pending real Cursor Composer/Agent host execution.
 
 #### 1. Shell Installer Parity (`install.sh`)
 - **Specification:** Add `cursor` target to `install.sh`:
@@ -167,7 +201,7 @@ The Phase 1 audit revealed that Cursor was integrated into `npm-wrapper` (`const
 ### Action 2: Universal Native Target & Tier 1 Rule Scaffolding
 
 #### 1. Formalize `zed` Target (Category A: Native Skill Target)
-- **Concept:** Zed adheres to the universal Agent Skills standard (`~/.agents/skills/`). Zed reads skills directly from `~/.agents/skills/`.
+- **Concept:** Zed adheres to the universal Agent Skills standard (`~/.agents/skills/`). Zed reads skills directly from `~/.agents/skills/` and workspace instructions from root `AGENTS.md`. Zed does NOT support `.zed/rules.md` (rejected as an illusion trap).
 - **Target Specification in `constants.mjs`**:
   - `name`: `'zed'`
   - `label`: `'Zed Editor (~/.agents/skills/flow via .config/zed)'`
@@ -175,7 +209,7 @@ The Phase 1 audit revealed that Cursor was integrated into `npm-wrapper` (`const
   - `destTemplates`: `['~/.agents/skills/flow']`
   - `alwaysInclude`: `false`
   - `projectScopeAllowed`: `false`
-- **Execution Mechanism:** In Zed, the assistant panel dispatches terminal commands directly or pulls context using slash commands. Aliasing `zed` directly to `~/.agents/skills/flow` avoids duplicating byte trees on disk while providing a first-class CLI selector (`npx flow-skill -t zed`).
+- **Execution Mechanism:** In Zed, the assistant panel dispatches terminal commands directly or pulls context using slash commands. Aliasing `zed` directly to `~/.agents/skills/flow` avoids duplicating byte trees on disk while providing a first-class CLI selector (`npx flow-skill -t zed`). Instructions are provided by `AGENTS.md` at workspace root.
 
 #### 2. Project Rule Scaffolding for Cursor (Category B: Rule Scaffold)
 - **Specification:** `<project-root>/.cursor/rules/flow.mdc`
@@ -184,7 +218,7 @@ The Phase 1 audit revealed that Cursor was integrated into `npm-wrapper` (`const
   ---
   description: Flow buildflow discipline layer and gated execution engine
   globs: flow/**,cards/**,*.md,src/**
-  alwaysApply: true
+  alwaysApply: false
   ---
   ```
 - **Content:**
