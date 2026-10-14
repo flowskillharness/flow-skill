@@ -28,10 +28,10 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Classification:** **Category B (Workspace Rule Scaffolding for IDE /dev Agent) & Category D (Deferred for CLI chat)**.
 - **Qualification Status:** **PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)**.
 - **Qualification Rationale:**
-  - Amazon Q Developer exhibits a split architectural modality. When operating in an IDE via the `/dev` autonomous feature development agent, it can ingest workspace instructions and execute build and terminal commands within the workspace environment, qualifying it as **Category B (Workspace Rule Scaffolding)**.
-  - Conversely, the standalone `q` CLI operates strictly as an interactive conversational query utility and shell translation helper, lacking an autonomous multi-turn tool invocation loop or deterministic build gating engine, qualifying it as **Category D (Deferred / Incompatible)** (Legacy query-only; successor transition pending current-source verification).
+  - Amazon Q Developer exhibits a split architectural modality. When operating in an IDE via the `/dev` autonomous feature development agent, it is hypothesized in desk review to ingest workspace context and execute build/terminal commands, evaluated as a **proposed Category B design candidate**.
+  - Conversely, the standalone `q` CLI is unassessed in live trials, historically functioning as an interactive conversational query utility (provisional Category D; successor transition pending current-source verification).
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), claiming "Amazon Q support" without disambiguating the IDE `/dev` agent from the `q` CLI is marketing deception ("quảng cáo ảo").
-  - Furthermore, Amazon Q Developer does not implement directory-based skill discovery (Category A) such as `~/.agents/skills/` or `~/.claude/skills/`. All Flow integration must occur via workspace rule scaffolding paired with a repository-vendored runner (`skills/flow/runner/flow.sh`).
+  - Furthermore, Amazon Q Developer does not implement directory-based skill discovery (Category A) such as `~/.agents/skills/` or `~/.claude/skills/`. Any prospective Flow integration is proposed to occur via manual prompt/workspace context paired with a repository-vendored runner (`skills/flow/runner/flow.sh`), since Flow does not ship an `.amazonq/` template.
   - **Template Clarification:** Flow's `flow rules` command does **NOT** implement an Amazon Q template. Per the compatibility matrix (§3.4), Amazon Q is locked to **seven verified templates**; Amazon Q integration is currently a **proposed design** relying on manual prompt/workspace context or generic root instruction files (such as `AGENTS.md`).
   - Because Amazon Q Developer does not offer an unauthenticated, local headless evaluation CLI for automated CI qualification, full verification requires an interactive host session executing the Four-Point Live Verification Protocol with raw tool transcripts, exit codes, and receipts archived to `plans/research/harness-expansion/evidence/`.
 
@@ -117,9 +117,9 @@ Amazon Q Developer ingests workspace context through two primary mechanisms:
 
 > **Design-Proposal Status:** `.amazonq/rules/` is an **un-implemented design proposal** rather than an authoritative vendor schema. It does not reflect a verified, vendor-documented ingestion path.
 
-1. **Project-Level Instruction Scaffolding (Workspace Rules):**
-   - Amazon Q reads project instruction files located in the workspace repository (e.g., `.amazonq/rules/`, `.aws/amazonq-rules.md`, or root `AGENTS.md` / markdown instructions referenced in the workspace).
-   - In standard IDE workspaces, markdown-based rule files provide explicit guidance to the `/dev` agent regarding repository build requirements, allowed files, and verification commands.
+1. **Workspace Context Hypotheses (Design Concept):**
+   - Unlike Cursor (`.cursor/rules/*.mdc`) or Windsurf (`.windsurf/rules/*.md`), Amazon Q Developer has no verified, vendor-documented rule folder schema like `.amazonq/rules/`. Any prospective integration relies on general workspace context injection, prompt framing, or root instruction files such as `AGENTS.md`.
+   - Flow does not ship an `.amazonq/` template in `flow rules`; all references here represent unverified design hypotheses.
 2. **Context Budgeting & Rule Sizing:**
    - Amazon Q Developer maintains bounded context window allocations for repository instructions to prevent prompt dilution.
    - Flow rule scaffolding must remain compact (strictly under 1,000 characters and 150 words), ensuring high attention retention during multi-file `/dev` planning.
@@ -160,9 +160,9 @@ A critical architectural boundary occurs when Amazon Q `/dev` executes in cloud 
 ### 3.1 Latent Trap 1: Dual Modality Confusion (`/dev` Agent vs. `q` CLI)
 - **The Pitfall:** Marketing Flow as "compatible with Amazon Q Developer" without specifying the operational modality. A developer installs the `q` CLI, attempts to run a Flow lifecycle command, and discovers that `q chat` is merely a conversational assistant that cannot execute tools or enforce gates.
 - **The Grounded Technical Reality:**
-  - The `q` CLI is purely an interactive question-answering tool and shell translator (Category D). It lacks an autonomous multi-turn tool execution loop.
-  - Only the `/dev` agent mode in IDEs (VS Code, JetBrains) possesses the workspace tool execution capabilities necessary for Flow build discipline (Category B).
-- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that Flow compatibility is scoped to the **IDE `/dev` agent** (Category B), while the standalone `q` CLI is **Category D (Deferred / Incompatible)**.
+  - The standalone `q` CLI is unassessed in live trials, historically functioning as an interactive query/translation utility (provisional Category D); successor transitions (e.g., AWS / Kiro tooling updates) are pending current-source verification. No autonomous multi-turn tool execution loop has been verified in it.
+  - Only the `/dev` agent mode in IDEs (VS Code, JetBrains) is hypothesized (desk review, unverified live) to possess the workspace tool execution capabilities necessary for Flow build discipline (proposed Category B design candidate).
+- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that any prospective Flow compatibility is scoped to the **IDE `/dev` agent** (proposed Category B design), while the standalone `q` CLI is unassessed in live trials and provisionally **Category D**, pending current-source verification.
 
 ### 3.2 Latent Trap 2: Cloud Workspace Sandbox Boundaries & Host Path Failures
 - **The Pitfall:** Scaffolding rules that instruct Amazon Q to invoke a globally installed Flow path (e.g., `bash ~/.agents/skills/flow/runner/flow.sh` or `bash ~/.claude/skills/flow/runner/flow.sh`).
