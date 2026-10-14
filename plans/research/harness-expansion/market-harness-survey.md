@@ -50,7 +50,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 ├─────────────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────┤
 │ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)                       │ • GitHub Copilot CLI (no loop)   │
 │ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)                         │ • Zed Inline Editor (no bash)    │
-│                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (Unassessed query utility)         │
+│                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (Historical query utility; successor capability unassessed)         │
 │                                     │ • Aider (Test Hook)                          │                                  │
 │                                     │ • OpenHands (Docker)                         │                                  │
 │                                     │ • Copilot VSCode Agent                       │                                  │
@@ -438,7 +438,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
   - Referencing unreachable host paths (`~/.agents/skills/...`) inside cloud containerized sandboxes.
 - **Feasibility Verdict:**
   - **Amazon Q (/dev Agent): Tier 2 Priority Candidate (Provisional Un-implemented Design Proposal; Score 66/100; Live Host Trial Pending).**
-  - **Amazon Q CLI: Tier 3 Deferred (Unassessed / Pending Verification: Legacy query utility; successor transition pending current-source verification).**
+  - **Amazon Q CLI: Unassessed / Pending Verification (historically query utility; current Kiro successor tool-loop capability unassessed).**
 ---
 
 ## 3. Cross-Harness Comparison & Technical Matrix
@@ -456,7 +456,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Autonomous (/dev mode) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
-| **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; successor transition pending)** |
+| **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
 

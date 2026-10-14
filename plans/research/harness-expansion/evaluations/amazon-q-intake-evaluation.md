@@ -76,11 +76,13 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 │ (Category B: Workspace Rule Scaffolding) │ (Deferred / Unassessed; Successor Transition Pending)       │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & JetBrains IDEs    │ Environment: Terminal shell (`q chat`)      │
-│ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Single-turn or chat question    │
-│ Tool Capability: Workspace terminal &    │ Tool Capability: None (suggests commands,   │
-│ file edits via AWS Toolkit engine        │ but does not own an autonomous tool loop)   │
+│ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Unassessed (Historically        │
+│ Tool Capability: Workspace terminal &    │ conversational; successor loop unassessed)  │
+│ file edits via AWS Toolkit engine        │ Tool Capability: Unassessed (Historically   │
+│                                          │ query/translation only; current Kiro        │
+│                                          │ successor capability unassessed)            │
 │ Ingestion: Workspace rules & prompt context│ Ingestion: Interactive CLI queries only   │
-│ Status: Provisional Candidate            │ Status: Deferred / Unassessed               │
+│ Status: Provisional Candidate            │ Status: Unassessed / Pending Verification   │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
