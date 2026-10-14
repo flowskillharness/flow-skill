@@ -63,7 +63,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ • OMP (~/.omp/agent/skills/flow)         │ • Aider (.aider.conf.yml test hook)         │
 │ • Cursor Native (~/.cursor/skills/flow)* │ • OpenHands (.openhands/microagents/*.md)   │
 │ • Zed (via ~/.agents/skills/flow)        │ • GitHub Copilot (.github/*instructions.md) │
-│   *Proposed parity target                │                                             │
+│   *Proposed parity target                │ • Goose (.goosehints)                       │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.      │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill        │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context. │
@@ -106,6 +106,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **Aider** | C | **PASS** | Config hook (`.aider.conf.yml`) setting `test-cmd: "bash runner/flow.sh check"` with `auto-test: true`. | **Provisional Candidate (Test Hook Scaffold)** |
 | **OpenHands** | B | **CONDITIONAL** | Microagent prompt (`.openhands/microagents/flow.md`) restricted to project-local paths inside Docker. | **Provisional Candidate (Container Scaffold)** |
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
+| **Goose** | B | **PASS** | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle

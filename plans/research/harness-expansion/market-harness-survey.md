@@ -54,6 +54,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Aider (Test Hook)      │                                  │
 │                                     │ • OpenHands (Docker)     │                                  │
 │                                     │ • Copilot VSCode Agent   │                                  │
+│                                     │ • Goose (.goosehints)    │                                  │
 └─────────────────────────────────────┴──────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -370,6 +371,36 @@ Zed is a high-performance, Rust-built code editor (Zed Industries). Its modern A
   - Claiming Zed Inline Assistant supports Flow. Inline Assistant only generates text diffs in editor buffers; it cannot invoke Flow gates.
 - **Feasibility Verdict:** **Tier 1 Candidate (Provisional Native Skill Target via Universal `~/.agents/skills/flow` + `AGENTS.md`; Live Host Trial Pending).**
 
+
+### Candidate 8: Goose
+
+#### 1. System Overview & Harness Architecture
+Goose (developed by Block, Inc.; open-source under Apache-2.0, repository: https://github.com/block/goose, docs: https://block.github.io/goose) is an autonomous software engineering agent available as both a high-performance CLI (`goose cli` / `goose session`) and a desktop application (Goose Desktop). Written primarily in Rust, Goose operates in an autonomous multi-turn reasoning and execution loop, utilizing tool extensions (prominently leveraging the Model Context Protocol - MCP) alongside built-in developer tools.
+
+#### 2. Extension & Integration Mechanism
+- **Workspace Instruction Scaffolding:**
+  - Goose ingests project-level instructions via `.goosehints` located at the repository root.
+  - On session start, Goose loads `.goosehints` into the active system context window to guide tool usage and project-level operational discipline.
+- **Developer Extension & Tool Execution:**
+  - Goose features a built-in `developer` extension providing shell execution capabilities via `developer__shell` (or `execute`).
+  - Terminal subshell commands run directly on the host operating system, capturing stdout, stderr, and integer exit codes.
+
+#### 3. Constitutional Audit: Rejection of Resident MCP Server Daemons
+- While Goose extensively uses MCP extensions, implementing Flow as a persistent, resident MCP server daemon is **constitutionally forbidden** under ADR-0001 (Zero Resident Daemons, Process Token Ownership).
+- Flow's state lives strictly on disk (`flow/*.md`, `cards/C-NNN.md`) and in git.
+- Goose interacts with Flow **strictly ephemerally** via its developer shell tool (`developer__shell` / `execute`) executing `bash skills/flow/runner/flow.sh <command>`, terminating on return.
+
+#### 4. Execution Capability & Mechanical Gate Enforcement
+- **Terminal Invocation:** The autonomous agent dispatches Flow lifecycle verbs (`status`, `next`, `check C-NNN`) via the developer shell tool.
+- **Gate-Stop Invariant:** Non-zero exit codes ($exit \neq 0$) from `flow.sh` are captured and returned to the model loop, mandating an immediate halt and preventing hallucinated gate passes.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:**
+  - A lightweight `.goosehints` file binds Goose to Flow's gated buildflow.
+  - Goose executes `bash skills/flow/runner/flow.sh` via its built-in shell tool and strictly respects non-zero exit codes.
+- **The Marketing Illusion to Avoid:**
+  - Building a resident MCP daemon that runs in the background, violating ADR-0001 and causing state-desynchronization traps.
+- **Feasibility Verdict:** **Tier 2 Priority Candidate (Provisional Category B Instruction Scaffold; Score 72/100; Live Host Trial Pending).**
 ---
 
 ## 3. Cross-Harness Comparison & Technical Matrix
@@ -384,6 +415,7 @@ Zed is a high-performance, Rust-built code editor (Zed Industries). Its modern A
 | **Aider** | `.aider.conf.yml` | `~/.aider.conf.yml` | `.aider.conf.yml` | `test-cmd` / `/run` | Semi-autonomous (Pair hook) | **Tier 2** |
 | **OpenHands** | Microagent (`.md`) | N/A (Isolated Docker) | `.openhands/microagents/` | `execute_bash` | Autonomous (Container) | **Tier 2** |
 | **Copilot (VSCode)**| `copilot-instructions.md` | Settings | `.github/copilot-instructions.md` | Terminal proposal | Semi-autonomous (Prompted) | **Tier 2** |
+| **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
 
 ---
