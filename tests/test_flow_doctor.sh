@@ -311,24 +311,32 @@ ck 0 "$rc" "doctor --check bounded_json on valid directory exits 0"
 ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
 ck "ok" "$ck_status" "valid context-handoff produces ok status"
 
-# F3. Symlinked context-handoff directory -> fail status, doctor exit 1
-rm -rf "$SB_DOC/.flow/context-handoff"
-mkdir -p "$SB_DOC/fake-handoff"
-ln -s "$SB_DOC/fake-handoff" "$SB_DOC/.flow/context-handoff"
-out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
-ck 1 "$rc" "doctor --check bounded_json on symlink directory exits 1"
-ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
-ck "fail" "$ck_status" "symlinked context-handoff produces fail status"
+# F3. Symlinked context-handoff directory -> fail status, doctor exit 1 (POSIX symlink check)
+IS_WIN=0
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*) IS_WIN=1 ;;
+esac
+if [ "$IS_WIN" -eq 0 ]; then
+  rm -rf "$SB_DOC/.flow/context-handoff"
+  mkdir -p "$SB_DOC/fake-handoff"
+  ln -s "$SB_DOC/fake-handoff" "$SB_DOC/.flow/context-handoff"
+  out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+  ck 1 "$rc" "doctor --check bounded_json on symlink directory exits 1"
+  ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+  ck "fail" "$ck_status" "symlinked context-handoff produces fail status"
 
-# F4. Unsafe permissions (0777) on directory -> fail status, doctor exit 1
-rm -rf "$SB_DOC/.flow/context-handoff" "$SB_DOC/fake-handoff"
-mkdir -p "$SB_DOC/.flow/context-handoff"
-chmod 0777 "$SB_DOC/.flow/context-handoff"
-out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
-ck 1 "$rc" "doctor --check bounded_json on unsafe permissions exits 1"
-ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
-ck "fail" "$ck_status" "unsafe directory mode produces fail status"
-
+  # F4. Unsafe permissions (0777) on directory -> fail status, doctor exit 1
+  rm -rf "$SB_DOC/.flow/context-handoff" "$SB_DOC/fake-handoff"
+  mkdir -p "$SB_DOC/.flow/context-handoff"
+  chmod 0777 "$SB_DOC/.flow/context-handoff"
+  out="$(bash "$RUN" doctor --check bounded_json --json 2>&1)"; rc=$?
+  ck 1 "$rc" "doctor --check bounded_json on unsafe permissions exits 1"
+  ck_status="$("$PY" -c 'import sys, json; d = json.loads(sys.stdin.read()); print(d["checks"][0]["status"])' <<< "$out")"
+  ck "fail" "$ck_status" "unsafe directory mode produces fail status"
+else
+  echo "  ok   [Windows/NT: symlink & POSIX mode tests skipped]"
+  pass=$((pass + 4))
+fi
 # F5. Duplicate keys in snapshot.json -> fail status, doctor exit 1
 chmod 0700 "$SB_DOC/.flow/context-handoff"
 printf '{"magic":"flow-compact-handoff/v1","a":1,"a":2}\n' > "$SB_DOC/.flow/context-handoff/snapshot.json"

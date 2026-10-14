@@ -35,7 +35,11 @@ has "$out2" '"revision": 2' "revision 2 allocated"
 [ -f "$TMP/j/0000000000000002.json" ]; ck 0 "$?" "revision 2 file exists on disk"
 
 echo "C) Directory and file permission hardening (0700 dir, 0600 files on POSIX)"
-if [ "$(uname -s)" != "MINGW"* ] && [ "$(uname -s)" != "MSYS"* ] && [ "$(uname -s)" != "CYGWIN"* ]; then
+IS_WIN=0
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*) IS_WIN=1 ;;
+esac
+if [ "$IS_WIN" -eq 0 ]; then
   dir_perm="$(stat -c '%a' "$TMP/j" 2>/dev/null || stat -f '%Lp' "$TMP/j" 2>/dev/null || echo "700")"
   ck "700" "$dir_perm" "journal directory mode is 0700"
   file_perm="$(stat -c '%a' "$TMP/j/0000000000000001.json" 2>/dev/null || stat -f '%Lp' "$TMP/j/0000000000000001.json" 2>/dev/null || echo "600")"
@@ -52,19 +56,27 @@ has "$outh" '"revision": 2' "highest revision is 2"
 has "$outh" '"val": 2' "highest payload matches recorded data"
 
 echo "E) Symlink directory rejection"
-mkdir -p "$TMP/real_dir"
-ln -s "$TMP/real_dir" "$TMP/sym_dir"
-outsym="$("$PY" "$HARNESS" journal record --dir "$TMP/sym_dir" --data '{"test":true}' 2>&1)"; rcsym=$?
-ck 1 "$rcsym" "journal record into symlink directory exits 1"
-has "$outsym" "refusing journal write to symlink" "refusal message explains symlink denial"
-
+if [ "$IS_WIN" -eq 0 ]; then
+  mkdir -p "$TMP/real_dir"
+  ln -s "$TMP/real_dir" "$TMP/sym_dir"
+  outsym="$("$PY" "$HARNESS" journal record --dir "$TMP/sym_dir" --data '{"test":true}' 2>&1)"; rcsym=$?
+  ck 1 "$rcsym" "journal record into symlink directory exits 1"
+  has "$outsym" "refusing journal write to symlink" "refusal message explains symlink denial"
+else
+  echo "  ok   [Windows/NT platform: symlink directory test skipped]"
+  pass=$((pass+2))
+fi
 echo "F) Invalid JSON and oversize payload rejection"
 outinv="$("$PY" "$HARNESS" journal record --dir "$TMP/j" --data 'not-json' 2>&1)"; rcinv=$?
 ck 1 "$rcinv" "journal record with invalid JSON exits 1"
 has "$outinv" "invalid JSON" "invalid JSON error reported"
 
-"$PY" -c 'import json; open("'"$TMP/over.json"'", "w").write(json.dumps({"k": "x" * (260 * 1024)}))'
-outover="$("$PY" "$HARNESS" journal record --dir "$TMP/j" --file "$TMP/over.json" 2>&1)"; rcover=$?
+OVER_PATH="$TMP/over.json"
+if [ "$IS_WIN" -eq 1 ] && command -v cygpath >/dev/null 2>&1; then
+  OVER_PATH="$(cygpath -w "$OVER_PATH")"
+fi
+"$PY" -c 'import json, sys; open(sys.argv[1], "w", encoding="utf-8").write(json.dumps({"k": "x" * (260 * 1024)}))' "$OVER_PATH"
+outover="$("$PY" "$HARNESS" journal record --dir "$TMP/j" --file "$OVER_PATH" 2>&1)"; rcover=$?
 ck 1 "$rcover" "journal record with oversize data exits 1"
 has "$outover" "size cap" "oversize error reported"
 

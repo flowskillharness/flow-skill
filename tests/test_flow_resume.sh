@@ -214,7 +214,7 @@ has "$out_card" "npm test" "Verify section rendered"
 has "$out_card" "linked decisions:" "linked decisions section rendered"
 has "$out_card" "git status:" "git status section rendered"
 has "$out_card" "NEXT_VERB=card" "advisory NEXT_VERB=card rendered"
-has "$out_card" "**First safe step**" "First safe step prompt rendered"
+has "$out_card" '\*\*First safe step\*\*' "First safe step prompt rendered"
 clean
 
 echo "M) resume --card redaction pipeline: masks AWS keys, JWTs, Bearer tokens"
