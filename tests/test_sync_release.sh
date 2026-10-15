@@ -191,14 +191,25 @@ cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
 git -C "$tmp/r" commit -qm "sync scripts in temp clone"
 ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+# Seed the gitignored bundled skill tree (normally produced by the mutating `pretest`
+# sync, which dry-run must not run). Fixture setup happens BEFORE the tree snapshot.
+rm -rf "$tmp/r/npm-wrapper/skills"
+mkdir -p "$tmp/r/npm-wrapper/skills"
+# Mirror sync.mjs shouldShip exclusions (__pycache__, eval/replay).
+tar -C "$ROOT/skills" --exclude=__pycache__ --exclude='eval/replay' -cf - . | tar -xf - -C "$tmp/r/npm-wrapper/skills"
 
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
 before_tags="$(git -C "$tmp/r" tag -l)"
 before_status="$(git -C "$tmp/r" status --porcelain)"
 
+before_tree_hash="$(cd "$tmp/r" && find . -type f -exec sha256sum {} + | sort)"
+
 node "$tmp/r/scripts/sync-release.mjs" --ship --dry-run >/tmp/sync_h.out 2>&1
 ck 0 $? "--ship --dry-run exits 0"
 grep -q "DRY-RUN SUCCESS" /tmp/sync_h.out && ck 0 0 "reports DRY-RUN SUCCESS" || ck 0 1 "reports DRY-RUN SUCCESS"
+
+after_tree_hash="$(cd "$tmp/r" && find . -type f -exec sha256sum {} + | sort)"
+[ "$before_tree_hash" = "$after_tree_hash" ] && ck 0 0 "recursive tree hash strictly unchanged (zero file modifications, tracked and untracked)" || ck 0 1 "recursive tree hash strictly unchanged (zero file modifications, tracked and untracked)"
 
 after_head="$(git -C "$tmp/r" rev-parse HEAD)"
 after_tags="$(git -C "$tmp/r" tag -l)"
