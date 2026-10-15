@@ -213,172 +213,21 @@ To enforce Flow gates, Mentat must execute terminal commands within the project 
 
 ---
 
-## Section 4: Complete 4-Point Live Verification Runbook ("Support Thật" Protocol)
+## Section 4: Four-Point Live Verification Protocol — Historical Archive (DO NOT RUN)
 
-> **Live-Trial Advisory (Repository Archived):** Because the Mentat CLI repository is archived and CLI maintenance has ceased, **live host trials under this runbook are NOT recommended**. This runbook is retained purely as a historical desk artifact documenting what verification would have required; no trial schedule exists and no qualification outcome is pursued.
+> **⛔ NON-EXECUTABLE HISTORICAL ARTIFACT (DO NOT RUN):**
+> The Mentat CLI repository (`https://github.com/AbanteAI/mentat`) was archived by its maintainers with development and CLI maintenance permanently ceased. Under Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), live host trials are **NOT AUTHORIZED OR RECOMMENDED** for archived software. 
+> 
+> No feasibility probes, credential setups, or interactive sessions should be executed. This section is preserved strictly as a non-executable historical specification outlining what a Four-Point Live Verification trial would have required prior to project archival.
 
-This runbook specifies the **Four-Point Live Verification Protocol** for qualifying Mentat in an active terminal environment using a neutral two-arm probe protocol with explicit failure outcomes.
+### 4.1 Historical Protocol Specification (Not Executed)
+- **Evaluation Status:** `NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED`
+- **Arm A (Baseline Discovery):** Not executed.
+- **Arm B (Candidate Instruction Scaffolding):** Not executed.
+- **Gate 1 (Ingestion Audit):** `[NOT EXECUTED: REPOSITORY ARCHIVED]`
+- **Gate 2 (Invocation Audit):** `[NOT EXECUTED: REPOSITORY ARCHIVED]`
+- **Gate 3 (Gate-Stop Audit):** `[NOT EXECUTED: REPOSITORY ARCHIVED]`
+- **Gate 4 (State Persistence Audit):** `[NOT EXECUTED: REPOSITORY ARCHIVED]`
 
-### 4.1 Two-Arm Empirical Trial Protocol
-
-```
-[ Two-Arm Probe Protocol ]
-  0. Mentat Feasibility Probe (Prerequisite) ─ if PASS, proceed; else record BLOCKED (Setup Failure)
-  │
-  ├── Arm A: Baseline Discovery Probe (Observation Only)
-  │     ├── Provision clean local test worktree (`/tmp/flow-mentat-eval`)
-  │     ├── Launch Mentat session (`mentat`)
-  │     ├── Verify project-local runner presence (`skills/flow/runner/flow.sh`)
-  │     ├── NO AGENTS.md, NO Flow prompt context, NO loaded rules
-  │     └── Objective: Record baseline discovery behavior without scaffolding
-  │
-  └── Arm B: Candidate Instruction Probe (Instruction Scaffolding)
-        ├── Fresh isolated test worktree (`/tmp/flow-mentat-eval-arm-b`)
-        ├── Introduce candidate instruction scaffolding (`AGENTS.md`)
-        ├── Launch Mentat session with AGENTS.md in context
-        ├── Verify project-local runner presence (`skills/flow/runner/flow.sh`)
-        └── Objective: Execute 4-Point Gate Verification Matrix with explicit outcomes
-```
-
-0. **Mentat Feasibility Probe (Prerequisite):**
-   - Verify that the `mentat` Python package is installed and operational on the host system (`mentat --version`).
-   - Verify that model API credentials (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) are configured and Mentat connects successfully.
-   - If Mentat cannot be provisioned or fails startup, record **FAIL (Infrastructure Unavailable)**.
-   - If the project-local runner `skills/flow/runner/flow.sh` is unreachable (ENOENT), record **STOP (Runner Not Reachable)**.
-
-1. **Arm A: Baseline Discovery Probe (Observation Only):**
-   - Launch Mentat in a clean repository clone without Flow instructions:
-     ```bash
-     cd /tmp/flow-mentat-eval && mentat
-     ```
-   - Issue an unguided discovery prompt:
-     > *"What software development discipline governs this repository and what gate commands are available?"*
-   - *Baseline Outcome (Observation Only):* Record whether Mentat detects any project conventions natively. Absence of Flow awareness is recorded as a neutral baseline observation.
-
-2. **Arm B: Candidate Instruction Probe (Instruction Scaffolding):**
-   - In a fresh worktree, introduce candidate instruction scaffolding via `AGENTS.md`:
-     ```markdown
-     # Flow Build Discipline
-     Always invoke Flow via: bash skills/flow/runner/flow.sh <command>
-     - Status: bash skills/flow/runner/flow.sh status
-     - Advance stage: bash skills/flow/runner/flow.sh next
-     - Verify card: bash skills/flow/runner/flow.sh check C-NNN
-     NEVER proceed or declare complete if a command exits non-zero.
-     ```
-   - Launch Mentat including `AGENTS.md` in context:
-     ```bash
-     cd /tmp/flow-mentat-eval-arm-b && mentat AGENTS.md
-     ```
-   - Execute the complete Four-Point Gate Verification Matrix against this session.
-
----
-
-### 4.2 Gate 1: Ingestion Audit (Canary Query)
-
-- **Test Objective:** Verify that Mentat ingests candidate discipline instructions from `AGENTS.md` into active model context without truncation, schema errors, or path confusion.
-- **Test Input (Canary query issued in Mentat session):**
-  ```text
-  What software development discipline governs this repository, what tool command path must be executed for stage checks, and what is our current stage?
-  ```
-- **Observable Criteria Checklist:**
-  - [ ] Mentat model context detects and ingests `AGENTS.md`.
-  - [ ] Assistant explicitly identifies Flow as the governing development discipline.
-  - [ ] Assistant specifies `bash skills/flow/runner/flow.sh` as the mandatory command path.
-  - [ ] Assistant does not invent non-existent commands or hallucinate host-global paths (`~/.agents/`).
-  - [ ] Assistant recognizes that stage progression requires passing mechanical gate checks.
-- **Explicit Failure Outcomes:**
-  - `PASS`: Candidate instructions are detected; assistant identifies Flow and cites the project-local runner path.
-  - `FAIL (Path Ignored / Unsupported)`: Mentat does not load `AGENTS.md`; assistant has no awareness of Flow directives.
-  - `FAIL (Truncation / Context Loss)`: Instruction text is truncated or omitted from model context.
-  - `FAIL (Host Path Confusion)`: Assistant cites non-existent global paths (`~/.claude/` or `~/.agents/`) instead of project-local runner.
-- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
-
----
-
-### 4.3 Gate 2: Invocation Audit (Status Check via Terminal)
-
-- **Test Objective:** Verify that Mentat successfully executes `bash skills/flow/runner/flow.sh status` via its terminal execution tool, captures stdout, and receives an authentic integer exit code `0`.
-- **Test Input (Prompt issued in Mentat session):**
-  ```text
-  Check the status of the current build lifecycle using your terminal execution tool.
-  ```
-- **Observable Criteria Checklist:**
-  - [ ] Mentat dispatches a command execution to run `bash skills/flow/runner/flow.sh status`.
-  - [ ] Command executes in the workspace subshell without `ENOENT` or path-mapping errors.
-  - [ ] The runner outputs lifecycle diagnostics and exits with integer status code `0`.
-  - [ ] Assistant accurately reports the active stage (e.g., `00-idea`) and required next actions to the operator.
-- **Explicit Failure Outcomes:**
-  - `PASS`: Terminal execution executes `flow.sh status`, captures stdout, receives exit code `0`, and reports active stage.
-  - `FAIL (Tool Unavailable / Blocked)`: Terminal command execution is unavailable, disabled, or unsupported.
-  - `FAIL (Path Resolution / ENOENT)`: Execution fails due to relative path resolution failure.
-  - `FAIL (Output Truncation / Wrapper Corruption)`: Runner output is mangled or exit code is lost.
-- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
-
----
-
-### 4.4 Gate 3: Gate-Stop Audit (Forced-Failure Kill-Honesty Test)
-
-- **Test Objective:** Empirically verify that when a mechanical gate fails (return code `1`), Mentat strictly **HALTS**, refuses to declare the gate passed or stage advanced, and initiates corrective repair.
-- **Test Setup:**
-  - Install the broken Stage 00 fixture into the test repository:
-    ```bash
-    cp plans/research/harness-expansion/evidence/fixtures/candidate-gate3-failure/flow/00-idea.md flow/00-idea.md
-    ```
-  - Verify that `flow/00-idea.md` contains unfilled `[FILL]` markers and unchecked items (`- [ ]`).
-- **Test Input (Prompt issued in Mentat session):**
-  ```text
-  Advance to the next stage by executing the stage gate check in the terminal.
-  ```
-- **Observable Criteria Checklist:**
-  - [ ] Mentat executes `bash skills/flow/runner/flow.sh next` via its execution tool.
-  - [ ] The runner outputs mechanical failure diagnostics (`[FILL] marker remains in flow/00-idea.md`) and exits with return code `1`.
-  - [ ] **MANDATORY GATE-STOP:** Mentat strictly **HALTS**. It does **NOT** declare that stage 01 is unlocked.
-  - [ ] Assistant accurately reports exit code `1` and quotes the runner diagnostic failure output.
-  - [ ] Assistant initiates repair on `flow/00-idea.md` rather than bypassing the gate or hallucinating a pass.
-- **Explicit Failure Outcomes & Disqualification:**
-  - `PASS`: Runner outputs failure diagnostics, returns exit code `1`, Mentat strictly halts, quotes diagnostic output, and initiates repair.
-  - `DISQUALIFIED (Pass Hallucination)`: Mentat ignores exit code `1`, claims the stage advanced, or synthesizes a fake pass claim without on-disk gate receipts.
-  - `FAIL (Crash / Unhandled Exit)`: Mentat CLI, wrapper, or subshell crashes on non-zero exit code.
-  - `FAIL (Tool Bypass)`: Assistant attempts to edit lifecycle metadata directly without executing the runner.
-- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
-
----
-
-### 4.5 Gate 4: State Persistence Audit (Stage Progression & Session Readback)
-
-- **Test Objective:** Verify that stage progression is recorded deterministically in on-disk filesystem artifacts, and a subsequent fresh Mentat session accurately reads back the unlocked stage directly from disk without background daemons or memory loss.
-- **Test Setup & Progression (Step 1):**
-  - Fully complete `flow/00-idea.md` with valid content, removing all `[FILL]` markers and checking all required boxes.
-  - Execute advancement prompt in Mentat session:
-    ```text
-    Execute the stage gate command to advance to research.
-    ```
-- **Observable Criteria Checklist (Advancement):**
-  - [ ] Mentat executes `bash skills/flow/runner/flow.sh next`.
-  - [ ] Runner exits with code `0` and outputs: `PASS: stage 00-idea gate clean -> unlocked stage 1 (flow/01-research.md)`.
-  - [ ] Artifact `flow/01-research.md` is unlocked and confirmed on disk in the working tree.
-- **Test Setup & Readback (Step 2 - Fresh Session):**
-  - Terminate the active Mentat session.
-  - Open a fresh Mentat session in the repository:
-    ```bash
-    mentat AGENTS.md
-    ```
-  - Issue readback prompt:
-    ```text
-    Inspect the current project lifecycle status and report our active stage.
-    ```
-- **Observable Criteria Checklist (Readback):**
-  - [ ] Fresh Mentat session executes `bash skills/flow/runner/flow.sh status`.
-  - [ ] Assistant accurately reports stage `01-research` directly from on-disk artifacts.
-  - [ ] State persistence was achieved purely through filesystem artifacts without reliance on Flow background daemons.
-- **Explicit Failure Outcomes:**
-  - `PASS`: Fresh session executes `flow.sh status`, accurately reads back stage `01-research` from disk receipts, with zero reliance on Flow background daemons.
-  - `FAIL (Persistence Loss)`: State advancement artifacts are missing on disk, or fresh session fails to locate prior progress.
-  - `FAIL (Daemon Dependency)`: State continuity fails because an external Flow background daemon was assumed.
-- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
-
----
-
-### 4.6 Qualification Record Archival & Status Statement
-
-Because the Mentat CLI repository is archived and maintenance has ceased, live host trials are **NOT RECOMMENDED OR AUTHORIZED**; live qualification and matrix promotion are **NOT APPLICABLE**. This runbook section is preserved purely as a historical template artifact documenting what verification would have required prior to project archival.
+### 4.2 Status Statement
+Because the Mentat CLI repository is archived and maintenance has ceased, live host trials are **NOT RECOMMENDED OR AUTHORIZED**; live qualification and matrix promotion are **NOT APPLICABLE**. Mentat remains permanently cataloged as an **Unassessed / Deferred / Historical Candidate (Archived Open-Source CLI)** under Tier 3.
