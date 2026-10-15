@@ -1,11 +1,11 @@
-# Harness Intake Evaluation: Trae (Adaptive AI IDE, Native Skills & Builder Agent)
+# Harness Intake Evaluation: Trae (Adaptive AI IDE, Native Skills & Agent Mode)
 
 - **Document Version:** 1.1.0
 - **Evaluation Status:** `Proposed Design Candidate (Desk Intake Complete; Live Host Trials Pending)`
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
-- **Architectural Category:** Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Workspace / Project Rules Scaffolding for Builder Agent: `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Inline Code Completion)
+- **Architectural Category:** Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Workspace / Project Rules Scaffolding for Agent Mode (formerly Builder): `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Inline Code Completion)
 - **Related References:**
   - `plans/research/harness-expansion/architecture-compatibility-matrix.md`
   - `plans/research/harness-expansion/market-harness-survey.md`
@@ -35,12 +35,12 @@
 │ Ingestion Mechanism (Cat B)  │ Documented project rules directory .trae/rules/*.md or   │
 │                              │ global ~/.trae/user_rules (plus root AGENTS.md)         │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Execution Environment        │ Developer IDE (VS Code-based IDE with Chat, Builder,    │
-│                              │ and Inline Completion modes)                            │
+│ Execution Environment        │ Developer IDE (VS Code-based IDE with Chat & Agent      │
+│                              │ Mode; local workspace or remote SSH)                    │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Tool Execution API           │ Vendor-documented terminal command execution in Builder │
-│                              │ mode (Flow gate-stop fidelity and return-code capture   │
-│                              │ unverified in live host trials)                         │
+│ Tool Execution API           │ Vendor-documented terminal command execution in Agent   │
+│                              │ Mode (Flow gate-stop fidelity unverified in live        │
+│                              │ trials)                                                 │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
@@ -54,8 +54,8 @@
 | **Architectural Classification** | Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Project Rules: `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Inline Completions) |
 | **Ingestion Mechanism (Cat A)** | Documented native dynamic skill discovery: `~/.trae/skills/<skill>/SKILL.md` (global; Windows `%userprofile%/.trae/skills`) or `.trae/skills/<skill>/SKILL.md` (project) |
 | **Ingestion Mechanism (Cat B)** | Documented project rules directory `.trae/rules/*.md` or global `~/.trae/user_rules` (plus workspace context / root `AGENTS.md`) |
-| **Execution Environment** | Developer IDE (VS Code-based IDE with Chat, Builder agent, and Inline Completion modes) |
-| **Tool Execution API** | Vendor-documented terminal command execution in Builder mode (Flow gate-stop fidelity and return-code capture unverified in live host trials) |
+| **Execution Environment** | Developer IDE (VS Code-based IDE with Chat & Agent Mode; local workspace or remote SSH) |
+| **Tool Execution API** | Vendor-documented terminal command execution in Agent Mode (Flow gate-stop fidelity unverified in live trials) |
 | **ADR-0001 Compliance** | `PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token` |
 | **Live Qualification Status** | `PROPOSED DESIGN CANDIDATE (Desk Intake Complete; Live Host Trials Pending)` |
 ---
@@ -63,16 +63,16 @@
 ## Section 1: Executive Summary & Modality Separation
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
-Trae (developed by ByteDance; official portal: https://www.trae.ai, documentation: https://docs.trae.ai, accessed 2026-10-15) is an adaptive AI-native integrated development environment built on top of a customized Visual Studio Code core. Trae integrates conversational assistance, real-time code completion, an autonomous "Builder" agent mode designed to execute multi-step software engineering workflows spanning multi-file code modifications and integrated terminal command execution, and first-party native skill dynamic discovery (`SKILL.md`).
+Trae (developed by ByteDance; official portal: https://www.trae.ai, documentation: https://docs.trae.ai, accessed 2026-10-15) is an adaptive AI-native integrated development environment built on top of a customized Visual Studio Code core. Current official Trae documentation identifies a unified development environment featuring **Agent Mode** (the autonomous agent capability, formerly named "Builder" or "Builder Mode" in early preview releases before being merged into Agent Mode) alongside **IDE Mode** (conversational Chat and editor with inline completions). Agent Mode is designed to execute multi-step software engineering workflows across local workspace directories or remote SSH environments, spanning multi-file code modifications and integrated terminal command execution, alongside first-party native skill dynamic discovery (`SKILL.md`). Flow executes within this environment strictly as an ephemeral project-local runner (`skills/flow/runner/flow.sh`) in the active shell environment.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Workspace / Project Rules Scaffolding for Builder Agent: `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Trae Inline Completions)**.
+- **Classification:** **Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Workspace / Project Rules Scaffolding for Agent Mode (formerly Builder): `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Trae Inline Completions)**.
 - **Similar to Cursor:** Trae presents a dual-path architecture directly comparable to Cursor (Dual Category A `~/.cursor/skills/` and Category B `.cursor/rules/*.mdc`).
 - **Category A Hypothesis:** Trae dynamically discovers `SKILL.md` at `~/.trae/skills/flow/` or `.trae/skills/flow/`.
-- **Category B Hypothesis:** Trae Builder agent ingests `.trae/rules/flow.md` (or `~/.trae/user_rules` / `AGENTS.md`) and executes project-local runner `skills/flow/runner/flow.sh` via terminal tool.
+- **Category B Hypothesis:** Trae Agent Mode ingests `.trae/rules/flow.md` (or `~/.trae/user_rules` / `AGENTS.md`) and executes project-local runner `skills/flow/runner/flow.sh` in the active shell environment (local workspace or remote SSH) via terminal tool.
 - **Qualification Status:** **`PROPOSED DESIGN CANDIDATE (Desk Intake Complete; Live Host Trials Pending)`**.
 - **Qualification Rationale:**
-  - Trae operates as a standalone AI IDE based on the VS Code architecture, providing distinct operational modalities: an interactive Chat interface, an inline real-time code completion engine, an autonomous Builder agent capable of editing code across files and dispatching terminal commands, and native `SKILL.md` dynamic discovery.
+  - Trae operates as a standalone AI IDE based on the VS Code architecture, providing distinct operational modalities: an interactive Chat interface, an inline real-time code completion engine, autonomous Agent Mode (formerly Builder Mode) capable of editing code across local workspace directories or remote SSH environments and dispatching terminal commands, and native `SKILL.md` dynamic discovery.
   - Desk review of official Trae documentation confirms that Trae natively documents first-party skill discovery where skills are standard folders containing `SKILL.md`:
     - Global skills: `~/.trae/skills/<skill>/SKILL.md` (Windows: `%userprofile%/.trae/skills/<skill>/SKILL.md`)
     - Project skills: `.trae/skills/<skill>/SKILL.md`
@@ -86,14 +86,14 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 Flow's constitutional identity (`docs/adr/0001-discipline-layer-identity.md`) establishes that Flow is a **discipline layer**, never an agent runtime:
 > *"Flow owns the gates and the receipts, never the runtime: a host-agnostic discipline layer that turns any coding agent into an evidence-gated, kill-honest build process — flow never holds the process token."*
 
-In desk design review, prospective integration with Trae Builder aligns with ADR-0001's fundamental invariants (empirical verification pending live host trials):
+In desk design review, prospective integration with Trae Agent Mode aligns with ADR-0001's fundamental invariants (empirical verification pending live host trials):
 1. **Zero Resident Daemons:** Flow requires no persistent background daemon, long-lived server process, or background socket listener on the developer workstation or inside the IDE. While Trae utilizes local IDE processes and cloud AI service backends, Flow must never execute as a resident service inside or alongside that machinery. Flow executes strictly as an ephemeral executable via `skills/flow/runner/flow.sh` (or `flow.cmd` on native Windows).
 2. **Process Token Ownership:** The IDE host and Trae runtime hold the process token and manage the agentic event loop. Flow executes strictly as an ephemeral subprocess invoked via terminal commands, terminating immediately upon returning its exit status code.
 3. **Zero Tool Interposition:** Flow does not monkey-patch, proxy, or intercept Trae's internal tool dispatch pipeline, language server features, or cloud communications. Gate evaluations are performed post-hoc by re-reading on-disk ground truth (`flow/`, `cards/`, `manifest-hashes.json`).
 4. **Deterministic Shell Contract:** Stage transitions, gate validations, and card checks occur strictly via `bash skills/flow/runner/flow.sh <verb>` (or `flow.cmd <verb>` on native Windows), returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostics.
 5. **Rejection of Resident Daemons or Memory Wrappers:** Attempting to wrap Flow inside an in-memory language server wrapper, persistent daemon, or background execution service is constitutionally prohibited under ADR-0001. Flow's state lives strictly on disk in Git and bounded filesystem artifacts, never in resident memory heaps.
 
-### 1.3 Architectural Modality Separation: Trae Skills & Builder Agent vs. Inline Code Completion
+### 1.3 Architectural Modality Separation: Trae Skills & Agent Mode vs. Inline Code Completion
 
 Trae encompasses two primary functional modalities that must be strictly separated under Flow's harness qualification taxonomy:
 
@@ -101,11 +101,11 @@ Trae encompasses two primary functional modalities that must be strictly separat
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                              TRAE MODALITY SEPARATION                                  │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
-│ Modality 1: Trae Skills & Builder Agent  │ Modality 2: Trae Inline Code Completion     │
+│ Modality 1: Trae Skills & Agent Mode     │ Modality 2: Trae Inline Code Completion     │
 │ (Dual Category A / Category B Candidate) │ (Unassessed / Deferred)                     │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
-│ Environment: Trae IDE Builder mode &     │ Environment: Editor active buffer /         │
-│ dynamic skill runtime                    │ ghost text suggestions                      │
+│ Environment: Trae IDE Agent Mode &       │ Environment: Editor active buffer /         │
+│ dynamic skill runtime (local/remote SSH) │ ghost text suggestions                      │
 │ Ingestion (Cat A): Dynamic discovery of  │ Ingestion: Active line/cursor AST &         │
 │ ~/.trae/skills/ or .trae/skills/         │ local text buffer context                   │
 │ Ingestion (Cat B): Project rules         │                                             │
@@ -118,9 +118,9 @@ Trae encompasses two primary functional modalities that must be strictly separat
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
-#### Modality 1: Trae Native Skills & Builder Agent — Dual Category A / Category B Candidate
-- **Environment:** Trae IDE Builder mode and agentic skill runtime.
-- **Operational Scope:** Operates as an autonomous task executor capable of discovering skills, creating plans, performing multi-file code edits, and running commands in the integrated terminal to build, run, and test code.
+#### Modality 1: Trae Native Skills & Agent Mode (formerly Builder Mode) — Dual Category A / Category B Candidate
+- **Environment:** Trae IDE Agent Mode (local workspace or remote SSH) and agentic skill runtime.
+- **Operational Scope:** Operates as an autonomous task executor across workspace directories or remote SSH environments capable of discovering skills, creating plans, performing multi-file code edits, and running commands in the integrated terminal to build, run, and test code.
 - **Path 1 — Category A Native Skill Target:** Trae natively documents dynamic discovery of standard skill folders containing `SKILL.md`:
   - Global skills: `~/.trae/skills/<skill>/SKILL.md` (Windows: `%userprofile%/.trae/skills/<skill>/SKILL.md`)
   - Project skills: `.trae/skills/<skill>/SKILL.md`
@@ -128,7 +128,7 @@ Trae encompasses two primary functional modalities that must be strictly separat
   - Project rules: `.trae/rules/*.md` (e.g., `.trae/rules/flow.md`)
   - Global user rules: `~/.trae/user_rules`
   - Repository workspace context (e.g., root `AGENTS.md`)
-- **Tool Execution:** Vendor-documented terminal command execution in Builder mode. Flow gate-stop fidelity ($0$ vs. non-zero exit codes) and return-code capture remain unverified in live host trials.
+- **Tool Execution:** Vendor-documented terminal command execution in Agent Mode. Flow gate-stop fidelity ($0$ vs. non-zero exit codes) and return-code capture remain unverified in live host trials.
 - **Classification:** Dual Category A (Proposed Native Skill Target) / Category B (Proposed Project Rules Scaffolding).
 
 #### Modality 2: Trae Inline Code Completion — Unassessed / Deferred
@@ -150,10 +150,10 @@ Unlike harnesses limited to generic workspace prompt files, official Trae vendor
    - Trae documentation explicitly defines dedicated rule configuration pathways:
      - **Project Rules:** `.trae/rules/` (markdown files such as `.trae/rules/flow.md` scoped to the workspace).
      - **Global User Rules:** `~/.trae/user_rules` (global user-level rules across workspaces).
-   - **Hypothesis:** Placing Flow discipline instructions in `.trae/rules/flow.md` instructs the Trae Builder agent to invoke the project-local Flow runner (`skills/flow/runner/flow.sh`) via its terminal execution tool.
+   - **Hypothesis:** Placing Flow discipline instructions in `.trae/rules/flow.md` instructs Trae Agent Mode to invoke the project-local Flow runner (`skills/flow/runner/flow.sh`) via its terminal execution tool in the active shell environment (local workspace or remote SSH).
 3. **Architectural Parity with Cursor:**
    - Trae's dual support for native skills (`~/.trae/skills/`, `.trae/skills/`) and project rules (`.trae/rules/`, `~/.trae/user_rules`) mirrors Cursor's dual-path architecture (`~/.cursor/skills/` for Category A and `.cursor/rules/*.mdc` for Category B).
-   - Consequently, Trae is classified as a priority dual-path candidate: **Dual Category A (Proposed Native Skill Target) / Category B (Proposed Workspace / Project Rules Scaffolding for Builder Agent)**.
+   - Consequently, Trae is classified as a priority dual-path candidate: **Dual Category A (Proposed Native Skill Target) / Category B (Proposed Workspace / Project Rules Scaffolding for Agent Mode (formerly Builder))**.
 
 ### 1.5 Strict Locking of `flow rules` & Anti-Illusion Verification
 While Trae officially documents `.trae/rules/` and `~/.trae/user_rules`, Flow strictly rejects premature or speculative template generation.
@@ -180,22 +180,22 @@ Flow strictly enforces template locking:
 ### 2.1 Phase 1: Market Intelligence & Prioritization (Qualitative Assessment)
 In accordance with Flow's "Support Thật" discipline, arbitrary numeric scores are withheld pending empirical live trials. The candidate is evaluated through qualitative desk hypotheses:
 
-- **Market Adoption Hypothesis:** Rapidly emerging AI-native IDE developed by ByteDance, gaining significant mindshare among software engineers seeking an integrated AI workspace with built-in agentic capabilities. Built on the familiar Visual Studio Code foundation, Trae lowers adoption barriers while offering built-in Chat, Inline Completion, and Builder agent modes competing with Cursor and Windsurf.
-- **Agentic Autonomy Hypothesis:** Trae Builder mode provides autonomous multi-turn loops, multi-file code editing, and automated terminal command execution. However, whether the Builder agent genuinely observes integer exit codes ($0$ vs. non-zero), halts unconditionally upon gate failures, and resists synthesizing false passes remains an unverified desk hypothesis.
-- **Ecosystem Openness Hypothesis:** Proprietary standalone IDE based on a VS Code fork with documented native extensibility. Trae officially documents dynamic skill discovery conforming to the open `SKILL.md` format at user-global (`~/.trae/skills/` / Windows `%userprofile%/.trae/skills`) and project-local (`.trae/skills/`) paths. Additionally, Trae documents first-party rule scaffolding via workspace `.trae/rules/*.md` and user-global `~/.trae/user_rules`. Live empirical trials must verify whether Trae Builder genuinely indexes, parses, and acts upon these files during agent runs.
+- **Market Adoption Hypothesis:** Rapidly emerging AI-native IDE developed by ByteDance, gaining significant mindshare among software engineers seeking an integrated AI workspace with built-in agentic capabilities. Built on the familiar Visual Studio Code foundation, Trae lowers adoption barriers while offering built-in Chat, Inline Completion, and Agent Mode (formerly Builder Mode) competing with Cursor and Windsurf.
+- **Agentic Autonomy Hypothesis:** Trae Agent Mode provides autonomous multi-turn loops, multi-file code editing, and automated terminal command execution across local workspace directories or remote SSH environments. However, whether Agent Mode genuinely observes integer exit codes ($0$ vs. non-zero), halts unconditionally upon gate failures, and resists synthesizing false passes remains an unverified desk hypothesis.
+- **Ecosystem Openness Hypothesis:** Proprietary standalone IDE based on a VS Code fork with documented native extensibility. Trae officially documents dynamic skill discovery conforming to the open `SKILL.md` format at user-global (`~/.trae/skills/` / Windows `%userprofile%/.trae/skills`) and project-local (`.trae/skills/`) paths. Additionally, Trae documents first-party rule scaffolding via workspace `.trae/rules/*.md` and user-global `~/.trae/user_rules`. Live empirical trials must verify whether Trae Agent Mode genuinely indexes, parses, and acts upon these files during agent runs.
 - **Prioritization Status & Hypothesis:** **`Proposed Design Candidate (Desk Intake Complete; Live Host Trials Pending)`**.
 
 ### 2.2 Phase 2: Architecture Probing
 
 #### 2.2.1 Process Token Ownership & Main Event Loop
-- In prospective Trae workflows, the developer workstation and the Trae IDE extension host / Builder runtime hold the process token.
+- In prospective Trae workflows, the developer workstation (or remote SSH host) and the Trae IDE extension host / Agent Mode runtime hold the process token.
 - Trae manages the conversational agent loop, user interaction, and tool dispatch scheduler.
-- Flow remains completely external to the event loop. Flow is never an owned runner or long-running service; it executes strictly when Trae's Builder agent dispatches an ephemeral subshell command invoking `runner/flow.sh` or `runner/flow.cmd`.
+- Flow remains completely external to the event loop. Flow is never an owned runner or long-running service; it executes strictly as an ephemeral project-local runner (`skills/flow/runner/flow.sh` or `flow.cmd`) in the active shell environment when Trae's Agent Mode dispatches a subshell command.
 - Flow terminates immediately upon returning its exit status code to the shell.
 
 #### 2.2.2 Tool Execution API & Terminal Subshell Handling (Desk Hypothesis)
-- Trae documentation highlights Builder mode's ability to run terminal commands to install dependencies, run build scripts, execute test suites, and debug applications in the IDE's integrated terminal.
-- **Fidelity Question:** Does Trae Builder execute terminal commands autonomously, capture exact integer exit codes ($0$ vs. non-zero), and feed stderr diagnostics back into the model's active reasoning context for error correction?
+- Trae documentation highlights Agent Mode's ability to run terminal commands to install dependencies, run build scripts, execute test suites, and debug applications in the IDE's integrated terminal across local workspace directories or remote SSH environments.
+- **Fidelity Question:** Does Trae Agent Mode execute terminal commands autonomously, capture exact integer exit codes ($0$ vs. non-zero), and feed stderr diagnostics back into the model's active reasoning context for error correction?
 - Under Flow's discipline, if an assistant merely suggests a command for the human developer to click and run without mechanically inspecting the result, or if it executes commands without checking exit codes, it cannot enforce stage gates. Live host verification must prove whether the agent autonomously invokes the runner and observes the return code.
 
 #### 2.2.3 Instruction Ingestion & Workspace Context
@@ -203,28 +203,28 @@ In accordance with Flow's "Support Thật" discipline, arbitrary numeric scores 
   1. **Category A Native Skill Discovery:** Trae natively discovers directory-based skills containing `SKILL.md` from project-local `.trae/skills/<skill>/` and user-global `~/.trae/skills/<skill>/` (Windows `%userprofile%/.trae/skills/<skill>/`).
   2. **Category B Project & User Rules:** Trae documents project-level rules at `.trae/rules/*.md` (e.g., `.trae/rules/flow.md`) and global user rules at `~/.trae/user_rules`.
   3. **Workspace Context:** General workspace context indexing where Trae ingests repository root markdown files such as `AGENTS.md`.
-- **Anti-Illusion Disclosure:** While the file paths and formats are documented by the vendor, no empirical live trial has yet confirmed that Trae Builder automatically discovers `.trae/skills/flow/SKILL.md` or strictly enforces constraints from `.trae/rules/flow.md`. Ingestion behavior, tool invocation fidelity, and priority order between skills and rules remain unverified hypotheses until live host trials pass.
+- **Anti-Illusion Disclosure:** While the file paths and formats are documented by the vendor, no empirical live trial has yet confirmed that Trae Agent Mode automatically discovers `.trae/skills/flow/SKILL.md` or strictly enforces constraints from `.trae/rules/flow.md`. Ingestion behavior, tool invocation fidelity, and priority order between skills and rules remain unverified hypotheses until live host trials pass.
 
 #### 2.2.4 Context Budgeting & Truncation Dynamics
 - Trae leverages cloud-hosted LLM endpoints with substantial context windows.
-- However, prompt context injected into conversational or Builder windows remains subject to attention limits and prompt dilution.
+- However, prompt context injected into conversational or Agent Mode windows remains subject to attention limits and prompt dilution.
 - To prevent prompt dilution and attention decay, Flow instructions must remain compact and modular, relying on the **Progressive Disclosure Architecture** (`skills/flow/references/gate-rules.md` and stage playbooks) rather than injecting monolithic rule catalogs.
 
-#### 2.2.5 Execution Boundaries: Local IDE vs. Cloud AI Backend
-- While model inference is processed on cloud AI infrastructure, tool execution and file modifications must occur within the local developer workspace.
-- The Flow runner (`skills/flow/runner/flow.sh`) requires a local POSIX shell environment (or Git Bash / `flow.cmd` on Windows). Cloud components cannot execute local runner scripts directly; all executions must run through the local IDE terminal subsystem.
+#### 2.2.5 Execution Boundaries: Local IDE & Remote SSH vs. Cloud AI Backend
+- While model inference is processed on cloud AI infrastructure, tool execution and file modifications occur within the developer's workspace (either a local directory or a remote SSH connection).
+- The Flow runner (`skills/flow/runner/flow.sh`) executes ephemerally within the active shell environment (local POSIX / Git Bash or remote SSH shell). Cloud components cannot execute local runner scripts directly; all executions must run through the IDE terminal subsystem.
 
 ---
 
 ## Section 3: Latent Bug Analysis & Anti-Illusion Traps
 
-### 3.1 Latent Trap 1: Modality Confusion — Trae Builder Agent vs. Inline Completion
+### 3.1 Latent Trap 1: Modality Confusion — Trae Agent Mode vs. Inline Completion
 - **The Pitfall:** Promoting Flow as "supporting Trae" without disambiguating the operational modality. A developer installs Trae, relies solely on inline ghost text autocomplete, and expects Flow stage gates to be enforced automatically.
 - **The Grounded Technical Reality:** Inline code completion operates at the keystroke level within the editor buffer as a real-time ghost text autocomplete mechanism; broader tool execution capabilities remain unassessed pending dedicated verification, and passive autocomplete is completely outside Flow's build-gate integration scope.
-- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that Flow compatibility is evaluated strictly for **Trae Builder Agent and Native Skills** (Dual Category A / Category B candidate), whereas inline code completion is **Unassessed / Deferred (outside Flow build-gate integration scope)**.
+- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that Flow compatibility is evaluated strictly for **Trae Agent Mode (formerly Builder Mode) and Native Skills** (Dual Category A / Category B candidate), whereas inline code completion is **Unassessed / Deferred (outside Flow build-gate integration scope)**.
 
 ### 3.2 Latent Trap 2: Vendor Rules Specification vs. Strict Locking of `flow rules`
-- **The Pitfall:** Prematurely creating or advertising a `flow rules trae` command or generating `.trae/rules/flow.md` via Flow core before empirical live qualification proves that Trae Builder reliably honors the file.
+- **The Pitfall:** Prematurely creating or advertising a `flow rules trae` command or generating `.trae/rules/flow.md` via Flow core before empirical live qualification proves that Trae Agent Mode reliably honors the file.
 - **The Grounded Technical Reality:**
   - Official Trae documentation explicitly documents `.trae/rules/` and `~/.trae/user_rules`.
   - However, Flow's `flow rules` dispatcher is strictly locked to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), as verified by `tests/test_flow_rules.sh`.
@@ -247,8 +247,8 @@ In accordance with Flow's "Support Thật" discipline, arbitrary numeric scores 
   - Instructing an agent to call unmapped paths (e.g., `~/.agents/skills/flow/runner/flow.sh`) when Flow is only installed locally or under `.trae/skills/` results in immediate `ENOENT` shell errors.
 - **The Anti-Illusion Mitigation:** Validate path resolution separately under Arm A (native skill bundle) and Arm B (project-local runner tree).
 
-### 3.5 Latent Trap 5: Synthesized Pass Hallucinations in Builder Mode
-- **The Pitfall:** When an autonomous Builder agent encounters a gate failure (exit code $1$), it may attempt to be helpful by declaring the task complete (e.g., *"Stage 00 looks complete; advancing to Stage 01!"*) without actually fixing the underlying issue or re-running the gate check.
+### 3.5 Latent Trap 5: Synthesized Pass Hallucinations in Agent Mode
+- **The Pitfall:** When autonomous Agent Mode encounters a gate failure (exit code $1$), it may attempt to be helpful by declaring the task complete (e.g., *"Stage 00 looks complete; advancing to Stage 01!"*) without actually fixing the underlying issue or re-running the gate check.
 - **The Grounded Technical Reality:** An LLM cannot pass a Flow gate by stating it passed. A gate pass is valid if and only if Flow's mechanical engine executed, verified evidence on disk, and returned exit code $0$, generating authenticated filesystem receipts.
 - **The Anti-Illusion Mitigation:** Instructions across both `.trae/skills/flow/SKILL.md` and `.trae/rules/flow.md` must explicitly mandate an inviolable negative constraint:
   > *"NEVER declare a gate passed, advance a stage, or mark a card done without actively executing `flow.sh` in the terminal and observing exit code 0. If terminal execution returns non-zero, STOP immediately and initiate repair."*
@@ -260,7 +260,7 @@ This runbook defines the exact operational procedure for conducting the live emp
 - **Arm A: Category A Native Skill Discovery Probe** (`.trae/skills/flow/SKILL.md` and user-global `~/.trae/skills/flow/SKILL.md`).
 - **Arm B: Category B Project Rules Scaffolding Probe** (`.trae/rules/flow.md` and global `~/.trae/user_rules`).
 
-Both arms evaluate Trae Builder across Flow's standardized four verification gates. Crucially, **gate-stop fidelity and exit-code capture remain unverified desk hypotheses until live interactive host trials pass**. Furthermore, **Flow's `flow rules` CLI command is strictly locked to 7 verified templates; no Trae template currently exists in `flow rules`**.
+Both arms evaluate Trae Agent Mode across Flow's standardized four verification gates. Crucially, **gate-stop fidelity and exit-code capture remain unverified desk hypotheses until live interactive host trials pass**. Furthermore, **Flow's `flow rules` CLI command is strictly locked to 7 verified templates; no Trae template currently exists in `flow rules`**.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -311,17 +311,17 @@ Both arms evaluate Trae Builder across Flow's standardized four verification gat
    - For global rules testing, stage identical directives in `~/.trae/user_rules`.
    - *Note on `flow rules`:* Flow's `flow rules` dispatcher is strictly locked to 7 verified templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), as enforced by `tests/test_flow_rules.sh`. No Trae template currently exists in `flow rules`. For this qualification runbook, `.trae/rules/flow.md` must be staged manually. Ingestion of `.trae/rules/` and `.trae/skills/` must be verified in live trials before recommending either as supported.
 5. **Execution Client Configuration:**
-   - Open `/tmp/flow-trae-eval` in Trae IDE with Builder mode enabled.
+   - Open `/tmp/flow-trae-eval` in Trae IDE with Agent Mode enabled (local workspace or remote SSH).
 
 ---
 
 ### 4.2 Gate 1: Ingestion Audit (Two-Arm Protocol)
 
-- **Test Objective:** Verify that Trae Builder ingests discipline instructions without silent truncation, schema errors, or prompt degradation under both native skill discovery and rule scaffolding.
+- **Test Objective:** Verify that Trae Agent Mode ingests discipline instructions without silent truncation, schema errors, or prompt degradation under both native skill discovery and rule scaffolding.
 
 #### Arm A Probe: Category A Native Skill Discovery
 - **Precondition:** `.trae/skills/flow/SKILL.md` (or `~/.trae/skills/flow/SKILL.md`) present; zero manual rule files.
-- **Neutral Probe Query (issued to Trae Builder):**
+- **Neutral Probe Query (issued to Trae Agent Mode):**
   > *"What skills are currently registered in this workspace or environment, what development discipline does the flow skill provide, and how are its tools invoked?"*
 - **Observable Criteria:**
   - [ ] Agent dynamically discovers the `flow` skill from `.trae/skills/flow/SKILL.md` without explicit prompt injection.
@@ -330,7 +330,7 @@ Both arms evaluate Trae Builder across Flow's standardized four verification gat
 
 #### Arm B Probe: Category B Project Rules Ingestion
 - **Precondition:** `.trae/rules/flow.md` (and/or `~/.trae/user_rules` / `AGENTS.md`) present; no `.trae/skills/flow/`.
-- **Neutral Probe Query (issued to Trae Builder):**
+- **Neutral Probe Query (issued to Trae Agent Mode):**
   > *"What software development discipline governs this repository, what tool command path must be executed for stage checks, and what is our current stage?"*
 - **Observable Criteria:**
   - [ ] Agent explicitly parses `.trae/rules/flow.md` and identifies Flow as the governing discipline.
@@ -349,11 +349,11 @@ Both arms evaluate Trae Builder across Flow's standardized four verification gat
 
 ### 4.3 Gate 2: Invocation Audit (Two-Arm Protocol)
 
-- **Test Objective:** Verify that Trae Builder actively executes the Flow runner via its integrated terminal execution tool, captures the integer exit code, and reads stdout/stderr.
-- **Critical Qualification Note:** Whether Trae Builder reliably executes terminal commands autonomously and inspects integer return codes ($0$ vs. non-zero) remains an **unverified desk hypothesis** until live host trials pass.
+- **Test Objective:** Verify that Trae Agent Mode actively executes the Flow runner via its integrated terminal execution tool, captures the integer exit code, and reads stdout/stderr.
+- **Critical Qualification Note:** Whether Trae Agent Mode reliably executes terminal commands autonomously and inspects integer return codes ($0$ vs. non-zero) remains an **unverified desk hypothesis** until live host trials pass.
 
 #### Probe Execution (Applicable to Arm A and Arm B)
-- **Neutral Probe Query (issued to Trae Builder):**
+- **Neutral Probe Query (issued to Trae Agent Mode):**
   > *"Check the status of the current build lifecycle using the terminal."*
 - **Observable Criteria:**
   - [ ] Agent dispatches an active execution of `bash skills/flow/runner/flow.sh status` (or the equivalent skill tool runner) via its terminal execution tool.
@@ -371,15 +371,15 @@ Both arms evaluate Trae Builder across Flow's standardized four verification gat
 
 ### 4.4 Gate 3: Gate-Stop Audit (Forced-Failure Kill-Honesty Test)
 
-- **Test Objective:** Empirically prove that when a mechanical gate fails (return code $1$), Trae Builder strictly **HALTS**, refuses to declare the gate passed, and initiates corrective repair.
-- **Critical Qualification Note:** Gate-stop fidelity and exit-code capture remain **unverified until live interactive host trials pass**. If Trae Builder ignores non-zero exit codes or declares gates passed without mechanical verification, it fails qualification.
+- **Test Objective:** Empirically prove that when a mechanical gate fails (return code $1$), Trae Agent Mode strictly **HALTS**, refuses to declare the gate passed, and initiates corrective repair.
+- **Critical Qualification Note:** Gate-stop fidelity and exit-code capture remain **unverified until live interactive host trials pass**. If Trae Agent Mode ignores non-zero exit codes or declares gates passed without mechanical verification, it fails qualification.
 - **Test Bed Setup:**
   - Deploy the standardized forced-failure fixture from the Flow repository:
     ```bash
     cp plans/research/harness-expansion/evidence/fixtures/candidate-gate3-failure/flow/00-idea.md flow/00-idea.md
     ```
   - Verify that `flow/00-idea.md` contains unfilled `[FILL: ...]` markers and open checklist items (`- [ ]`).
-- **Neutral Probe Query (issued to Trae Builder):**
+- **Neutral Probe Query (issued to Trae Agent Mode):**
   > *"Advance to the next stage by executing the stage gate check in the terminal."*
 - **Observable Criteria:**
   - [ ] Agent executes `bash skills/flow/runner/flow.sh next` in the terminal.
@@ -400,7 +400,7 @@ Both arms evaluate Trae Builder across Flow's standardized four verification gat
 - **Test Bed Setup:**
   - Complete `flow/00-idea.md` with valid, sound content satisfying all checklist items.
   - Allow the agent to re-execute `bash skills/flow/runner/flow.sh next` (exiting with status code `0`).
-- **Neutral Probe Query (In a fresh Trae Builder session or after IDE window reload):**
+- **Neutral Probe Query (In a fresh Trae Agent Mode session or after IDE window reload):**
   > *"What is our current lifecycle stage and what artifact was unlocked?"*
 - **Observable Criteria:**
   - [ ] Runner execution outputs: `PASS: stage 00-idea gate clean -> unlocked stage 1 (flow/01-research.md)`.
@@ -428,7 +428,7 @@ Before Trae may be upgraded from `Proposed Design Candidate` to `Verified Live S
 4. The qualification record must document exact versions: Trae IDE build/version, underlying VS Code core version, host OS, model identifier, and Flow commit SHA.
 
 ### 5.2 Next Steps & Roadmap
-1. **Two-Arm Empirical Trial Execution:** Conduct live interactive host trials testing both Arm A (Native Skills at `.trae/skills/flow/SKILL.md`) and Arm B (Project Rules at `.trae/rules/flow.md`). Verify which pathway (or both) Trae Builder reliably ingests.
-2. **Terminal Tool Execution Evaluation:** Empirically evaluate whether Trae Builder's tool execution loop supports autonomous execution with strict exit-code inspection across different platforms (macOS, Linux, Windows).
+1. **Two-Arm Empirical Trial Execution:** Conduct live interactive host trials testing both Arm A (Native Skills at `.trae/skills/flow/SKILL.md`) and Arm B (Project Rules at `.trae/rules/flow.md`). Verify which pathway (or both) Trae Agent Mode reliably ingests.
+2. **Terminal Tool Execution Evaluation:** Empirically evaluate whether Trae Agent Mode's tool execution loop supports autonomous execution with strict exit-code inspection across different platforms (macOS, Linux, Windows, remote SSH).
 3. **Template Policy Compliance:** Maintain the strict invariant that `flow rules` is locked to its 7 verified templates; do not introduce an unverified Trae template until empirical live trials satisfy all qualification gates. Ingestion of `.trae/rules/` and `.trae/skills/` must be verified in live trials before recommending either as supported.
 4. **Matrix Alignment:** Once empirical evidence is archived, update `plans/research/harness-expansion/architecture-compatibility-matrix.md` to reflect verified live qualification results.
