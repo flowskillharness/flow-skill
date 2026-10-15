@@ -222,12 +222,12 @@ Currently, **only Claude Code and Codex CLI possess full historical empirical li
 - **Provisional Candidate:**
   - **Aider** (`.aider.conf.yml`): Configured with `test-cmd: "bash -c 'cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'"` and `auto-test: true`. It conditionally runs `flow check` on the active in-flight card (or falls back to `flow status` when no card is in flight) upon file edits. This provides developer pair-programming test guidance, distinct from Category B multi-turn interactive prompt rules.
 
-### 5.5 Category D: Incompatible / Deferred Candidates
-- **Definition:** Harnesses fundamentally unable to support Flow's discipline model without violating ADR-0001 or compromising reliability.
-- **Deferred / Incompatible Targets & Grounded Rationale:**
-  - **GitHub Copilot CLI** (`gh copilot`): Deferred / Unassessed. Historically functions as an interactive command suggestion utility; autonomous tool execution and instruction ingestion under current GitHub CLI extensions remain unassessed pending dedicated verification.
-  - **Zed Inline Editor** (non-assistant mode): Deferred / Incompatible. Lacks terminal tool invocation capabilities. (Note: Zed's Assistant panel with the Agent Skills standard is evaluated under Category A via `~/.agents/skills/flow`).
-  - **Continue.dev**: Deferred pending authoritative documentation of its active configuration schema and empirical live tool-loop execution verification (not currently supported in `flow rules`).
+### 5.5 Category D: Incompatible Targets & Unassessed/Deferred Candidates
+- **Category D (Confirmed Incompatible Targets):** Harnesses fundamentally unable to support Flow's discipline model without violating ADR-0001 or compromising reliability:
+  - **Zed Inline Editor** (non-assistant mode): Incompatible. Lacks terminal tool invocation capabilities. (Note: Zed's Assistant panel with the Agent Skills standard is evaluated under Category A via `~/.agents/skills/flow`).
+- **Unassessed / Deferred Candidates (Pending Verification):** Candidates where active tool-loop execution or configuration schemas have not been empirically verified on running hosts; held outside Category D incompatibility:
+  - **GitHub Copilot CLI** (`gh copilot`): Unassessed / Deferred. Historically functions as an interactive command suggestion utility; autonomous tool execution under current GitHub CLI extensions remains unassessed pending dedicated verification.
+  - **Continue.dev**: Unassessed / Deferred. Schema volatility across releases and active autonomous tool execution loop remain unverified; held outside Category D pending live host trials.
 ---
 
 # Section 2: Anti-Illusion Protocol & Latent Bug Catalog

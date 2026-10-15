@@ -69,21 +69,22 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill                             │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context.                      │
 ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────┤
-│ Category C: Automated Test Gate Hooks    │ Category D: Deferred / Incompatible                              │
-│ (Deterministic test command binding)     │ (No autonomous loop / query-only tools)                          │
+│ Category C: Automated Test Gate Hooks    │ Category D: Confirmed Incompatible Targets                       │
+│ (Deterministic test command binding)     │ (Lacks terminal tool invocation)                                 │
 ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────┤
-│ • Aider (.aider.conf.yml test-cmd)       │ • Continue.dev (unverified tool schema)                          │
-│ Nature: Non-agentic test execution hook. │ Nature: Conversational or single-turn only.                      │
-│ Mechanical gate check on file change.    │ Lacks multi-turn autonomous tool execution.                      │
+│ • Aider (.aider.conf.yml test-cmd)       │ • Zed Inline Editor (buffer only, no terminal tool)              │
+│ Nature: Non-agentic test execution hook. │ Nature: Inline editor buffer only.                               │
+│ Mechanical gate check on file change.    │ Lacks terminal execution capabilities.                           │
 └──────────────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
 ```
 
 - **Category A (Native Skill Targets):** Direct directory installation of Flow's skill bundle (`SKILL.md`). The agent discovers and dispatches Flow commands natively.
 - **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot), plus provisional candidate design profiles (Goose, and proposed un-implemented Amazon Q Developer /dev agent).
 - **Category C (Automated Hook / Test Gate Scaffolding):** Harnesses providing deterministic test command binding (e.g., Aider's `test-cmd` in `.aider.conf.yml`, supported via `flow rules aider`).
-- **Category D (Deferred / Incompatible):** Tools lacking a verified autonomous multi-turn tool execution loop, such as Continue.dev (unverified schema). Standalone GitHub Copilot CLI is unassessed pending dedicated verification.
+- **Category D (Confirmed Incompatible Targets):** Tools fundamentally lacking terminal execution capabilities (such as Zed inline editor in non-assistant mode).
+- **Unassessed / Deferred Candidates:** Candidates where active tool-loop execution or configuration schemas have not been empirically verified on running hosts (Continue.dev, GitHub Copilot CLI, Amazon Q CLI); held outside Category D incompatibility pending dedicated host verification.
 
-*Note: Standalone GitHub Copilot CLI and Amazon Q CLI are classified as Unassessed / Pending Verification (historical query utilities; current extension tool-loop capabilities unassessed).*
+*Note: Standalone GitHub Copilot CLI, Amazon Q CLI, and Continue.dev are classified as Unassessed / Deferred Pending Verification.*
 
 ---
 
