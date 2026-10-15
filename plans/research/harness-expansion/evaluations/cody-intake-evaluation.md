@@ -145,7 +145,7 @@ Cody provides several context ingestion pathways:
 
 #### 2.2.4 Context Budgeting & Token Dynamics
 - **Enterprise Code Graph Retrieval:** Cody relies on embeddings, keyword search, and Sourcegraph's code graph index to assemble relevant prompt context. In large enterprise codebases, broad queries can retrieve dozens of irrelevant code snippets, diluting the effective context window.
-- **Instruction Dilution Mitigation:** Injecting monolithic rule files into Cody risks truncation or context crowding. Flow scaffolding for Cody must remain ultra-lean (< 100 tokens), delegating in-depth stage rules to on-disk reference playbooks (`skills/flow/references/*.md`).
+- **Instruction Dilution Mitigation:** Injecting monolithic rule files into Cody risks truncation or context crowding. Flow scaffolding for Cody must remain ultra-lean (compact and directive), delegating in-depth stage rules to on-disk reference playbooks (`skills/flow/references/*.md`).
 
 ---
 
@@ -157,7 +157,7 @@ This section evaluates the integration against Flow's Anti-Illusion Protocol (`d
 - **The Pitfall:** Advertising Flow as universally compatible with "Sourcegraph Cody" without differentiating between IDE extensions and the Sourcegraph Web UI. A developer opens Sourcegraph Web Search, invokes Cody Chat to advance a Flow stage, and discovers that Web Cody cannot execute shell commands, read local disk receipts, or update cards.
 - **The Grounded Technical Reality:**
   - In desk analysis, Sourcegraph Web UI Cody functions as a cloud-based code search interface; direct local subshell and filesystem execution capabilities remain unassessed pending dedicated verification.
-  - Only Cody running inside an IDE extension (VS Code, JetBrains, Neovim) possesses access to local project files and the integrated terminal.
+  - In desk review, local project file edits and integrated terminal proposals are scoped to Cody running inside IDE extensions (VS Code, JetBrains, Neovim).
 - **The Anti-Illusion Mitigation:** Documentation and compatibility matrix entries must explicitly scope Category B candidacy to **Cody IDE Extensions (VS Code & JetBrains)**, while categorizing Sourcegraph Web UI Cody as **Unassessed / Deferred (Web Search Interface)**.
 
 ### 3.2 Latent Trap 2: Terminal Autonomy & The Copy-Paste Illusion
@@ -179,7 +179,7 @@ This section evaluates the integration against Flow's Anti-Illusion Protocol (`d
 ### 3.4 Latent Trap 4: Embeddings Dilution & Token Budget Truncation in Enterprise Codebases
 - **The Pitfall:** Providing an extensive, multi-kilobyte rule file in `.cody/prompts/` or `.vscode/cody.json`. In massive enterprise repositories, Cody's context retrieval engine blends workspace instructions with embeddings from dozens of indexed source files, causing prompt dilution and instructions to be ignored.
 - **The Grounded Technical Reality:** When context windows are saturated with code graph embeddings, instruction-following fidelity degrades significantly. The agent tends to hallucinate gate completions and bypass checklist verification.
-- **The Anti-Illusion Mitigation:** Workspace rule scaffolding must be ultra-compact (< 100 tokens in `AGENTS.md` or workspace prompt configs), establishing pointer directives to on-disk reference playbooks (`skills/flow/references/gate-rules.md`).
+- **The Anti-Illusion Mitigation:** Workspace rule scaffolding must be ultra-compact (concise and focused in `AGENTS.md` or workspace prompt configs), establishing pointer directives to on-disk reference playbooks (`skills/flow/references/gate-rules.md`).
 
 ### 3.5 Latent Trap 5: Shell Environment & Relative Path Disconnect (`flow.sh` Execution)
 - **The Pitfall:** Writing rules that assume a global installation path (e.g., `~/.agents/skills/flow/runner/flow.sh`) or invoking `./skills/flow/runner/flow.sh` without the shell interpreter.

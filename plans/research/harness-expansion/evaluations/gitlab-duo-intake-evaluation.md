@@ -179,7 +179,7 @@ GitLab Duo Workflow can execute in two distinct operational environments: a loca
 - **The Pitfall:** Advertising Flow as "compatible with GitLab Duo" without explicitly distinguishing the operational modality. A developer opens GitLab Duo Chat in the Web UI or IDE sidebar, types a prompt to advance a stage, and discovers that Duo Chat merely generates a conversational reply explaining how to advance rather than executing the gate command.
 - **The Grounded Technical Reality:**
   - In desk review, standard GitLab Duo Chat historically operates as a conversational assistant; its autonomous tool execution loop and gate enforcement capabilities remain unassessed pending dedicated live verification.
-  - Only GitLab Duo Workflow possesses the autonomous multi-step execution loop capable of dispatching shell commands within an execution client.
+  - In vendor materials, GitLab Duo Workflow is described as possessing an autonomous multi-step execution loop capable of dispatching shell commands within an execution client (empirical gate enforcement unverified in Flow trials).
 - **The Anti-Illusion Mitigation:** Documentation, matrix entries, and evaluation records must explicitly state that Flow compatibility is scoped strictly to **GitLab Duo Workflow** (Category B), while standard **GitLab Duo Chat** is classified as **Unassessed / Deferred Pending Verification (Historically Conversational)**.
 
 ### 3.2 Latent Trap 2: CI/CD Runner Sandbox vs. Local IDE (Host Path Disconnect & ENOENT)
