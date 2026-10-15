@@ -48,6 +48,10 @@ Nightly (cron) ──► smoke.mjs vs dist-tags next + latest (clean cwd, no npm
 - Stable tag (`npm@0.1.0`) → dist-tag **`latest`**.
 - `promote_to` workflow input: **manual-only early exit** (prints `npm dist-tag add …`); OIDC cannot dist-tag (E401).
 - After every pre-release: decide whether `latest` should follow. If yes → manual promote (checklist).
+- **GitHub Release boundary:**
+  - GitHub Releases belong to the Skill Product axis (`v<skill_v>`). A GitHub Release with release notes is created for `v<skill_v>` (e.g. `gh release create v0.34.2 --notes-file CHANGELOG.md`).
+  - The npm installer axis (`npm@<version>`) triggers the OIDC npm publish pipeline to npmjs.com. It does NOT automatically generate a GitHub Release; any installer GitHub Release is optional and manual.
+  - This eliminates confusion between npm publishing and GitHub Releases.
 
 ## Harness preflight (every release — skill and/or npm)
 
@@ -115,6 +119,7 @@ bash scripts/release.sh --yes
      - `npm test --prefix npm-wrapper`
    - In `--dry-run`: outputs `DRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship.` and exits 0 (strictly non-mutating).
    - In live mode (requires `--yes`): checks tag existence, creates new git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to remote origin, and displays GitHub Actions approval instructions.
+   - **GitHub Release creation**: GitHub Releases belong to the Skill Product axis (`v<skill_v>`). A GitHub Release with release notes is created for `v<skill_v>` (e.g. `gh release create v<skill_v> --notes-file CHANGELOG.md`). The npm installer axis (`npm@<version>`) triggers the OIDC npm publish pipeline to npmjs.com and does NOT automatically generate a GitHub Release (any installer GitHub Release is optional and manual).
 
 ### Manual Step-by-Step Breakdown (Reference)
 
@@ -128,6 +133,7 @@ For developers wishing to perform manual or partial steps:
 6. **Verification battery**: `bash scripts/release-preflight.sh && bash scripts/pack-rehearsal.sh`.
 7. **Tag**: `git tag npm@<npm_v>` and `git tag v<skill_v>`.
 8. **Push**: `git push origin master && git push origin npm@<npm_v> && git push origin v<skill_v>`.
+9. **GitHub Release (Skill Product)**: `gh release create v<skill_v> --notes-file CHANGELOG.md`. The npm installer axis triggers OIDC publish to npmjs.com and does not automatically generate a GitHub Release.
 ## Skill product release (e.g. v0.24.0)
 
 1. **Implement + tests**
