@@ -71,10 +71,10 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Status:** **`Historical / Deprecated Candidate (Repository Archived / Maintenance Ceased; Live Trials Not Recommended)`**.
 - **Qualification Rationale:**
   - Mentat operated in the developer terminal as an open-source command-line coding assistant. With repository archival and cessation of maintenance, active execution capabilities remain unverified historical artifacts.
-  - **Distinction from Category A (Native Skill Target):** Desk review of Mentat's official documentation and open-source codebase found no documented native skill directory standard (such as the universal `~/.agents/skills/` specification or Claude Code's `~/.claude/skills/`). Mentat does not auto-discover standalone `SKILL.md` bundles from global host directories. Claiming Category A native skill discovery without empirical evidence would be an illusion trap.
+  - **Distinction from Category A (Native Skill Target):** In desk review of Mentat's historical repository and documentation, no documented native skill directory standard (such as the universal `~/.agents/skills/` specification or Claude Code's `~/.claude/skills/`) was identified. Mentat did not provide native discovery for standalone `SKILL.md` bundles from global host directories.
   - **Strict Locking of `flow rules`:** Flow's CLI rule generator is strictly locked to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), strictly verified by `tests/test_flow_rules.sh`. **No Mentat template exists in `flow rules`.** Attempting `flow rules mentat` exits with status `2` (`unknown harness: mentat`).
   - In strict accordance with Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising "Mentat support" or claiming compatibility without empirical live host verification of subshell invocation, return-code capture ($0$ vs. non-zero), and gate-stop fidelity constitutes marketing deception ("quảng cáo ảo").
-  - Prospective Flow integration must rely on hypothesized prompt context, command-line arguments, or repository root `AGENTS.md` guiding the assistant to invoke the project-local runner (`skills/flow/runner/flow.sh`).
+  - Pre-archive desk analysis hypothesized that any integration would have relied on prompt context, command-line arguments, or repository root `AGENTS.md` guiding the assistant to invoke a project-local runner (`skills/flow/runner/flow.sh`).
   - Because the repository is archived and maintenance has ceased, live host trials are **not recommended**; this record is retained purely as a historical desk review artifact under Flow's qualification taxonomy.
 
 ### 1.2 Constitutional Alignment (ADR-0001 Invariants)
@@ -156,11 +156,11 @@ To enforce Flow gates, Mentat would have needed to execute terminal commands wit
 
 ### 3.1 Latent Trap 1: Modality Confusion (Conversational Planning vs. Mechanical Gate Checks)
 - **The Failure Mode:**
-  - An operator or LLM assumes that because Mentat coordinated multi-file edits across the repository and produced an articulate summary of completed work, the Flow lifecycle stage has passed.
+  - An operator or LLM might assume that because Mentat historically coordinated multi-file edits across the repository and produced an articulate summary of completed work, the Flow lifecycle stage had passed.
   - This is an **illusion trap**. In Flow's constitutional model, conversational narratives, multi-file code proposals, and chat explanations have zero evidentiary value.
   - Stage advancement requires authenticated on-disk files (`flow/00-idea.md`, `cards/C-NNN.md`), validated checksums in `manifest-hashes.json`, and an authentic exit code `0` from `flow.sh next` or `flow.sh check`.
 - **The Anti-Illusion Mitigation:**
-  - Instructions in `AGENTS.md` would have needed to explicitly stipulate that coordinating edits in Mentat does not satisfy Flow gates.
+  - In pre-archive desk analysis, instructions in `AGENTS.md` would have needed to explicitly stipulate that coordinating edits in Mentat does not satisfy Flow gates.
   - Because Mentat is an archived project, live qualification Gate 3 was not executed.
 
 ### 3.2 Latent Trap 2: Absence of Dedicated `flow rules` Template
@@ -177,8 +177,8 @@ To enforce Flow gates, Mentat would have needed to execute terminal commands wit
     ```
   - An automated script assuming a Mentat rule template will crash with exit code `2`.
 - **The Anti-Illusion Mitigation:**
-  - Flow documentation must explicitly declare that Mentat has **no dedicated `flow rules` generator**.
-  - Instruction scaffolding for Mentat must be provided via the repository root `AGENTS.md` and standard prompt context.
+  - Flow documentation explicitly records that Mentat has **no dedicated `flow rules` generator**.
+  - No active instruction scaffolding is provided or supported for the archived tool.
 
 ### 3.3 Latent Trap 3: Strict Prohibition of Flow Background Daemons (ADR-0001)
 - **The Failure Mode:**
@@ -187,12 +187,12 @@ To enforce Flow gates, Mentat would have needed to execute terminal commands wit
 - **The Anti-Illusion Mitigation:**
   - Under ADR-0001, **Flow must never hold the process token and must never run a resident daemon**.
   - Flow executes strictly per command as an ephemeral subprocess (`flow.sh status`, `flow.sh check`, `flow.sh next`) and terminates immediately upon returning an integer exit code.
-  - Mentat runs as an interactive Python CLI; Flow remains strictly an ephemeral child process.
+  - Mentat historically operated as an interactive Python CLI; Flow strictly maintains zero background daemons.
 
 ### 3.4 Latent Trap 4: Project-Local Runner Requirement (`skills/flow/runner/flow.sh`)
 - **The Failure Mode:**
   - Users familiar with Category A harnesses (such as Claude Code or Codex) expect the agent to automatically resolve global commands installed under `~/.claude/skills/flow` or `~/.agents/skills/flow`.
-  - Mentat does not inspect host global skill directories. If instructions tell Mentat to run `flow status` or refer to global paths, the terminal subshell will fail with:
+  - In desk review, no documented mechanism for discovering host-global skill directories was identified for Mentat. If an agent were instructed to invoke global paths without local runner presence, the terminal subshell would fail with:
     ```text
     bash: flow: command not found (exit code 127)
     ```
