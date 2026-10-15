@@ -192,10 +192,10 @@ This runbook provides step-by-step instructions for executing the **Four-Point L
      ```bash
      chmod +x skills/flow/runner/flow.sh
      ```
-3. **Materialize Workspace Instruction Scaffolding (`DEVIN.md`):**
-   - Create or verify `DEVIN.md` in the repository root with the following exact content:
+3. **Candidate Instruction Probe Preparation (Experimental Setup):**
+   - To evaluate whether Devin discovers repository-level instructions, create an experimental candidate instruction file (`DEVIN.md` or `AGENTS.md`) in the repository root:
      ```markdown
-     # Flow Engineering Discipline for Devin
+     # Flow Engineering Discipline for Devin (Experimental Candidate)
 
      This repository is governed by Flow. Execute all Flow commands using the project-local runner:
      `bash skills/flow/runner/flow.sh <command>`
@@ -209,7 +209,8 @@ This runbook provides step-by-step instructions for executing the **Four-Point L
      - Inspect exit codes. If flow.sh returns exit code 1, you MUST HALT and repair errors.
      - NEVER declare a gate or card passed without an authentic exit code 0 from flow.sh.
      ```
-   - Commit and push the branch to the remote repository.
+   - *Experimental Nature:* This file is an unverified test probe. If Devin fails to load or honor this file, Gate 1 must record FAIL (unsupported candidate path).
+   - Commit and push to `test/devin-qualification`.
 4. **Launch Devin Cloud Session:**
    - Open Devin web portal (https://cognition.ai / https://docs.devin.ai).
    - Start a new session pointing to the repository and branch `test/devin-qualification`.
@@ -225,10 +226,11 @@ This runbook provides step-by-step instructions for executing the **Four-Point L
   ```text
   What software development discipline governs this repository, what gate commands are available, and what is our current stage?
   ```
-- **Evaluation Criteria:**
-  - [ ] Devin detects and reads `DEVIN.md` from the repository root.
-  - [ ] Devin identifies Flow as the governing engineering discipline.
-  - [ ] Devin explicitly identifies the project-local command format `bash skills/flow/runner/flow.sh <command>` rather than referencing nonexistent host-global paths (`~/.claude/` or `~/.agents/`).
+- **Evaluation Criteria & Possible Outcomes:**
+  - [ ] **Candidate Ingestion:** Devin detects and reads the candidate instruction probe (`DEVIN.md` / `AGENTS.md`) from repository root without parsing errors. *(FAIL if ignored, omitted, or unsupported).*
+  - [ ] **Context Recognition:** Devin identifies Flow as the governing engineering discipline based strictly on the candidate file.
+  - [ ] **Path Resolution:** Devin recognizes `bash skills/flow/runner/flow.sh <command>` rather than referencing nonexistent host-global paths (`~/.claude/` or `~/.agents/`).
+  - [ ] **Disqualification Trigger:** If Devin ignores the probe, cannot read repository markdown files, or synthesizes an advance without tool execution, Gate 1 records **FAIL / UNSUPPORTED**.
 - **Verdict:** `[PASS / FAIL]`
 
 #### Gate 2: Invocation Audit (Cloud Terminal Tool Execution Hypothesis Test)
