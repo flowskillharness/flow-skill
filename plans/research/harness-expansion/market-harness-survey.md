@@ -639,7 +639,7 @@ Plandex (Plandex Inc.; repository: https://github.com/plandex-ai/plandex, docume
 ### Candidate 17: Trae (Dual Category A Native Skills & Category B Agent Mode)
 
 #### 1. System Overview & Harness Architecture
-Trae (ByteDance; official portal: https://www.trae.ai, documentation: https://docs.trae.ai) is an adaptive, AI-first code editor built upon a VS Code foundation (full desk intake: `evaluations/trae-intake-evaluation.md`). Official Trae documentation identifies a merged environment featuring **Agent Mode** (the autonomous agent capability, formerly named "Builder" or "Builder Mode" in early preview releases before being merged into Agent Mode) alongside **IDE Mode** (Chat and editor completions). Trae provides multiple interaction modalities: an interactive Chat panel, autonomous multi-turn **Agent Mode** with integrated terminal execution and workspace editing capabilities across local workspace directories or remote SSH environments, and inline code completion. Architecturally, Trae presents a unique dual-category integration profile:
+Trae (ByteDance; official portal: https://www.trae.ai, documentation: https://docs.trae.ai) is an adaptive, AI-first code editor built upon a VS Code foundation (full desk intake: `evaluations/trae-intake-evaluation.md`). Official Trae documentation identifies a merged environment featuring **Agent Mode** (the autonomous agent capability, formerly named "Builder" or "Builder Mode" in early preview releases before being merged into Agent Mode) alongside **IDE Mode** (Chat and editor completions). Trae provides multiple interaction modalities: an interactive Chat panel, **Agent Mode** for multi-file workspace editing and terminal command execution (live Flow qualification scoped to local Agent Mode; remote SSH separately unqualified; tool API hypothetical), and inline code completion. Architecturally, Trae presents a unique dual-category integration profile:
 - **Category A (Native Skill Target):** Documented support for directory-based dynamic skill discovery via `SKILL.md` located at user-global (`~/.trae/skills/`) and project-local (`.trae/skills/`) paths.
 - **Category B (Project Rules Scaffolding):** Documented project rules support at `.trae/rules/*.md` and user-level global rules at `~/.trae/user_rules`, complemented by repository-root `AGENTS.md`.
 
@@ -669,7 +669,7 @@ In desk review, Trae is evaluated as a **proposed un-implemented Dual Category A
 ### Candidate 18: Void Editor (Open-Source AI Code Editor) — Historical / Deprecated Candidate
 
 #### 1. System Overview & Harness Architecture
-Void Editor (official portal: https://voideditor.com, repository: https://github.com/voideditor/void, documentation: https://docs.voideditor.com) is an open-source (Apache-2.0) AI code editor built as a VS Code fork, marketed as an open-source Cursor alternative (full desk intake: `evaluations/void-intake-evaluation.md`). It offered a Chat mode and an autonomous Agent mode, with customizable AI model backends spanning commercial APIs and local model servers (Ollama, vLLM).
+Void Editor (official portal: https://voideditor.com, repository: https://github.com/voideditor/void, documentation: https://docs.voideditor.com) is an open-source (Apache-2.0) AI code editor built as a VS Code fork, marketed as an open-source Cursor alternative (full desk intake: `evaluations/void-intake-evaluation.md`). It offered a Chat mode and an Agent mode for multi-file edits, with customizable AI model backends spanning commercial APIs and local model servers (Ollama, vLLM).
 
 **Market Status Disclosure (Deprecation / Inactivity):** Void Editor is an **inactive / deprecated open-source project**. Development has ceased (deprecation notice; repository effectively archived for historical interest), and the project is retained here purely as a **historical candidate**. Live host trials are **not recommended**; no "supported" claim of any kind is made.
 
@@ -723,7 +723,7 @@ In desk review, Void is evaluated as an **Unassessed / Deferred / Historical (In
 | **Plandex** | Project plan context / `AGENTS.md` (No template) | N/A | Proposed plan / `AGENTS.md` | Built-in command tool (`exec`) | Autonomous (Configurable auto-debug; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Trae** | `.trae/skills/` (`SKILL.md`) & `.trae/rules/` | `~/.trae/skills/` & `~/.trae/user_rules` | `.trae/skills/flow/` & `.trae/rules/flow.md` | Hypothesized terminal tool (unverified API name / host trial pending) | Autonomous (Local Agent Mode; live trial pending) | **Dual A/B Proposed Candidate (Local Agent Mode; Live Trial Pending)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
-| **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Autonomous (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
+| **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; project inactive) | Unassessed (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
 
 ---
 
