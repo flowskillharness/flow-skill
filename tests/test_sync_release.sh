@@ -181,6 +181,48 @@ grep -q "git push origin npm@" /tmp/sync_g.out && ck 1 0 "does not emit git push
 grep -q "git push origin v" /tmp/sync_g.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
 rm -rf "$tmp"
 
+echo "H) --ship --dry-run is strictly non-mutating in an isolated temp repository"
+tmp=$(mktemp -d)
+git clone -q "$ROOT" "$tmp/r"
+git -C "$tmp/r" config user.email "test@example.com"
+git -C "$tmp/r" config user.name "Test Runner"
+cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
+git -C "$tmp/r" add scripts/
+git -C "$tmp/r" commit -qm "sync scripts in temp clone"
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+
+before_head="$(git -C "$tmp/r" rev-parse HEAD)"
+before_tags="$(git -C "$tmp/r" tag -l)"
+before_status="$(git -C "$tmp/r" status --porcelain)"
+
+node "$tmp/r/scripts/sync-release.mjs" --ship --dry-run >/tmp/sync_h.out 2>&1
+ck 0 $? "--ship --dry-run exits 0"
+grep -q "DRY-RUN SUCCESS" /tmp/sync_h.out && ck 0 0 "reports DRY-RUN SUCCESS" || ck 0 1 "reports DRY-RUN SUCCESS"
+
+after_head="$(git -C "$tmp/r" rev-parse HEAD)"
+after_tags="$(git -C "$tmp/r" tag -l)"
+after_status="$(git -C "$tmp/r" status --porcelain)"
+
+[ "$before_head" = "$after_head" ] && ck 0 0 "git log/HEAD strictly unchanged" || ck 0 1 "git log/HEAD strictly unchanged"
+[ "$before_tags" = "$after_tags" ] && ck 0 0 "git tags strictly unchanged" || ck 0 1 "git tags strictly unchanged"
+[ "$before_status" = "$after_status" ] && ck 0 0 "working tree status strictly unchanged" || ck 0 1 "working tree status strictly unchanged"
+
+# Live --ship without --yes pauses for confirmation without mutating
+node "$tmp/r/scripts/sync-release.mjs" --ship >/tmp/sync_h_noyes.out 2>&1
+ck 0 $? "live --ship without --yes exits 0"
+grep -q "RELEASE SHIP CONFIRMATION REQUIRED" /tmp/sync_h_noyes.out && ck 0 0 "prompts for confirmation" || ck 0 1 "prompts for confirmation"
+[ "$before_head" = "$(git -C "$tmp/r" rev-parse HEAD)" ] && ck 0 0 "live --ship without --yes made no commits" || ck 0 1 "live --ship without --yes made no commits"
+[ "$before_tags" = "$(git -C "$tmp/r" tag -l)" ] && ck 0 0 "live --ship without --yes created no tags" || ck 0 1 "live --ship without --yes created no tags"
+[ "$before_status" = "$(git -C "$tmp/r" status --porcelain)" ] && ck 0 0 "live --ship without --yes working tree status strictly unchanged" || ck 0 1 "live --ship without --yes working tree status strictly unchanged"
+# Live --ship with uncommitted non-release changes fails with exit 1
+touch "$tmp/r/unrelated.txt"
+node "$tmp/r/scripts/sync-release.mjs" --ship --yes >/tmp/sync_h_unrelated.out 2>&1
+ck 1 $? "live --ship fails on uncommitted non-release file"
+grep -q "FAIL: Working tree contains uncommitted changes outside release files" /tmp/sync_h_unrelated.out && ck 0 0 "reports clean working tree precondition failure" || ck 0 1 "reports clean working tree precondition failure"
+
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

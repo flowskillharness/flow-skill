@@ -65,6 +65,18 @@ need an alternative write path — re-check npm changelog before that date.
 - [x] Repo public (OIDC audience).
 - [ ] Optional: `npm profile get` when diagnosing account issues.
 
+## Canonical Release Command (`scripts/release.sh`)
+
+From the repo root, run the unified release automation that automates surface synchronization, release preparation commits, i18n pair hash recording, the full 7-gate verification battery, tagging, and push:
+
+```bash
+# Non-mutating pre-flight verification:
+bash scripts/release.sh --dry-run
+
+# Live release execution (creates tags, pushes master and tags):
+bash scripts/release.sh --yes
+```
+
 ## Local pre-flight (every release)
 
 ```bash

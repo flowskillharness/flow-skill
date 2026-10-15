@@ -85,69 +85,49 @@ node scripts/sync-release.mjs --sync
 
 ## Canonical Chronological Release Workflow
 
-> **Current published baseline**: `npm@0.7.8` and `v0.34.1` have already been tagged and published (`npm view @manhquy/flow-skill dist-tags` shows `latest: 0.7.8`). When running `node scripts/sync-release.mjs --instructions` (or `--sync`), the tool detects that both release tags already exist in the repository, treats the run as metadata repair / synchronization, and suppresses tag creation instructions to prevent duplicate tag errors or accidental re-pushes.
+The entire release pipeline is unified into a single fail-closed execution via `bash scripts/release.sh`:
 
-When performing a new release across skill product and/or npm installer channels, follow this canonical 8-step sequence:
-
-### Step 1: Decide version bump
-- **If bumping skill product**:
-  Update `skills/flow/SKILL.md` (`metadata.version`), `.claude-plugin/plugin.json` (`version`), and `portable-manifest.json` (`version`) together to the same version `v<skill_v>`.
-- **If bumping npm installer**:
-  ```bash
-  cd npm-wrapper && npm version <patch|minor|prerelease> --no-git-tag-version
-  ```
-  *(Always pass `--no-git-tag-version` to prevent npm from creating a conflicting `v*` git tag).*
-
-### Step 2: Add release notes
-- Add release notes for skill product under `CHANGELOG.md` (`## [<skill_v>] - YYYY-MM-DD`).
-- Add release notes for npm installer under `npm-wrapper/CHANGELOG.md` (`## [<npm_v>] - YYYY-MM-DD`).
-
-### Step 3: Synchronize surfaces
-From repository root:
 ```bash
-node scripts/sync-release.mjs --sync
-```
-This updates documentation table rows across all 4 README files (`npm-wrapper/README.md`, `npm-wrapper/README_VN.md`, `README.md`, `README_VN.md`), preserves GA rows if bumping a prerelease, runs `npm run sync` inside `npm-wrapper` to re-materialize bundled assets and hashes, and verifies release coherence.
+# Preview release readiness, simulate checks, and verify gates non-mutatingly:
+bash scripts/release.sh --dry-run
 
-### Step 4: Commit changes
-```bash
-git add skills/flow/SKILL.md .claude-plugin/plugin.json portable-manifest.json \
-  npm-wrapper/package.json npm-wrapper/skills/ README.md README_VN.md \
-  npm-wrapper/README.md npm-wrapper/README_VN.md CHANGELOG.md npm-wrapper/CHANGELOG.md
-git commit -m "chore(release): prepare v<skill_v> / npm@<npm_v>"
+# Execute full live release (synchronize surfaces, commit release prep & i18n hashes, run battery, tag, and push):
+bash scripts/release.sh --yes
 ```
 
-### Step 5: Record i18n pair hashes
-Because `check-i18n-pairs.sh` verifies committed `HEAD:<path>` blobs:
-```bash
-bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md
-bash scripts/check-i18n-pairs.sh record README.md
-git add docs/i18n-pairs.txt && git commit -m "docs(i18n): update pair hashes"
-```
+### The 8 Unified Steps Automated by `scripts/release.sh`:
 
-### Step 6: Run full verification
-From repository root:
-```bash
-bash scripts/release-preflight.sh
-bash scripts/pack-rehearsal.sh
-```
-Verify that preflight reports `PREFLIGHT PASS` and pack rehearsal reports `pack-rehearsal OK`.
+1. **Safety Precondition Check**: Validates that the working tree is clean or contains only valid release surface files. In live mode, fails loudly if unrelated uncommitted changes exist.
+2. **Version Resolution**: Reads skill product version (`skills/flow/SKILL.md`) and npm package version (`npm-wrapper/package.json`).
+3. **Changelog Validation**: Verifies changelog entries exist for both versions in `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
+4. **Surface Synchronization**: Synchronizes table rows across all 4 README files (`npm-wrapper/README.md`, `npm-wrapper/README_VN.md`, `README.md`, `README_VN.md`), preserves GA rows for prereleases, and re-materializes bundled assets via `npm run sync` in `npm-wrapper`.
+5. **Release Commit**: Commits release preparation files (`chore(release): prepare v<skill_v> / npm@<npm_v>`).
+6. **i18n Pair Hash Recording**: Records committed `HEAD` blob hashes for `README.md` and `npm-wrapper/README.md` via `scripts/check-i18n-pairs.sh record`.
+7. **i18n Commit**: Commits updated pair hashes in `docs/i18n-pairs.txt` (`docs(i18n): update pair hashes for v<skill_v> / <npm_v>`).
+8. **Verification Battery & Tagging/Push**:
+   - Runs the entire verification battery:
+     - `check-release-coherence.sh`
+     - `release-preflight.sh`
+     - `pack-rehearsal.sh`
+     - `check-doc-budgets.sh`
+     - `test_doc_budgets.sh`
+     - `test_flow_rules.sh`
+     - `npm test --prefix npm-wrapper`
+   - In `--dry-run`: outputs `DRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship.` and exits 0 (strictly non-mutating).
+   - In live mode (requires `--yes`): checks tag existence, creates new git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to remote origin, and displays GitHub Actions approval instructions.
 
-### Step 7: Create release tags
-Only emit tags for versions that do not yet exist:
-```bash
-git tag npm@<npm_v>    # triggers npm publish workflow (.github/workflows/publish-npm-wrapper.yml)
-git tag v<skill_v>      # skill product GitHub release (does not trigger npm publish)
-```
+### Manual Step-by-Step Breakdown (Reference)
 
-### Step 8: Push
-```bash
-git push origin master
-git push origin npm@<npm_v>
-# If skill tag was created:
-git push origin v<skill_v>
-```
+For developers wishing to perform manual or partial steps:
 
+1. **Decide version bump**: Update `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, and `portable-manifest.json` for skill; or `cd npm-wrapper && npm version <patch|minor|prerelease> --no-git-tag-version`.
+2. **Add release notes**: `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
+3. **Synchronize surfaces**: `node scripts/sync-release.mjs --sync`.
+4. **Commit changes**: `git commit -m "chore(release): prepare v<skill_v> / npm@<npm_v>"`.
+5. **Record i18n hashes**: `bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md` and `README.md`, then commit `docs/i18n-pairs.txt`.
+6. **Verification battery**: `bash scripts/release-preflight.sh && bash scripts/pack-rehearsal.sh`.
+7. **Tag**: `git tag npm@<npm_v>` and `git tag v<skill_v>`.
+8. **Push**: `git push origin master && git push origin npm@<npm_v> && git push origin v<skill_v>`.
 ## Skill product release (e.g. v0.24.0)
 
 1. **Implement + tests**

@@ -535,23 +535,353 @@ Commit recommendation:
 `);
 }
 
+const ALLOWED_RELEASE_FILES = new Set([
+  'skills/flow/SKILL.md',
+  '.claude-plugin/plugin.json',
+  'portable-manifest.json',
+  'npm-wrapper/package.json',
+  'npm-wrapper/package-lock.json',
+  'CHANGELOG.md',
+  'npm-wrapper/CHANGELOG.md',
+  'README.md',
+  'README_VN.md',
+  'npm-wrapper/README.md',
+  'npm-wrapper/README_VN.md',
+  'docs/i18n-pairs.txt',
+]);
+
+function isAllowedReleaseFile(filePath) {
+  if (ALLOWED_RELEASE_FILES.has(filePath)) return true;
+  if (filePath.startsWith('npm-wrapper/skills/')) return true;
+  if (filePath === 'npm-wrapper/node_modules' || filePath.startsWith('npm-wrapper/node_modules/')) return true;
+  return false;
+}
+
+function getWorkingTreeStatus() {
+  const out = execFileSync('git', ['status', '--porcelain'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  if (!out.trim()) return [];
+  return out.split(/\r?\n/).filter(Boolean).map(line => {
+    const match = line.match(/^(.{2})\s+(.*)$/);
+    const status = match ? match[1] : line.slice(0, 2);
+    let p = match ? match[2].trim() : line.slice(3).trim();
+    if (p.includes(' -> ')) {
+      p = p.split(' -> ').pop().trim();
+    }
+    if (p.startsWith('"') && p.endsWith('"')) {
+      p = p.slice(1, -1);
+    }
+    p = p.replace(/\\/g, '/');
+    return { status, path: p };
+  });
+}
+
+function shipRelease({ isDryRun = false, isYes = false } = {}) {
+  // If neither --dry-run nor --yes is specified:
+  // Print planned release actions and exit 0 immediately with ZERO file modifications, ZERO commits, ZERO writes!
+  if (!isYes && !isDryRun) {
+    const skill_v = getSkillVersion();
+    const npm_v = getNpmVersion();
+    const npmTag = npm_v ? `npm@${npm_v}` : 'npm@<unknown>';
+    const skillTag = skill_v ? `v${skill_v}` : 'v<unknown>';
+    const npmTagStatus = npm_v ? gitTagExists(npmTag) : { exists: false, source: 'unknown' };
+    const skillTagStatus = skill_v ? gitTagExists(skillTag) : { exists: false, source: 'unknown' };
+
+    console.log(`
+================================================================================
+RELEASE SHIP CONFIRMATION REQUIRED
+================================================================================
+Planned live release:
+  Skill version: ${skill_v ? `v${skill_v}` : 'MISSING'}
+  npm version:   ${npm_v ?? 'MISSING'}
+  Tags:
+    - ${npmTag} ${npmTagStatus.exists ? `(already exists: ${npmTagStatus.source})` : '(new tag to create)'}
+    - ${skillTag} ${skillTagStatus.exists ? `(already exists: ${skillTagStatus.source})` : '(new tag to create)'}
+  Branch:
+    - master -> origin/master
+
+Confirmation flag (--yes / -y) was not provided. Live mutations, tag creation,
+and pushing are paused for safety.
+
+To preview release readiness without mutations:
+  node scripts/sync-release.mjs --ship --dry-run
+  bash scripts/release.sh --dry-run
+
+To execute this release live, re-run with --yes:
+  node scripts/sync-release.mjs --ship --yes
+  bash scripts/release.sh --yes
+================================================================================
+`);
+    process.exit(0);
+  }
+
+  console.log(`\n================================================================================`);
+  console.log(`Starting Flow Skill Unified Release Pipeline${isDryRun ? ' (DRY-RUN)' : ''}`);
+  console.log(`================================================================================\n`);
+  // a. Checks if working tree is clean (or has only release files modified).
+  console.log('Step 1/8: Checking working tree status...');
+  const statusFiles = getWorkingTreeStatus();
+  const nonReleaseFiles = statusFiles.filter(f => !isAllowedReleaseFile(f.path));
+  if (nonReleaseFiles.length > 0) {
+    if (!isDryRun) {
+      console.error('FAIL: Working tree contains uncommitted changes outside release files. Clean working tree before running --ship.');
+      for (const f of nonReleaseFiles) {
+        console.error(`  ${f.status} ${f.path}`);
+      }
+      process.exit(1);
+    } else {
+      console.log('[WARN] Working tree contains uncommitted changes outside release files (non-mutating --dry-run continues):');
+      for (const f of nonReleaseFiles) {
+        console.log(`  ${f.status} ${f.path}`);
+      }
+    }
+  } else {
+    console.log('✓ Working tree is clean or has only release files modified.');
+  }
+  // b. Reads skill version and npm version.
+  console.log('\nStep 2/8: Reading skill and npm versions...');
+  const skill_v = getSkillVersion();
+  const npm_v = getNpmVersion();
+  if (!skill_v) {
+    console.error('FAIL: Missing skill version in skills/flow/SKILL.md');
+    process.exit(1);
+  }
+  if (!npm_v) {
+    console.error('FAIL: Missing npm version in npm-wrapper/package.json');
+    process.exit(1);
+  }
+  console.log(`✓ Skill product version: v${skill_v}`);
+  console.log(`✓ npm package version:   ${npm_v}`);
+
+  // c. Validates CHANGELOG entries exist for both versions.
+  console.log('\nStep 3/8: Validating CHANGELOG entries...');
+  const changelogPath = join(repoRoot, 'CHANGELOG.md');
+  if (!existsSync(changelogPath) || !new RegExp(`^##\\s+\\[?${escapeRegExp(skill_v)}\\]?`, 'm').test(readFileSync(changelogPath, 'utf8'))) {
+    console.error(`FAIL: CHANGELOG.md is missing an entry for skill version v${skill_v}`);
+    process.exit(1);
+  }
+  const wrapperChangelogPath = join(repoRoot, 'npm-wrapper', 'CHANGELOG.md');
+  if (!existsSync(wrapperChangelogPath) || !new RegExp(`^##\\s+\\[?${escapeRegExp(npm_v)}\\]?`, 'm').test(readFileSync(wrapperChangelogPath, 'utf8'))) {
+    console.error(`FAIL: npm-wrapper/CHANGELOG.md is missing an entry for npm version ${npm_v}`);
+    process.exit(1);
+  }
+  console.log('✓ CHANGELOG entries exist for both versions.');
+
+
+  if (!isDryRun) {
+    // d. Runs syncRelease(skill_v, npm_v) to update all 4 READMEs and re-materialize npm-wrapper/skills with npm run sync.
+    console.log('\nStep 4/8: Synchronizing READMEs and npm-wrapper skills...');
+    syncRelease(skill_v, npm_v);
+
+    // e. If release files are dirty:
+    //    - Commits them: `chore(release): prepare v${skill_v} / npm@${npm_v}`
+    console.log('\nStep 5/8: Checking for uncommitted release preparation files...');
+    const statusAfterSync = getWorkingTreeStatus();
+    const dirtyReleaseFiles = statusAfterSync
+      .map(f => f.path)
+      .filter(p => p !== 'docs/i18n-pairs.txt' && isAllowedReleaseFile(p));
+
+    if (dirtyReleaseFiles.length > 0) {
+      console.log('Committing release preparation files:');
+      for (const f of dirtyReleaseFiles) {
+        console.log(`  + ${f}`);
+      }
+      execFileSync('git', ['add', '--', ...dirtyReleaseFiles], { cwd: repoRoot, stdio: 'inherit' });
+      execFileSync('git', ['commit', '-m', `chore(release): prepare v${skill_v} / npm@${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+      console.log(`✓ Committed release files: chore(release): prepare v${skill_v} / npm@${npm_v}`);
+    } else {
+      console.log('✓ Release preparation files are already clean / committed.');
+    }
+
+    // f. Records i18n pair hashes using bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md and bash scripts/check-i18n-pairs.sh record README.md.
+    console.log('\nStep 6/8: Recording i18n pair hashes...');
+    execFileSync('bash', ['scripts/check-i18n-pairs.sh', 'record', 'npm-wrapper/README.md'], {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
+    execFileSync('bash', ['scripts/check-i18n-pairs.sh', 'record', 'README.md'], {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
+    console.log('✓ Recorded i18n pair hashes.');
+
+    // g. If docs/i18n-pairs.txt is dirty, commits it: `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`
+    console.log('\nStep 7/8: Checking docs/i18n-pairs.txt status...');
+    const statusAfterRecord = getWorkingTreeStatus();
+    const i18nDirty = statusAfterRecord.some(f => f.path === 'docs/i18n-pairs.txt');
+    if (i18nDirty) {
+      console.log('Committing updated docs/i18n-pairs.txt...');
+      execFileSync('git', ['add', 'docs/i18n-pairs.txt'], { cwd: repoRoot, stdio: 'inherit' });
+      execFileSync('git', ['commit', '-m', `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+      console.log(`✓ Committed docs/i18n-pairs.txt: docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`);
+    } else {
+      console.log('✓ docs/i18n-pairs.txt is already clean / up to date.');
+    }
+  } else {
+    console.log('\n[DRY-RUN] Verifying release surface coherence (non-mutating mode)...');
+    const checkState = runChecks();
+    if (!checkState.allPass) {
+      console.error(formatDiagnosticTable(checkState.results));
+      console.error('\nFAIL: Release surfaces show drift during dry-run validation.');
+      process.exit(1);
+    }
+    console.log('✓ Release surfaces coherent.');
+    console.log('[DRY-RUN] Skipping git commits and i18n record (non-mutating mode).');
+  }
+  // h. Runs the entire verification battery:
+  //    - check-release-coherence.sh
+  //    - release-preflight.sh
+  //    - pack-rehearsal.sh
+  //    - check-doc-budgets.sh
+  //    - test_doc_budgets.sh
+  //    - test_flow_rules.sh
+  //    - npm test --prefix npm-wrapper
+  // i. If any check fails, aborts immediately.
+  console.log('\nStep 8/8: Running entire verification battery...');
+  const battery = [
+    { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
+    { name: 'release-preflight', cmd: 'bash', args: ['scripts/release-preflight.sh'] },
+    { name: 'pack-rehearsal', cmd: 'bash', args: ['scripts/pack-rehearsal.sh'] },
+    { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
+    { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
+    { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
+    { name: 'npm test --prefix npm-wrapper', cmd: process.platform === 'win32' ? 'npm.cmd' : 'npm', args: ['test', '--prefix', 'npm-wrapper'] },
+  ];
+
+  for (const step of battery) {
+    console.log(`\n>>> Running ${step.name}...`);
+    try {
+      execFileSync(step.cmd, step.args, {
+        cwd: repoRoot,
+        stdio: 'inherit',
+      });
+      console.log(`✓ ${step.name} PASSED`);
+    } catch (err) {
+      console.error(`\nFAIL: Verification step "${step.name}" failed (exit code ${err.status ?? 1}). Aborting release.`);
+      process.exit(err.status ?? 1);
+    }
+  }
+
+  // j. If --dry-run: prints "DRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship." and exits 0.
+  if (isDryRun) {
+    console.log('\nDRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship.\n');
+    process.exit(0);
+  }
+
+  // k. If live:
+  //    - Verifies if tags npm@${npm_v} and v${skill_v} already exist. If either exists, prints warning/info and does not duplicate.
+  //    - If tags are new: creates git tag npm@${npm_v} and git tag v${skill_v}.
+  //    - Pushes master and tags: git push origin master and git push origin npm@${npm_v} / git push origin v${skill_v}.
+  //    - Prints instructions for approving the GitHub Actions npm-publish environment.
+  const npmTag = `npm@${npm_v}`;
+  const skillTag = `v${skill_v}`;
+  const npmTagStatus = gitTagExists(npmTag);
+  const skillTagStatus = gitTagExists(skillTag);
+
+
+  let createdNpmTag = false;
+  let createdSkillTag = false;
+
+  console.log('\n================================================================================');
+  console.log('Tagging Release');
+  console.log('================================================================================\n');
+
+  if (npmTagStatus.exists) {
+    console.log(`[INFO] Git tag ${npmTag} already exists (${npmTagStatus.source}). Skipping npm tag creation.`);
+  } else {
+    console.log(`Creating git tag ${npmTag}...`);
+    execFileSync('git', ['tag', npmTag], { cwd: repoRoot, stdio: 'inherit' });
+    createdNpmTag = true;
+    console.log(`✓ Created tag ${npmTag}`);
+  }
+
+  if (skillTagStatus.exists) {
+    console.log(`[INFO] Git tag ${skillTag} already exists (${skillTagStatus.source}). Skipping skill tag creation.`);
+  } else {
+    console.log(`Creating git tag ${skillTag}...`);
+    execFileSync('git', ['tag', skillTag], { cwd: repoRoot, stdio: 'inherit' });
+    createdSkillTag = true;
+    console.log(`✓ Created tag ${skillTag}`);
+  }
+
+  console.log('\n================================================================================');
+  console.log('Pushing to Remote');
+  console.log('================================================================================\n');
+
+  console.log('Pushing master branch to origin...');
+  execFileSync('git', ['push', 'origin', 'master'], { cwd: repoRoot, stdio: 'inherit' });
+  console.log('✓ Pushed master to origin');
+
+  if (createdNpmTag || !npmTagStatus.exists) {
+    console.log(`Pushing tag ${npmTag} to origin...`);
+    execFileSync('git', ['push', 'origin', npmTag], { cwd: repoRoot, stdio: 'inherit' });
+    console.log(`✓ Pushed tag ${npmTag} to origin`);
+  } else {
+    console.log(`[INFO] Tag ${npmTag} already exists on remote/local. Skipping tag push.`);
+  }
+
+  if (createdSkillTag || !skillTagStatus.exists) {
+    console.log(`Pushing tag ${skillTag} to origin...`);
+    execFileSync('git', ['push', 'origin', skillTag], { cwd: repoRoot, stdio: 'inherit' });
+    console.log(`✓ Pushed tag ${skillTag} to origin`);
+  } else {
+    console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
+  }
+
+  console.log(`
+================================================================================
+RELEASE SHIP SUCCESSFUL
+================================================================================
+Skill Product: v${skill_v}
+npm Package:   ${npm_v}
+
+Pushed to origin:
+  Branch: master
+  Tags:   ${npmTag}${createdNpmTag ? ' (newly created)' : ' (already existed)'}
+          ${skillTag}${createdSkillTag ? ' (newly created)' : ' (already existed)'}
+
+NEXT STEPS (GitHub Actions Approval):
+  1. Go to GitHub Actions:
+     https://github.com/manhquydev/flow-skill/actions
+  2. Locate the "Publish npm-wrapper to npm" workflow run triggered by tag ${npmTag}.
+  3. Review and approve the "npm-publish" environment deployment prompt (requires reviewer approval).
+  4. Once published, verify the published package:
+     npm view @manhquy/flow-skill dist-tags --json
+     npx --yes @manhquy/flow-skill@latest --help
+================================================================================
+`);
+}
+
 function main() {
   const args = process.argv.slice(2);
+  const isShip = args.includes('--ship');
+  const isDryRun = args.includes('--dry-run');
+  const isYes = args.includes('--yes') || args.includes('-y');
   const isSync = args.includes('--sync');
   const isInstructions = args.includes('--instructions');
-  const isCheck = args.includes('--check') || (!isSync && !isInstructions);
+  const isCheck = args.includes('--check') || (!isShip && !isSync && !isInstructions);
   const isHelp = args.includes('--help') || args.includes('-h');
 
   if (isHelp) {
-    console.log(`Usage: node scripts/sync-release.mjs [--check | --sync | --instructions]
+    console.log(`Usage: node scripts/sync-release.mjs [--check | --sync | --instructions | --ship [--dry-run] [--yes]]
 
 Options:
   --check         Validate release coherence across all versions, manifests, readmes, and changelogs (default)
   --sync          Synchronize documentation tables across README files, trigger npm-wrapper sync, and verify
   --instructions  Print release instructions and tag status for current versions without modifying files
+  --ship          Full release pipeline: sync, commit prep & i18n hashes, run battery, tag, and push
+  --dry-run       When used with --ship, run full validation checks without modifying files, committing, tagging, or pushing
+  --yes, -y       Confirm live tag creation and pushing when executing --ship
   --help          Show this help message
 `);
     process.exit(0);
+  }
+
+  if (isShip) {
+    shipRelease({ isDryRun, isYes });
+    return;
   }
 
   if (isInstructions) {
