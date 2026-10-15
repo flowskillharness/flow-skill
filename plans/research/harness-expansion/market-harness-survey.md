@@ -64,6 +64,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
 │                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│ • Void Editor (Historical / Inactive Open-Source IDE) │
 │                                     │ • PearAI (Proposed Open-Source IDE Agent Scaffold) │                                  │
+│                                     │ • AutoCodeRover (Proposed Container / Benchmark Scaffold) │                   │
 │                                     │                                              │ • Mentat (Historical / Archived Terminal CLI)    │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
@@ -757,6 +758,31 @@ In desk review, Mentat is evaluated as an **Unassessed / Deferred / Historical (
 
 ---
 
+### Candidate 21: AutoCodeRover (Automated Program Repair Agent)
+
+#### 1. System Overview & Harness Architecture
+AutoCodeRover is an open-source (Apache-2.0, National University of Singapore) automated program repair framework combining LLMs with AST-level code navigation and iterative test execution for GitHub issue resolution (full desk intake: `evaluations/auto-code-rover-intake-evaluation.md`).
+
+#### 2. Execution Environment
+- AutoCodeRover executes in a local host environment or Docker container.
+- Any hypothetical Flow integration would execute ephemerally via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>`), terminating immediately upon return.
+- Zero Flow Daemons (ADR-0001): Flow operates exclusively as a stateless, host-invoked discipline layer; it would not run as or spawn persistent background daemons, servers, or socket listeners. The host agent holds the execution process token.
+
+#### 3. Extension & Integration Mechanism: Task Prompt Context / `AGENTS.md`
+- Hypothesized Ingestion Mechanism (unverified): task prompt context plus repository root `AGENTS.md`.
+- No `flow rules` template exists for AutoCodeRover; `flow rules` remains strictly locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules autocoderover` fails with exit code 2.
+
+#### 4. Project-Local Runner Requirement
+- Any hypothetical integration mandates `bash skills/flow/runner/flow.sh <command>` — project-vendored runner invocation with the Flow runner tree present in the project workspace.
+- AutoCodeRover did not discover host-global skill directories; terminal tool execution, exit-code capture fidelity, and gate-stop behavior remain **unverified** pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts, test command execution logs, and gate-stop verification — archived under `plans/research/harness-expansion/evidence/`.
+- **The Marketing Illusion to Avoid:** Claiming verified support or a non-existent `flow rules autocoderover` template. Advertising unverified scaffolding as a compatible harness would be precisely the "quảng cáo ảo" (marketing theater) ADR-0001 forbids.
+- **Feasibility Verdict:** **AutoCodeRover: Proposed Design Candidate (Unverified Category B Container/Benchmark Scaffold Hypothesis; Live Host Trials Pending).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -786,6 +812,7 @@ In desk review, Mentat is evaluated as an **Unassessed / Deferred / Historical (
 | **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; project inactive) | Unassessed (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
 | **PearAI** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool (unverified API) | Autonomy unverified; live trial pending | **Proposed B (Design Hypothesis; Unverified)** |
 | **Mentat** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; repository archived) | Unassessed (CLI maintenance ceased; live trials not recommended) | **Tier 3 (Deferred / Historical Candidate; repository archived)** |
+| **AutoCodeRover** | Problem context / `AGENTS.md` (No template) | N/A | Problem context / `AGENTS.md` | Hypothesized test command tool | Autonomy unverified; live trial pending | **Proposed B (Design Hypothesis; Unverified)** |
 
 ---
 
@@ -1015,3 +1042,5 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - **PearAI Documentation & Repository:** https://trypear.ai · https://github.com/trypear/pearai-submodule · https://trypear.ai/docs (PearAI, Apache-2.0, accessed 2026-10-15)
 17. **Mentat Documentation & Repository (Historical / Archived Project):**
    - **Mentat Documentation & Repository:** https://mentat.ai · https://github.com/AbanteAI/mentat (Abante AI, Apache-2.0, accessed 2026-10-15; repository archived, CLI maintenance ceased)
+18. **AutoCodeRover Documentation & Repository:**
+   - **AutoCodeRover Documentation & Repository:** https://github.com/nus-apr/auto-code-rover · https://arxiv.org/abs/2404.05427 (National University of Singapore, Apache-2.0, accessed 2026-10-15)

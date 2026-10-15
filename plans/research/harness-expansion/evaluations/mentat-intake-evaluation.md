@@ -167,8 +167,8 @@ To enforce Flow gates, Mentat would have needed to execute terminal commands wit
 - **The Failure Mode:**
   - A developer assumes that Flow includes a built-in generator for Mentat and attempts:
     ```bash
-    bash skills/flow/runner/flow.sh rules mentat --write
-    ```
+    bash skills/flow/runner/flow.sh rules mentat
+```
   - Flow's `flow rules` command is strictly locked to **seven supported harnesses** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), as verified by `tests/test_flow_rules.sh`:
     ```text
     unknown harness: mentat
