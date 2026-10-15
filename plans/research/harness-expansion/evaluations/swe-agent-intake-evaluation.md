@@ -171,29 +171,29 @@ In the research-described Docker architecture, a hypothesized isolation boundary
 ### 3.1 Latent Trap 1: The Docker Container Sandbox Boundary & Host Path Illusion (`ENOENT`)
 - **The Failure Mode:**
   - Developers familiar with host-level CLI tools (like Claude Code or Codex) often assume that global installations (`~/.claude/skills/flow` or `~/.agents/skills/flow`) are universally available.
-  - In SWE-agent, the agent executes inside an isolated Docker container rootfs where host user directories do not exist.
-  - If instructions reference host-global paths, SWE-agent attempts to resolve them against `/root/` or `/home/swe-user/`, triggering `ENOENT` fatal errors.
+  - In the research-described container model, SWE-agent executes inside an isolated Docker container rootfs where host user directories would not exist.
+  - If instructions reference host-global paths, SWE-agent is hypothesized to resolve them against container-local paths, triggering `ENOENT` failures (subject to live container verification).
   - Furthermore, engineers might attempt to run `npx @manhquy/flow-skill -t <target> --project`. In Flow's constitutional installer (`constants.mjs`), project-scoped installation (`--project`) is **strictly reserved for Claude Code** (`projectScopeAllowed: false` for all other targets).
 - **The Anti-Illusion Mitigation:**
-  - Flow integration for SWE-agent mandates checking out or vendoring the project-local runner at `skills/flow/runner/flow.sh`.
-  - Repository instructions (`AGENTS.md`) and YAML prompt templates must strictly invoke:
+  - Proposed Flow integration for SWE-agent requires checking out or vendoring the project-local runner at `skills/flow/runner/flow.sh`.
+  - Repository instructions (`AGENTS.md`) and YAML prompt templates would reference:
     ```bash
     bash skills/flow/runner/flow.sh <command>
     ```
-  - Neither host-global paths nor unsupported `--project` flags may ever be recommended.
+  - Neither host-global paths nor unsupported `--project` flags should ever be recommended in scaffolding instructions.
 
 ### 3.2 Latent Trap 2: ACI Custom Shell Commands vs. Standard Bash Execution
-- **The Failure Mode:**
-  - SWE-agent's ACI environment wraps container interaction with custom command utilities (`open_file`, `scroll_down`, `search_dir`, `edit_lines`).
+- **The Failure Mode (Hypothesis):**
+  - In the research-described ACI environment, container interaction is wrapped with custom command utilities (`open_file`, `scroll_down`, `search_dir`, `edit_lines`).
   - If an instruction ambiguously directs the agent to "inspect Flow gates using your editor", an LLM might attempt to open `skills/flow/runner/flow.sh` with `open_file` or edit internal state files manually instead of executing the runner.
-  - Alternatively, if an ACI command execution wrapper buffers or filters stdout/stderr, or intercepts exit codes to format LLM observation blocks, a non-zero exit code ($exit \neq 0$) might be masked or treated as a catastrophic environment crash rather than a clean gate diagnostic.
+  - If an ACI command execution wrapper hypothesizes to buffer or filter stdout/stderr, or intercept exit codes to format LLM observation blocks, a non-zero exit code ($exit \neq 0$) might be masked or treated as a catastrophic environment crash rather than a clean gate diagnostic.
 - **The Anti-Illusion Mitigation:**
-  - Instruction scaffolding must unambiguously direct SWE-agent to invoke Flow via standard bash command execution:
+  - Proposed instruction scaffolding would unambiguously direct SWE-agent to invoke Flow via standard bash command execution:
     ```bash
     bash skills/flow/runner/flow.sh <command>
     ```
-  - Instructions must explicitly forbid editing or tampering with Flow's mechanical files (`flow.sh`, `manifest-hashes.json`).
-  - SWE-agent must receive raw stdout/stderr streams and the exact integer return code to enable clean error diagnosis and repair.
+  - Instructions would explicitly forbid editing or tampering with Flow's mechanical files (`flow.sh`, `manifest-hashes.json`).
+  - SWE-agent is expected to receive raw stdout/stderr streams and the exact integer return code to enable clean error diagnosis and repair (empirical exit-code fidelity unverified pending live container trials).
 
 ### 3.3 Latent Trap 3: Zero Resident Daemons & State Boundary Invariants (ADR-0001)
 - **The Failure Mode:**
@@ -210,8 +210,8 @@ In the research-described Docker architecture, a hypothesized isolation boundary
   - When an autonomous agent encounters a failing verification check or a non-zero exit code ($exit \neq 0$), a common pathological failure mode is **rationalized bypass / synthetic pass**:
     > *"The verification script reported an error in 00-idea.md, but I have verified that all requirements are conceptually satisfied. Marking idea stage complete and proceeding to research."*
   - This rationalized bypass completely subverts Flow's mechanical evidence gates ("quảng cáo ảo").
-- **The Anti-Illusion Mitigation:**
-  - Instruction templates must explicitly instruct:
+- **The Anti-Illusion Mitigation (Proposed):**
+  - Instruction templates would explicitly instruct:
     > *"NEVER synthesize or hallucinate a gate pass. If `bash skills/flow/runner/flow.sh` returns exit code 1, you MUST HALT immediately, report the exact runner diagnostic output, and resolve the failure on disk. Advancing stages without an authentic exit code 0 is a catastrophic discipline breach."*
   - Empirical verification via Gate 3 (forced-failure gate-stop) is mandatory to ensure SWE-agent genuinely halts when a gate fails.
 
