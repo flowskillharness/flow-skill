@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.34.3] - 2026-10-15
+- **Unified release automation (scripts/sync-release.mjs + scripts/release.sh):** Fail-closed dual-axis coherence, strictly non-mutating dry-run (recursive SHA-256 tree hash), fail-closed local+remote tag suppression, and portable read-only battery.
+
 ## [0.34.2] - 2026-10-15
 
 - **Comprehensive 21-Harness Market Expansion:** Formally authored, validated, and integrated desk intake evaluations for 21 market harnesses across Tier 1, Tier 2, and Tier 3 categories (including Cursor, Zed, Roo Code, Cline, Windsurf, OpenHands, Aider, Copilot, Goose, Amazon Q Developer, Devin, SWE-agent, GitLab Duo, Sourcegraph Cody, Augment Code, Tabnine, Plandex, Trae Dual A/B, PearAI, AutoCodeRover, and historical profiles for Void and Mentat).
