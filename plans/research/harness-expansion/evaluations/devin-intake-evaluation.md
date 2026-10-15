@@ -71,7 +71,7 @@ Devin does **not** discover arbitrary host desktop skill directories:
 ### 2.1 Phase 1: Market Intelligence & Prioritization
 - **Market Share & Developer Adoption (Hypothesized Market Archetype):** Devin represents an autonomous commercial SWE agent developed by Cognition AI (vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15). In industry coverage and benchmark reports (e.g., SWE-bench Verified), it serves as a prominent autonomous agent reference, though broad install metrics remain bounded by subscription-gated access.
 - **Agentic Autonomy & Capability (Desk Hypothesis):** In vendor demonstrations, Devin is shown planning multi-step tasks, editing code across files, and executing shell commands in a cloud sandbox; empirical subshell execution and gate-stop fidelity remain unverified in Flow trials. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
-- **Ecosystem Openness & Stability:** Devin is a proprietary platform with a closed-source cloud orchestration runtime. However, its instruction ingestion relies on standard, human-readable repository files (`DEVIN.md`, `AGENTS.md`, and playbook knowledge entries), allowing clean, non-invasive instruction injection without proprietary runtime dependencies.
+- **Ecosystem Openness & Stability:** Devin is a proprietary platform with a closed-source cloud orchestration runtime. Prospective instruction ingestion is hypothesized to use repository files (`DEVIN.md`, `AGENTS.md`, or session playbooks), allowing non-invasive instruction injection if supported by the host runtime.
 - **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
   - **Status Classification:** `Unverified Internal Prioritization Hypothesis (Desk Intake; Live Host Validation Pending)`
   - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
@@ -92,7 +92,7 @@ Devin’s architecture separates the model planning tier from the execution envi
 
 #### 2.2.2 Ingestion Mechanism (Hypothesized): Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
 Devin discovers project-level operational guidelines via repository root files:
-- **`DEVIN.md` (Hypothesized Standard):** Referenced in community discussions and vendor materials as Devin's repository instruction convention; actual automatic ingestion behavior remains unverified in Flow testing.
+- **`DEVIN.md` (Hypothesized Format):** Suggested in community discussions and vendor marketing as a potential repository instruction file; actual automatic ingestion behavior remains unverified in Flow testing.
 - **`AGENTS.md` (Open Standard):** Hypothesized cross-agent repository instruction format; live ingestion behavior remains subject to Phase 4 trials.
 - **Playbook Knowledge:** Operators can configure organizational playbooks in Devin's web interface to persist cross-repository guidelines.
 - **Context Injection Dynamics (Hypothesized):** In desk review, repository instructions are hypothesized to be injected into initial prompt context; instruction files must remain compact to avoid context dilution.
@@ -109,12 +109,12 @@ A critical technical reality governs Devin integrations due to the remote microV
              ▼ git clone (remote network)
 [ Isolated Devin Cloud MicroVM Sandbox ]
   └── /home/devin/workspace/          <── MicroVM working directory
-        ├── DEVIN.md                  <── Ingested by Devin at session start
+        ├── DEVIN.md                  <── Hypothesized instruction file
         └── skills/flow/runner/flow.sh <── MUST BE LOCATED HERE (Project-local runner)
 ```
 
-- **Remote Cloud Isolation:** Devin does not run on the developer's laptop. It clones the repository into a remote cloud microVM. Host-global paths configured on the user's local machine (`~/.claude/`, `~/.agents/`, `/home/user/`) do not exist.
-- **The `ENOENT` Trap:** If instructions direct Devin to invoke a host-global path like `bash ~/.claude/skills/flow/runner/flow.sh` or `bash ~/.agents/skills/flow/runner/flow.sh`, the cloud microVM crashes immediately with:
+- **Remote Cloud Isolation (Hypothesized):** In this cloud sandbox model, Devin is described as cloning repositories into an isolated cloud environment. Host-global paths configured on a developer's local machine (`~/.claude/`, `~/.agents/`) would not exist.
+- **The `ENOENT` Trap (Hypothesized):** If instructions directed Devin to invoke a host-global path like `bash ~/.claude/skills/flow/runner/flow.sh`, the cloud sandbox is hypothesized to fail with `ENOENT`:
   $$\text{bash: /home/devin/.claude/skills/flow/runner/flow.sh: No such file or directory (ENOENT)}$$
 - **Project-Local Runner Requirement:** Flow's runner tree must be checked into the repository under `skills/flow/runner/flow.sh` (or vendored during workspace setup). All instructions in `DEVIN.md` must strictly mandate the project-local relative path:
   ```bash
@@ -159,7 +159,7 @@ A critical technical reality governs Devin integrations due to the remote microV
   - This rationalization completely invalidates Flow's evidence-gated discipline ("quảng cáo ảo").
 - **The Grounded Technical Reality:**
   - Flow's gates are mechanical: `flow.sh next` and `flow.sh check C-NNN` return exit status `1` when checks fail (e.g., unfilled `[FILL]` markers, open checklist `- [ ]`, uncommitted diffs).
-  - Devin's shell tool receives the exact integer exit code from the microVM subshell.
+  - In desk design, Devin's shell tool is expected to receive the exact integer exit code from the sandbox subshell (subject to empirical verification in live trials).
 - **The Anti-Illusion Mitigation:**
   - `DEVIN.md` must encode an explicit non-negotiable directive:
     > *"NEVER synthesize or hallucinate a gate pass. If `bash skills/flow/runner/flow.sh` returns exit code 1, you MUST HALT immediately, report the exact runner diagnostic output, and resolve the failure. Advancing stages without an authentic exit code 0 is a catastrophic discipline breach."*
@@ -167,7 +167,7 @@ A critical technical reality governs Devin integrations due to the remote microV
 
 ### 3.4 MicroVM Sandbox Ephemerality & Persistence Dynamics
 - **The Failure Mode:**
-  - Cloud microVM sandboxes are ephemeral. If a Devin session is paused, restarted, or completed, changes that are not committed to Git or pushed to the remote branch may be permanently lost upon microVM teardown.
+  - In cloud sandbox architectures, environment instances are typically ephemeral. Changes that are not committed to Git or pushed to the remote branch risk being lost upon session teardown.
 - **The Anti-Illusion Mitigation:**
   - Flow relies entirely on disk-backed files (`flow/*.md`, `cards/C-NNN.md`) and Git commits.
   - When Devin advances a stage or updates a card, the resulting markdown artifacts are committed to Git, ensuring cross-session and cross-microVM continuity without relying on ephemeral microVM disk storage.
