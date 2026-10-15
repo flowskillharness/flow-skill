@@ -5,7 +5,7 @@
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
-- **Architectural Category:** Category B (Container Agent Instruction Scaffolding)
+- **Architectural Category:** Category B (Proposed Container Agent Scaffold — Unverified)
 - **Related References:**
   - `plans/research/harness-expansion/architecture-compatibility-matrix.md`
   - `plans/research/harness-expansion/market-harness-survey.md`
@@ -19,21 +19,21 @@
 
 ---
 
-## Section 1: Executive Summary & Category B (Container Agent Instruction Scaffolding) Classification
+## Section 1: Executive Summary & Proposed Container Agent Instruction Scaffolding
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 SWE-agent (developed by Princeton University NLP and the InterCode team; repository: https://github.com/swe-agent/swe-agent, website: https://swe-agent.com, accessed 2026-10-15) is an open-source autonomous software engineering system. It deploys language models into isolated Linux Docker container environments to solve real-world GitHub repository issues, achieving prominent baseline results on autonomous evaluation benchmarks such as SWE-bench (https://www.swebench.com). SWE-agent pioneered the **Agent-Computer Interface (ACI)**, a specialized interaction framework that structures how language models view, search, edit, and execute code within sandboxed shell environments.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category B (Container Agent Instruction Scaffolding)**.
-- **Qualification Status:** **PROVISIONAL CANDIDATE (Container Live Trials Pending)**.
+- **Classification:** **Proposed Container Agent Instruction Scaffolding (Unverified)**.
+- **Qualification Status:** **PROPOSED DESIGN CANDIDATE (Container Live Trials Pending)**.
 - **Qualification Rationale:** SWE-agent operates inside an isolated Docker container execution sandbox (typically mounting codebases to `/workspace` or `/testbed`). It lacks native directory-based skill discovery (Category A). Instruction ingestion occurs via repository instruction files (such as `README.md`, `AGENTS.md`, or problem context) and configurable YAML prompt templates (`config/*.yaml`). In desk review, Flow's ephemeral runner (`skills/flow/runner/flow.sh`) is architecturally compatible with SWE-agent's containerized shell execution environment. However, under Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §1.1), claiming verified compatibility without live container test execution is strictly rejected as marketing deception ("quảng cáo ảo"). Until a live SWE-agent Docker session executes the Four-Point Live Verification Protocol with raw tool receipts archived, SWE-agent remains a Provisional Candidate.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        SWE-AGENT EVALUATION SUMMARY                                    │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
-│ Architectural Classification │ Category B: Container Agent Instruction Scaffolding     │
+│ Architectural Classification │ Category B: Proposed Container Agent Scaffold (Hypothesis)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Repository instructions / Prompt configuration templates│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -45,7 +45,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Live Qualification Status    │ PROVISIONAL CANDIDATE (Container Live Trials Pending)   │
+│ Live Qualification Status    │ PROPOSED CANDIDATE (Container Live Trials Pending)       │
 └──────────────────────────────┴─────────────────────────────────────────────────────────┘
 ```
 

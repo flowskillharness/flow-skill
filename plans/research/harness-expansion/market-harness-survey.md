@@ -521,7 +521,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:** Live evidence — raw transcripts, tool payloads, and integer exit codes from a Duo Workflow session — demonstrating ingestion of the scaffolding and mechanical halt on gate failure, archived under `plans/research/harness-expansion/evidence/`.
-- **The Marketing Illusion to Avoid:** Advertising generic "GitLab Duo support" (conflating query-only Duo Chat with the unverified Duo Workflow agent), or claiming a `.gitlab/duo_workflow.yml` template exists in `flow rules` (it does not).
+- **The Marketing Illusion to Avoid:** Advertising generic "GitLab Duo support" (conflating historically conversational Duo Chat (current tool-loop capability unassessed) with the unverified Duo Workflow agent), or claiming a `.gitlab/duo_workflow.yml` template exists in `flow rules` (it does not).
 - **Feasibility Verdict:**
   - **GitLab Duo Workflow: Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
   - **GitLab Duo Chat: Unassessed / Deferred Pending Verification (Historically query utility; tool loop unassessed).**
@@ -563,7 +563,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 [ Container / Sandbox Environment (OpenHands / Codespaces) ]
   └── /workspace/my-project/
         ├── .openhands/microagents/flow.md
-        └── skills/flow/runner/flow.sh <── MUST BE LOCATED HERE (Project-scoped)
+        └── skills/flow/runner/flow.sh <── MUST BE LOCATED HERE (Repository-vendored runner)
 ```
 - **The Pitfall:** If an installer only places Flow in `~/.claude/` or `~/.agents/` on the developer's laptop, containerized agents like OpenHands will crash with:
   `bash: /home/user/.agents/skills/flow/runner/flow.sh: No such file or directory`.
