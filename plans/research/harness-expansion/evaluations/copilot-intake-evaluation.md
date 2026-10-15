@@ -23,7 +23,7 @@
 GitHub Copilot (developed by GitHub and Microsoft; vendor documentation: https://docs.github.com/en/copilot, accessed 2026-10-15) is an AI-powered coding assistant deeply integrated into the Visual Studio Code editor and GitHub developer ecosystem. It spans multiple operational surfaces: inline code completions, multi-turn conversational chat (Copilot Chat in VS Code), multi-file editing workflows (Copilot Edits and emerging Copilot Workspace/Agent capabilities), and a command-line assistant (`gh copilot` extension for the GitHub CLI).
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category B (Workspace Rule Scaffolding for VS Code / Workspace) & Category D (Deferred for GitHub Copilot CLI)**.
+- **Classification:** **Category B (Workspace Rule Scaffolding for VS Code / Workspace) & Unassessed / Pending Verification (GitHub Copilot CLI)**.
 - **Qualification Status:** **PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)**.
 - **Qualification Rationale:**
   - Flow implements native workspace rule scaffolding for GitHub Copilot via `flow rules copilot --write`, materializing `.github/copilot-instructions.md`.
@@ -171,7 +171,7 @@ This repository enforces Flow discipline:
 - **The Anti-Illusion Mitigation:**
   - Flow's documentation and compatibility matrix explicitly bifurcate GitHub Copilot:
     - **VS Code Copilot Workspace:** Category B (Workspace Rule Scaffolding).
-    - **GitHub Copilot CLI (`gh copilot`):** Category D (Deferred / Unassessed).
+    - **GitHub Copilot CLI (`gh copilot`):** Unassessed / Pending Verification.
   - Flow strictly refuses to document or advertise CLI support for GitHub Copilot.
 
 ### 3.2 Latent Trap 2: Lack of Autonomous Loop & Chat Hallucination Trap

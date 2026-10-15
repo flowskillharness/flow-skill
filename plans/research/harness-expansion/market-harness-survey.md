@@ -328,8 +328,8 @@ GitHub Copilot spans multiple surfaces:
   - Providing a clean `.github/copilot-instructions.md` instructing Copilot to format changes around Flow cards and prompt the user to execute `bash runner/flow.sh check`.
   - Flow serves as an interactive guide.
 - **The Marketing Illusion to Avoid:**
-  - Advertising "Full Autonomous Buildflow in GitHub Copilot". Copilot Agent Mode cannot run the complete Idea->Retro pipeline autonomously without constant human driving. Copilot CLI cannot participate in Flow at all.
-- **Feasibility Verdict:** **Tier 2 for VS Code Copilot (.github/copilot-instructions.md) / Tier 3 for Copilot CLI (Unsupported).**
+  - Advertising "Full Autonomous Buildflow in GitHub Copilot". Copilot Agent Mode cannot run the complete Idea->Retro pipeline autonomously without constant human driving. Copilot CLI historically functioned as an interactive suggestion helper; its tool execution loop under modern extensions remains unassessed.
+- **Feasibility Verdict:** **Tier 2 for VS Code Copilot (.github/copilot-instructions.md) / Tier 3 Deferred for Copilot CLI (Unassessed / Pending Verification).**
 
 ---
 

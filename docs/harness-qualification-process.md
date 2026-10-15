@@ -209,7 +209,7 @@ Currently, **only Claude Code and Codex CLI possess full historical empirical li
 ### 5.3 Category B: Workspace Rule Scaffolding (Instruction Injection)
 - **Definition:** Harnesses lacking global skill discovery or relying on project-level instruction files.
 - **Disclosure Mandate:** Must be disclosed strictly as *"Rule Scaffolding"*, NEVER as *"Native Skill"*. All Category B targets are **provisional candidates**:
-  - **Cursor Rules** (`.cursor/rules/flow.mdc`): Provisional candidate scaffold using MDC format with globbing and `alwaysApply: true`.
+  - **Cursor Rules** (`.cursor/rules/flow.mdc`): Provisional candidate scaffold using MDC format with globbing and `alwaysApply: false`.
   - **Windsurf Cascade** (`.windsurf/rules/flow.md`): Provisional candidate scaffold injecting workspace discipline.
   - **Roo Code** (`.roomodes`): Provisional candidate custom mode with required `command` execution permissions.
   - **Cline** (`.clinerules`): Provisional candidate discipline prompt.
