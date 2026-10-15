@@ -227,15 +227,19 @@ To evaluate SWE-agent objectively without presupposing container behaviors, the 
 
 ```
 [ Two-Arm Probe Protocol ]
-  ├── Arm A: Baseline Discovery Probe (Clean Worktree)
-  │     ├── Clean repository clone inside container sandbox
-  │     ├── Flow vendored at skills/flow/runner/flow.sh
+  0. Container Feasibility Probe (Prerequisite) ─ if PASS, proceed; else record BLOCKED (Setup Failure)
+  │
+  ├── Arm A: Baseline Discovery Probe (Observation Only)
+  │     ├── Conditionally provision a container session (if feasibility passes)
+  │     ├── Repository checkout (or equivalent working directory)
+  │     ├── Runner: reachability to skills/flow/runner/flow.sh recorded as observation
   │     ├── NO AGENTS.md, NO custom prompt config, NO instructions
   │     └── Objective: Record whatever native discovery behavior is observed (observation only)
   │
   └── Arm B: Candidate Instruction Probe (Instruction Scaffolding)
-        ├── Clean repository clone inside container sandbox
-        ├── Flow vendored at skills/flow/runner/flow.sh
+        ├── Conditional on container session being available (after feasibility)
+        ├── Repository checkout (or equivalent working directory)
+        ├── Runner: reachability to skills/flow/runner/flow.sh recorded as observation
         ├── Candidate instruction scaffolding installed (AGENTS.md / YAML template)
         └── Objective: Execute 4-Point Gate Verification Matrix with explicit outcomes
 ```
