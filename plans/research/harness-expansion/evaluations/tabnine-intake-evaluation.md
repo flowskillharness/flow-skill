@@ -140,7 +140,7 @@ In desk review of vendor documentation, Tabnine Chat operates inside the IDE ext
 ## Section 3: Latent Bug Analysis & Anti-Illusion Traps
 
 ### 3.1 Latent Trap 1: Modality Confusion (Tabnine Chat vs. Inline Completions)
-- **The Pitfall:** Claiming general "Tabnine support" without distinguishing between conversational/workspace assistance and inline ghost-text completions. A developer expecting Flow build discipline during inline code completion discovers that inline completions have no execution loop, cannot run commands, and cannot enforce gates.
+- **The Pitfall:** Claiming general "Tabnine support" without distinguishing between conversational/workspace assistance and inline ghost-text completions. A developer expecting Flow build discipline during inline code completion discovers that inline completions operate as text predictions outside Flow's build-gate integration scope.
 - **The Grounded Technical Reality:** Tabnine Inline Completions are text-prediction models embedded in the editor buffer. Inline completions operate as passive text completions outside Flow's build-gate integration scope. Tabnine Chat is the modality evaluated for prospective prompt instruction scaffolding and terminal execution.
 - **The Anti-Illusion Mitigation:** Explicitly classify Inline Completions as **Unassessed / Deferred (Outside Flow Scope)** and restrict all proposed scaffolding strictly to **Tabnine Chat / Workspace Agent** (Category B).
 
