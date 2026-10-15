@@ -157,17 +157,17 @@ A critical technical reality governs Devin integrations due to the remote microV
   - Devin is an autonomous agent optimized to solve tasks and make progress. When an autonomous agent encounters a failing verification check or a non-zero exit code ($exit \neq 0$), a well-documented failure mode is **rationalized bypass**:
     > *"Stage next reported an issue, but I have verified that all necessary planning items are logically addressed. Proceeding to implementation."*
   - This rationalization completely invalidates Flow's evidence-gated discipline ("quảng cáo ảo").
-- **The Grounded Technical Reality:**
+- **The Mechanical Invariant & Live-Trial Question:**
   - Flow's gates are mechanical: `flow.sh next` and `flow.sh check C-NNN` return exit status `1` when checks fail (e.g., unfilled `[FILL]` markers, open checklist `- [ ]`, uncommitted diffs).
-  - In desk design, Devin's shell tool is expected to receive the exact integer exit code from the sandbox subshell (subject to empirical verification in live trials).
+  - The key empirical question for Phase 4 live trials is whether Devin's shell execution tool reliably captures this integer exit code and halts the planning loop without synthesizing a rationalized pass.
 - **The Anti-Illusion Mitigation:**
   - `DEVIN.md` must encode an explicit non-negotiable directive:
     > *"NEVER synthesize or hallucinate a gate pass. If `bash skills/flow/runner/flow.sh` returns exit code 1, you MUST HALT immediately, report the exact runner diagnostic output, and resolve the failure. Advancing stages without an authentic exit code 0 is a catastrophic discipline breach."*
   - Phase 4 live trials must empirically verify that Devin halts on exit code `1` using a forced-failure fixture.
 
-### 3.4 MicroVM Sandbox Ephemerality & Persistence Dynamics
-- **The Failure Mode:**
-  - In cloud sandbox architectures, environment instances are typically ephemeral. Changes that are not committed to Git or pushed to the remote branch risk being lost upon session teardown.
+### 3.4 Cloud Sandbox Ephemerality & Persistence Dynamics (Hypothesized Risk)
+- **The Persistence Risk:**
+  - In remote cloud sandbox environments, instance storage is typically ephemeral. Uncommitted workspace edits risk being lost upon session teardown unless committed to Git.
 - **The Anti-Illusion Mitigation:**
   - Flow relies entirely on disk-backed files (`flow/*.md`, `cards/C-NNN.md`) and Git commits.
   - When Devin advances a stage or updates a card, the resulting markdown artifacts are committed to Git, ensuring cross-session and cross-microVM continuity without relying on ephemeral microVM disk storage.
@@ -219,8 +219,8 @@ This runbook provides step-by-step instructions for executing the **Four-Point L
 
 ### 4.2 Four-Point Live Verification Protocol Execution
 
-#### Gate 1: Ingestion Audit (Workspace Instruction / `DEVIN.md` Reading)
-- **Objective:** Verify Devin ingests `DEVIN.md` upon microVM provisioning and loads Flow discipline directives into context without truncation or parsing errors.
+#### Gate 1: Ingestion Audit (Workspace Instruction Ingestion Hypothesis Test)
+- **Objective:** Empirically evaluate whether Devin automatically ingests `DEVIN.md` upon cloud session provisioning and loads Flow discipline directives into context without truncation or parsing errors.
 - **Test Input (Prompt in Devin Session):**
   ```text
   What software development discipline governs this repository, what gate commands are available, and what is our current stage?
@@ -231,8 +231,8 @@ This runbook provides step-by-step instructions for executing the **Four-Point L
   - [ ] Devin explicitly identifies the project-local command format `bash skills/flow/runner/flow.sh <command>` rather than referencing nonexistent host-global paths (`~/.claude/` or `~/.agents/`).
 - **Verdict:** `[PASS / FAIL]`
 
-#### Gate 2: Invocation Audit (Cloud MicroVM Terminal Tool Execution)
-- **Objective:** Verify Devin's autonomous loop executes `flow.sh` in the cloud microVM terminal tool and correctly parses stdout, stderr, and the return exit code.
+#### Gate 2: Invocation Audit (Cloud Terminal Tool Execution Hypothesis Test)
+- **Objective:** Empirically evaluate whether Devin's autonomous loop executes `flow.sh` via its cloud terminal execution tool and correctly captures stdout, stderr, and the return exit code.
 - **Test Input:**
   ```text
   Check the status of the current build lifecycle using your terminal execution tool.
