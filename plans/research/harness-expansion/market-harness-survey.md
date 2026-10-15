@@ -407,7 +407,7 @@ Goose (developed by Block, Inc.; open-source under Apache-2.0, repository: https
 
 #### 1. System Overview & Harness Architecture: Dual Modality
 Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws.amazon.com/q/developer/, documentation: https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/) is an AI-powered software development assistant integrated across IDEs (VS Code, JetBrains IDEs via AWS Toolkit), command-line environments (`q` CLI), and AWS cloud workspaces. Under Flow's architecture taxonomy, Amazon Q Developer exhibits two distinct execution modalities:
-1. **IDE `/dev` Agent (Category B: Workspace Rule Scaffolding):** In VS Code and JetBrains IDEs, invoking `/dev` engages an autonomous feature development agent. The `/dev` agent ingests workspace context, generates structured multi-step plans, modifies codebase files, and dispatches terminal and build commands to validate changes within workspace or cloud sandbox execution boundaries.
+1. **IDE `/dev` Agent (Proposed Category B Design Candidate):** In VS Code and JetBrains IDEs, invoking `/dev` is described by AWS as engaging a feature development agent. In desk research, it is hypothesized to ingest workspace context and dispatch build/terminal commands (empirical tool-loop verification pending live trials).
 2. **Standalone `q` CLI (Unassessed / Pending Verification):** The standalone `q` CLI utility (`q chat`, `q translate`) is designed strictly for interactive developer Q&A, code completions, and shell translations. It historically functioned as an interactive query utility; current CLI capability remains unassessed pending current AWS/Kiro documentation.
 
 #### 2. Extension & Integration Mechanism
@@ -416,16 +416,16 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
   - Amazon Q Developer has no established `.amazonq/rules/` vendor schema. Scaffolding is NOT implemented in `flow rules` (which is locked to 7 templates). Integration is purely a hypothetical design concept relying on manual prompt/workspace context (or generic root instruction files like `AGENTS.md`).
   - Candidate instruction guidance must remain compact (strictly under 1,000 characters and 150 words) to prevent context clipping and prompt dilution during multi-file `/dev` tasks.
 - **Project-Local Runner Requirement:**
-  - Because Amazon Q `/dev` tasks frequently execute within remote sandbox containers (such as AWS CodeCatalyst or isolated devcontainers), host global paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) produce `ENOENT` failures.
+  - In containerized dev environments (such as AWS CodeCatalyst), host global paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) would produce `ENOENT` failures; repository-local runners are required.
   - The repository must vendor Flow locally (`skills/flow/runner/flow.sh` or `skills\flow\runner\flow.cmd` on Windows) for reliable execution.
 #### 3. Constitutional Audit: Rejection of AWS Cloud Daemons & Background Services
 - Attempting to implement Flow as a resident cloud daemon, persistent AWS Lambda background service, Amazon ECS background task, or resident socket daemon is **constitutionally forbidden** under ADR-0001 (Zero Resident Daemons, Process Token Ownership).
 - Flow maintains zero resident services. State lives strictly in Git, filesystem markdown artifacts (`flow/*.md`, `cards/C-NNN.md`), and deterministic exit codes.
-- Amazon Q Developer holds the process token and manages the `/dev` agent loop. Flow executes ephemerally as a subprocess when invoked via workspace terminal/build tools (`bash skills/flow/runner/flow.sh <command>`) and terminates immediately upon returning.
+- In this proposed integration, Amazon Q Developer holds the process token. Flow would execute ephemerally as a subprocess when invoked via workspace terminal/build tools (`bash skills/flow/runner/flow.sh <command>`) and terminate immediately upon returning.
 
 #### 4. Execution Capability & Mechanical Gate Enforcement
-- **Terminal & Build Tool Invocation:** In `/dev` mode, the agent dispatches Flow lifecycle commands (`status`, `next`, `check C-NNN`) via its workspace terminal execution tool.
-- **Gate-Stop Invariant:** Non-zero exit codes ($exit \neq 0$) from `flow.sh` are captured and returned to the `/dev` agent loop, requiring the agent to halt immediately, inspect errors, and repair issues rather than hallucinating gate passes.
+- **Terminal & Build Tool Invocation (Hypothesis):** In `/dev` mode, the agent is hypothesized to dispatch Flow lifecycle commands (`status`, `next`, `check C-NNN`) via its workspace execution tool.
+- **Gate-Stop Invariant (Pending Verification):** Flow's non-zero exit codes ($exit \neq 0$) must be captured and returned to the `/dev` agent loop to mandate an immediate halt, preventing hallucinated gate passes (subject to Phase 4 live verification).
 - **CLI Limitation:** The standalone `q` CLI has not demonstrated an autonomous multi-turn tool execution loop in verified testing (unassessed pending current AWS/Kiro documentation).
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
