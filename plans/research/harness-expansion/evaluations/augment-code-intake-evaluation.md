@@ -91,7 +91,7 @@ Augment Code encompasses distinct developer-facing capabilities that must be sep
 │ code editing proposals                   │ (No agentic conversational loop)            │
 │ Tool API: Hypothesized terminal / shell  │ Tool API: None (lacks terminal / shell tool │
 │ execution tool (unverified in Flow)      │ execution subsystem)                        │
-│ Status: Proposed Design Candidate        │ Status: Incompatible / Not Applicable       │
+│ Status: Proposed Design Candidate        │ Status: Outside Scope / Unassessed          │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -101,11 +101,11 @@ Augment Code encompasses distinct developer-facing capabilities that must be sep
 - **Tool Execution:** Hypothesized terminal / shell execution tool allowing the assistant to execute build, test, and lifecycle commands in the workspace environment (unverified in Flow live trials).
 - **Classification:** Category B (Proposed Workspace Instruction Scaffolding).
 
-#### Modality 2: Augment Inline Code Completion (Passive Autocomplete) — Incompatible / Not Applicable
+#### Modality 2: Augment Inline Code Completion (Passive Autocomplete) — Outside Flow Integration Scope
 - **Environment:** Editor active text buffer triggered via typing and cursor movement.
 - **Operational Scope:** Passive next-token prediction, multi-line completion, and Next Edit Suggestions.
-- **Absence of Tool Execution:** Lacks any conversational turn structure, planning loop, or terminal execution subsystem. Inline completion cannot invoke shell commands, inspect exit codes, or advance Flow gates.
-- **Classification:** Incompatible / Not Applicable for Flow gate governance.
+- **Integration Scope:** Passive next-token prediction, multi-line completion, and Next Edit Suggestions within editor buffers. As a code-authoring completion modality, this is outside Flow's build-gate integration scope; broader tool execution capabilities remain unassessed pending dedicated verification.
+- **Classification:** Outside Flow Integration Scope (Passive Code Completion).
 
 ### 1.4 Why Category B (Proposed Workspace Scaffolding) and Not Category A (Native Skill Target)?
 Harnesses in **Category A (Native Skill Targets)** natively auto-discover directory-based skill bundles containing `SKILL.md` from a standard host location (e.g., Claude Code reading `~/.claude/skills/flow`, Codex CLI reading `~/.codex/skills/flow`, or universal agents reading `~/.agents/skills/flow`).

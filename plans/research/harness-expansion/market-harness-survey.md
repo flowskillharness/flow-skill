@@ -587,7 +587,7 @@ Augment Code (Augment Inc.; documentation: https://docs.augmentcode.com) is an A
 #### 1. System Overview & Modality Separation
 Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two sharply divergent modalities that must be strictly separated under Flow's taxonomy (full desk intake: `evaluations/tabnine-intake-evaluation.md`):
 - **Tabnine Chat & Workspace Agent:** An interactive chat and workspace agent modality available in VS Code and JetBrains IDEs that ingests repository context, answers queries, and proposes edits or shell operations. In desk review, evaluated as an **unverified Category B design hypothesis**.
-- **Tabnine Inline (Completions only):** A non-agentic inline code completion utility operating purely on editor buffers without shell tool execution or autonomous loops. Evaluated as non-agentic and classified as **Unassessed / Deferred Pending Verification** (constitutionally incompatible with Flow gating in isolation).
+- **Tabnine Inline (Completions only):** A non-agentic inline code completion utility operating purely on editor buffers without shell tool execution or autonomous loops. Evaluated as non-agentic and classified as **Unassessed / Deferred Pending Verification** (completion-only mode outside Flow's integration scope; broader tool capabilities unassessed pending verification).
 
 #### 2. Execution Environment (Hypothesized for Chat & Workspace Agent)
 - Tabnine Chat executes within the local IDE extension host (VS Code / JetBrains). Flow would execute ephemerally via the project-local runner (`bash skills/flow/runner/flow.sh <command>` or `flow.cmd` on Windows), terminating immediately upon return.

@@ -29,7 +29,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Rationale:**
   - Tabnine exhibits a strict operational separation between two primary modalities:
     1. **Tabnine Chat & Workspace Agent:** An interactive sidebar agent and workspace-aware assistant capable of answering questions, proposing file edits, and interacting with developer workflows within IDEs (VS Code, JetBrains, Eclipse). In desk review, this modality is evaluated as an unverified **Category B (Proposed Workspace Instruction Scaffolding)** candidate hypothesis.
-    2. **Tabnine Inline Completions:** Ghost-text suggestions served in real-time as the developer types. Inline completions possess zero tool execution API, zero subshell execution loop, and zero capability to run mechanical gates or inspect return codes. This modality is classified as **Unassessed / Deferred**.
+    2. **Tabnine Inline Completions:** Real-time ghost-text completions served as the developer authors code. As an inline code-completion modality, this is outside Flow's build-gate integration scope; broader tool execution capabilities remain unassessed pending dedicated verification. Classified as **Unassessed / Deferred**.
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising general "Tabnine support" without distinguishing Tabnine Chat/Workspace Agent from inline completions is marketing deception ("quảng cáo ảo").
   - Tabnine does not implement directory-based skill discovery (Category A) conforming to the universal Agent Skills standard (`~/.agents/skills/`) or `~/.claude/skills/`. Prospective Flow integration is proposed via workspace context, prompt rules, or repository root `AGENTS.md` paired with a project-local runner (`skills/flow/runner/flow.sh`).
   - Flow's `flow rules` dispatcher currently implements **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Tabnine is not an active target in `flow rules`; all Tabnine workspace scaffolding remains a **proposed design candidate** pending live empirical qualification.
@@ -100,7 +100,7 @@ Tabnine spans two fundamentally divergent operational modalities that must be st
 #### Modality 2: Tabnine Inline Completions (Unassessed / Deferred)
 - **Environment:** IDE code editor buffer.
 - **Operational Scope:** Real-time ghost-text completions synthesized from local/cloud language models as code is authored.
-- **Zero Tool Execution API:** Possesses no tool execution loop, no terminal dispatch mechanism, and no means to run Flow gate scripts or evaluate exit codes.
+- **Integration Scope:** Code-completion modality outside Flow's build-gate integration scope; broader tool execution capabilities remain unassessed pending dedicated verification.
 - **Classification:** Unassessed / Deferred (Tabnine Inline Completions).
 
 ---
@@ -108,7 +108,7 @@ Tabnine spans two fundamentally divergent operational modalities that must be st
 ## Section 2: Phase 1 & 2 Technical Probing: Execution Model & Architecture
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization Scoring
-- **Market Share & Developer Adoption (Enterprise & Community):** Tabnine is a long-standing pioneer in AI-assisted code completion, predating modern LLM chat assistants. It maintains an extensive installed base across global enterprise organizations, particularly enterprises with strict security and data governance requirements that mandate on-premise, air-gapped, or Virtual Private Cloud (VPC) deployments. Tabnine plugins have logged millions of downloads across VS Code, JetBrains Marketplace, and Eclipse.
+- **Market Share & Developer Adoption (Enterprise & Community):** Tabnine is a long-standing pioneer in AI-assisted code completion, predating modern LLM chat assistants. It maintains an extensive installed base across global enterprise organizations, particularly enterprises with strict security and data governance requirements that mandate on-premise, air-gapped, or Virtual Private Cloud (VPC) deployments. Tabnine plugins maintain an established presence across VS Code, JetBrains Marketplace, and Eclipse as reported in vendor documentation and IDE marketplace listings (accessed 2026-10-15).
 - **Agentic Autonomy & Capability (Interactive Guidance vs. Autonomous Loop):** Tabnine Chat provides conversational guidance, codebase context indexing, and code refactoring suggestions. However, its autonomous multi-turn shell execution and exit code handling remain unassessed in Flow trials. In standard IDE workflows, Tabnine Chat primarily suggests shell commands or code diffs for user review and approval rather than autonomously driving an unconstrained tool-execution loop.
 - **Ecosystem Openness & Stability:** Tabnine is built on proprietary extension clients, proprietary model orchestration, and proprietary cloud/VPC backend infrastructure. Configuration formats for workspace-level rule ingestion remain unpinned and lack an open, standardized specification comparable to the universal Agent Skills standard.
 - **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Desk Intake Complete; Live Host Trials Pending)**.
@@ -141,7 +141,7 @@ In desk review of vendor documentation, Tabnine Chat operates inside the IDE ext
 
 ### 3.1 Latent Trap 1: Modality Confusion (Tabnine Chat vs. Inline Completions)
 - **The Pitfall:** Claiming general "Tabnine support" without distinguishing between conversational/workspace assistance and inline ghost-text completions. A developer expecting Flow build discipline during inline code completion discovers that inline completions have no execution loop, cannot run commands, and cannot enforce gates.
-- **The Grounded Technical Reality:** Tabnine Inline Completions are text-prediction models embedded in the editor buffer. They possess zero subshell execution capability. Tabnine Chat is the only modality where tool invocation and prompt instruction scaffolding could feasibly operate.
+- **The Grounded Technical Reality:** Tabnine Inline Completions are text-prediction models embedded in the editor buffer. Inline completions operate as passive text completions outside Flow's build-gate integration scope. Tabnine Chat is the modality evaluated for prospective prompt instruction scaffolding and terminal execution.
 - **The Anti-Illusion Mitigation:** Explicitly classify Inline Completions as **Unassessed / Deferred (No Tool Execution)** and restrict all proposed scaffolding strictly to **Tabnine Chat / Workspace Agent** (Category B).
 
 ### 3.2 Latent Trap 2: Absence of Dedicated Flow Template in `flow rules`
