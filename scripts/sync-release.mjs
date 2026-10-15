@@ -13,7 +13,7 @@
  *   node scripts/sync-release.mjs --sync
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -21,57 +21,6 @@ import { execFileSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
-
-// Directories whose transient churn (VCS metadata, installed dependencies) is never
-// part of the zero-mutation guarantee enforced for --dry-run.
-const ZERO_MUTATION_EXCLUDED_DIRS = new Set(['.git', 'node_modules']);
-
-function snapshotTree(root) {
-  const map = new Map();
-  (function walk(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        if (ZERO_MUTATION_EXCLUDED_DIRS.has(entry.name)) continue;
-        walk(join(dir, entry.name));
-      } else if (entry.isFile()) {
-        map.set(join(dir, entry.name), readFileSync(join(dir, entry.name)));
-      }
-    }
-  })(root);
-  return map;
-}
-
-function restoreTree(root, snapshot) {
-  let restored = 0;
-  const seen = new Set();
-  (function walk(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        if (ZERO_MUTATION_EXCLUDED_DIRS.has(entry.name)) continue;
-        walk(join(dir, entry.name));
-      } else if (entry.isFile()) {
-        const p = join(dir, entry.name);
-        seen.add(p);
-        const original = snapshot.get(p);
-        if (original === undefined) {
-          rmSync(p); // file created during the dry-run
-          restored += 1;
-        } else if (!original.equals(readFileSync(p))) {
-          writeFileSync(p, original); // file modified during the dry-run
-          restored += 1;
-        }
-      }
-    }
-  })(root);
-  for (const [p, content] of snapshot) {
-    if (!seen.has(p)) {
-      mkdirSync(dirname(p), { recursive: true }); // file deleted during the dry-run
-      writeFileSync(p, content);
-      restored += 1;
-    }
-  }
-  return restored;
-}
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -791,8 +740,9 @@ To execute this release live, re-run with --yes:
   //    - npm test --prefix npm-wrapper
   // i. If any check fails, aborts immediately.
   console.log('\nStep 8/8: Running entire verification battery...');
-  // In dry-run mode, avoid scripts that invoke `npm run sync` (release-preflight.sh
-  // and `npm test` via its `pretest` hook); use strictly read-only equivalents instead.
+  // In dry-run mode, run ONLY strictly read-only checks. Avoid scripts that invoke
+  // `npm run sync` (release-preflight.sh and `npm test` via its `pretest` hook) and
+  // node test files that write runtime state; the tree must stay byte-identical.
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const battery = isDryRun
     ? [
@@ -801,12 +751,6 @@ To execute this release live, re-run with --yes:
         { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
         { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
         { name: 'test_release_coherence', cmd: 'bash', args: ['tests/test_release_coherence.sh'] },
-        {
-          name: 'npm-wrapper tests (read-only)',
-          cmd: 'node',
-          args: ['--test', '--test-concurrency=1', 'test/installer.test.mjs', 'test/detect.test.mjs', 'test/cli.test.mjs', 'test/lock-atomicity.test.mjs', 'test/sync-manifest.test.mjs'],
-          cwd: 'npm-wrapper', // bypasses `pretest` sync hook
-        },
       ]
     : [
         { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
@@ -818,35 +762,38 @@ To execute this release live, re-run with --yes:
         { name: 'npm test --prefix npm-wrapper', cmd: npmCmd, args: ['test', '--prefix', 'npm-wrapper'] },
       ];
 
-  let preRunTree = null;
-  if (isDryRun) {
-    // Some read-only-equivalent checks (test_flow_rules.sh flow-harness invocations,
-    // sync-manifest.test.mjs receipt writes) touch runtime state files (.flow/,
-    // manifest receipts). Snapshot the tree so the dry-run can restore any byte and
-    // guarantee strict zero-mutation across the whole repository.
-    preRunTree = snapshotTree(repoRoot);
-  }
-
-  const mutatedPaths = [];
+  const dryRunFailures = [];
   for (const step of battery) {
     console.log(`\n>>> Running ${step.name}...`);
     try {
       execFileSync(step.cmd, step.args, {
         cwd: step.cwd ? join(repoRoot, step.cwd) : repoRoot,
         stdio: 'inherit',
+        // flow.sh telemetry appends .flow/events.jsonl + .flow/cycle_id in the project
+        // root on every invocation; the dry-run tree must stay byte-identical, so use
+        // the runner's own logging-kill switch (same contract as DO_NOT_TRACK).
+        env: isDryRun ? { ...process.env, FLOW_LOG_DISABLE: '1' } : process.env,
       });
       console.log(`✓ ${step.name} PASSED`);
     } catch (err) {
-      console.error(`\nFAIL: Verification step "${step.name}" failed (exit code ${err.status ?? 1}). Aborting release.`);
-      process.exit(err.status ?? 1);
+      if (isDryRun) {
+        // Capture the failure and keep running the remaining read-only steps;
+        // the fail-closed exit happens after the full battery.
+        dryRunFailures.push({ name: step.name, status: err.status ?? 1 });
+        console.error(`✗ ${step.name} FAILED (exit code ${err.status ?? 1}); continuing dry-run battery.`);
+      } else {
+        console.error(`\nFAIL: Verification step "${step.name}" failed (exit code ${err.status ?? 1}). Aborting release.`);
+        process.exit(err.status ?? 1);
+      }
     }
   }
 
-  if (isDryRun && preRunTree) {
-    const restored = restoreTree(repoRoot, preRunTree);
-    if (restored > 0) {
-      console.log(`\n[DRY-RUN] Restored ${restored} runtime-state file(s); repository left byte-identical (zero-mutation guarantee).`);
+  if (isDryRun && dryRunFailures.length > 0) {
+    for (const failure of dryRunFailures) {
+      console.error(`FAIL: Verification step "${failure.name}" failed (exit code ${failure.status}).`);
     }
+    console.error(`\nFAIL: ${dryRunFailures.length} verification step(s) failed during dry-run battery.`);
+    process.exit(1);
   }
 
   // j. If --dry-run: prints "DRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship." and exits 0.

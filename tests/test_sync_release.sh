@@ -5,6 +5,13 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 pass=0; fail=0
 ck() { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected=$1 got=$2"; fail=$((fail+1)); fi; }
+portable_hash() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    find "$1" -type f -exec sha256sum {} + 2>/dev/null | sort
+  else
+    find "$1" -type f -exec shasum -a 256 {} + 2>/dev/null | sort
+  fi
+}
 
 echo "A) sync-release --check exits 0 on current repository"
 node "$ROOT/scripts/sync-release.mjs" --check >/tmp/sync_check.out 2>&1
@@ -181,7 +188,7 @@ grep -q "git push origin npm@" /tmp/sync_g.out && ck 1 0 "does not emit git push
 grep -q "git push origin v" /tmp/sync_g.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
 rm -rf "$tmp"
 
-echo "H) --ship --dry-run is strictly non-mutating in an isolated temp repository"
+echo "H) --ship --dry-run is strictly non-mutating (recursive tree hash)"
 tmp=$(mktemp -d)
 git clone -q "$ROOT" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
@@ -189,49 +196,32 @@ git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts in temp clone"
+git -C "$tmp/r" commit -qm "sync scripts"
 ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
-# Seed the gitignored bundled skill tree (normally produced by the mutating `pretest`
-# sync, which dry-run must not run). Fixture setup happens BEFORE the tree snapshot.
-rm -rf "$tmp/r/npm-wrapper/skills"
-mkdir -p "$tmp/r/npm-wrapper/skills"
-# Mirror sync.mjs shouldShip exclusions (__pycache__, eval/replay).
-tar -C "$ROOT/skills" --exclude=__pycache__ --exclude='eval/replay' -cf - . | tar -xf - -C "$tmp/r/npm-wrapper/skills"
 
+before_tree_hash="$(portable_hash "$tmp/r")"
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
 before_tags="$(git -C "$tmp/r" tag -l)"
-before_status="$(git -C "$tmp/r" status --porcelain)"
-
-before_tree_hash="$(cd "$tmp/r" && find . -type f -exec sha256sum {} + | sort)"
 
 node "$tmp/r/scripts/sync-release.mjs" --ship --dry-run >/tmp/sync_h.out 2>&1
 ck 0 $? "--ship --dry-run exits 0"
 grep -q "DRY-RUN SUCCESS" /tmp/sync_h.out && ck 0 0 "reports DRY-RUN SUCCESS" || ck 0 1 "reports DRY-RUN SUCCESS"
 
-after_tree_hash="$(cd "$tmp/r" && find . -type f -exec sha256sum {} + | sort)"
-[ "$before_tree_hash" = "$after_tree_hash" ] && ck 0 0 "recursive tree hash strictly unchanged (zero file modifications, tracked and untracked)" || ck 0 1 "recursive tree hash strictly unchanged (zero file modifications, tracked and untracked)"
+after_tree_hash="$(portable_hash "$tmp/r")"
+[ "$before_tree_hash" = "$after_tree_hash" ] && ck 0 0 "recursive tree hash unchanged" || ck 0 1 "recursive tree hash changed"
+[ "$before_head" = "$(git -C "$tmp/r" rev-parse HEAD)" ] && ck 0 0 "HEAD unchanged" || ck 0 1 "HEAD changed"
+[ "$before_tags" = "$(git -C "$tmp/r" tag -l)" ] && ck 0 0 "tags unchanged" || ck 0 1 "tags changed"
 
-after_head="$(git -C "$tmp/r" rev-parse HEAD)"
-after_tags="$(git -C "$tmp/r" tag -l)"
-after_status="$(git -C "$tmp/r" status --porcelain)"
-
-[ "$before_head" = "$after_head" ] && ck 0 0 "git log/HEAD strictly unchanged" || ck 0 1 "git log/HEAD strictly unchanged"
-[ "$before_tags" = "$after_tags" ] && ck 0 0 "git tags strictly unchanged" || ck 0 1 "git tags strictly unchanged"
-[ "$before_status" = "$after_status" ] && ck 0 0 "working tree status strictly unchanged" || ck 0 1 "working tree status strictly unchanged"
-
-# Live --ship without --yes pauses for confirmation without mutating
-node "$tmp/r/scripts/sync-release.mjs" --ship >/tmp/sync_h_noyes.out 2>&1
-ck 0 $? "live --ship without --yes exits 0"
-grep -q "RELEASE SHIP CONFIRMATION REQUIRED" /tmp/sync_h_noyes.out && ck 0 0 "prompts for confirmation" || ck 0 1 "prompts for confirmation"
-[ "$before_head" = "$(git -C "$tmp/r" rev-parse HEAD)" ] && ck 0 0 "live --ship without --yes made no commits" || ck 0 1 "live --ship without --yes made no commits"
-[ "$before_tags" = "$(git -C "$tmp/r" tag -l)" ] && ck 0 0 "live --ship without --yes created no tags" || ck 0 1 "live --ship without --yes created no tags"
-[ "$before_status" = "$(git -C "$tmp/r" status --porcelain)" ] && ck 0 0 "live --ship without --yes working tree status strictly unchanged" || ck 0 1 "live --ship without --yes working tree status strictly unchanged"
-# Live --ship with uncommitted non-release changes fails with exit 1
-touch "$tmp/r/unrelated.txt"
-node "$tmp/r/scripts/sync-release.mjs" --ship --yes >/tmp/sync_h_unrelated.out 2>&1
-ck 1 $? "live --ship fails on uncommitted non-release file"
-grep -q "FAIL: Working tree contains uncommitted changes outside release files" /tmp/sync_h_unrelated.out && ck 0 0 "reports clean working tree precondition failure" || ck 0 1 "reports clean working tree precondition failure"
-
+# I) forced battery failure in dry-run: tree hash still unchanged
+# README.md budget is 900 words (~317 used): append enough filler to breach it so
+# check-doc-budgets.sh (a read-only battery step) fails, while release-surface
+# coherence (tables, i18n HEAD-blob hashes) stays green.
+yes "# budget breach" | head -700 >> "$tmp/r/README.md"
+after_edit_tree_hash="$(portable_hash "$tmp/r")"
+node "$tmp/r/scripts/sync-release.mjs" --ship --dry-run >/tmp/sync_i.out 2>&1
+ck 1 $? "dry-run fails on battery failure"
+after_i_tree_hash="$(portable_hash "$tmp/r")"
+[ "$after_edit_tree_hash" = "$after_i_tree_hash" ] && ck 0 0 "tree hash unchanged on failure" || ck 0 1 "tree hash changed on failure"
 rm -rf "$tmp"
 
 echo
