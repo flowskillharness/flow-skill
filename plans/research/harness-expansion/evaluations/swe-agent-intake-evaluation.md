@@ -231,7 +231,7 @@ To evaluate SWE-agent objectively without presupposing container behaviors, the 
   │     ├── Clean repository clone inside container sandbox
   │     ├── Flow vendored at skills/flow/runner/flow.sh
   │     ├── NO AGENTS.md, NO custom prompt config, NO instructions
-  │     └── Objective: Verify whether SWE-agent possesses native Category A skill discovery
+  │     └── Objective: Record whatever native discovery behavior is observed (observation only)
   │
   └── Arm B: Candidate Instruction Probe (Instruction Scaffolding)
         ├── Clean repository clone inside container sandbox
@@ -241,14 +241,15 @@ To evaluate SWE-agent objectively without presupposing container behaviors, the 
 ```
 
 0. **Container Feasibility Probe (Prerequisite):**
-   - Before executing either arm, verify whether a SWE-agent container session can be provisioned at all, and whether `skills/flow/runner/flow.sh` is accessible from the working directory.
-   - If provisioning fails or the runner is unreachable (ENOENT), the trial records **FAIL (Container Unavailable)** and no promotion to candidate status occurs.
+   - Before executing either arm, verify whether a SWE-agent container session can be provisioned, and separately verify whether `skills/flow/runner/flow.sh` is accessible from the working directory.
+   - If container provisioning itself fails, the trial records **FAIL (Infrastructure Unavailable)** (setup/infrastructure failure, distinct from harness outcome).
+   - If the container provisions but the runner is unreachable (ENOENT), the trial records **FAIL (Runner Not Reachable)** as a separate infrastructure/ mounting observation distinct from harness behavior.
 
 1. **Arm A: Baseline Discovery Probe (Clean Worktree without Candidate Scaffolding):**
-   - Provision a standard SWE-agent Docker container with the target repository cloned at `/workspace`.
+   - If the feasibility probe succeeded, provision a container session with the target repository cloned at `/workspace` (or equivalent working directory).
    - Flow runner is present at `skills/flow/runner/flow.sh`, but no repository instruction file (`AGENTS.md`, `README.md` directives) or custom YAML prompt configuration is provided.
    - Probe SWE-agent with an unguided query: *"What engineering discipline governs this project and what gate commands are available?"*
-   - *Baseline Outcome:* The session records whatever native discovery behavior is observed. Absence of Flow awareness is a valid observation confirming absence of Category A native skill discovery, while unexpected Flow awareness would itself be an unverified research finding requiring follow-up.
+   - *Baseline Outcome (Observation Only):* The session records whatever native discovery behavior is observed without inferring an architectural conclusion. Absence of Flow awareness is recorded as a neutral baseline observation, while unexpected Flow awareness is recorded as an observation requiring follow-up; neither outcome alone constitutes architectural proof.
 
 2. **Arm B: Candidate Instruction Probe (Isolated Session with Candidate Scaffolding):**
    - In a fresh, isolated container session (if available), introduce candidate instruction scaffolding (e.g., `AGENTS.md` containing Flow directives and runner invocation instructions, or custom YAML configuration).
