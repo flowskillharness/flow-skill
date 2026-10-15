@@ -447,7 +447,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 #### 1. System Overview & Harness Architecture
 Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and executes terminal commands within an isolated cloud sandbox loop.
 
-#### 2. Execution Environment: Linux Cloud MicroVM Sandbox
+#### 2. Execution Environment: Cloud Sandbox Environment (Hypothesized)
 - In vendor documentation, Devin is described as executing inside a cloud sandbox provisioned per session with shell, code editor, and browser.
 - The cloud sandbox is isolated from local developer workstations: global host paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) would be inaccessible inside the remote environment.
 - Sandboxes are ephemeral; session-scoped filesystem state does not persist across sessions unless committed to the repository.
@@ -458,8 +458,8 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 - Scaffolding guidance must therefore live in `DEVIN.md` / `AGENTS.md`, kept compact to avoid context dilution across long autonomous sessions.
 
 #### 4. Project-Local Runner Requirement
-- Because Devin runs in a cloud MicroVM, the repository must vendor Flow locally at **`skills/flow/runner/flow.sh`** for reliable execution.
-- Selling global installation for Devin is impossible: an installer that only places Flow in host-global registries leaves Devin's sandbox unable to find the runner, producing immediate `ENOENT` failures.
+- Because Devin runs in an isolated cloud environment, the repository would require Flow vendored locally at **`skills/flow/runner/flow.sh`** for reliable execution.
+- A global installer targeting developer host registries would leave the remote cloud environment unable to locate the runner (producing immediate `ENOENT` failures).
 - In proposed integration, Devin would invoke Flow ephemerally via its sandbox terminal (`bash skills/flow/runner/flow.sh <command>`); the Devin process would hold the process token and Flow would terminate immediately upon returning.
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)

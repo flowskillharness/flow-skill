@@ -72,13 +72,12 @@ Devin does **not** discover arbitrary host desktop skill directories:
 - **Market Share & Developer Adoption (Prominent Autonomous SWE Agent):** Devin represents the pioneering commercial autonomous software engineering agent developed by Cognition AI (vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15). It commands substantial mindshare across enterprise engineering teams, venture-backed startups, and research communities focusing on autonomous coding benchmarks (e.g., SWE-bench Verified). While access is commercial and subscription-gated rather than distributed as a free mass-market IDE plugin, Devin's influence as an autonomous agent archetype is significant.
 - **Agentic Autonomy & Capability:** Devin is designed and demonstrated by Cognition as an autonomous multi-turn agent. In vendor demonstrations and benchmark tasks, it is shown planning multi-step tasks, editing code across files, and executing shell commands in a cloud sandbox. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
 - **Ecosystem Openness & Stability:** Devin is a proprietary platform with a closed-source cloud orchestration runtime. However, its instruction ingestion relies on standard, human-readable repository files (`DEVIN.md`, `AGENTS.md`, and playbook knowledge entries), allowing clean, non-invasive instruction injection without proprietary runtime dependencies.
-- **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Estimate)**.
+- **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
   - **Status Classification:** `Unverified Internal Prioritization Hypothesis (Desk Intake; Live Host Validation Pending)`
-  - **3-Dimension Breakdown per `docs/harness-qualification-process.md` §1.1:**
-    1. **Market Share & Developer Adoption (40 Points Max):** **26/40 (Desk Estimate)**. Prominent autonomous commercial SWE agent with enterprise mindshare; subscription-gated access creates a smaller broad-developer install base than consumer IDEs.
-    2. **Agentic Autonomy & Capability (40 Points Max):** **32/40 (Desk Hypothesis)**. Vendor demonstrations and benchmark reports show multi-turn loop with terminal, editor, and browser tools; empirical tool-loop and gate-stop fidelity remain unverified in live Flow trials.
-    3. **Ecosystem Openness & Stability (20 Points Max):** **14/20**. Proprietary platform, closed cloud runtime; hypothesized plain Markdown ingestion (`DEVIN.md` / `AGENTS.md`), while agent orchestration and sandbox infrastructure are proprietary.
-  - **Total Score:** **72/100** -> Priority Tier 2 (Evaluated / Scaffolding Target, range 50–74).
+  - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
+    1. **Market Adoption Hypothesis:** Autonomous commercial SWE agent with notable enterprise and research mindshare, though subscription-gated access bounds broad install metrics.
+    2. **Agentic Autonomy Hypothesis:** Demonstrated multi-turn planning and tool use in vendor benchmark tasks; empirical subshell execution and gate-stop fidelity remain unverified in Flow trials.
+    3. **Ecosystem Openness Hypothesis:** Closed-source cloud platform; hypothesized plain Markdown ingestion (`DEVIN.md` / `AGENTS.md`), with proprietary orchestration and sandbox infrastructure.
 
 ### 2.2 Phase 2: Architecture Probing
 
