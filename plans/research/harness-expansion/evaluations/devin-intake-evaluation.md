@@ -86,15 +86,15 @@ Devin does **not** discover arbitrary host desktop skill directories:
 Devin’s architecture separates the model planning tier from the execution environment:
 1. **Agent Orchestration & Planning Tier:** The Cognition cloud platform manages the model reasoning loop, prompt history, user chat interface, browser session, and task decomposition hierarchy.
 2. **Execution Environment (Isolated Cloud MicroVM Sandbox):**
-   - Each Devin task runs inside a dedicated, isolated Linux microVM (typically an Ubuntu/Debian environment).
+   - Each Devin task is described in vendor documentation as running inside an isolated cloud microVM sandbox.
    - The microVM provides a full POSIX-compliant execution environment with standard development runtimes (Node.js, Python, Git, Docker, Bash).
    - Tool execution is performed through a real shell/PTY interface (`bash`), capturing standard output, standard error, and integer exit codes.
    - Filesystem changes occur directly in the cloned repository workspace inside the microVM.
 
 #### 2.2.2 Ingestion Mechanism: Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
 Devin discovers project-level operational guidelines via repository root files:
-- **`DEVIN.md`:** Cognition AI’s native repository instruction standard. Devin automatically scans and ingests `DEVIN.md` at repository initialization.
-- **`AGENTS.md`:** Devin also supports the standardized Linux Foundation Agentic AI Foundation (`AGENTS.md`) format, ensuring cross-agent instruction compatibility.
+- **`DEVIN.md` (Vendor-Documented Standard):** Documented by Cognition AI as Devin's repository instruction convention; hypothesized to be ingested at repository initialization (empirical ingestion fidelity pending live host trials).
+- **`AGENTS.md` (Open Standard):** Hypothesized cross-agent repository instruction format; live ingestion behavior remains subject to Phase 4 trials.
 - **Playbook Knowledge:** Operators can configure organizational playbooks in Devin's web interface to persist cross-repository guidelines.
 - **Context Injection Dynamics:** At session start, Devin ingests the markdown instruction file into its initial system/developer context. To prevent prompt dilution, instruction files must remain concise, focused, and directive.
 
