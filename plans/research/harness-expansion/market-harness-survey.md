@@ -505,11 +505,11 @@ SWE-agent (Princeton NLP; derived from the InterCode research line; source: http
 #### 1. System Overview & Modality Separation
 GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_duo/) spans two divergent modalities that must be strictly separated under Flow's taxonomy (full desk intake: `evaluations/gitlab-duo-intake-evaluation.md`):
 - **GitLab Duo Workflow:** In vendor documentation, described as an emerging multi-step execution agent. In desk review, its capability to formulate plans, modify files, and invoke terminal subshells in local IDEs or remote CI/CD runner sandboxes is evaluated as an **unverified Category B candidate hypothesis**.
-- **GitLab Duo Chat:** A conversational query assistant in the Web UI, IDE sidebars, and Web IDE. It lacks an autonomous tool loop, cannot execute shell commands, and is classified **Category D (Deferred / Incompatible)**.
+- **GitLab Duo Chat:** A conversational query assistant in the Web UI, IDE sidebars, and Web IDE. In standard usage, it operates as an interactive query utility; autonomous tool execution and runner exit-code handling remain unassessed pending dedicated live verification (classified as Unassessed / Deferred Pending Verification).
 
 #### 2. Execution Environment (Hypothesized for Duo Workflow)
 - Duo Workflow is hypothesized to execute in a local IDE workspace (GitLab Workflow extension in VS Code) or an ephemeral GitLab CI/CD runner container. Host-global paths are absent in runner sandboxes; only the cloned repository under `/builds/<group>/<project>/` exists.
-- Duo Chat has no execution environment relevant to Flow: it is query-only with no terminal tool.
+- In verified testing, Duo Chat has not demonstrated an execution environment relevant to Flow: it historically operates as a query utility without an autonomous terminal tool loop (unassessed pending dedicated verification).
 
 #### 3. Extension & Integration Mechanism: Proposed `.gitlab/duo_workflow.yml` / `AGENTS.md`
 - A `.gitlab/duo_workflow.yml` workflow configuration and repository-root `AGENTS.md` instructions are **proposed ingestion mechanisms**; their existence, schema, and parsing by the execution client are unverified desk hypotheses.
@@ -524,7 +524,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 - **The Marketing Illusion to Avoid:** Advertising generic "GitLab Duo support" (conflating query-only Duo Chat with the unverified Duo Workflow agent), or claiming a `.gitlab/duo_workflow.yml` template exists in `flow rules` (it does not).
 - **Feasibility Verdict:**
   - **GitLab Duo Workflow: Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
-  - **GitLab Duo Chat: Deferred / Incompatible (Category D: Query Only, No Loop).**
+  - **GitLab Duo Chat: Unassessed / Deferred Pending Verification (Historically query utility; tool loop unassessed).**
 
 ---
 
@@ -544,7 +544,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
 | **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud Sandbox; unverified) | Hypothesized `DEVIN.md` / `AGENTS.md` (Proposed) | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
-| **SWE-agent** | Prompt templates / `AGENTS.md` | N/A (Docker Container) | Config templates / `AGENTS.md` | ACI shell (`execute`) | Autonomous (Docker loop) | **Proposed B (Design Hypothesis; Unverified)** |
+| **SWE-agent** | Prompt templates / `AGENTS.md` | N/A (Docker Container) | Config templates / `AGENTS.md` | ACI shell (`execute`) | Hypothesized autonomous (Docker loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **GitLab Duo Workflow** | Proposed `.gitlab/duo_workflow.yml` (No template) | N/A | Proposed config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **GitLab Duo Chat** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending verification)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
@@ -567,7 +567,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 ```
 - **The Pitfall:** If an installer only places Flow in `~/.claude/` or `~/.agents/` on the developer's laptop, containerized agents like OpenHands will crash with:
   `bash: /home/user/.agents/skills/flow/runner/flow.sh: No such file or directory`.
-- **The Requirement:** Flow must provide first-class **project-scoped installation** (`flow-skill install project .`) for containerized and sandboxed harnesses.
+- **The Requirement:** For containerized and sandboxed harnesses (where project-scoped installation via `npm-wrapper` is reserved exclusively for Claude Code per codebase policy), repositories must vendor the Flow runner tree locally (`skills/flow/runner/flow.sh`) so container subshells can access the runner without depending on unreachable host global registries.
 
 ### 4.2 The Windows Shell Trap (`flow.sh` vs. `flow.cmd`)
 - In Windows environments (common across Cursor, Windsurf, VS Code Copilot):
