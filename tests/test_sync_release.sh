@@ -81,9 +81,17 @@ cp "$ROOT/npm-wrapper/CHANGELOG.md" "$tmp/r/npm-wrapper/"
 cp -r "$ROOT/skills/flow" "$tmp/r/skills/"
 
 # Set prerelease version in npm-wrapper/package.json
-sed -i 's/"version": "0.7.8"/"version": "0.7.9-next.0"/' "$tmp/r/npm-wrapper/package.json"
+node -e '
+  const fs = require("node:fs");
+  const p = process.argv[1];
+  fs.writeFileSync(p, fs.readFileSync(p, "utf8").replace(/"version": "0.7.8"/, "\"version\": \"0.7.9-next.0\""));
+' "$tmp/r/npm-wrapper/package.json"
 # Add changelog entry for the prerelease in npm-wrapper/CHANGELOG.md
-sed -i '1s/^/## [0.7.9-next.0] - 2026-10-15\n\n- Pre-release test.\n\n/' "$tmp/r/npm-wrapper/CHANGELOG.md"
+node -e '
+  const fs = require("node:fs");
+  const p = process.argv[1];
+  fs.writeFileSync(p, "## [0.7.9-next.0] - 2026-10-15\n\n- Pre-release test.\n\n" + fs.readFileSync(p, "utf8"));
+' "$tmp/r/npm-wrapper/CHANGELOG.md"
 
 node "$tmp/r/scripts/sync-release.mjs" --sync >/tmp/sync_e.out 2>&1
 ck 0 $? "--sync exits 0 with prerelease"
