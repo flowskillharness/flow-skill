@@ -125,35 +125,29 @@ Understanding Mentat's architectural classification requires analyzing why it be
 
 ### 2.2 Phase 2: Architecture Probing
 
-#### 2.2.1 Terminal Execution Model & Process Token Ownership
-Mentat operates as a client-side CLI utility running locally on the developer's workstation:
-1. **Host-Native Execution:** Installed via Python (`pip install mentat`), Mentat executes in the developer's local shell environment. It interacts directly with the local repository, reads project files into context, and applies edits using Git-aware operations.
-2. **Process Token Ownership:** The developer and the Mentat CLI process hold the execution loop. Mentat queries LLM providers directly using configured API keys. Flow never holds the main loop and executes strictly as an ephemeral subprocess invoked through command execution tools.
+#### 2.2.1 Terminal Execution Model & Process Token Ownership (Historical Analysis)
+Mentat operated as a client-side CLI utility running locally on the developer's workstation:
+1. **Host-Native Execution:** Historically installed via Python (`pip install mentat`), Mentat executed in the developer's local shell environment, reading project files into context and applying edits using Git-aware operations.
+2. **Process Token Ownership:** The developer and the Mentat CLI process held the execution loop. Mentat queried LLM providers directly using configured API keys. Flow would have executed strictly as an ephemeral subprocess invoked through command execution tools, never holding the main loop.
 3. **Constitutional Demarcation (ADR-0001):** Flow requires zero persistent daemons, zero resident background services, and zero memory-resident state. Ephemeral subshell calls (`bash skills/flow/runner/flow.sh <command>`) run, inspect on-disk truth, write receipts, and exit immediately.
 
-#### 2.2.2 Context Ingestion & Workspace Instructions
-Mentat manages context dynamically from the project repository:
-1. **Context Inclusion:** Developers specify files to include in context when launching Mentat or via in-session commands. Mentat builds project context using Git information and repository structure.
-2. **Configuration (`.mentat_config.json`):** Project-specific settings can be defined in `.mentat_config.json` at the git root, controlling model parameters and behavior.
-3. **Repository Root Instruction Carrier (`AGENTS.md`):** Mentat does not define a proprietary rule format (such as `.cursor/rules/` or `.windsurf/rules/`). The universal instruction carrier for Flow discipline is the repository root `AGENTS.md`. Whether Mentat automatically ingests `AGENTS.md` into its active system prompt or requires explicit context inclusion is evaluated during Gate 1 testing.
+#### 2.2.2 Context Ingestion & Workspace Instructions (Historical Analysis)
+Mentat historically managed context dynamically from the project repository:
+1. **Context Inclusion:** Developers specified files to include in context when launching Mentat or via in-session commands.
+2. **Configuration (`.mentat_config.json`):** Project-specific settings were documentable in `.mentat_config.json` at the git root, controlling model parameters.
+3. **Repository Root Instruction Carrier (`AGENTS.md`):** Mentat did not define a proprietary rule format (such as `.cursor/rules/` or `.windsurf/rules/`). The universal instruction carrier for Flow discipline was hypothesized as repository root `AGENTS.md`, but whether Mentat automatically ingested `AGENTS.md` was never empirically verified in live trials prior to archival.
 4. **Absence of Flow Template:** Flow's `flow rules` CLI command does **not** generate a Mentat configuration. Attempting `flow rules mentat` will exit with code `2`. Integration relies entirely on general project instructions or manual prompt framing.
 
-#### 2.2.3 Tool Invocation API & Shell Subsystem
-To enforce Flow gates, Mentat must execute terminal commands within the project workspace:
-1. **Command Execution in Agent Loop:** Mentat documents the ability to execute terminal commands (such as running test suites or shell scripts) within its loop.
-2. **Exit Code Propagation Hypothesis:** When Mentat invokes `bash skills/flow/runner/flow.sh <command>`, it must capture both standard output streams and the exact integer return code ($0$ for pass, $1$ for failure). Non-zero exit codes must cleanly feed back into model context as build failures rather than crashing the assistant.
-3. **Gate-Stop Fidelity Hypothesis:** When the runner exits non-zero, Mentat must recognize the failure, halt further stage progression, and refuse to proceed until the failure is resolved on disk. This remains an unverified hypothesis pending live qualification trials.
+#### 2.2.3 Tool Invocation API & Shell Subsystem (Historical Analysis)
+To enforce Flow gates, Mentat would have needed to execute terminal commands within the project workspace:
+1. **Command Execution in Agent Loop:** Mentat documentation historically described the ability to execute terminal commands (such as running test suites or shell scripts) within its loop.
+2. **Exit Code Propagation Hypothesis:** In hypothetical integration, Mentat would have needed to capture both standard output streams and the exact integer return code ($0$ for pass, $1$ for failure). Non-zero exit codes would need to feed back into model context as build failures.
+3. **Gate-Stop Fidelity Hypothesis:** Whether Mentat's command execution loop and subshell invocation reliably captured integer exit codes ($0$ vs. non-zero), halted on failure, and refused to hallucinate a pass was never empirically verified in Flow live trials prior to repository archival.
 
 #### 2.2.4 Isolation Boundaries & Project-Local Runner Setup
-1. **Local Workstation Scope:** Mentat executes directly on the host operating system without container isolation by default.
-2. **Project-Local Runner Requirement:** Because Mentat does not discover host-global skill bundles (`~/.agents/skills/flow` or `~/.claude/skills/flow`), the Flow runner must be checked out or vendored locally within the repository at:
-   ```bash
-   skills/flow/runner/flow.sh
-   ```
-3. **Invocation Path:** All operational instructions must direct Mentat to invoke the runner using the workspace-relative path:
-   ```bash
-   bash skills/flow/runner/flow.sh <command>
-   ```
+1. **Local Workstation Scope:** Mentat executed directly on the host operating system without container isolation by default.
+2. **Project-Local Runner Requirement:** Because no documented mechanism for discovering host-global skill bundles (`~/.agents/skills/flow` or `~/.claude/skills/flow`) was identified in desk review, hypothetical integration would have required the Flow runner tree to be present in the project workspace at `skills/flow/runner/flow.sh`.
+3. **Invocation Path (Non-Operational Historical Recipe):** Scaffolding would have directed Mentat to invoke the workspace-relative runner (`bash skills/flow/runner/flow.sh <command>`). Because the repository is archived, this recipe is non-operational and preserved strictly as a historical desk note.
 4. **Project Scope Reservation Notice:** Project-level installation (`--project` in npm installer or `install.sh project`) is **strictly reserved for Claude Code** (`.claude/skills/flow`). In `constants.mjs`, `projectScopeAllowed: false` is enforced for all other targets. Running `--project` against non-Claude targets is explicitly rejected by the installer and must never be promised or documented for Mentat.
 
 ---
@@ -166,9 +160,8 @@ To enforce Flow gates, Mentat must execute terminal commands within the project 
   - This is an **illusion trap**. In Flow's constitutional model, conversational narratives, multi-file code proposals, and chat explanations have zero evidentiary value.
   - Stage advancement requires authenticated on-disk files (`flow/00-idea.md`, `cards/C-NNN.md`), validated checksums in `manifest-hashes.json`, and an authentic exit code `0` from `flow.sh next` or `flow.sh check`.
 - **The Anti-Illusion Mitigation:**
-  - Instructions in `AGENTS.md` must explicitly stipulate:
-    > *"Coordinating edits or proposing changes in Mentat does NOT satisfy Flow gates. Stage progression and card completion require executing `bash skills/flow/runner/flow.sh check <card>` or `flow.sh next` in the terminal and observing an authentic exit code 0."*
-  - Live qualification Gate 3 enforces this distinction by injecting a broken stage fixture and verifying that Mentat halts.
+  - Instructions in `AGENTS.md` would have needed to explicitly stipulate that coordinating edits in Mentat does not satisfy Flow gates.
+  - Because Mentat is an archived project, live qualification Gate 3 was not executed.
 
 ### 3.2 Latent Trap 2: Absence of Dedicated `flow rules` Template
 - **The Failure Mode:**
@@ -205,11 +198,7 @@ To enforce Flow gates, Mentat must execute terminal commands within the project 
     ```
   - Furthermore, running `npx @manhquy/flow-skill -t mentat --project` is invalid because Flow's installer (`constants.mjs`) restricts `--project` strictly to Claude Code (`projectScopeAllowed: false` for all other targets).
 - **The Anti-Illusion Mitigation:**
-  - All Mentat instruction scaffolding must explicitly reference the project-local runner path:
-    ```bash
-    bash skills/flow/runner/flow.sh <command>
-    ```
-  - The repository must have `skills/flow/runner/flow.sh` checked out or vendored locally.
+  - All hypothetical Mentat instruction scaffolding would have referenced the project-local runner path (`bash skills/flow/runner/flow.sh <command>`), but no active integration recipe is supported for the archived tool.
 
 ---
 
