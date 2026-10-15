@@ -56,6 +56,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Copilot VSCode Agent                       │                                  │
 │                                     │ • Goose (.goosehints)                        │                                  │
 │                                     │ • Amazon Q Developer (/dev) (Proposed design)│                                  │
+│                                     │ • Devin (DEVIN.md / Cloud Sandbox)           │                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -441,6 +442,34 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
   - **Amazon Q CLI: Unassessed / Pending Verification (historically query utility; current Kiro successor tool-loop capability unassessed).**
 ---
 
+### Candidate 10: Devin Autonomous Software Engineer (Cognition AI)
+
+#### 1. System Overview & Harness Architecture
+Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and executes terminal commands in a persistent sandbox loop.
+
+#### 2. Execution Environment: Linux Cloud MicroVM Sandbox
+- Devin executes inside an ephemeral **Linux cloud MicroVM sandbox**, provisioned per session with its own shell, code editor, and browser.
+- The sandbox is isolated from the developer's host machine: **global host paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) are completely inaccessible** inside the MicroVM.
+- Sandboxes are ephemeral; session-scoped filesystem state does not persist across sessions unless committed to the repository.
+
+#### 3. Extension & Integration Mechanism: DEVIN.md / AGENTS.md
+- Devin ingests repository-level instruction files, natively supporting **`DEVIN.md`** (vendor-specific) and the open **`AGENTS.md`** convention at the repository root.
+- Instruction files direct Devin's autonomous loop toward project conventions; no proprietary rule schema (`flow rules` template) exists for Devin, and `flow rules` remains locked to the 7 implemented templates.
+- Scaffolding guidance must therefore live in `DEVIN.md` / `AGENTS.md`, kept compact to avoid context dilution across long autonomous sessions.
+
+#### 4. Project-Local Runner Requirement
+- Because Devin runs in a cloud MicroVM, the repository must vendor Flow locally at **`skills/flow/runner/flow.sh`** for reliable execution.
+- Selling global installation for Devin is impossible: an installer that only places Flow in host-global registries leaves Devin's sandbox unable to find the runner, producing immediate `ENOENT` failures.
+- Devin invokes Flow ephemerally via its sandbox terminal (`bash skills/flow/runner/flow.sh <command>`); the Devin sandbox process holds the process token and Flow terminates immediately upon returning.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** A `DEVIN.md` / `AGENTS.md` entry directing Devin to invoke the repository-vendored runner (`skills/flow/runner/flow.sh status`, `check C-NNN`), honoring Flow's non-zero exit codes to halt the autonomous loop at gate failures.
+- **The Marketing Illusion to Avoid:** Claiming a `DEVIN.md` template or generator exists in `flow rules` (it does not; `flow rules` is locked to seven verified templates), or referencing host-global skill paths inside the cloud sandbox.
+- **Feasibility Verdict:**
+  - **Devin: Tier 2 Priority Candidate (Provisional Category B Scaffold; Score 72/100; Live Cloud Trials Pending).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -456,6 +485,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
+| **Devin** | `DEVIN.md` / `AGENTS.md` | N/A (Cloud MicroVM) | `DEVIN.md` / `AGENTS.md` | `bash` (MicroVM terminal) | Autonomous (Cloud loop) | **Tier 2 (Provisional Candidate)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---

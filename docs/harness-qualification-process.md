@@ -227,7 +227,7 @@ Currently, **only Claude Code and Codex CLI possess full historical empirical li
   - **Zed Inline Editor** (non-assistant mode): Incompatible. Lacks terminal tool invocation capabilities. (Note: Zed's Assistant panel with the Agent Skills standard is evaluated under Category A via `~/.agents/skills/flow`).
 - **Unassessed / Deferred Candidates (Pending Verification):** Candidates where active tool-loop execution or configuration schemas have not been empirically verified on running hosts; held outside Category D incompatibility:
   - **GitHub Copilot CLI** (`gh copilot`): Unassessed / Deferred. Historically functions as an interactive command suggestion utility; autonomous tool execution under current GitHub CLI extensions remains unassessed pending dedicated verification.
-  - **Continue.dev**: Unassessed / Deferred. Schema volatility across releases and active autonomous tool execution loop remain unverified; held outside Category D pending live host trials.
+  - **Continue.dev**: Unassessed / Deferred. Schema stability/current configuration ingestion behavior and active autonomous tool execution loop remain unverified pending version-pinned vendor documentation and live host trials; held outside Category D.
 ---
 
 # Section 2: Anti-Illusion Protocol & Latent Bug Catalog

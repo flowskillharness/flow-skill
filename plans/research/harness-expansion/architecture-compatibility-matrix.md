@@ -65,6 +65,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ • Zed (via ~/.agents/skills/flow)        │ • GitHub Copilot (.github/*instructions.md)                      │
 │   *Proposed parity target                │ • Goose (.goosehints)                                            │
 │                                          │ • Amazon Q Developer (/dev) (Proposed design; un-implemented)    │
+│                                          │ • Devin (DEVIN.md / AGENTS.md)                                   │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.                           │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill                             │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context.                      │
@@ -124,6 +125,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 | **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **Devin** | B | PROVISIONAL (Desk-Reviewed) | Cloud microVM sandbox; project-local runner required; ephemeral execution. | Provisional Candidate (Cloud Sandbox Scaffold; Host Trial Pending) |
 | **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Historically functioned as query utility; current tool-loop capability unassessed (successor transition pending verification). | Unassessed / Pending Verification (Successor transition pending current-source verification) |
 
 
