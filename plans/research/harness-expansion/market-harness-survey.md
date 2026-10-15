@@ -448,9 +448,9 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and executes terminal commands within an isolated cloud sandbox loop.
 
 #### 2. Execution Environment: Cloud Sandbox Environment (Hypothesized)
-- In vendor documentation, Devin is described as executing inside a cloud sandbox provisioned per session with shell, code editor, and browser.
+- In desk research, Devin is hypothesized to execute inside a cloud sandbox provisioned with shell, editor, and browser tools.
 - The cloud sandbox is isolated from local developer workstations: global host paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) would be inaccessible inside the remote environment.
-- Sandboxes are ephemeral; session-scoped filesystem state does not persist across sessions unless committed to the repository.
+- Sandbox persistence and lifecycle dynamics remain unverified in Flow testing; state is assumed to require git persistence.
 
 #### 3. Extension & Integration Mechanism: DEVIN.md / AGENTS.md
 - Devin is hypothesized in desk review to discover repository instruction files (`DEVIN.md` / `AGENTS.md`), subject to live host verification.
