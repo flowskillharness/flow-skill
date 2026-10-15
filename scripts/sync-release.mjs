@@ -870,13 +870,34 @@ To execute this release live, re-run with --yes:
     console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
   }
 
-  if (createdSkillTag) {
-    console.log(`\nCreating official GitHub Release for ${skillTag}...`);
+  // Handle GitHub Release for v<skill_v> (fail-closed if creation fails; handles existing tag with missing release)
+  console.log(`\nChecking GitHub Release for ${skillTag}...`);
+  let releaseExists = false;
+  try {
+    const viewOut = execFileSync('gh', ['release', 'view', skillTag, '--json', 'tagName'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (viewOut) releaseExists = true;
+  } catch {
+    releaseExists = false;
+  }
+
+  if (releaseExists) {
+    console.log(`[INFO] GitHub Release for ${skillTag} already exists. Skipping release creation.`);
+  } else {
+    console.log(`Creating official GitHub Release for ${skillTag}...`);
     try {
-      execFileSync('gh', ['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], { stdio: 'inherit', cwd: repoRoot });
+      execFileSync('gh', ['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
+        cwd: repoRoot,
+        stdio: 'inherit',
+      });
       console.log(`✓ GitHub Release created for ${skillTag}`);
     } catch (err) {
-      console.warn(`[WARN] Could not automatically create GitHub Release for ${skillTag}: ${err.message}. You can run 'gh release create ${skillTag} --notes-file CHANGELOG.md' manually.`);
+      console.error(`\nFAIL: Could not create GitHub Release for ${skillTag} (exit code ${err.status ?? 1}).`);
+      console.error(`Command failed: gh release create ${skillTag} --title v${skill_v} --notes-file CHANGELOG.md`);
+      process.exit(err.status ?? 1);
     }
   }
 
