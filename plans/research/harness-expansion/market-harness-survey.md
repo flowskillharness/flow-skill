@@ -64,6 +64,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
 │                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│ • Void Editor (Historical / Inactive Open-Source IDE) │
 │                                     │ • PearAI (Proposed Open-Source IDE Agent Scaffold) │                                  │
+│                                     │                                              │ • Mentat (Historical / Archived Terminal CLI)    │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -727,6 +728,35 @@ In desk review, PearAI is evaluated as a **Proposed Design Candidate (Unverified
 
 ---
 
+### Candidate 20: Mentat (Terminal AI Coding Assistant) — Historical / Archived Candidate
+
+#### 1. System Overview & Harness Architecture
+Mentat (official portal: https://mentat.ai, repository: https://github.com/AbanteAI/mentat) is an open-source (Apache-2.0, Abante AI) terminal coding assistant written in Python, coordinating multi-file code editing and command execution from the command line (full desk intake: `evaluations/mentat-intake-evaluation.md`).
+
+**Market Status Disclosure (Repository Archived / Maintenance Ceased):** The Mentat CLI repository is **archived and no longer maintained or supported** (the Mentat name has since pivoted to a separate bot product). Mentat is retained here purely as a **historical candidate** — an early terminal coding assistant of archival interest. Live host trials are **not recommended**; no "supported" claim of any kind is made.
+
+In desk review, Mentat is evaluated as an **Unassessed / Deferred / Historical (Inactive Terminal CLI)** candidate under Tier 3 — not an active design proposal.
+
+#### 2. Execution Environment: Local Developer Terminal
+- Mentat executed locally in the developer terminal as a Python CLI coordinating multi-file edits and command execution.
+- Any hypothetical Flow integration would execute ephemerally via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>`), terminating immediately upon return.
+- Zero Flow Daemons (ADR-0001): Flow operates exclusively as a stateless, host-invoked discipline layer; it would not run as or spawn persistent background daemons, servers, or socket listeners. The host CLI holds the execution process token.
+
+#### 3. Extension & Integration Mechanism: Workspace Context / Prompt Rules / `AGENTS.md`
+- Hypothesized Ingestion Mechanism (unverified): workspace context / prompt rules configuration plus repository root `AGENTS.md`. Whether Mentat auto-ingested `AGENTS.md` was never empirically verified before maintenance ceased.
+- No `flow rules` template exists for Mentat; `flow rules` remains strictly locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules mentat` fails with exit code 2.
+
+#### 4. Project-Local Runner Requirement
+- Any hypothetical integration mandates `bash skills/flow/runner/flow.sh <command>` — project-vendored runner invocation with the Flow runner tree present in the project workspace.
+- Mentat did not discover host-global skill directories; terminal tool execution, exit-code capture fidelity (integer exit codes $0$/$1$, halting on non-zero exit, refusing to hallucinate a pass), and gate-stop behavior were **never empirically verified** and now remain permanently unverified given repository archival.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts, terminal tool execution logs, and gate-stop verification — archived under `plans/research/harness-expansion/evidence/`. For an archived project, even this bar is moot: live trials are not recommended and none were ever captured.
+- **The Marketing Illusion to Avoid:** Claiming verified support or a non-existent `flow rules mentat` template. Advertising an archived CLI as a compatible harness would be precisely the "quảng cáo ảo" (marketing theater) ADR-0001 forbids.
+- **Feasibility Verdict:** **Mentat: Historical / Deprecated Candidate (Repository Archived / Maintenance Ceased; Live Trials Not Recommended).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -755,6 +785,7 @@ In desk review, PearAI is evaluated as a **Proposed Design Candidate (Unverified
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 | **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; project inactive) | Unassessed (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
 | **PearAI** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool (unverified API) | Autonomy unverified; live trial pending | **Proposed B (Design Hypothesis; Unverified)** |
+| **Mentat** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; repository archived) | Unassessed (CLI maintenance ceased; live trials not recommended) | **Tier 3 (Deferred / Historical Candidate; repository archived)** |
 
 ---
 
@@ -982,3 +1013,5 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - **Void Editor Documentation & Repository:** https://voideditor.com · https://github.com/voideditor/void · https://docs.voideditor.com (Open Source, accessed 2026-10-15)
 16. **PearAI Documentation & Repository:**
    - **PearAI Documentation & Repository:** https://trypear.ai · https://github.com/trypear/pearai-submodule · https://trypear.ai/docs (PearAI, Apache-2.0, accessed 2026-10-15)
+17. **Mentat Documentation & Repository (Historical / Archived Project):**
+   - **Mentat Documentation & Repository:** https://mentat.ai · https://github.com/AbanteAI/mentat (Abante AI, Apache-2.0, accessed 2026-10-15; repository archived, CLI maintenance ceased)
