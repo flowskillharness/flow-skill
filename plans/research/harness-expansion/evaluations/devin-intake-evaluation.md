@@ -25,19 +25,19 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai, documenta
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
 - **Classification:** **Category B (Remote Cloud Sandbox Instruction Scaffolding)**.
 - **Qualification Status:** **PROVISIONAL CANDIDATE (Cloud Sandbox Live Trials Pending)**.
-- **Qualification Rationale:** Devin ingests workspace operational instructions via repository-level configuration files (such as `DEVIN.md` or `AGENTS.md`) and playbook knowledge bases. However, under Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §1.1), claiming verified compatibility based solely on placing a markdown instruction file into a repository is strictly rejected as marketing deception ("quảng cáo ảo"). Harnesses in Category B provide repository-scoped instruction scaffolding rather than native directory-based skill discovery (Category A). Devin executes entirely inside an ephemeral cloud MicroVM where local developer host filesystems are completely absent. Until an active Devin cloud session executes the Four-Point Live Verification Protocol inside a real cloud sandbox and archives raw tool execution payloads, terminal exit codes, and on-disk receipts to `plans/research/harness-expansion/evidence/`, Devin remains classified strictly as a **Provisional Candidate**.
+- **Qualification Rationale:** In desk review, Devin is hypothesized to ingest workspace operational instructions via repository-level configuration files (such as `DEVIN.md` or `AGENTS.md`) or session playbooks, though native ingestion fidelity has not been empirically verified on a live host. However, under Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §1.1), claiming verified compatibility based solely on placing a markdown instruction file into a repository is strictly rejected as marketing deception ("quảng cáo ảo"). Harnesses in Category B provide repository-scoped instruction scaffolding rather than native directory-based skill discovery (Category A). Devin executes entirely inside an ephemeral cloud MicroVM where local developer host filesystems are completely absent. Until an active Devin cloud session executes the Four-Point Live Verification Protocol inside a real cloud sandbox and archives raw tool execution payloads, terminal exit codes, and on-disk receipts to `plans/research/harness-expansion/evidence/`, Devin remains classified strictly as a **Provisional Candidate**.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                           DEVIN AGENT EVALUATION SUMMARY                               │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
-│ Architectural Classification │ Category B: Remote Cloud Sandbox Instruction Scaffolding│
+│ Architectural Classification │ Category B: Proposed Cloud Sandbox Scaffold (Hypothesis)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Ingestion Mechanism          │ Workspace instructions / Playbook (`DEVIN.md` / `AGENTS.md`) │
+│ Ingestion Mechanism          │ Hypothesized instructions (`DEVIN.md` / `AGENTS.md`)    │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Execution Environment        │ Isolated Linux Cloud MicroVM Sandbox                    │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Tool Execution API           │ Built-in sandboxed shell tool (`bash` / terminal execution) │
+│ Tool Execution API           │ Hypothesized sandboxed shell execution (`bash`)         │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -60,7 +60,7 @@ Harnesses in **Category A (Native Skill Targets)** natively auto-discover direct
 
 Devin does **not** discover arbitrary host desktop skill directories:
 - Devin executes by provisioning a clean, remote cloud microVM and cloning the target repository from git.
-- Devin discovers operational conventions through repository-scoped markdown files: prominently `DEVIN.md`, workspace playbook entries, and the emerging open AAIF `AGENTS.md` standard.
+- Devin is hypothesized in desk review to discover operational conventions through repository-scoped markdown files: prominently `DEVIN.md`, workspace playbook entries, and `AGENTS.md`, subject to empirical live verification.
 - Even if a developer has Flow installed locally at `~/.agents/skills/flow` or `~/.claude/skills/flow` on their physical laptop, that directory does not exist inside Devin's remote cloud microVM.
 - Flow interacts with Devin by providing workspace instruction scaffolding (via `DEVIN.md` or `AGENTS.md`) directing Devin's terminal tool to execute the project-local runner (`bash skills/flow/runner/flow.sh`). Devin is therefore unequivocally categorized as **Category B (Remote Cloud Sandbox Instruction Scaffolding)**.
 
