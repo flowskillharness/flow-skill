@@ -5,174 +5,115 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@manhquy/flow-skill"><img src="https://img.shields.io/npm/v/@manhquy/flow-skill?color=cb3837&style=flat-square" alt="npm version"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D22.14-brightgreen?style=flat-square" alt="Node.js >= 22.14"></a>
+  <a href="https://github.com/manhquydev/flow-skill/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License: MIT"></a>
+  <a href="https://flowskill.io.vn"><img src="https://img.shields.io/badge/docs-flowskill.io.vn-blueviolet?style=flat-square" alt="Documentation"></a>
+</p>
+
 # @manhquy/flow-skill
 
-Cài skill **flow** vào coding agent bằng một lệnh.
+CLI cài đặt chính thức cho **Flow** — harness build có cổng hướng dẫn coding agent từ ý tưởng đến phần mềm sẵn sàng production thông qua các cổng kiểm định trung thực và có bằng chứng xác thực.
 
-| | |
-|---|---|
-| **Package** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) (installer CLI) |
-| **GA hiện tại** | **0.7.10** — ships skill product **v0.34.2** |
-| **Nền tảng** | macOS · Linux · Windows (cùng code path Node) |
-| **Yêu cầu** | Node.js **≥ 22.14** |
-| **Source** | [github.com/manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |
-| **Website** | [flowskill.io.vn](https://flowskill.io.vn) |
-
-flow là harness build có cổng (`/flow`): ý tưởng → cổng trung thực → bằng chứng done thật. Package này chỉ **cài** skill đó vào skill home của agent.
+[English](./README.md) · [Tiếng Việt](./README_VN.md)
 
 ---
 
-## Lệnh chuẩn
+## Bắt đầu nhanh
 
 ```bash
-# Khuyến nghị — luôn gắn @latest để npx không dùng cache cũ
 npx @manhquy/flow-skill@latest
 ```
 
-| Bước | Chi tiết |
-|------|----------|
-| 1 | Tải dist-tag **`latest`** từ npm registry |
-| 2 | Multi-select tương tác các agent detect được (Claude luôn được đề xuất) |
-| 3 | Copy cây `skills/flow` vào từng đích đã chọn |
-| 4 | In hướng dẫn sau reload (`/flow`, `$flow`, …) |
+Trình cài đặt tương tác tự động nhận diện các coding agent đã cài đặt, sao chép gói skill `/flow` vào thư mục skill tương ứng và giúp bạn sẵn sàng chỉ sau vài giây.
 
-**Sau cài:** restart hoặc reload agent (xem [Sau khi cài](#sau-khi-cài)).
+---
 
-### Xác nhận version
+## Hỗ trợ Coding Agent & Mục tiêu
+
+| Agent | Thư mục Skill | Lệnh kích hoạt |
+|---|---|---|
+| **Claude Code** | `~/.claude/skills/flow` | `/flow` |
+| **Cursor** | `~/.cursor/skills/flow` | Agent Skills panel |
+| **Codex CLI** | `~/.codex/skills/flow` | `$flow` |
+| **Antigravity** | `~/.gemini/antigravity-cli/skills/flow` | `/flow` |
+| **OMP** | `~/.omp/agent/skills/flow` | `/flow` |
+| **Universal Agents** | `~/.agents/skills/flow` | Tự động nhận diện |
+
+---
+
+## Lệnh thông dụng & Tùy chọn
 
 ```bash
-npx @manhquy/flow-skill@latest --help
-# expect: flow-skill v0.7.x (ships skill v0.34.x)
-```
+# Cài đặt tương tác (khuyến nghị)
+npx @manhquy/flow-skill@latest
 
-### Lệnh hay dùng
-
-```bash
-# Không prompt (Claude + agent đã detect)
+# Tự động / không hỏi lại (tất cả agent đã nhận diện + Claude)
 npx @manhquy/flow-skill@latest --yes
 
-# Một hoặc nhiều target
-npx @manhquy/flow-skill@latest --yes --target claude
-npx @manhquy/flow-skill@latest --yes -t claude -t codex
-npx @manhquy/flow-skill@latest --yes -t claude,codex
+# Chỉ định target cụ thể
+npx @manhquy/flow-skill@latest --yes --target claude,cursor
 
-# Mọi target được hỗ trợ
-npx @manhquy/flow-skill@latest --yes --all
-
-# Skill Claude trong repo (dễ commit)
+# Phạm vi dự án (chỉ Claude Code — cài vào .claude/skills/flow trong repo hiện tại)
 npx @manhquy/flow-skill@latest --yes --project --dir .
 
-# Chỉ xem kế hoạch, không ghi đĩa + JSONL (CI)
-npx @manhquy/flow-skill@latest --yes --all --dry-run --json
+# Xem trước kế hoạch cài đặt mà không ghi file
+npx @manhquy/flow-skill@latest --yes --all --dry-run
 ```
 
-### Tùy chọn
+### Bảng tùy chọn CLI
 
-| Flag | Ý nghĩa |
-|------|---------|
-| `-y`, `--yes` | Bỏ prompt; cài selection mặc định (detected + Claude) |
-| `-t`, `--target <name>` | Target (lặp được hoặc comma-separated) |
-| `--all` | Mọi target, kể cả chưa detect |
-| `--project` | Scope project — chỉ Claude → `<dir>/.claude/skills/flow` |
-| `--dir <path>` | Thư mục project (kéo theo `--project`; mặc định: cwd) |
-| `--json` | JSONL events (`plan`, `install:*`, `summary`) |
-| `--dry-run` | In plan; không ghi đĩa |
-| `-h`, `--help` | Help |
-
-### Targets
-
-| Tên | Đích | Detection |
-|-----|------|-----------|
-| `claude` | `~/.claude/skills/flow` | `~/.claude` (luôn được đề xuất) |
-| `codex` | `~/.codex/skills/flow` | `~/.codex/skills` |
-| `agents` | `~/.agents/skills/flow` | `~/.agents/skills` |
-| `antigravity` | `~/.gemini/antigravity-cli/skills/flow` **và** `~/.gemini/config/skills/flow` | một trong hai path |
-| `cursor` | `~/.cursor/skills/flow` | `~/.cursor/skills` |
-| `omp` | `~/.omp/agent/skills/flow` | `~/.omp/agent/skills` (bare `~/.omp` không bao giờ trigger — chỉ là runtime state) |
-
-`--project` **chỉ** hỗ trợ `claude`. Kết hợp target khác → exit `2`.
-
-### Quy tắc
-
-| Nên | Không |
-|-----|--------|
-| `npx @manhquy/flow-skill@latest` | Bare `npx @manhquy/flow-skill` (cache npx có thể cũ) |
-| **Chạy** CLI để copy skill | Chỉ `npm i` (chỉ thêm package; không cài skill vào agent home) |
-| Pin installer `@0.7.7` nếu cần cố định | Pin npm `@0.34.0` (version **skill** ≠ version package) |
-| Ưu tiên `@latest` / `@0.7.x` | `@rc` (đã retire / tụt hậu) |
-
-**Hai trục version:** `package.json` = installer CLI; `SKILL.md` metadata = skill product. Cả hai hiện trong `--help` và event JSONL `plan` (`version` + `skillVersion`).
+| Tùy chọn | Mô tả |
+|---|---|
+| `-y, --yes` | Cài đặt không cần qua các bước nhắc tương tác |
+| `-t, --target <name>` | Chỉ định target cụ thể (phân cách bằng dấu phẩy hoặc lặp lại flag) |
+| `--all` | Cài đặt cho tất cả các target được hỗ trợ |
+| `--project` | Cài đặt vào repository dự án cục bộ (`.claude/skills/flow`) |
+| `--dry-run` | Xem trước kế hoạch cài đặt mà không ghi đĩa |
+| `--json` | Xuất các sự kiện JSONL cho CI/tự động hóa |
+| `-h, --help` | Hiển thị trợ giúp CLI |
 
 ---
 
-## Sau khi cài
+## Lần chạy đầu & Các bước tiếp theo
 
-| Agent | Bước tiếp |
-|-------|-----------|
-| Claude Code | Gõ `/flow` |
-| Codex CLI | Restart Codex một lần → `$flow` |
-| Antigravity | Restart IDE / `agy` → `/flow` |
-| Agents home | Reload tool nếu không tự nhận skill mới |
-| Cursor | Reload Cursor; kiểm panel agent skills |
-| Bất kỳ | `/flow doctor` (hoặc `runner/flow.sh doctor`) |
+Sau khi cài đặt hoàn tất, hãy khởi động lại hoặc tải lại coding agent của bạn, sau đó:
 
-### Kiểm tra trên đĩa (Claude global)
-
-```bash
-grep -E '^\s*version:' ~/.claude/skills/flow/SKILL.md | head -1
-bash ~/.claude/skills/flow/runner/flow.sh doctor
-```
+- `/flow` — kiểm tra giai đoạn hiện tại và xem những điều kiện nào đang chặn tiến trình
+- `/flow next` — đánh giá tiêu chí cổng và chuyển sang giai đoạn tiếp theo
+- `/flow doctor` — kiểm tra tình trạng môi trường và tính toàn vẹn của gói skill đã cài đặt
 
 ---
 
-## Gỡ cài
+## Phiên bản & Khả năng tương thích
 
-```bash
-rm -rf ~/.claude/skills/flow
-rm -rf ~/.codex/skills/flow
-rm -rf ~/.agents/skills/flow
-rm -rf ~/.cursor/skills/flow
-rm -rf ~/.gemini/antigravity-cli/skills/flow
-rm -rf ~/.gemini/config/skills/flow
-rm -rf ~/.omp/agent/skills/flow
-# project scope:
-rm -rf <project>/.claude/skills/flow
-```
+| | |
+|---|---|
+| **GA hiện tại** | **0.7.10** — ships skill product **v0.34.2** |
+| **Node.js** | `>= 22.14.0` |
+| **Tài liệu** | [flowskill.io.vn](https://flowskill.io.vn) |
+| **Kho lưu trữ** | [GitHub: manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |
+| **Giấy phép** | MIT |
 
 ---
 
-## Xử lý sự cố
+## Xử lý sự cố & Câu hỏi thường gặp
 
-| Hiện tượng | Cách xử lý |
-|------------|------------|
-| Agent không có `/flow` sau `npm i` | Chạy `npx @manhquy/flow-skill@latest` (phải **execute** installer) |
-| Skill cũ sau khi “cài lại” | Luôn dùng `@latest`; tránh bare package name |
-| `No matching version found` với `@0.34.0` | Đó là version **skill**. Dùng `@latest` hoặc `@0.7.x` |
-| Node quá cũ | Cài Node ≥ 22.14 (`nvm install 22`, v.v.) |
-| Windows `EBUSY` / `EPERM` | Đóng agent đang giữ file trong skill dir; chạy lại |
-| Stale install lock | Xóa `<parent>/.flow-skill.installing.lock` nếu reclaim thất bại |
-
----
-
-## JSONL (`--json`)
-
-```jsonl
-{"event":"plan","version":"0.7.7","skillVersion":"0.34.0","dryRun":false,"scope":"global","targets":["claude"]}
-{"event":"install:start","target":"claude","dests":["~/.claude/skills/flow"]}
-{"event":"install:done","target":"claude","dests":["~/.claude/skills/flow"],"result":"success","error":null,"warnings":[]}
-{"event":"summary","success":true,"total":1,"attempted":1,"installed":1,"failed":0,"skipped":0,"aborted":false}
-```
-
-Exit codes: `0` success · `1` target failure · `2` bad usage · `130` SIGINT.
-
-Contract additive: field mới có thể xuất hiện; field hiện có không đổi tên/xóa.
+- **Agent không nhận lệnh `/flow`:** Hãy chắc chắn rằng bạn chạy qua lệnh `npx @manhquy/flow-skill@latest`. Nếu chỉ chạy `npm install @manhquy/flow-skill` đơn thuần, npm chỉ tải package về `node_modules` mà không thực thi cài đặt để sao chép skill vào thư mục của agent.
+- **Cập nhật Flow:** Chạy lại lệnh `npx @manhquy/flow-skill@latest` bất cứ lúc nào. Luôn gắn `@latest` để đảm bảo `npx` không dùng bản lưu cache cũ.
+- **Yêu cầu phiên bản Node.js:** Yêu cầu Node.js ≥ 22.14 LTS (`node --version`).
+- **Gỡ cài đặt:** Xóa thư mục skill khỏi các đường dẫn agent mà bạn đã cài:
+  ```bash
+  rm -rf ~/.claude/skills/flow ~/.cursor/skills/flow ~/.codex/skills/flow ~/.agents/skills/flow ~/.gemini/antigravity-cli/skills/flow ~/.omp/agent/skills/flow
+  ```
 
 ---
 
-## Provenance & bảo mật
+## Bảo mật & Nguồn gốc xuất xứ
 
-Bản publish từ CI có [npm provenance](https://docs.npmjs.com/generating-provenance-statements). Mô hình đe dọa và báo cáo: [SECURITY.md](./SECURITY.md).
+Các gói được phát hành từ CI đều có [npm provenance](https://docs.npmjs.com/generating-provenance-statements) xác thực. Mô hình đe dọa, chính sách bảo mật và bảo đảm chuỗi cung ứng: [SECURITY.md](./SECURITY.md).
 
-## License
+## Giấy phép
 
-MIT © 2026 manhquy
+[MIT](./LICENSE) © 2026 manhquy
