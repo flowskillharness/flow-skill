@@ -79,7 +79,6 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 │ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Unassessed (Historically        │
 │ Tool Capability: Hypothesized terminal & │ Tool Capability: Unassessed (Historically   │
 │ file edits (desk-reviewed hypothesis)    │ query/translation only; current Kiro        │
-│                                          │ query/translation only; current Kiro        │
 │                                          │ successor capability unassessed)            │
 │ Ingestion: Hypothesized prompt context   │ Ingestion: Interactive CLI queries only   │
 │ Status: Provisional Candidate            │ Status: Unassessed / Pending Verification   │
