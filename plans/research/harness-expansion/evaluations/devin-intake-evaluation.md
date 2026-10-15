@@ -1,7 +1,7 @@
 # Harness Intake Evaluation: Devin Autonomous Software Engineer
 
 - **Document Version:** 1.0.0
-- **Evaluation Status:** Provisional Candidate (Desk Intake Complete; Cloud Sandbox Live Trials Pending)
+- **Evaluation Status:** Proposed Design Candidate (Desk Intake Complete; Cloud Sandbox Live Trials Pending)
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
@@ -17,14 +17,14 @@
 
 ---
 
-## Section 1: Executive Summary & Category B (Remote Cloud Sandbox Instruction Scaffolding) Classification
+## Section 1: Executive Summary & Category B (Proposed Cloud Sandbox Scaffold) Classification
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 Devin (developed by Cognition AI; vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15) is an autonomous software engineering agent. In vendor demonstrations, Devin is shown operating within an isolated cloud sandbox environment equipped with terminal, editor, and browser tools. In desk intake, its runtime integration with Flow is evaluated as an unverified design hypothesis (live host trials pending).
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
 - **Classification:** **Category B (Proposed Remote Cloud Sandbox Instruction Scaffolding — Unverified)**.
-- **Qualification Status:** **PROVISIONAL CANDIDATE (Cloud Sandbox Live Trials Pending)**.
+- **Qualification Status:** **PROPOSED DESIGN CANDIDATE (Cloud Sandbox Live Trials Pending)**.
 - **Qualification Rationale:** In desk review, Devin is hypothesized to ingest workspace operational instructions via repository-level configuration files (such as `DEVIN.md` or `AGENTS.md`) or session playbooks, though native ingestion fidelity has not been empirically verified on a live host. However, under Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §1.1), claiming verified compatibility based solely on placing a markdown instruction file into a repository is strictly rejected as marketing deception ("quảng cáo ảo"). Harnesses in Category B provide repository-scoped instruction scaffolding rather than native directory-based skill discovery (Category A). Devin executes entirely inside an ephemeral cloud MicroVM where local developer host filesystems are completely absent. Until an active Devin cloud session executes the Four-Point Live Verification Protocol inside a real cloud sandbox and archives raw tool execution payloads, terminal exit codes, and on-disk receipts to `plans/research/harness-expansion/evidence/`, Devin remains classified strictly as a **Provisional Candidate**.
 
 ```
@@ -35,13 +35,13 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Hypothesized instructions (`DEVIN.md` / `AGENTS.md`)    │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Execution Environment        │ Isolated Linux Cloud MicroVM Sandbox                    │
+│ Execution Environment        │ Hypothesized Cloud Sandbox Environment (Unverified)     │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Tool Execution API           │ Hypothesized sandboxed shell execution (`bash`)         │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Live Qualification Status    │ PROVISIONAL CANDIDATE (Cloud Sandbox Live Trials Pending)│
+│ Live Qualification Status    │ PROPOSED CANDIDATE (Cloud Sandbox Live Trials Pending)   │
 └──────────────────────────────┴─────────────────────────────────────────────────────────┘
 ```
 
@@ -55,7 +55,7 @@ In desk design review, Devin aligns with ADR-0001's fundamental invariants (empi
 3. **Zero Tool Interposition:** Flow does not monkey-patch, wrap, or intercept Devin's internal tool dispatch pipeline, browser actions, or editor commands. Flow evaluates gates post-hoc by re-reading ground truth directly from workspace filesystem artifacts (`flow/`, `cards/`, `manifest-hashes.json`).
 4. **Deterministic Shell Contract:** All stage transitions, gate validations, and card checks execute strictly via `bash skills/flow/runner/flow.sh <command>`, returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostics.
 
-### 1.3 Why Category B (Remote Cloud Sandbox Instruction Scaffolding) and Not Category A (Native Skill Target)?
+### 1.3 Why Proposed Category B (Cloud Sandbox Scaffold) and Not Category A (Native Skill Target)?
 Harnesses in **Category A (Native Skill Targets)** natively auto-discover directory-based skill bundles containing `SKILL.md` from a standard home (e.g., Claude Code reading `~/.claude/skills/flow`, Codex CLI reading `~/.codex/skills/flow`, or Zed Assistant reading `~/.agents/skills/flow`).
 
 Devin does **not** discover arbitrary host desktop skill directories:
@@ -101,16 +101,12 @@ Devin discovers project-level operational guidelines via repository root files:
 A critical technical reality governs Devin integrations due to the remote microVM boundary:
 
 ```
-[ Developer Local Workstation ]
-  ├── ~/.claude/skills/flow           <── Completely nonexistent on Devin's cloud!
-  ├── ~/.agents/skills/flow           <── Completely nonexistent on Devin's cloud!
-  └── /home/developer/flow-project/   <── Pushed to remote Git provider (GitHub/GitLab)
-             │
-             ▼ git clone (remote network)
-[ Isolated Devin Cloud MicroVM Sandbox ]
-  └── /home/devin/workspace/          <── MicroVM working directory
-        ├── DEVIN.md                  <── Hypothesized instruction file
-        └── skills/flow/runner/flow.sh <── MUST BE LOCATED HERE (Project-local runner)
+[ Illustrative Model: Hypothesized Cloud Sandbox Architecture ]
+  Local Workstation Global Paths (e.g., ~/.claude/, ~/.agents/)
+             ≠ (Inaccessible inside remote cloud execution sandbox)
+  Cloned Repository Working Directory
+        ├── DEVIN.md                  <── Hypothesized instruction file (Unverified)
+        └── skills/flow/runner/flow.sh <── Proposed project-local runner
 ```
 
 - **Remote Cloud Isolation (Hypothesized):** In this cloud sandbox model, Devin is described as cloning repositories into an isolated cloud environment. Host-global paths configured on a developer's local machine (`~/.claude/`, `~/.agents/`) would not exist.
