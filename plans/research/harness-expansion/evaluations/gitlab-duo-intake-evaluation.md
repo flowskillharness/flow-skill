@@ -95,7 +95,7 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 #### Modality 1: GitLab Duo Workflow (Category B: Proposed Workspace Rule Scaffolding)
 - **Environment:** Local developer IDE (VS Code with GitLab Workflow extension) and remote GitLab CI/CD container runners provisioned for automated workflow execution.
 - **Rule Ingestion:** Proposed via workspace workflow configuration (`.gitlab/duo_workflow.yml`) or repository root instructions (`AGENTS.md`).
-- **Tool Execution:** Duo Workflow provides an autonomous execution subshell capable of invoking bash commands in the workspace environment, capturing stdout/stderr, and receiving exit codes.
+- **Tool Execution:** Duo Workflow is hypothesized in desk review to execute subshell commands in the workspace environment, capturing stdout/stderr, and receiving exit codes (unverified pending live trials).
 - **Classification:** Category B (Proposed Workspace Rule Scaffolding).
 
 #### Modality 2: GitLab Duo Chat (Unassessed / Deferred Pending Verification)
@@ -111,19 +111,19 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 ### 2.1 Phase 1: Market Intelligence & Prioritization Scoring
 - **Market Share & Developer Adoption:** GitLab Duo serves a massive enterprise developer base embedded within self-managed GitLab EE/CE instances and GitLab.com SaaS. Organizations subject to strict data sovereignty, regulatory compliance (FedRAMP, HIPAA, SOC 2), and air-gapped security policies frequently standardize on GitLab for source code management, CI/CD, and DevSecOps. While consumer AI mindshare is concentrated around tools like Cursor and Claude Code, GitLab's enterprise penetration represents a widespread, high-value user segment.
 - **Agentic Autonomy & Capability:** GitLab Duo spans a wide autonomy spectrum:
-  - Duo Chat historically operates as a conversational query assistant; its autonomous tool-loop capability remains unassessed in verified testing.
+  - Duo Chat historically operates as a conversational query assistant; its autonomous tool-loop capability remains unassessed pending live verification.
   - Duo Workflow is described in vendor documentation as an emerging multi-step planning and tool execution agent; its empirical subshell execution and gate-stop fidelity remain unverified in Flow trials.
 - **Ecosystem Openness & Stability:** GitLab operates on an open-core model. While the GitLab Community Edition source code is public, GitLab Duo and Duo Workflow rely on proprietary cloud backend services (GitLab Duo Workflow Service / AI Gateway). Configuration formats are emerging and documented, but runtime orchestration is closed-source.
 - **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
 - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
   1. Market Adoption Hypothesis: Extensive enterprise GitLab ecosystem developer base.
-  2. Agentic Autonomy Hypothesis: Duo Workflow provides an emerging multi-step planning loop (empirical tool-loop and gate-stop fidelity unverified in Flow trials); standard Duo Chat historically operates as conversational query assistant.
+  2. Agentic Autonomy Hypothesis: Duo Workflow is described in vendor materials as providing an emerging multi-step planning loop (empirical tool-loop and gate-stop fidelity unverified in Flow trials); standard Duo Chat historically operates as conversational query assistant.
   3. Ecosystem Openness Hypothesis: Open-core / proprietary enterprise service.
 
 ### 2.2 Phase 2: Architecture Probing
 
 #### 2.2.1 Duo Workflow Execution Subsystem & Agent Loop
-The GitLab Duo Workflow architecture decouples model planning from execution:
+In vendor architecture blueprints, the GitLab Duo Workflow architecture is described as decoupling model planning from execution:
 1. **Duo Workflow Service (Control Plane):** A centralized service communicating with the GitLab AI Gateway and underlying LLMs (e.g., Anthropic Claude models). It maintains task state, generates multi-step plans, and coordinates tool execution requests.
 2. **Execution Client (Data Plane):** The local IDE extension (GitLab Workflow in VS Code) or the GitLab CI/CD runner container acts as the execution client.
 3. **Execution Subshell Tool (Hypothesized):** In vendor architectural blueprints, Duo Workflow is described as dispatching execution requests to the execution client, hypothesized to execute commands in a subshell, capture stdout/stderr, and return the integer exit code to the control plane (unverified pending live trials).

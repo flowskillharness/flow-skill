@@ -25,7 +25,7 @@
 Sourcegraph Cody (developed by Sourcegraph Inc.; vendor portal: https://sourcegraph.com/cody, documentation: https://sourcegraph.com/docs/cody, source repository: https://github.com/sourcegraph/cody, Apache-2.0, accessed 2026-10-15) is an AI-assisted code intelligence platform and developer extension. Cody operates across multiple IDEs—including Visual Studio Code, JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, GoLand), and Neovim (via the `cody-agent` protocol)—as well as within the web-based Sourcegraph code navigation and search platform. Cody integrates code graph embeddings, syntax tree analysis, context-fetching protocols (such as OpenCTX), multi-turn chat, inline code generation, multi-file code editing (`Cody Edits`), and emerging agentic workflows.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category B (Workspace Rule Scaffolding for VS Code / JetBrains) & Unassessed / Deferred (Web Search / Read-Only Interface)**.
+- **Classification:** **Category B (Workspace Rule Scaffolding for VS Code / JetBrains) & Unassessed / Deferred (Web Search / Web Search Interface)**.
 - **Qualification Status:** **`PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)`**.
 - **Qualification Rationale:**
   - In desk review, Sourcegraph Cody exhibits an architectural split between developer IDE environments (VS Code, JetBrains, Neovim) and the web-based enterprise code search interface. In IDE environments, Cody supports repository-scoped context ingestion via workspace configuration, OpenCTX context providers, and root `AGENTS.md` instructions, alongside multi-file code edits and interactive terminal command execution. This IDE modality represents a **Category B (Workspace Rule Scaffolding)** candidate hypothesis.
@@ -40,7 +40,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B (Workspace Rule Scaffolding for VS Code /   │
 │                              │ JetBrains) & Unassessed / Deferred (Web Search /       │
-│                              │ Read-Only Interface)                                    │
+│                              │ Web Search Interface)                                   │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Workspace prompt configuration / OpenCTX context        │
 │                              │ providers / root `AGENTS.md`                            │
@@ -78,7 +78,7 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: Cody IDE Extension           │ Modality 2: Sourcegraph Web Search / Chat   │
 │ (Category B: Workspace Rule Scaffolding) │ (Unassessed / Deferred (Web Search /       │
-│                                          │ Read-Only Interface)                       │
+│                                          │ Web Search Interface)                       │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code, JetBrains, Neovim  │ Environment: Sourcegraph Cloud & Enterprise │
 │                                          │ Web UI                                      │
@@ -86,7 +86,7 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 │ Ingestion: Workspace prompt config /     │ Ingestion: Conversational web prompt query  │
 │ OpenCTX providers / root `AGENTS.md`     │ (Global repository search context only)     │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
-│ Agent Loop: Multi-turn chat, inline diffs│ Agent Loop: Single-turn conversational Q&A  │
+│ Agent Loop: Multi-turn chat, inline diffs│ Agent Loop: Unassessed (Historically Q&A)  │
 │ and multi-file `Cody Edits`              │ and code search exploration                 │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Tool API: Hypothesized terminal / shell  │ Tool API: Unassessed (Web code search only; │
@@ -102,10 +102,10 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 - **Tool Execution:** Hypothesized terminal and shell execution capability (surfacing suggested commands to the integrated terminal or invoking subshells during automated tasks).
 - **Classification:** Category B (Workspace Rule Scaffolding Candidate).
 
-#### Modality 2: Sourcegraph Web Search & Web Cody (Unassessed / Deferred (Web Search / Read-Only Interface))
+#### Modality 2: Sourcegraph Web Search & Web Cody (Unassessed / Deferred (Web Search / Web Search Interface))
 - **Environment:** Sourcegraph Cloud (sourcegraph.com) or self-hosted Sourcegraph Enterprise web application.
 - **Conversational Scope:** Read-only enterprise codebase search, cross-repository code indexing, and conversational explanation. It answers queries by referencing indexed code graph symbols.
-- **Lack of Local Execution Subsystem:** Web Cody operates as a web-based code search interface; local terminal tool execution and gate enforcement capabilities remain unassessed in verified testing (Unassessed / Deferred).
+- **Lack of Local Execution Subsystem:** Web Cody operates as a web-based code search interface; local terminal tool execution and gate enforcement capabilities remain unassessed pending live verification (Unassessed / Deferred).
 - **Classification:** Unassessed / Deferred (Web Search / Read-Only Interface).
 
 ---
