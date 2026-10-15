@@ -28,7 +28,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Classification:** **Category B (Workspace Rule Scaffolding for VS Code / JetBrains) & Unassessed / Deferred (Web Search / Web Search Interface)**.
 - **Qualification Status:** **`PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)`**.
 - **Qualification Rationale:**
-  - In desk review, Sourcegraph Cody exhibits an architectural split between developer IDE environments (VS Code, JetBrains, Neovim) and the web-based enterprise code search interface. In IDE environments, Cody supports repository-scoped context ingestion via workspace configuration, OpenCTX context providers, and root `AGENTS.md` instructions, alongside multi-file code edits and interactive terminal command execution. This IDE modality represents a **Category B (Workspace Rule Scaffolding)** candidate hypothesis.
+  - In desk review, Sourcegraph Cody exhibits an architectural split between developer IDE environments (VS Code, JetBrains, Neovim) and the web-based enterprise code search interface. In IDE environments, Cody is hypothesized in desk review to support repository context ingestion via workspace prompt configuration, OpenCTX context providers, or root `AGENTS.md` instructions, alongside code edits and terminal execution proposals. This IDE modality represents a **Category B (Proposed Workspace Rule Scaffolding)** candidate hypothesis.
   - Conversely, Cody operating within the web-based Sourcegraph search UI functions as an enterprise code search interface; its workspace tool execution capabilities remain unassessed pending dedicated verification (classified as Unassessed / Deferred).
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising general "Sourcegraph Cody support" without distinguishing the IDE extension modality from web-based code search represents marketing deception ("quảng cáo ảo").
   - In standard developer usage within IDEs, Cody Chat primarily operates as an interactive conversational assistant that suggests terminal commands and code modifications for manual user execution. While emerging Cody Agent modes support programmatic tool dispatches, autonomous multi-turn shell execution loops that mechanically capture non-zero exit codes ($\text{exit} \neq 0$) and halt upon gate failures have not been empirically verified against live host runtimes.
@@ -106,7 +106,7 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 - **Environment:** Sourcegraph Cloud (sourcegraph.com) or self-hosted Sourcegraph Enterprise web application.
 - **Conversational Scope:** Read-only enterprise codebase search, cross-repository code indexing, and conversational explanation. It answers queries by referencing indexed code graph symbols.
 - **Lack of Local Execution Subsystem:** Web Cody operates as a web-based code search interface; local terminal tool execution and gate enforcement capabilities remain unassessed pending live verification (Unassessed / Deferred).
-- **Classification:** Unassessed / Deferred (Web Search / Read-Only Interface).
+- **Classification:** Unassessed / Deferred (Web Search Interface).
 
 ---
 

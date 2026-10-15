@@ -122,20 +122,20 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 
 ### 2.2 Phase 2: Architecture Probing
 
-#### 2.2.1 Duo Workflow Execution Subsystem & Agent Loop
-In vendor architecture blueprints, the GitLab Duo Workflow architecture is described as decoupling model planning from execution:
-1. **Duo Workflow Service (Control Plane):** A centralized service communicating with the GitLab AI Gateway and underlying LLMs (e.g., Anthropic Claude models). It maintains task state, generates multi-step plans, and coordinates tool execution requests.
-2. **Execution Client (Data Plane):** The local IDE extension (GitLab Workflow in VS Code) or the GitLab CI/CD runner container acts as the execution client.
-3. **Execution Subshell Tool (Hypothesized):** In vendor architectural blueprints, Duo Workflow is described as dispatching execution requests to the execution client, hypothesized to execute commands in a subshell, capture stdout/stderr, and return the integer exit code to the control plane (unverified pending live trials).
-4. **Iterative Refinement:** If a command exits with status $0$, Duo Workflow marks the step completed; if it exits non-zero ($\text{exit} \neq 0$), Duo Workflow is designed to evaluate error diagnostics and attempt corrective actions.
+#### 2.2.1 Duo Workflow Execution Subsystem (Architectural Blueprint Hypotheses)
+In GitLab's documented architectural blueprints, Duo Workflow is designed with a decoupled planning and execution model:
+1. **Duo Workflow Service (Control Plane Hypothesis):** A cloud service communicating with the GitLab AI Gateway and LLMs, hypothesized to coordinate task state, generate multi-step plans, and issue tool execution requests.
+2. **Execution Client (Data Plane Hypothesis):** The local IDE extension (GitLab Workflow in VS Code) or GitLab CI/CD runner container is designed to act as the execution client.
+3. **Execution Subshell Tool (Hypothesized):** When a build or verification step is requested, the client is hypothesized to execute the command in a subshell, capture stdout/stderr, and return the integer exit code to the control plane (unverified in Flow live testing).
+4. **Iterative Refinement (Hypothesized Behavior):** If a command returns status 0, the step is marked complete; non-zero exits are hypothesized to trigger corrective actions in the model loop, pending empirical verification under the Four-Point Live Verification Protocol.
 
 > **Unverified Desk Hypothesis (Anti-Illusion Disclosure):** The execution subshell tool dispatch, stdout/stderr capture, and integer exit code return path described above are **unverified desk hypotheses** derived from vendor documentation. They have not been observed in a live Duo Workflow host session and remain pending live host trials under the Four-Point Live Verification Protocol (Section 4).
 
 #### 2.2.2 Rule & Instruction Ingestion Mechanism
-Duo Workflow ingests operational context through repository-level configuration and workspace instructions:
+Duo Workflow is hypothesized to ingest repository context through repository-level configuration and workspace instructions:
 1. **Workflow Configuration (`.gitlab/duo_workflow.yml`):** Proposed workflow definition file where project-specific instructions, constraints, and tool invocation contracts can be declared.
 2. **Root Context File (`AGENTS.md`):** As GitLab tooling embraces standard agent instructions, root `AGENTS.md` provides cross-agent build discipline instructions.
-3. **Context Budgeting:** GitLab Duo enforces token budgets on system instructions to avoid attention degradation. Scaffolding rules must remain compact (strictly under 1,000 characters and 150 words) to ensure high retention during extended multi-step workflows.
+3. **Context Budgeting:** GitLab Duo Workflow is designed with bounded token budgets on system instructions to avoid attention degradation. Scaffolding rules must remain compact (strictly under 1,000 characters and 150 words) to ensure high retention during extended multi-step workflows.
 
 > **Unverified Desk Hypothesis (Anti-Illusion Disclosure):** The existence, schema, and ingestion of `.gitlab/duo_workflow.yml` (and `AGENTS.md` pickup by Duo Workflow) are **unverified desk hypotheses**. No live host trial has demonstrated that a GitLab execution client parses this file or applies its tool invocation contracts; verification remains pending live host trials under Section 4.
 
