@@ -176,7 +176,7 @@ In architectural evaluation, GitLab Duo Workflow is hypothesized to execute acro
 ## Section 3: Latent Bug Analysis & Anti-Illusion Traps
 
 ### 3.1 Latent Trap 1: Modality Confusion (Duo Workflow vs. Duo Chat)
-- **The Pitfall:** Advertising Flow as "compatible with GitLab Duo" without explicitly distinguishing the operational modality. A developer opens GitLab Duo Chat in the Web UI or IDE sidebar, types a prompt to advance a stage, and discovers that Duo Chat merely generates a conversational reply explaining how to advance rather than executing the gate command.
+- **The Pitfall:** Advertising Flow as "compatible with GitLab Duo" without explicitly distinguishing the operational modality. A developer opens GitLab Duo Chat in the Web UI or IDE sidebar, types a prompt to advance a stage, and discovers that Duo Chat functions as an interactive query assistant without verified autonomous tool execution capabilities.
 - **The Grounded Technical Reality:**
   - In desk review, standard GitLab Duo Chat historically operates as a conversational assistant; its autonomous tool execution loop and gate enforcement capabilities remain unassessed pending dedicated live verification.
   - In vendor materials, GitLab Duo Workflow is described as possessing an autonomous multi-step execution loop capable of dispatching shell commands within an execution client (empirical gate enforcement unverified in Flow trials).
@@ -186,7 +186,7 @@ In architectural evaluation, GitLab Duo Workflow is hypothesized to execute acro
 - **The Pitfall:** Writing scaffolding instructions that direct the agent to execute a globally installed Flow path (e.g., `bash ~/.agents/skills/flow/runner/flow.sh`).
 - **The Grounded Technical Reality:**
   - In proposed CI/CD container runner workflows, the developer's physical host filesystem would not be mounted. The runner environment contains only the cloned repository under `/builds/<group>/<project>/`.
-  - Invoking `~/.agents/skills/flow/runner/flow.sh` triggers an immediate `ENOENT: No such file or directory` crash.
+  - Invoking `~/.agents/skills/flow/runner/flow.sh` in remote CI/CD container sandboxes is hypothesized to fail with `ENOENT: No such file or directory` if host paths are unmounted.
 - **The Anti-Illusion Mitigation:**
   - Scaffolding instructions must always reference the repository-vendored runner tree:
     ```bash
