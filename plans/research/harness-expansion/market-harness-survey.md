@@ -48,7 +48,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 ├─────────────────────────────────────┬──────────────────────────────────────────────┬──────────────────────────────────┤
 │ TIER 1: Priority Native Fit         │ TIER 2: Project Rule Fit                     │ TIER 3: Deferred / Constrained   │
 ├─────────────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────┤
-│ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)                       │ • GitHub Copilot CLI (no loop)   │
+│ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)                       │ • GitHub Copilot CLI (Unassessed query utility)   │
 │ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)                         │ • Zed Inline Editor (no bash)    │
 │                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (Historical query utility; successor capability unassessed)         │
 │                                     │ • Aider (Test Hook)                          │                                  │
@@ -454,7 +454,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 | **OpenHands** | Microagent (`.md`) | N/A (Isolated Docker) | `.openhands/microagents/` | `execute_bash` | Autonomous (Container) | **Tier 2** |
 | **Copilot (VSCode)**| `copilot-instructions.md` | Settings | `.github/copilot-instructions.md` | Terminal proposal | Semi-autonomous (Prompted) | **Tier 2** |
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
-| **Copilot CLI** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3** |
+| **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 

@@ -220,12 +220,12 @@ Currently, **only Claude Code and Codex CLI possess full historical empirical li
 - **Definition:** Headless or developer-driven harnesses providing deterministic test or command execution hooks without multi-agent interactive skill dispatch.
 - **Scaffold Mechanism:** Materialized via `flow rules aider --write` into `.aider.conf.yml`.
 - **Provisional Candidate:**
-  - **Aider** (`.aider.conf.yml`): Configured with `test-cmd: "bash -c 'if [ -s cards/.inflight ]; then bash skills/flow/runner/flow.sh check $(cat cards/.inflight); else bash skills/flow/runner/flow.sh status; fi'"` and `auto-test: true`. It conditionally runs `flow check` on the active in-flight card (or falls back to `flow status` when no card is in flight) upon file edits. This provides developer pair-programming test guidance, distinct from Category B multi-turn interactive prompt rules.
+  - **Aider** (`.aider.conf.yml`): Configured with `test-cmd: "bash -c 'cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'"` and `auto-test: true`. It conditionally runs `flow check` on the active in-flight card (or falls back to `flow status` when no card is in flight) upon file edits. This provides developer pair-programming test guidance, distinct from Category B multi-turn interactive prompt rules.
 
 ### 5.5 Category D: Incompatible / Deferred Candidates
 - **Definition:** Harnesses fundamentally unable to support Flow's discipline model without violating ADR-0001 or compromising reliability.
 - **Deferred / Incompatible Targets & Grounded Rationale:**
-  - **GitHub Copilot CLI** (`gh copilot`): Deferred / Incompatible. An interactive query assistant that explains or suggests terminal commands on demand; it completely lacks an autonomous multi-turn tool invocation loop, has no workspace rule ingestion mechanism, and cannot execute Flow's gated build lifecycle.
+  - **GitHub Copilot CLI** (`gh copilot`): Deferred / Unassessed. Historically functions as an interactive command suggestion utility; autonomous tool execution and instruction ingestion under current GitHub CLI extensions remain unassessed pending dedicated verification.
   - **Zed Inline Editor** (non-assistant mode): Deferred / Incompatible. Lacks terminal tool invocation capabilities. (Note: Zed's Assistant panel with the Agent Skills standard is evaluated under Category A via `~/.agents/skills/flow`).
   - **Continue.dev**: Deferred pending authoritative documentation of its active configuration schema and empirical live tool-loop execution verification (not currently supported in `flow rules`).
 ---

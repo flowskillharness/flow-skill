@@ -37,7 +37,8 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │                 GITHUB COPILOT (VS CODE & WORKSPACE) EVALUATION SUMMARY                │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B (Workspace Rule Scaffolding for VS Code) &   │
-│                              │ Category D (Deferred for GitHub Copilot CLI)            │
+│                              │ Deferred / Unassessed (GitHub Copilot    │
+│                              │ CLI; Pending Verification)              │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Workspace Instructions (`.github/copilot-instructions.md`)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -70,13 +71,14 @@ GitHub Copilot spans two fundamentally divergent operational modalities that req
 │                        GITHUB COPILOT MODALITY SEPARATION                              │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: VS Code Copilot Workspace    │ Modality 2: GitHub Copilot CLI              │
-│ (Category B: Workspace Rule Scaffolding) │ (Category D: Deferred / Incompatible)       │
+│ (Category B: Workspace Rule Scaffolding) │ (Deferred / Unassessed; Pending    │
+│                                          │ Verification)                      │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & Codespaces        │ Environment: Terminal shell (`gh copilot`)  │
 │ Ingestion: `.github/copilot-instructions.md`│ Ingestion: None (Zero instruction files)   │
-│ Agent Loop: Multi-turn Chat / Agent Mode │ Agent Loop: None (Single-turn query only)   │
-│ Tool API: Terminal proposal & execution  │ Tool API: None (Suggests string commands)   │
-│ Status: Provisional Candidate            │ Status: Deferred / Incompatible             │
+│ Agent Loop: Multi-turn Chat / Agent Mode │ Agent Loop: Unassessed (Historically query) │
+│ Tool API: Terminal proposal & execution  │ Tool API: Unassessed (Historically suggests)│
+│ Status: Provisional Candidate            │ Status: Deferred / Unassessed              │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -165,11 +167,11 @@ This repository enforces Flow discipline:
     ```bash
     gh copilot suggest "advance flow stage to 01-research"
     ```
-  - `gh copilot` returns a generic natural-language text response or hallucinates a non-existent git command. It has no tool invocation engine, does not read `.github/copilot-instructions.md`, cannot evaluate runner exit codes, and leaves the repository in an unverified state.
+  - `gh copilot` was historically designed as an interactive command suggestion utility; it returned a generic natural-language text response rather than a tool invocation, and it does not read `.github/copilot-instructions.md`. Its autonomous loop and runner exit-code handling remain unassessed pending current CLI verification, and the repository is left in an unverified state.
 - **The Anti-Illusion Mitigation:**
   - Flow's documentation and compatibility matrix explicitly bifurcate GitHub Copilot:
     - **VS Code Copilot Workspace:** Category B (Workspace Rule Scaffolding).
-    - **GitHub Copilot CLI (`gh copilot`):** Category D (Deferred / Incompatible).
+    - **GitHub Copilot CLI (`gh copilot`):** Category D (Deferred / Unassessed).
   - Flow strictly refuses to document or advertise CLI support for GitHub Copilot.
 
 ### 3.2 Latent Trap 2: Lack of Autonomous Loop & Chat Hallucination Trap
