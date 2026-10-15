@@ -507,10 +507,9 @@ npm Package:   ${npm_v}
   console.log('1. Channel 1 — npm installer release (triggers npm publish workflow):');
   if (npmCheck.exists) {
     console.log(`   [INFO] Git tag ${npmTag} ALREADY exists (${npmCheck.source}). Skipping npm tag command.`);
+  } else if (npmCheck.source === 'unconfirmed') {
+    console.log(`   [WARN] Remote tag check for ${npmTag} unconfirmed (remote inaccessible). Tag creation commands suppressed for safety; verify remote tags manually.`);
   } else {
-    if (npmCheck.source === 'unconfirmed') {
-      console.log(`   [WARN] Remote check for ${npmTag} unconfirmed (offline or remote inaccessible). Verify tags on GitHub before pushing.`);
-    }
     console.log(`   git tag ${npmTag}`);
     console.log(`   git push origin ${npmTag}`);
   }
@@ -518,10 +517,9 @@ npm Package:   ${npm_v}
   console.log('\n2. Channel 2 — Skill product release (GitHub Release / tags):');
   if (skillCheck.exists) {
     console.log(`   [INFO] Git tag ${skillTag} ALREADY exists (${skillCheck.source}). Skipping skill tag command.`);
+  } else if (skillCheck.source === 'unconfirmed') {
+    console.log(`   [WARN] Remote tag check for ${skillTag} unconfirmed (remote inaccessible). Tag creation commands suppressed for safety; verify remote tags manually.`);
   } else {
-    if (skillCheck.source === 'unconfirmed') {
-      console.log(`   [WARN] Remote check for ${skillTag} unconfirmed (offline or remote inaccessible). Verify tags on GitHub before pushing.`);
-    }
     console.log(`   git tag ${skillTag}`);
     console.log(`   git push origin ${skillTag}`);
   }

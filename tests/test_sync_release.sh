@@ -121,6 +121,33 @@ grep -q "Skipping skill tag command" /tmp/sync_f.out && ck 0 0 "skips skill tag 
 grep -q "git tag npm@" /tmp/sync_f.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
 grep -q "git tag v" /tmp/sync_f.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
 
+echo "G) unconfirmed remote tag lookup suppresses git tag commands"
+tmp=$(mktemp -d)
+mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
+cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
+cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
+cp "$ROOT/portable-manifest.json" "$tmp/r/"
+cp "$ROOT/.claude-plugin/plugin.json" "$tmp/r/.claude-plugin/"
+cp "$ROOT/npm-wrapper/package.json" "$tmp/r/npm-wrapper/"
+cp "$ROOT/npm-wrapper/README.md" "$tmp/r/npm-wrapper/"
+cp "$ROOT/npm-wrapper/README_VN.md" "$tmp/r/npm-wrapper/"
+cp "$ROOT/README.md" "$tmp/r/"
+cp "$ROOT/README_VN.md" "$tmp/r/"
+cp "$ROOT/CHANGELOG.md" "$tmp/r/"
+cp "$ROOT/npm-wrapper/CHANGELOG.md" "$tmp/r/npm-wrapper/"
+git -C "$tmp/r" init -q
+git -C "$tmp/r" add -A
+git -C "$tmp/r" -c user.email=test@test -c user.name=test commit -qm init
+git -C "$tmp/r" remote add origin /dev/null/nonexistent
+
+node "$tmp/r/scripts/sync-release.mjs" --instructions >/tmp/sync_g.out 2>&1
+ck 0 $? "sync-release --instructions exit code with unreachable remote"
+grep -q "Tag creation commands suppressed for safety" /tmp/sync_g.out && ck 0 0 "reports suppression warning" || ck 0 1 "reports suppression warning"
+grep -q "git tag npm@" /tmp/sync_g.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
+grep -q "git tag v" /tmp/sync_g.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
