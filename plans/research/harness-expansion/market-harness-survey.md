@@ -63,6 +63,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Augment Code (Proposed IDE Scaffold)       │ • Tabnine Inline (Completions only)              │
 │                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
 │                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│ • Void Editor (Historical / Inactive Open-Source IDE) │
+│                                     │ • PearAI (Proposed Open-Source IDE Agent Scaffold) │                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -697,6 +698,35 @@ In desk review, Void is evaluated as an **Unassessed / Deferred / Historical (In
 
 ---
 
+### Candidate 19: PearAI (Open-Source AI Code Editor)
+
+#### 1. System Overview & Harness Architecture
+PearAI (official portal: https://trypear.ai, repository: https://github.com/trypear/pearai-submodule, documentation: https://trypear.ai/docs) is an open-source (Apache-2.0, YC W24) AI code editor built as a VS Code fork. It provides a Chat mode and a Creator/Agent mode for multi-file agentic edits (full desk intake: `evaluations/pearai-intake-evaluation.md`).
+
+In desk review, PearAI is evaluated as a **Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis)** under Tier 2 — not a verified integration. No live host trial has been executed and no "supported" claim of any kind is made.
+
+#### 2. Execution Environment: Local IDE Workspace
+- PearAI executes locally on the developer's workstation as a VS Code fork with Chat and Creator/Agent modes.
+- Any hypothetical Flow integration would execute via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>`), terminating immediately upon return.
+- Zero Flow Daemons (ADR-0001): Flow operates exclusively as a stateless, host-invoked discipline layer; it would not run as or spawn persistent background daemons, language servers, or socket listeners. The host editor holds the execution process token.
+
+#### 3. Extension & Integration Mechanism: Workspace Context / Prompt Rules / `AGENTS.md`
+- Hypothesized Ingestion Mechanism (unverified): workspace context / prompt rules configuration plus repository-root `AGENTS.md`.
+- No `flow rules` template exists for PearAI; `flow rules` remains strictly locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules pearai` fails with exit code 2.
+
+#### 4. Project-Local Runner Requirement
+- Any hypothetical integration mandates `bash skills/flow/runner/flow.sh <command>` — project-vendored runner invocation with the Flow runner tree present in the project workspace.
+- The Creator/Agent mode's terminal tool execution, exit-code capture fidelity (integer exit codes $0$/$1$, halting on non-zero exit, refusing to hallucinate a pass), and gate-stop behavior remain **unverified** pending a live host trial.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts, terminal tool execution logs, and gate-stop verification — archived under `plans/research/harness-expansion/evidence/`. None of these exist for PearAI today.
+- **The Marketing Illusion to Avoid:** Claiming verified support or a non-existent `flow rules pearai` template. Advertising an unverified editor as a compatible harness would be precisely the "quảng cáo ảo" (marketing theater) ADR-0001 forbids.
+- **Feasibility Verdict:**
+  - **PearAI Creator / Agent: Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
+  - **PearAI Inline Code Editing: Unassessed / Deferred Pending Verification (Inline code editing mode outside Flow build-gate scope; broader capabilities unassessed).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -724,6 +754,7 @@ In desk review, Void is evaluated as an **Unassessed / Deferred / Historical (In
 | **Trae** | `.trae/skills/` (`SKILL.md`) & `.trae/rules/` | `~/.trae/skills/` & `~/.trae/user_rules` | `.trae/skills/flow/` & `.trae/rules/flow.md` | Hypothesized terminal tool (unverified API name / host trial pending) | Autonomous (Local Agent Mode; live trial pending) | **Dual A/B Proposed Candidate (Local Agent Mode; Live Trial Pending)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 | **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; project inactive) | Unassessed (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
+| **PearAI** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool (unverified API) | Autonomous (Creator/Agent mode; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 
 ---
 
@@ -949,3 +980,5 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - **Trae Documentation & Official Site:** https://www.trae.ai · https://docs.trae.ai (ByteDance, accessed 2026-10-15)
 15. **Void Editor Documentation & Repository (Historical / Inactive Project):**
    - **Void Editor Documentation & Repository:** https://voideditor.com · https://github.com/voideditor/void · https://docs.voideditor.com (Open Source, accessed 2026-10-15)
+16. **PearAI Documentation & Repository:**
+   - **PearAI Documentation & Repository:** https://trypear.ai · https://github.com/trypear/pearai-submodule · https://trypear.ai/docs (PearAI, Apache-2.0, accessed 2026-10-15)
