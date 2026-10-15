@@ -199,10 +199,10 @@ In the research-described Docker architecture, a hypothesized isolation boundary
 - **The Failure Mode:**
   - In complex agentic platforms, developers sometimes attempt to run persistent background services (e.g., daemonized MCP servers, background file watchers, or in-memory state caches).
   - In a containerized environment like SWE-agent, background daemons risk zombie process leaks, container port conflicts, uncoordinated state corruption across container resets, and direct violation of Flow's constitutional identity (ADR-0001).
-- **The Anti-Illusion Mitigation:**
-  - Flow strictly enforces **Zero Resident Daemons**. Flow does not run a server or persistent listener.
-  - SWE-agent invokes `flow.sh`, Flow verifies receipts on disk, writes updated receipts (e.g., in `cards/C-NNN.md` or `manifest-hashes.json`), and exits immediately.
-  - The process token remains with SWE-agent at all times.
+- **The Anti-Illusion Mitigation (Proposed):**
+  - Flow is designed to enforce **Zero Resident Daemons**. Flow does not run a server or persistent listener.
+  - In proposed integration, SWE-agent would invoke `flow.sh`, Flow would verify receipts on disk, write updated receipts (e.g., in `cards/C-NNN.md` or `manifest-hashes.json`), and exit immediately (receipt-write integrity unverified pending live container trials).
+  - The process token is expected to remain with SWE-agent at all times (proposed model).
 
 ### 3.4 Latent Trap 4: Container Timeouts & Synthesized Pass Hallucinations (Gate-Stop Fidelity)
 - **The Failure Mode:**
