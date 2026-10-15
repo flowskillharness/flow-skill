@@ -17,13 +17,13 @@
 
 ---
 
-## Section 1: Executive Summary & Category B (Proposed Cloud Sandbox Scaffold) Classification
+## Section 1: Executive Summary & Proposed Cloud Sandbox Scaffold Classification
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 Devin (developed by Cognition AI; vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15) is an autonomous software engineering agent. In vendor demonstrations, Devin is shown operating within an isolated cloud sandbox environment equipped with terminal, editor, and browser tools. In desk intake, its runtime integration with Flow is evaluated as an unverified design hypothesis (live host trials pending).
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category B (Proposed Remote Cloud Sandbox Instruction Scaffolding — Unverified)**.
+- **Classification:** **Proposed Cloud Sandbox Instruction Scaffolding (Unverified)**.
 - **Qualification Status:** **PROPOSED DESIGN CANDIDATE (Cloud Sandbox Live Trials Pending)**.
 - **Qualification Rationale:** In desk review, Devin is hypothesized to ingest workspace operational instructions via repository-level configuration files (such as `DEVIN.md` or `AGENTS.md`) or session playbooks, though native ingestion fidelity has not been empirically verified on a live host. However, under Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §1.1), claiming verified compatibility based solely on placing a markdown instruction file into a repository is strictly rejected as marketing deception ("quảng cáo ảo"). Harnesses in Category B provide repository-scoped instruction scaffolding rather than native directory-based skill discovery (Category A). Devin executes entirely inside an ephemeral cloud MicroVM where local developer host filesystems are completely absent. Until an active Devin cloud session executes the Four-Point Live Verification Protocol inside a real cloud sandbox and archives raw tool execution payloads, terminal exit codes, and on-disk receipts to `plans/research/harness-expansion/evidence/`, Devin remains classified strictly as a **Provisional Candidate**.
 
@@ -91,7 +91,7 @@ Devin’s architecture separates the model planning tier from the execution envi
    - Filesystem changes occur directly in the cloned repository workspace inside the microVM.
 
 #### 2.2.2 Ingestion Mechanism (Hypothesized): Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
-Devin discovers project-level operational guidelines via repository root files:
+In proposed integration, Devin is hypothesized to discover project-level operational guidelines via repository root files:
 - **`DEVIN.md` (Hypothesized Format):** Suggested in community discussions and vendor marketing as a potential repository instruction file; actual automatic ingestion behavior remains unverified in Flow testing.
 - **`AGENTS.md` (Open Standard):** Hypothesized cross-agent repository instruction format; live ingestion behavior remains subject to Phase 4 trials.
 - **Playbook Knowledge:** Operators can configure organizational playbooks in Devin's web interface to persist cross-repository guidelines.
