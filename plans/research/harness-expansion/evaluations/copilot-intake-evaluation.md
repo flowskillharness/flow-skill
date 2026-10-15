@@ -28,7 +28,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Rationale:**
   - Flow implements native workspace rule scaffolding for GitHub Copilot via `flow rules copilot --write`, materializing `.github/copilot-instructions.md`.
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), claiming general "GitHub Copilot support" without explicitly distinguishing the VS Code workspace environment from the standalone `gh copilot` CLI is marketing deception ("quảng cáo ảo").
-  - The standalone `gh copilot` CLI historically functions as an interactive command suggestion utility without an autonomous tool execution loop; its capability under current GitHub CLI extensions remains unassessed pending dedicated verification (classified as Category D / Unassessed).
+  - The standalone `gh copilot` CLI historically functions as an interactive command suggestion utility without an autonomous tool execution loop; its capability under current GitHub CLI extensions remains unassessed pending dedicated verification (status: Unassessed / Pending Verification).
   - In VS Code, GitHub Copilot Chat and Agent Mode ingest `.github/copilot-instructions.md` as repository-level prompt guidance. However, standard Copilot Chat operates primarily as a conversational assistant that proposes terminal commands to the operator rather than executing them in an autonomous, unprompted loop; only Agent Mode or explicit terminal execution actions dispatch commands into the integrated terminal.
   - Static generation of `.github/copilot-instructions.md` does not constitute empirical proof of live gate enforcement. Because GitHub Copilot lacks an unauthenticated, local headless execution CLI for automated CI qualification, full qualification requires an interactive host session executing the Four-Point Live Verification Protocol with raw tool transcripts, terminal payloads, exit codes, and receipts committed to `plans/research/harness-expansion/evidence/`.
 
@@ -75,10 +75,10 @@ GitHub Copilot spans two fundamentally divergent operational modalities that req
 │                                          │ Verification)                      │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & Codespaces        │ Environment: Terminal shell (`gh copilot`)  │
-│ Ingestion: `.github/copilot-instructions.md`│ Ingestion: None (Zero instruction files)   │
+│ Ingestion: `.github/copilot-instructions.md`│ Ingestion: Unassessed (No verified instruction file schema)   │
 │ Agent Loop: Multi-turn Chat / Agent Mode │ Agent Loop: Unassessed (Historically query) │
 │ Tool API: Terminal proposal & execution  │ Tool API: Unassessed (Historically suggests)│
-│ Status: Provisional Candidate            │ Status: Deferred / Unassessed              │
+│ Status: Provisional Candidate            │ Status: Unassessed / Pending Verification              │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -88,11 +88,11 @@ GitHub Copilot spans two fundamentally divergent operational modalities that req
 - **Tool Execution:** In standard chat, Copilot proposes terminal commands that the user can execute via a single click ("Run in Terminal"). In Agent Mode / Copilot Edits, Copilot can propose and trigger terminal tool execution in the integrated terminal.
 - **Classification:** Category B (Workspace Rule Scaffolding).
 
-#### Modality 2: GitHub Copilot CLI (`gh copilot`) (Category D / Unassessed: Deferred)
+#### Modality 2: GitHub Copilot CLI (`gh copilot`) (Unassessed / Pending Verification)
 - **Environment:** Standalone terminal extension for the GitHub CLI (`gh copilot suggest`, `gh copilot explain`).
 - **Historical Query Scope:** `gh copilot` was designed as an interactive command suggestion utility without an autonomous multi-turn tool execution loop; its capability under current/emerging CLI extensions remains unassessed pending dedicated host verification.
-- **Absence of Verified Instruction Ingestion:** It has no verified mechanism to parse `.github/copilot-instructions.md`, `AGENTS.md`, or project build contracts.
-- **Classification:** Category D / Unassessed (Deferred). Claiming Flow support for `gh copilot` is strictly prohibited without live verification evidence.
+- **Instruction Ingestion Unverified:** It has no verified, vendor-documented mechanism to parse `.github/copilot-instructions.md`, `AGENTS.md`, or project build contracts.
+- **Classification:** Unassessed / Pending Verification. Claiming Flow support for `gh copilot` is strictly prohibited without live verification evidence.
 
 ---
 

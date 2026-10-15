@@ -18,14 +18,14 @@
 
 ---
 
-## Section 1: Executive Summary & Category D (Deferred Candidate) Classification
+## Section 1: Executive Summary & Deferred Candidate Classification (Pending Verification)
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 Continue.dev (developed by Continue Dev, Inc.; official portal: https://continue.dev, documentation: https://docs.continue.dev, source repository: https://github.com/continuedev/continue) is an open-source AI code assistant extension available for Visual Studio Code and JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, etc.). Continue enables developers to connect commercial LLMs (Anthropic Claude, OpenAI GPT-4o, Google Gemini) or locally hosted models (via Ollama, LM Studio, vLLM, or llama.cpp) to power inline code completions (tab autocomplete), conversational sidebar chat, slash commands, custom context providers (`@code`, `@docs`, `@folder`, `@diff`), and emerging experimental tool and agent features.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category D (Deferred / Pending Schema & Tool-Loop Verification)**.
-- **Qualification Status:** **`DEFERRED CANDIDATE (Category D: Schema & Tool-Loop Unverified; Live Trials Pending)`**.
+- **Classification:** **Deferred Candidate (Pending Schema & Tool-Loop Verification)**.
+- **Qualification Status:** **`DEFERRED CANDIDATE (Schema & Tool-Loop Unverified; Live Trials Pending)`**.
 - **Qualification Rationale:**
   - Continue.dev has undergone multiple configuration schema revisions across minor releases (transitioning across `config.json`, `config.yaml`, `.continue/rules/`, and `.continue/prompts/`), without a pinned, backward-compatible workspace rule schema guaranteed across versions.
   - In standard developer usage, Continue functions primarily as an inline completion engine and conversational chat panel. Its autonomous multi-turn tool execution loop—specifically the ability to dispatch shell commands autonomously, inspect non-zero integer exit codes ($\text{exit} \neq 0$), and reliably halt on mechanical gate failure—has not been empirically verified against running hosts.
@@ -36,7 +36,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                      CONTINUE.DEV EXTENSION EVALUATION SUMMARY                         │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
-│ Architectural Classification │ Category D (Deferred / Pending Schema & Tool-Loop)      │
+│ Architectural Classification │ Deferred Candidate (Pending Schema & Tool-Loop)        │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Evolving config (`config.yaml` / `.continue/rules/` /   │
 │                              │ prompt files)                                           │
@@ -46,7 +46,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Live Qualification Status    │ DEFERRED CANDIDATE (Category D: Schema & Tool-Loop      │
+│ Live Qualification Status    │ DEFERRED CANDIDATE (Schema & Tool-Loop Unverified;      │
 │                              │ Unverified; Live Trials Pending)                        │
 └──────────────────────────────┴─────────────────────────────────────────────────────────┘
 ```
@@ -338,4 +338,4 @@ To graduate Continue.dev from **Category D (Deferred Candidate)** to **Category 
 
 Continue.dev represents an important and promising open-source AI extension project, distinguished by its Apache-2.0 licensing and flexible model connectivity. However, Flow's non-negotiable **"Support Thật"** discipline categorically rejects marketing theater and speculative support.
 
-Until Continue.dev stabilizes its workspace rule schema and demonstrates an empirically verified, kill-honest autonomous tool execution loop, it remains classified as **Category D (Deferred Candidate)**. Flow will not introduce unverified rule scaffolding into `flow rules` or make premature compatibility claims that could mislead developers into unconstrained, unverified agent executions.
+Until Continue.dev stabilizes its workspace rule schema and demonstrates an empirically verified, kill-honest autonomous tool execution loop, it remains classified as a **Deferred Candidate (Pending Schema & Tool-Loop Verification)**. Flow will not introduce unverified rule scaffolding into `flow rules` or make premature compatibility claims that could mislead developers into unconstrained, unverified agent executions.
