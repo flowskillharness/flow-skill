@@ -271,6 +271,9 @@ if [ "$1" = "release" ] && [ "$2" = "view" ]; then
   if [ "$mode" = "exists" ]; then
     echo "{\"tagName\":\"$3\"}"
     exit 0
+  elif [ "$mode" = "auth_error" ]; then
+    echo "HTTP 401: Bad credentials (mock auth failure)" >&2
+    exit 1
   else
     echo "release not found" >&2
     exit 1
@@ -311,7 +314,14 @@ grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out" && ck 1 0 "K2: output does NOT c
 GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k3.out" 2>&1
 ck 0 $? "K3: sync-release exits 0 when gh release create succeeds"
 grep -q "GitHub Release created for v" "$tmp/k3.out" && ck 0 0 "K3: output contains 'GitHub Release created for v'" || ck 0 1 "K3: output contains 'GitHub Release created for v'"
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'"
+
+# Test K4: Mock gh release view fails with auth/network error:
+# Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
+GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k4.out" 2>&1
+ck 1 $? "K4: sync-release exits 1 when gh release view has auth/network error"
+grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck 0 0 "K4: output contains 'Could not check GitHub Release status'" || ck 0 1 "K4: output contains 'Could not check GitHub Release status'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out" && ck 1 0 "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
 
 rm -rf "$tmp"
 

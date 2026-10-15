@@ -884,10 +884,11 @@ To execute this release live, re-run with --yes:
     const stderr = err.stderr ? err.stderr.toString() : '';
     // If error is release not found (404), releaseExists stays false (safe to create)
     // If error is network/auth failure, report error and abort rather than blindly attempting create:
-    if (stderr.toLowerCase().includes('release not found') || err.status === 1) {
+    if (stderr.toLowerCase().includes('release not found') || stderr.toLowerCase().includes('not found') || stderr.toLowerCase().includes('could not find release')) {
       releaseExists = false;
     } else {
-      console.error(`\nFAIL: Could not check GitHub Release status for ${skillTag}: ${stderr.trim() || err.message}`);
+      console.error(`\nFAIL: Could not check GitHub Release status for ${skillTag} (network, authentication, or API error): ${stderr.trim() || err.message}`);
+      console.error('Aborting release for safety to prevent inconsistent release state.');
       process.exit(err.status ?? 1);
     }
   }
