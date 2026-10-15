@@ -89,16 +89,16 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 │ Agent Loop: Multi-turn chat, inline diffs│ Agent Loop: Single-turn conversational Q&A  │
 │ and multi-file `Cody Edits`              │ and code search exploration                 │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
-│ Tool API: Hypothesized terminal / shell  │ Tool API: None (Cannot invoke host shell or │
-│ execution tool (interactive / subshell)  │ modify local workspace files)               │
+│ Tool API: Hypothesized terminal / shell  │ Tool API: Unassessed (Web code search only; │
+│ execution tool (interactive / subshell)  │ local terminal execution unassessed)        │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
-│ Status: Provisional Candidate            │ Status: Deferred / Incompatible             │
+│ Status: Provisional Candidate            │ Status: Unassessed / Deferred               │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
 #### Modality 1: Sourcegraph Cody IDE Extension (Category B: Workspace Rule Scaffolding)
 - **Environment:** Local developer IDEs (VS Code, JetBrains IDEs, and Neovim) running the official Sourcegraph Cody extension.
-- **Rule Ingestion:** Evaluated via workspace prompt configuration (`.vscode/cody.json` custom commands or modern Cody prompt configuration), OpenCTX context providers, or standard root `AGENTS.md` instructions.
+- **Rule Ingestion:** Evaluated via workspace prompt configuration (`.vscode/cody.json` custom commands or modern Cody prompt configuration), OpenCTX context providers, or proposed root `AGENTS.md` prompt context (automatic ingestion unverified in Flow testing).
 - **Tool Execution:** Hypothesized terminal and shell execution capability (surfacing suggested commands to the integrated terminal or invoking subshells during automated tasks).
 - **Classification:** Category B (Workspace Rule Scaffolding Candidate).
 

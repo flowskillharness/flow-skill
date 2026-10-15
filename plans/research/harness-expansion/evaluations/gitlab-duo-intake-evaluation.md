@@ -84,9 +84,9 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 │ Environment: IDE Extension & CI Runners  │ Environment: Web UI, Web IDE, IDE Sidebar   │
 │ Ingestion: `.gitlab/duo_workflow.yml` or │ Ingestion: Interactive chat prompt context  │
 │ root `AGENTS.md`                         │ (No verified workspace rule schema)         │
-│ Agent Loop: Multi-turn autonomous plan & │ Agent Loop: Unassessed (Historically        │
+│ Agent Loop: Hypothesized autonomous plan &  │ Agent Loop: Unassessed (Historically        │
 │ execution loop                           │ conversational)                             │
-│ Tool API: Terminal/execution subshell    │ Tool API: Unassessed (Historically suggests │
+│ Tool API: Hypothesized execution subshell   │ Tool API: Unassessed (Historically suggests │
 │ execution tool                           │ snippets; tool execution unassessed)        │
 │ Status: Provisional Candidate            │ Status: Unassessed / Deferred               │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
@@ -101,7 +101,7 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 #### Modality 2: GitLab Duo Chat (Unassessed / Deferred Pending Verification)
 - **Environment:** GitLab Web UI, GitLab Web IDE, and IDE sidebar panels.
 - **Conversational Scope:** Functions primarily as an interactive code explanation, documentation lookup, and refactoring assistant. It answers developer queries and suggests code blocks in Markdown.
-- **Tool Execution Scope:** In verified testing, standard Duo Chat historically operates as a conversational query assistant; an autonomous tool execution loop and runner exit-code handling remain unassessed pending dedicated live verification.
+- **Tool Execution Scope:** In vendor documentation and desk analysis, standard Duo Chat historically operates as a conversational query assistant; an autonomous tool execution loop and runner exit-code handling remain unassessed pending dedicated live verification.
 - **Classification:** Unassessed / Deferred Pending Verification (Historically conversational).
 
 ---
