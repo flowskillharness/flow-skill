@@ -5,7 +5,7 @@
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
-- **Architectural Category:** Category B (Proposed Workspace Rule Scaffolding for Duo Workflow) & Category D (Deferred for Basic Duo Chat)
+- **Architectural Category:** Category B (Proposed Workspace Rule Scaffolding for Duo Workflow) & Unassessed / Deferred (GitLab Duo Chat)
 - **Related References:**
   - `plans/research/harness-expansion/architecture-compatibility-matrix.md`
   - `plans/research/harness-expansion/market-harness-survey.md`
@@ -25,12 +25,12 @@
 GitLab Duo (developed by GitLab Inc.; vendor portal: https://docs.gitlab.com/ee/user/gitlab_duo/, documentation: https://docs.gitlab.com/ee/user/duo_workflow/, accessed 2026-10-15) is an AI-assisted capability suite integrated throughout the GitLab DevSecOps platform, IDE extensions (GitLab Workflow for Visual Studio Code, JetBrains IDEs, and GitLab Web IDE), and GitLab CI/CD container runner environments.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
-- **Classification:** **Category B (Proposed Workspace Rule Scaffolding for Duo Workflow) & Category D (Deferred for Basic Duo Chat)**.
+- **Classification:** **Category B (Proposed Workspace Rule Scaffolding for Duo Workflow) & Unassessed / Deferred Pending Verification (GitLab Duo Chat)**.
 - **Qualification Status:** **PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)**.
 - **Qualification Rationale:**
   - GitLab Duo exhibits a fundamental split in operational architecture between two distinct modalities:
     1. **GitLab Duo Workflow:** In vendor documentation, GitLab Duo Workflow is described as an emerging multi-step execution agent. In desk review, its capability to formulate plans, modify files, and invoke terminal subshells in local IDEs or remote CI/CD runner sandboxes is evaluated as an unverified **Category B (Proposed Workspace Rule Scaffolding)** candidate hypothesis.
-    2. **GitLab Duo Chat:** A conversational assistant embedded in the GitLab Web UI, IDE sidebars, and Web IDE. Standard Duo Chat is conversational-only, lacks an autonomous tool-driven task loop, cannot execute arbitrary shell commands to enforce mechanical gates, and requires interactive human mediation. Classified strictly under **Category D (Deferred for Basic Duo Chat)**.
+    2. **GitLab Duo Chat:** Standard Duo Chat historically operates as a conversational assistant in the GitLab Web UI, IDE sidebars, and Web IDE; its autonomous tool execution capability remains unassessed pending dedicated live verification (classified as Unassessed / Deferred Pending Verification).
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising general "GitLab Duo support" without separating the autonomous Duo Workflow agent from conversational Duo Chat is marketing deception ("quảng cáo ảo").
   - GitLab Duo does not implement directory-based skill discovery (Category A) conforming to the universal Agent Skills standard (`~/.agents/skills/`) or `~/.claude/skills/`. Any prospective Flow integration is proposed to operate via workspace configuration and project instructions (such as `.gitlab/duo_workflow.yml` or repository root `AGENTS.md`) paired with a project-local runner (`skills/flow/runner/flow.sh`).
   - Flow's `flow rules` dispatcher currently implements **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). GitLab Duo is not currently an active target in `flow rules`; all Duo Workflow scaffolding remains a **proposed design candidate** pending live empirical qualification.
@@ -41,7 +41,8 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │                        GITLAB DUO EVALUATION SUMMARY                                   │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B (Proposed Workspace Rule Scaffolding for     │
-│                              │ Duo Workflow) & Category D (Deferred for Basic Duo Chat)│
+│                              │ Duo Workflow) & Unassessed / Deferred (GitLab Duo Chat; │
+│                              │ Pending Verification)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Workspace configuration / CI/CD context                 │
 │                              │ (`.gitlab/duo_workflow.yml` or root `AGENTS.md`)        │
@@ -113,13 +114,11 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
   - Duo Chat is conversational only (non-agentic).
   - Duo Workflow introduces an emerging multi-step planning and tool execution agent capable of autonomous code editing and build verification across local and remote containerized environments. Autonomy is gated by enterprise security controls and policy boundaries.
 - **Ecosystem Openness & Stability:** GitLab operates on an open-core model. While the GitLab Community Edition source code is public, GitLab Duo and Duo Workflow rely on proprietary cloud backend services (GitLab Duo Workflow Service / AI Gateway). Configuration formats are emerging and documented, but runtime orchestration is closed-source.
-- **Priority Tier Score:** **Tier 2 (Provisional Internal Estimate: 66/100)**.
-  - **Score Classification:** `Provisional Internal Estimate (Desk Intake)`
-  - **3-Dimension Breakdown per `docs/harness-qualification-process.md` §1.1:**
-    1. **Market Share & Developer Adoption (40 Points Max):** **28/40**. Widespread enterprise GitLab developer base across GitLab.com and self-managed instances; high enterprise compliance mindshare.
-    2. **Agentic Autonomy & Capability (40 Points Max):** **22/40**. Duo Workflow provides an emerging multi-step planning loop with subshell tool execution; standard Duo Chat is conversational only, constraining overall harness autonomy.
-    3. **Ecosystem Openness & Stability (20 Points Max):** **16/20**. Open-core platform with public documentation and issue tracker; AI gateway and Duo Workflow cloud backend remain proprietary enterprise services.
-  - **Total Score:** **66/100** -> Priority Tier 2 (Evaluated / Scaffolding Target, range 50–74).
+- **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
+- **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
+  1. Market Adoption Hypothesis: Extensive enterprise GitLab ecosystem developer base.
+  2. Agentic Autonomy Hypothesis: Duo Workflow provides an emerging multi-step planning loop (empirical tool-loop and gate-stop fidelity unverified in Flow trials); standard Duo Chat historically operates as conversational query assistant.
+  3. Ecosystem Openness Hypothesis: Open-core / proprietary enterprise service.
 
 ### 2.2 Phase 2: Architecture Probing
 

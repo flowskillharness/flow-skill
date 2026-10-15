@@ -57,7 +57,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Goose (.goosehints)                        │                                  │
 │                                     │ • Amazon Q Developer (/dev) (Proposed design)│                                  │
 │                                     │ • Devin (DEVIN.md / Cloud Sandbox)           │                                  │
-│                                     │ • SWE-agent (Docker / ACI)                   │ • GitLab Duo Chat (Query only, no loop)          │
+│                                     │ • SWE-agent (Docker / ACI)                   │ • GitLab Duo Chat (Historical query utility; unassessed)          │
 │                                     │ • GitLab Duo Workflow (Proposed design)      │                                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
@@ -544,9 +544,9 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
 | **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud Sandbox; unverified) | Hypothesized `DEVIN.md` / `AGENTS.md` (Proposed) | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
-| **SWE-agent** | Prompt templates / `AGENTS.md` | N/A (Docker Container) | Config templates / `AGENTS.md` | ACI shell (`execute`) | Autonomous (Docker loop) | **Tier 2 (Provisional Candidate)** |
+| **SWE-agent** | Prompt templates / `AGENTS.md` | N/A (Docker Container) | Config templates / `AGENTS.md` | ACI shell (`execute`) | Autonomous (Docker loop) | **Proposed B (Design Hypothesis; Unverified)** |
 | **GitLab Duo Workflow** | Proposed `.gitlab/duo_workflow.yml` (No template) | N/A | Proposed config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
-| **GitLab Duo Chat** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3 (Deferred / Incompatible)** |
+| **GitLab Duo Chat** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending verification)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
