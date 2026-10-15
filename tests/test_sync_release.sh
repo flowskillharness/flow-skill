@@ -153,10 +153,14 @@ grep -q "Git tag npm@$test_npm_v ALREADY exists" /tmp/sync_f.out && ck 0 0 "repo
 grep -q "Skipping npm tag command" /tmp/sync_f.out && ck 0 0 "skips npm tag command" || ck 0 1 "skips npm tag command"
 grep -q "Git tag v$test_skill_v ALREADY exists" /tmp/sync_f.out && ck 0 0 "reports ALREADY exists for skill tag" || ck 0 1 "reports ALREADY exists for skill tag"
 grep -q "Skipping skill tag command" /tmp/sync_f.out && ck 0 0 "skips skill tag command" || ck 0 1 "skips skill tag command"
-grep -q "git tag npm@" /tmp/sync_f.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
-grep -q "git tag v" /tmp/sync_f.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
-grep -q "git push origin npm@" /tmp/sync_f.out && ck 1 0 "does not emit git push origin npm@" || ck 0 0 "does not emit git push origin npm@"
-grep -q "git push origin v" /tmp/sync_f.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
+grep -q "git tag npm@" /tmp/sync_f.out
+ck 1 $? "does not emit git tag npm@"
+grep -q "git tag v" /tmp/sync_f.out
+ck 1 $? "does not emit git tag v"
+grep -q "git push origin npm@" /tmp/sync_f.out
+ck 1 $? "does not emit git push origin npm@"
+grep -q "git push origin v" /tmp/sync_f.out
+ck 1 $? "does not emit git push origin v"
 rm -rf "$tmp"
 
 echo "G) unconfirmed remote tag lookup suppresses git tag commands"
@@ -182,10 +186,14 @@ git -C "$tmp/r" remote add origin /dev/null/nonexistent
 node "$tmp/r/scripts/sync-release.mjs" --instructions >/tmp/sync_g.out 2>&1
 ck 0 $? "sync-release --instructions exit code with unreachable remote"
 grep -q "Tag creation commands suppressed for safety" /tmp/sync_g.out && ck 0 0 "reports suppression warning" || ck 0 1 "reports suppression warning"
-grep -q "git tag npm@" /tmp/sync_g.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
-grep -q "git tag v" /tmp/sync_g.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
-grep -q "git push origin npm@" /tmp/sync_g.out && ck 1 0 "does not emit git push origin npm@" || ck 0 0 "does not emit git push origin npm@"
-grep -q "git push origin v" /tmp/sync_g.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
+grep -q "git tag npm@" /tmp/sync_g.out
+ck 1 $? "does not emit git tag npm@"
+grep -q "git tag v" /tmp/sync_g.out
+ck 1 $? "does not emit git tag v"
+grep -q "git push origin npm@" /tmp/sync_g.out
+ck 1 $? "does not emit git push origin npm@"
+grep -q "git push origin v" /tmp/sync_g.out
+ck 1 $? "does not emit git push origin v"
 rm -rf "$tmp"
 
 echo "H) --ship --dry-run is strictly non-mutating (recursive tree hash)"
@@ -307,7 +315,8 @@ grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck 0 0 "K1: output contains '
 GH_MOCK_MODE="create_fail" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k2.out" 2>&1
 ck 1 $? "K2: sync-release exits 1 when gh release create fails"
 grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" || ck 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'"
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out" && ck 1 0 "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
+ck 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
 
 # Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
 # Assert output contains "GitHub Release created for v"
@@ -321,7 +330,8 @@ grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck 0 0 "K3: output contains '
 GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k4.out" 2>&1
 ck 1 $? "K4: sync-release exits 1 when gh release view has auth/network error"
 grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck 0 0 "K4: output contains 'Could not check GitHub Release status'" || ck 0 1 "K4: output contains 'Could not check GitHub Release status'"
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out" && ck 1 0 "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
+ck 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
 
 rm -rf "$tmp"
 
