@@ -137,8 +137,8 @@ The upstream research paper describes the **Agent-Computer Interface (ACI)** as 
     ```
   - Because Flow adheres to strict output token budgeting (`docs/doc-budgets.txt`), Flow runner diagnostics fit comfortably within SWE-agent's ACI observation windows without triggering aggressive pagination truncation.
 
-#### 2.2.4 Container Isolation Reality: The Host Path Disconnect & Project-Local Runner Mandate
-A critical technical constraint governs SWE-agent integrations due to its Docker container isolation boundary:
+#### 2.2.4 Container Isolation (Hypothesized Model): Host Path Disconnect & Project-Local Runner Setup
+In the research-described Docker architecture, a hypothesized isolation boundary governs prospective SWE-agent integrations:
 ```
 [ Host Operating System ]
   ├── /home/user/.claude/skills/flow   <── Completely invisible to Docker container!
@@ -147,22 +147,22 @@ A critical technical constraint governs SWE-agent integrations due to its Docker
          ▼
 [ Isolated Docker Container Sandbox ]
   └── /workspace/                      <── Container working directory (or /testbed)
-        ├── AGENTS.md                  <── Ingested repository instructions
-        └── skills/flow/runner/flow.sh <── MANDATORY: Project-local vendored runner
+        ├── AGENTS.md                  <── Hypothesized instruction file (Unverified)
+        └── skills/flow/runner/flow.sh <── Proposed: Project-local vendored runner
 ```
 
-- **Host Path Disconnect:** When SWE-agent launches a Docker container, the container operates with its own isolated root filesystem. Host paths such as `/home/user/.claude/skills/flow` or `/home/user/.agents/skills/flow` do not exist.
-- **Path Resolution Failure (`ENOENT`):** If an agent instruction mistakenly instructs SWE-agent to execute `bash ~/.claude/skills/flow/runner/flow.sh` or `bash ~/.agents/skills/flow/runner/flow.sh`, the container bash subshell immediately fails:
+- **Host Path Disconnect (Hypothesized):** In this container model, the sandbox is described as operating with its own isolated root filesystem. Host-global paths (`/home/user/.claude/skills/flow` or `/home/user/.agents/skills/flow`) are hypothesized to not exist.
+- **Path Resolution Failure (`ENOENT` Trap Hypothesis):** If instructions directed SWE-agent to invoke a host-global path like `bash ~/.claude/skills/flow/runner/flow.sh` or `bash ~/.agents/skills/flow/runner/flow.sh`, the container bash subshell is hypothesized to fail with:
   $$\text{bash: /root/.claude/skills/flow/runner/flow.sh: No such file or directory (ENOENT)}$$
-- **Project-Local Runner Mandate:** The Flow runner tree **must be vendored directly within the target repository** under `skills/flow/runner/flow.sh`. All instruction templates must strictly reference the workspace-relative invocation:
+- **Project-Local Runner Setup (Proposed):** In proposed integration, the Flow runner tree would be vendored directly within the target repository under `skills/flow/runner/flow.sh`. Instruction templates would reference the workspace-relative invocation:
   ```bash
   bash skills/flow/runner/flow.sh <command>
   ```
 
-#### 2.2.5 Execution Invariants: Zero Resident Daemons
-- Tool commands executed by SWE-agent inside the container run as short-lived subshell executions.
+#### 2.2.5 Execution Invariants (Proposed Model): Zero Resident Daemons
+- In the proposed integration model, tool commands dispatched by SWE-agent inside the container run as short-lived subshell executions.
 - Flow requires no resident background daemon, server process, or persistent socket listener.
-- Each invocation (`status`, `next`, `check`) reads on-disk ground truth, verifies evidence, writes receipts, and terminates cleanly.
+- Each invocation (`status`, `next`, `check`) is expected to read on-disk ground truth, verify evidence, write receipts, and terminate cleanly (empirical receipt integrity pending live container trials).
 
 ---
 
