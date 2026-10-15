@@ -15,7 +15,7 @@
   - `AGENTS.md`
 - **Vendor References:**
   - Void Official Site: https://voideditor.com (accessed 2026-10-15)
-  - Void GitHub Repository: https://github.com/voideditor/void (Open-source Apache-2.0 / MIT, accessed 2026-10-15)
+  - Void GitHub Repository: https://github.com/voideditor/void (Open-source Apache-2.0, accessed 2026-10-15)
   - Void Documentation: https://docs.voideditor.com (accessed 2026-10-15)
 
 ---
@@ -135,14 +135,14 @@ Void encompasses two primary operational modalities that must be strictly separa
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization Scoring
 
-- **Market Share & Developer Adoption (Qualitative Adoption Hypothesis):** Void Editor is an emerging open-source entrant in the AI-native IDE landscape (source repository: `voideditor/void`). While its overall desktop market share remains modest compared to established commercial tools such as VS Code, Cursor, or Windsurf, Void has gained significant developer enthusiasm within open-source, privacy-first, and local-AI communities. Developers choose Void specifically for sovereign control over model endpoints and zero proprietary telemetry.
+- **Market Share & Developer Adoption (Qualitative Adoption Hypothesis):** Void Editor originated as an open-source alternative to Cursor based on a VS Code fork (source repository: `voideditor/void`). While it attracted initial interest in open-source and local-model developer communities, project development has ceased and official repository notices indicate the project is deprecated and inactive. In accordance with Flow's qualification criteria, inactive tools are classified as historical candidates rather than active integration targets.
 - **Agentic Autonomy & Capability (Qualitative Hypothesis):** Void Agent mode provides conversational interaction, workspace file indexing, multi-file diffing, and hypothesized terminal command execution. However, whether Void's agent loop can autonomously execute shell commands, mechanically inspect non-zero exit codes ($\text{exit} \neq 0$), halt without human intervention, and refrain from hallucinating gate progression remains an unverified desk hypothesis pending live host trials.
-- **Ecosystem Openness & Stability:** Void is 100% open-source (licensed under Apache-2.0 / MIT) with an inspectable TypeScript and C++ codebase derived from VS Code. It provides complete transparency into prompt assembly, context retrieval, and client-side execution. Void supports both local inference engines (Ollama, vLLM, LM Studio) and direct commercial API connections without middleman cloud servers.
+- **Ecosystem Openness & Stability:** Void is open-source under the Apache-2.0 license with an inspectable TypeScript and C++ codebase derived from VS Code. However, due to project inactivity and deprecation notices, the ecosystem lacks active maintenance and long-term release stability.
 - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
   In strict compliance with `docs/harness-qualification-process.md`, arbitrary numeric scores are withheld until live empirical trials provide quantifiable metrics. Desk hypotheses are labeled as follows:
-  1. **Market Adoption Hypothesis:** Niche but rapidly growing adoption among privacy-sensitive engineers, local-model researchers, and open-source advocates seeking an unencumbered VS Code alternative.
-  2. **Agentic Autonomy Hypothesis:** Multi-file diff generation and chat-guided workflows present; autonomous shell execution and gate-stop fidelity unverified in Flow live trials.
-  3. **Ecosystem Openness Hypothesis:** Exceptional openness: fully open-source core, zero proprietary telemetry, direct client-to-model architecture, and native support for local Ollama/vLLM endpoints.
+  1. **Market Adoption Hypothesis:** Historical open-source Cursor alternative; project is inactive / deprecated, so active market adoption is not expanding. Live trials are not recommended.
+  2. **Agentic Autonomy Hypothesis:** Multi-file diff generation and chat-guided workflows present in repository code; autonomous shell execution and gate-stop fidelity unverified in Flow live trials.
+  3. **Ecosystem Openness Hypothesis:** Open-source codebase under Apache-2.0 with direct client-to-model architecture, but ecosystem stability is constrained by project deprecation.
 - **Prioritization Verdict:** **Historical / Deprecated Candidate (Project Inactive / Deprecation Notice; Live Trials Not Recommended).**.
 
 ### 2.2 Phase 2: Architecture Probing
