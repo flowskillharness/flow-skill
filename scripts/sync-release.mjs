@@ -669,6 +669,20 @@ To execute this release live, re-run with --yes:
   }
   console.log('✓ CHANGELOG entries exist for both versions.');
 
+  // Step 3.5: Atomic Tag & Remote Precondition Check (BEFORE any mutation or commit)
+  console.log('\nChecking tag and remote preconditions...');
+  const npmTag = `npm@${npm_v}`;
+  const skillTag = `v${skill_v}`;
+  const npmTagStatus = gitTagExists(npmTag);
+  const skillTagStatus = gitTagExists(skillTag);
+
+  if (!isDryRun) {
+    if (npmTagStatus.source === 'unconfirmed' || skillTagStatus.source === 'unconfirmed') {
+      console.error('\nFAIL: Remote tag status could not be confirmed with origin (network failure, authentication error, or remote inaccessible).');
+      console.error('Aborting before any file changes or git commits to ensure atomic safety.');
+      process.exit(1);
+    }
+  }
 
   if (!isDryRun) {
     // d. Runs syncRelease(skill_v, npm_v) to update all 4 READMEs and re-materialize npm-wrapper/skills with npm run sync.
@@ -807,12 +821,6 @@ To execute this release live, re-run with --yes:
   //    - If tags are new: creates git tag npm@${npm_v} and git tag v${skill_v}.
   //    - Pushes master and tags: git push origin master and git push origin npm@${npm_v} / git push origin v${skill_v}.
   //    - Prints instructions for approving the GitHub Actions npm-publish environment.
-  const npmTag = `npm@${npm_v}`;
-  const skillTag = `v${skill_v}`;
-  const npmTagStatus = gitTagExists(npmTag);
-  const skillTagStatus = gitTagExists(skillTag);
-
-
   let createdNpmTag = false;
   let createdSkillTag = false;
 
@@ -846,7 +854,7 @@ To execute this release live, re-run with --yes:
   execFileSync('git', ['push', 'origin', 'master'], { cwd: repoRoot, stdio: 'inherit' });
   console.log('✓ Pushed master to origin');
 
-  if (createdNpmTag || !npmTagStatus.exists) {
+  if (createdNpmTag) {
     console.log(`Pushing tag ${npmTag} to origin...`);
     execFileSync('git', ['push', 'origin', npmTag], { cwd: repoRoot, stdio: 'inherit' });
     console.log(`✓ Pushed tag ${npmTag} to origin`);
@@ -854,12 +862,22 @@ To execute this release live, re-run with --yes:
     console.log(`[INFO] Tag ${npmTag} already exists on remote/local. Skipping tag push.`);
   }
 
-  if (createdSkillTag || !skillTagStatus.exists) {
+  if (createdSkillTag) {
     console.log(`Pushing tag ${skillTag} to origin...`);
     execFileSync('git', ['push', 'origin', skillTag], { cwd: repoRoot, stdio: 'inherit' });
     console.log(`✓ Pushed tag ${skillTag} to origin`);
   } else {
     console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
+  }
+
+  if (createdSkillTag) {
+    console.log(`\nCreating official GitHub Release for ${skillTag}...`);
+    try {
+      execFileSync('gh', ['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], { stdio: 'inherit', cwd: repoRoot });
+      console.log(`✓ GitHub Release created for ${skillTag}`);
+    } catch (err) {
+      console.warn(`[WARN] Could not automatically create GitHub Release for ${skillTag}: ${err.message}. You can run 'gh release create ${skillTag} --notes-file CHANGELOG.md' manually.`);
+    }
   }
 
   console.log(`

@@ -77,7 +77,9 @@ bash scripts/release.sh --dry-run
 bash scripts/release.sh --yes
 ```
 
-## Local pre-flight (every release)
+## Diagnostic & Manual Verification (Non-Canonical Reference)
+
+> **Notice:** The canonical release workflow is `bash scripts/release.sh [--dry-run | --yes]` run from the repository root (documented in `docs/release-process.md`). The manual steps below are preserved strictly as non-canonical diagnostic references for debugging individual components.
 
 ```bash
 # 0. From repo root — harness coherence + doctor + dual-version + dist-tag lag

@@ -224,6 +224,32 @@ after_i_tree_hash="$(portable_hash "$tmp/r")"
 [ "$after_edit_tree_hash" = "$after_i_tree_hash" ] && ck 0 0 "tree hash unchanged on failure" || ck 0 1 "tree hash changed on failure"
 rm -rf "$tmp"
 
+echo "J) fail-closed unconfirmed remote tag check aborts atomically before mutations"
+tmp=$(mktemp -d)
+git clone --no-tags -q "$ROOT" "$tmp/r"
+git -C "$tmp/r" config user.email "test@example.com"
+git -C "$tmp/r" config user.name "Test Runner"
+cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
+git -C "$tmp/r" add scripts/
+git -C "$tmp/r" commit -qm "sync scripts"
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
+
+before_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
+before_j_status="$(git -C "$tmp/r" status --porcelain)"
+
+node "$tmp/r/scripts/sync-release.mjs" --ship --yes >/tmp/sync_j.out 2>&1
+ck 1 $? "sync-release --ship --yes exits 1 on unconfirmed remote"
+grep -q "Remote tag status could not be confirmed with origin" /tmp/sync_j.out && ck 0 0 "reports unconfirmed remote error" || ck 0 1 "reports unconfirmed remote error"
+after_j_tags="$(git -C "$tmp/r" tag -l)"
+[ -z "$after_j_tags" ] && ck 0 0 "zero tags created" || ck 0 1 "zero tags created"
+after_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
+[ "$before_j_head" = "$after_j_head" ] && ck 0 0 "zero commits made" || ck 0 1 "zero commits made"
+after_j_status="$(git -C "$tmp/r" status --porcelain)"
+[ "$before_j_status" = "$after_j_status" ] && ck 0 0 "working tree 100% clean, zero writes" || ck 0 1 "working tree 100% clean, zero writes"
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
