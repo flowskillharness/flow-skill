@@ -65,7 +65,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ • Zed (via ~/.agents/skills/flow)        │ • GitHub Copilot (.github/*instructions.md)                      │
 │   *Proposed parity target                │ • Goose (.goosehints)                                            │
 │                                          │ • Amazon Q Developer (/dev) (Proposed design; un-implemented)    │
-│                                          │ • Devin (DEVIN.md / AGENTS.md)                                   │
+│                                          │ • Devin (DEVIN.md / AGENTS.md) (Proposed design; un-implemented) │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.                           │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill                             │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context.                      │
@@ -80,7 +80,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 ```
 
 - **Category A (Native Skill Targets):** Direct directory installation of Flow's skill bundle (`SKILL.md`). The agent discovers and dispatches Flow commands natively.
-- **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot), plus provisional candidate design profiles (Goose, and proposed un-implemented Amazon Q Developer /dev agent).
+- **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot), plus provisional candidate design profiles (Goose, proposed un-implemented Amazon Q Developer /dev agent, and proposed un-implemented Devin cloud sandbox scaffold).
 - **Category C (Automated Hook / Test Gate Scaffolding):** Harnesses providing deterministic test command binding (e.g., Aider's `test-cmd` in `.aider.conf.yml`, supported via `flow rules aider`).
 - **Category D (Confirmed Incompatible Targets):** Tools fundamentally lacking terminal execution capabilities (such as Zed inline editor in non-assistant mode).
 - **Unassessed / Deferred Candidates:** Candidates where active tool-loop execution or configuration schemas have not been empirically verified on running hosts (Continue.dev, GitHub Copilot CLI, Amazon Q CLI); held outside Category D incompatibility pending dedicated host verification.
@@ -125,7 +125,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 | **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
-| **Devin** | B | PROVISIONAL (Desk-Reviewed) | Cloud microVM sandbox; project-local runner required; ephemeral execution. | Provisional Candidate (Cloud Sandbox Scaffold; Host Trial Pending) |
+| **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; remote cloud microVM sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Provisional Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
 | **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Historically functioned as query utility; current tool-loop capability unassessed (successor transition pending verification). | Unassessed / Pending Verification (Successor transition pending current-source verification) |
 
 

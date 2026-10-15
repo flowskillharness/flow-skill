@@ -676,8 +676,8 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Cursor Rules & MDC Specification: [https://cursor.com/docs/rules](https://cursor.com/docs/rules)
    - Cursor Composer Agent Architecture: [https://cursor.com/docs/agent](https://cursor.com/docs/agent)
 3. **Windsurf / Cascade Documentation:**
-   - Windsurf Rules & Memories: [https://docs.devin.ai/desktop/cascade/memories](https://docs.devin.ai/desktop/cascade/memories)
-   - Codeium Cascade Customizations: [https://devin.ai/blog/windsurf-wave-8-cascade-customization-features](https://devin.ai/blog/windsurf-wave-8-cascade-customization-features)
+   - Windsurf Official Portal: [https://codeium.com/windsurf](https://codeium.com/windsurf)
+   - Windsurf Rules Documentation: [https://docs.codeium.com/windsurf/rules](https://docs.codeium.com/windsurf/rules)
 4. **Cline & Roo Code Documentation:**
    - Roo Code Modes & Custom Rules: [https://github.com/RooVetGit/Roo-Cline](https://github.com/RooVetGit/Roo-Cline)
    - Cline Command Execution Standards: [https://github.com/cline/cline](https://github.com/cline/cline)
@@ -697,3 +697,6 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Amazon Q Developer User Guide: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/)
    - Amazon Q /dev Software Development Agent: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/dev-agent.html](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/dev-agent.html)
    - Amazon Q CLI Reference: [https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/command-line.html](https://docs.aws.amazon.com/amazonq/latest/aws-builder-use-ug/command-line.html)
+10. **Devin Documentation (Cognition AI):**
+   - Devin Official Portal: [https://cognition.ai](https://cognition.ai)
+   - Devin Documentation: [https://docs.devin.ai](https://docs.devin.ai)
