@@ -69,6 +69,20 @@ bash scripts/release-preflight.sh
 
 `marketplace.json` → `metadata.version` is the **catalog** version, not skill product — do not force it equal to `0.22.x`.
 
+### Release synchronization & coherence tool (`scripts/sync-release.mjs`)
+
+From repo root:
+
+```bash
+# Validate release coherence across skill and npm channels with a diagnostic table:
+node scripts/sync-release.mjs --check
+
+# Synchronize documentation table rows, re-materialize npm-wrapper/skills, and re-verify:
+node scripts/sync-release.mjs --sync
+```
+
+`node scripts/sync-release.mjs --check` validates version alignment across `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, `portable-manifest.json`, `npm-wrapper/package.json`, root and wrapper READMEs (EN and VN), changelogs, runner hash, and dual-axis non-equality (`npm_v !== skill_v`).
+
 ## Skill product release (e.g. v0.24.0)
 
 1. **Implement + tests**
@@ -104,6 +118,10 @@ At runtime, `flow doctor` validates every file in the installed tree against `ma
 ### A. Pre-flight (local)
 
 ```bash
+# From repo root — synchronize release docs and verify coherence
+node scripts/sync-release.mjs --sync
+node scripts/sync-release.mjs --check
+
 # From repo root — harness + coherence + dual-version
 bash scripts/release-preflight.sh
 
@@ -114,18 +132,16 @@ npm test              # 41+ tests; pretest re-syncs
 node bin/cli.mjs --help | head -3
 # expect: flow-skill vX.Y.Z (ships skill vA.B.C)
 
-# Bump installer only
-npm version prerelease --preid=next   # or patch|minor|major for stable
-# Ensure tag shape npm@* (workflow trigger). Prefer:
-git tag -d "v$(node -p "require('./package.json').version")" 2>/dev/null || true
-# If npm version created wrong tag name, delete and recreate:
-# git tag npm@$(node -p "require('./package.json').version")
-```
+# Bump installer only (use --no-git-tag-version to prevent npm from creating a conflicting v* tag)
+npm version prerelease --preid=next --no-git-tag-version   # or patch|minor|major for stable
+# Create the npm trigger tag explicitly (npm@* triggers publish-npm-wrapper.yml; v* is skill-only):
+git tag npm@$(node -p "require('./package.json').version")
 
 Also:
 
 - Align `npm-wrapper/CHANGELOG.md` Unreleased → versioned section.
 - Root README status table: npm package version line.
+- `npm-wrapper/README.md` and `npm-wrapper/README_VN.md`: verified by `check-release-coherence.sh` (and `node scripts/sync-release.mjs --check`) and must always match `npm_v` and `skill_v` (run `node scripts/sync-release.mjs --sync` to synchronize automatically).
 - Secret grep empty (see RELEASE_CHECKLIST).
 - Confirm `bin/cli.mjs` stays mode `100755` in git.
 

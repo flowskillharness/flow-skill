@@ -46,6 +46,16 @@ fi
 
 grep -qE "v${skill_v}|${skill_v}" README.md && ok "README mentions skill $skill_v" || fail "README missing skill $skill_v"
 grep -q "$npm_v" npm-wrapper/package.json && ok "npm package.json $npm_v" || fail "npm package.json missing version"
+grep -q "$npm_v" README.md && ok "README mentions npm $npm_v" || fail "README missing npm $npm_v"
+if [ -f README_VN.md ]; then
+  grep -qE "v${skill_v}|${skill_v}" README_VN.md && ok "README_VN mentions skill $skill_v" || fail "README_VN missing skill $skill_v"
+  grep -q "$npm_v" README_VN.md && ok "README_VN mentions npm $npm_v" || fail "README_VN missing npm $npm_v"
+fi
+[ -f npm-wrapper/README.md ] || fail "missing npm-wrapper/README.md"
+(grep -q "$npm_v" npm-wrapper/README.md && grep -qE "v${skill_v}|${skill_v}" npm-wrapper/README.md) && ok "npm-wrapper/README.md matches versions ($npm_v / $skill_v)" || fail "npm-wrapper/README.md does not match current versions ($npm_v / $skill_v)"
+if [ -f npm-wrapper/README_VN.md ]; then (grep -q "$npm_v" npm-wrapper/README_VN.md && grep -qE "v${skill_v}|${skill_v}" npm-wrapper/README_VN.md) && ok "npm-wrapper/README_VN.md matches versions ($npm_v / $skill_v)" || fail "npm-wrapper/README_VN.md does not match current versions ($npm_v / $skill_v)"; fi
+grep -qE "## \[?${skill_v}\]?" CHANGELOG.md && ok "CHANGELOG.md contains entry for skill $skill_v" || fail "CHANGELOG.md missing entry for skill $skill_v"
+grep -qE "## \[?${npm_v}\]?" npm-wrapper/CHANGELOG.md && ok "npm-wrapper/CHANGELOG.md contains entry for npm $npm_v" || fail "npm-wrapper/CHANGELOG.md missing entry for npm $npm_v"
 
 # Every suite named in tests/manifest.txt must exist on disk.
 # Empty extract is a fail (do not ok a no-op after the runner left the hardcoded loop).
