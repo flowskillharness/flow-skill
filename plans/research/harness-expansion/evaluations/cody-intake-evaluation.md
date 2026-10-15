@@ -156,15 +156,15 @@ This section evaluates the integration against Flow's Anti-Illusion Protocol (`d
 ### 3.1 Latent Trap 1: Modality Separation (IDE Chat & Edits vs. Web UI Search)
 - **The Pitfall:** Advertising Flow as universally compatible with "Sourcegraph Cody" without differentiating between IDE extensions and the Sourcegraph Web UI. A developer opens Sourcegraph Web Search, invokes Cody Chat to advance a Flow stage, and discovers that Web Cody cannot execute shell commands, read local disk receipts, or update cards.
 - **The Grounded Technical Reality:**
-  - Sourcegraph Web UI Cody is a remote, read-only conversational code search tool. It operates entirely in the cloud and has no access to the developer's local subshell or filesystem.
+  - In desk analysis, Sourcegraph Web UI Cody functions as a cloud-based code search interface; direct local subshell and filesystem execution capabilities remain unassessed pending dedicated verification.
   - Only Cody running inside an IDE extension (VS Code, JetBrains, Neovim) possesses access to local project files and the integrated terminal.
-- **The Anti-Illusion Mitigation:** Documentation and compatibility matrix entries must explicitly scope Category B candidacy to **Cody IDE Extensions (VS Code & JetBrains)**, while categorizing Sourcegraph Web UI Cody as **Category D (Deferred for Web/Search Only)**.
+- **The Anti-Illusion Mitigation:** Documentation and compatibility matrix entries must explicitly scope Category B candidacy to **Cody IDE Extensions (VS Code & JetBrains)**, while categorizing Sourcegraph Web UI Cody as **Unassessed / Deferred (Web Search Interface)**.
 
 ### 3.2 Latent Trap 2: Terminal Autonomy & The Copy-Paste Illusion
 - **The Pitfall:** Assuming that because Cody displays a terminal command code fence (`bash skills/flow/runner/flow.sh next`) in chat, the harness has autonomously executed the command and verified the gate.
 - **The Grounded Technical Reality:**
-  - In standard chat, Cody does not execute shell commands autonomously. It proposes snippets for the human developer to execute.
-  - If the user forgets to run the command, or runs it and encounters an exit code `1`, Cody has no automated subshell loop to catch the failure unless the developer pastes the terminal output back into the chat.
+  - In standard chat, Cody historically proposes code snippets for user execution; autonomous subshell execution and gate enforcement remain unverified in Flow live trials.
+  - In desk assessment, if a user does not execute proposed snippets or encounters non-zero exit codes, an automated subshell loop has not been verified to catch the failure without user mediation.
   - This creates the illusion of automated gating while placing the mechanical burden entirely on the human.
 - **The Anti-Illusion Mitigation:** Live qualification must specifically test whether Cody operates in an autonomous tool execution loop, or whether it functions as a semi-autonomous assistant requiring operator mediation. Under no circumstances may Cody declare a stage advanced without verifying that the runner executed and returned exit code 0.
 

@@ -158,7 +158,7 @@ GitLab Duo Workflow can execute in two distinct operational environments: a loca
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
-- **The Host-Global Path Disconnect:** In GitLab CI/CD runner containers, developer `$HOME` paths on their local laptops (e.g., `~/.agents/skills/flow/` or `~/.claude/skills/flow/`) do not exist.
+- **The Host-Global Path Disconnect:** In proposed GitLab CI/CD runner container workflows, developer local `$HOME` paths (e.g., `~/.agents/skills/flow/` or `~/.claude/skills/flow/`) would not exist.
 - **The `ENOENT` Trap:** Instructing Duo Workflow to invoke host-global paths causes immediate failure:
   $$\text{bash: /home/user/.agents/skills/flow/runner/flow.sh: No such file or directory (ENOENT)}$$
 - **Project-Local Runner Requirement:** All Duo Workflow instructions must strictly mandate executing the project-local runner located at `skills/flow/runner/flow.sh`:
@@ -178,14 +178,14 @@ GitLab Duo Workflow can execute in two distinct operational environments: a loca
 ### 3.1 Latent Trap 1: Modality Confusion (Duo Workflow vs. Duo Chat)
 - **The Pitfall:** Advertising Flow as "compatible with GitLab Duo" without explicitly distinguishing the operational modality. A developer opens GitLab Duo Chat in the Web UI or IDE sidebar, types a prompt to advance a stage, and discovers that Duo Chat merely generates a conversational reply explaining how to advance rather than executing the gate command.
 - **The Grounded Technical Reality:**
-  - GitLab Duo Chat is a non-agentic conversational assistant. It does not possess an autonomous tool execution loop and cannot dispatch shell commands to enforce mechanical gates.
+  - In desk review, standard GitLab Duo Chat historically operates as a conversational assistant; its autonomous tool execution loop and gate enforcement capabilities remain unassessed pending dedicated live verification.
   - Only GitLab Duo Workflow possesses the autonomous multi-step execution loop capable of dispatching shell commands within an execution client.
-- **The Anti-Illusion Mitigation:** Documentation, matrix entries, and evaluation records must explicitly state that Flow compatibility is scoped strictly to **GitLab Duo Workflow** (Category B), while standard **GitLab Duo Chat** is classified as **Category D (Deferred / Non-Agentic Conversational)**.
+- **The Anti-Illusion Mitigation:** Documentation, matrix entries, and evaluation records must explicitly state that Flow compatibility is scoped strictly to **GitLab Duo Workflow** (Category B), while standard **GitLab Duo Chat** is classified as **Unassessed / Deferred Pending Verification (Historically Conversational)**.
 
 ### 3.2 Latent Trap 2: CI/CD Runner Sandbox vs. Local IDE (Host Path Disconnect & ENOENT)
 - **The Pitfall:** Writing scaffolding instructions that direct the agent to execute a globally installed Flow path (e.g., `bash ~/.agents/skills/flow/runner/flow.sh`).
 - **The Grounded Technical Reality:**
-  - When Duo Workflow executes in a GitLab CI/CD runner container (e.g., Docker-in-Docker or isolated Linux runner image), the host filesystem is not mounted. The runner environment contains only the cloned repository under `/builds/<group>/<project>/`.
+  - In proposed CI/CD container runner workflows, the developer's physical host filesystem would not be mounted. The runner environment contains only the cloned repository under `/builds/<group>/<project>/`.
   - Invoking `~/.agents/skills/flow/runner/flow.sh` triggers an immediate `ENOENT: No such file or directory` crash.
 - **The Anti-Illusion Mitigation:**
   - Scaffolding instructions must always reference the repository-vendored runner tree:
