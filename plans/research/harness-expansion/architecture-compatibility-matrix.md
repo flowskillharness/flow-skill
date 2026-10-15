@@ -68,6 +68,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │                                          │ • Devin (DEVIN.md / AGENTS.md) (Proposed design; un-implemented) │
 │                                          │ • SWE-agent (Container / ACI) (Proposed design; un-implemented)  │
 │                                          │ • GitLab Duo Workflow (Proposed design; un-implemented)          │
+│                                          │ • Sourcegraph Cody (Proposed design; un-implemented)             │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.                           │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill                             │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context.                      │
@@ -82,7 +83,7 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 ```
 
 - **Category A (Native Skill Targets):** Direct directory installation of Flow's skill bundle (`SKILL.md`). The agent discovers and dispatches Flow commands natively.
-- **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot), plus provisional candidate design profiles (Goose, proposed un-implemented Amazon Q Developer /dev agent, proposed un-implemented Devin cloud sandbox scaffold, proposed un-implemented SWE-agent container scaffold, and proposed un-implemented GitLab Duo Workflow scaffold).
+- **Category B (Workspace Rule Scaffolding):** Project-level instruction files directing an autonomous host agent to invoke the Flow runner. Includes implemented templates in flow rules (Cursor, Windsurf, Roo Code, Cline, OpenHands, Copilot), plus provisional candidate design profiles (Goose, proposed un-implemented Amazon Q Developer /dev agent, proposed un-implemented Devin cloud sandbox scaffold, proposed un-implemented SWE-agent container scaffold, and proposed un-implemented GitLab Duo Workflow scaffold, and proposed un-implemented Sourcegraph Cody IDE-extension scaffold).
 - **Category C (Automated Hook / Test Gate Scaffolding):** Harnesses providing deterministic test command binding (e.g., Aider's `test-cmd` in `.aider.conf.yml`, supported via `flow rules aider`).
 - **Category D (Confirmed Incompatible Targets):** Tools fundamentally lacking terminal execution capabilities (such as Zed inline editor in non-assistant mode).
 - **Unassessed / Deferred Candidates:** Candidates where active tool-loop execution or configuration schemas have not been empirically verified on running hosts (Continue.dev, GitHub Copilot CLI, Amazon Q CLI, GitLab Duo Chat); held outside Category D incompatibility pending dedicated host verification.
@@ -132,6 +133,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **SWE-agent** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; Docker container execution; project-local runner required; ACI shell tool. | Provisional Candidate (Proposed Container Scaffold; Live Trial Pending) |
 | **GitLab Duo Workflow** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified Duo Workflow execution tool and rule schema. | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
 | **GitLab Duo Chat** | Unassessed | PENDING-VERIFICATION | Historically conversational query assistant in IDE/Web UI; tool loop unassessed pending dedicated verification. | Unassessed / Deferred Pending Verification (Historical query utility) |
+| **Sourcegraph Cody** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified OpenCTX/prompt ingestion and terminal tool loop. | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle

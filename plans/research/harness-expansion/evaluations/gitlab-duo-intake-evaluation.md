@@ -71,7 +71,7 @@ In desk design review, prospective integration with GitLab Duo Workflow aligns w
 4. **Deterministic Shell Contract:** Stage transitions, gate validations, and card checks occur strictly via `bash skills/flow/runner/flow.sh <verb>` (or `flow.cmd <verb>` on native Windows), returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostic output.
 5. **Rejection of Resident CI/CD Daemons or Background Services:** Attempting to run Flow as a persistent background daemon, a shared sidecar service in GitLab CI/CD, or an in-memory workflow orchestrator is constitutionally prohibited under ADR-0001. Flow's state lives strictly in Git and bounded filesystem artifacts, never in resident memory heaps.
 
-### 1.3 Architectural Classification: Category B (Duo Workflow) vs. Category D (Duo Chat)
+### 1.3 Architectural Classification: Category B (Proposed Duo Workflow) vs. Unassessed / Deferred (Duo Chat)
 GitLab Duo spans two fundamentally divergent operational modalities that must be strictly separated under Flow's harness taxonomy:
 
 ```
@@ -111,8 +111,8 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 ### 2.1 Phase 1: Market Intelligence & Prioritization Scoring
 - **Market Share & Developer Adoption:** GitLab Duo serves a massive enterprise developer base embedded within self-managed GitLab EE/CE instances and GitLab.com SaaS. Organizations subject to strict data sovereignty, regulatory compliance (FedRAMP, HIPAA, SOC 2), and air-gapped security policies frequently standardize on GitLab for source code management, CI/CD, and DevSecOps. While consumer AI mindshare is concentrated around tools like Cursor and Claude Code, GitLab's enterprise penetration represents a widespread, high-value user segment.
 - **Agentic Autonomy & Capability:** GitLab Duo spans a wide autonomy spectrum:
-  - Duo Chat is conversational only (non-agentic).
-  - Duo Workflow introduces an emerging multi-step planning and tool execution agent capable of autonomous code editing and build verification across local and remote containerized environments. Autonomy is gated by enterprise security controls and policy boundaries.
+  - Duo Chat historically operates as a conversational query assistant; its autonomous tool-loop capability remains unassessed in verified testing.
+  - Duo Workflow is described in vendor documentation as an emerging multi-step planning and tool execution agent; its empirical subshell execution and gate-stop fidelity remain unverified in Flow trials.
 - **Ecosystem Openness & Stability:** GitLab operates on an open-core model. While the GitLab Community Edition source code is public, GitLab Duo and Duo Workflow rely on proprietary cloud backend services (GitLab Duo Workflow Service / AI Gateway). Configuration formats are emerging and documented, but runtime orchestration is closed-source.
 - **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
 - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
@@ -126,7 +126,7 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 The GitLab Duo Workflow architecture decouples model planning from execution:
 1. **Duo Workflow Service (Control Plane):** A centralized service communicating with the GitLab AI Gateway and underlying LLMs (e.g., Anthropic Claude models). It maintains task state, generates multi-step plans, and coordinates tool execution requests.
 2. **Execution Client (Data Plane):** The local IDE extension (GitLab Workflow in VS Code) or the GitLab CI/CD runner container acts as the execution client.
-3. **Execution Subshell Tool:** When Duo Workflow requires running a build or verification step, it dispatches an execution request to the execution client. The client executes the command in a subshell, captures stdout/stderr, and returns the integer exit code to the control plane.
+3. **Execution Subshell Tool (Hypothesized):** In vendor architectural blueprints, Duo Workflow is described as dispatching execution requests to the execution client, hypothesized to execute commands in a subshell, capture stdout/stderr, and return the integer exit code to the control plane (unverified pending live trials).
 4. **Iterative Refinement:** If a command exits with status $0$, Duo Workflow marks the step completed; if it exits non-zero ($\text{exit} \neq 0$), Duo Workflow is designed to evaluate error diagnostics and attempt corrective actions.
 
 > **Unverified Desk Hypothesis (Anti-Illusion Disclosure):** The execution subshell tool dispatch, stdout/stderr capture, and integer exit code return path described above are **unverified desk hypotheses** derived from vendor documentation. They have not been observed in a live Duo Workflow host session and remain pending live host trials under the Four-Point Live Verification Protocol (Section 4).

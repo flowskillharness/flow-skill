@@ -19,7 +19,7 @@
 
 ---
 
-## Section 1: Executive Summary & Modality Separation (Category B & Category D)
+## Section 1: Executive Summary & Modality Separation (Proposed Category B & Unassessed Web Modality)
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 Sourcegraph Cody (developed by Sourcegraph Inc.; vendor portal: https://sourcegraph.com/cody, documentation: https://sourcegraph.com/docs/cody, source repository: https://github.com/sourcegraph/cody, Apache-2.0, accessed 2026-10-15) is an AI-assisted code intelligence platform and developer extension. Cody operates across multiple IDEs—including Visual Studio Code, JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, GoLand), and Neovim (via the `cody-agent` protocol)—as well as within the web-based Sourcegraph code navigation and search platform. Cody integrates code graph embeddings, syntax tree analysis, context-fetching protocols (such as OpenCTX), multi-turn chat, inline code generation, multi-file code editing (`Cody Edits`), and emerging agentic workflows.
@@ -29,7 +29,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Status:** **`PROVISIONAL CANDIDATE (Desk Intake Complete; Live Host Trials Pending)`**.
 - **Qualification Rationale:**
   - In desk review, Sourcegraph Cody exhibits an architectural split between developer IDE environments (VS Code, JetBrains, Neovim) and the web-based enterprise code search interface. In IDE environments, Cody supports repository-scoped context ingestion via workspace configuration, OpenCTX context providers, and root `AGENTS.md` instructions, alongside multi-file code edits and interactive terminal command execution. This IDE modality represents a **Category B (Workspace Rule Scaffolding)** candidate hypothesis.
-  - Conversely, Cody operating within the web-based Sourcegraph search UI lacks direct workspace execution capabilities, cannot dispatch shell commands to local developer filesystems, and is strictly classified as **Category D (Deferred for Web/Search Only)**.
+  - Conversely, Cody operating within the web-based Sourcegraph search UI functions as an enterprise code search interface; its workspace tool execution capabilities remain unassessed pending dedicated verification (classified as Unassessed / Deferred).
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising general "Sourcegraph Cody support" without distinguishing the IDE extension modality from web-based code search represents marketing deception ("quảng cáo ảo").
   - In standard developer usage within IDEs, Cody Chat primarily operates as an interactive conversational assistant that suggests terminal commands and code modifications for manual user execution. While emerging Cody Agent modes support programmatic tool dispatches, autonomous multi-turn shell execution loops that mechanically capture non-zero exit codes ($\text{exit} \neq 0$) and halt upon gate failures have not been empirically verified against live host runtimes.
   - Flow's `flow rules` dispatcher currently generates **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Sourcegraph Cody is not an active target in `flow rules`; all prospective Cody scaffolding remains a **proposed design candidate** pending live empirical qualification through the Four-Point Live Verification Protocol.
@@ -69,7 +69,7 @@ In desk design review, prospective integration with Sourcegraph Cody in IDE envi
 4. **Deterministic Shell Contract:** Stage transitions, gate validations, and card checks occur strictly via `bash skills/flow/runner/flow.sh <verb>` (or `flow.cmd <verb>` on native Windows), returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostics.
 5. **Rejection of Resident MCP / Language Server Wrappers:** Attempting to wrap Flow inside a resident OpenCTX provider server, an in-memory MCP server daemon, or a persistent language server wrapper is constitutionally prohibited under ADR-0001. Flow's state lives strictly on disk in Git and bounded filesystem artifacts, never in resident memory heaps.
 
-### 1.3 Architectural Classification: Category B (IDE Extension) vs. Category D (Web Search)
+### 1.3 Architectural Classification: Category B (Proposed IDE Extension) vs. Unassessed / Deferred (Web Search)
 Sourcegraph Cody spans two fundamentally distinct operational modalities that must be strictly separated under Flow's harness taxonomy:
 
 ```
@@ -105,7 +105,7 @@ Sourcegraph Cody spans two fundamentally distinct operational modalities that mu
 #### Modality 2: Sourcegraph Web Search & Web Cody (Unassessed / Deferred (Web Search / Read-Only Interface))
 - **Environment:** Sourcegraph Cloud (sourcegraph.com) or self-hosted Sourcegraph Enterprise web application.
 - **Conversational Scope:** Read-only enterprise codebase search, cross-repository code indexing, and conversational explanation. It answers queries by referencing indexed code graph symbols.
-- **Lack of Local Execution Subsystem:** Web Cody cannot execute local shell commands, possesses no terminal execution tool on the developer machine, cannot invoke `flow.sh`, and cannot enforce stage gate checks on disk.
+- **Lack of Local Execution Subsystem:** Web Cody operates as a web-based code search interface; local terminal tool execution and gate enforcement capabilities remain unassessed in verified testing (Unassessed / Deferred).
 - **Classification:** Unassessed / Deferred (Web Search / Read-Only Interface).
 
 ---
