@@ -5,7 +5,7 @@
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
-- **Architectural Category:** Category B (Proposed CLI Workspace Instruction Scaffolding)
+- **Architectural Category:** Historical / Deprecated (Unassessed / Deferred / Historical; Inactive Terminal CLI)
 - **Related References:**
   - `plans/research/harness-expansion/architecture-compatibility-matrix.md`
   - `plans/research/harness-expansion/market-harness-survey.md`
@@ -25,8 +25,8 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                             MENTAT INTAKE EVALUATION SUMMARY                           │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
-│ Architectural Classification │ Category B (Proposed CLI Workspace Instruction          │
-│                              │ Scaffolding)                                            │
+│ Architectural Classification │ Historical / Deprecated (Unassessed / Deferred /        │
+│                              │ Historical; Inactive Terminal CLI)                      │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism          │ Hypothesized prompt context / instructions / repository │
 │                              │ root `AGENTS.md` (no verified schema; no Flow template) │
@@ -49,7 +49,7 @@
 
 | Dimension | Specification & Desk Assessment |
 | :--- | :--- |
-| **Architectural Classification** | Category B (Proposed CLI Workspace Instruction Scaffolding) |
+| **Architectural Classification** | Historical / Deprecated (Unassessed / Deferred / Historical; Inactive Terminal CLI) |
 | **Ingestion Mechanism** | Hypothesized prompt context / instructions / repository root `AGENTS.md` (no verified schema; no Flow template) |
 | **Execution Environment** | Developer Terminal / CLI (Python package `mentat` running on host workstation) |
 | **Tool Execution API** | Hypothesized terminal / shell command execution tool in Mentat loop (Flow gate-stop fidelity and return-code capture unverified in live trials) |
@@ -70,7 +70,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Classification:** **Unassessed / Deferred / Historical (Inactive Terminal CLI)**.
 - **Qualification Status:** **`Historical / Deprecated Candidate (Repository Archived / Maintenance Ceased; Live Trials Not Recommended)`**.
 - **Qualification Rationale:**
-  - Mentat operates in the developer terminal as a command-line assistant coordinating multi-file code editing and command execution from the command line.
+  - Mentat operated in the developer terminal as an open-source command-line coding assistant. With repository archival and cessation of maintenance, active execution capabilities remain unverified historical artifacts.
   - **Distinction from Category A (Native Skill Target):** Desk review of Mentat's official documentation and open-source codebase found no documented native skill directory standard (such as the universal `~/.agents/skills/` specification or Claude Code's `~/.claude/skills/`). Mentat does not auto-discover standalone `SKILL.md` bundles from global host directories. Claiming Category A native skill discovery without empirical evidence would be an illusion trap.
   - **Strict Locking of `flow rules`:** Flow's CLI rule generator is strictly locked to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), strictly verified by `tests/test_flow_rules.sh`. **No Mentat template exists in `flow rules`.** Attempting `flow rules mentat` exits with status `2` (`unknown harness: mentat`).
   - In strict accordance with Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising "Mentat support" or claiming compatibility without empirical live host verification of subshell invocation, return-code capture ($0$ vs. non-zero), and gate-stop fidelity constitutes marketing deception ("quảng cáo ảo").
@@ -93,10 +93,10 @@ Understanding Mentat's architectural classification requires analyzing why it be
 1. **Why Not Category A (Native Skill Target)?**
    - Category A harnesses natively scan for and discover directory-based skill bundles containing `SKILL.md` from standardized host locations (e.g., Claude Code reading `~/.claude/skills/flow`, Codex reading `~/.codex/skills/flow`, or Zed reading `~/.agents/skills/flow`).
    - In desk review of official vendor documentation and codebase, no documented native directory-based skill discovery mechanism conforming to `SKILL.md` bundles (`~/.agents/skills/` or `~/.claude/skills/`) was identified for Mentat. Claiming Category A native skill discovery without empirical evidence would be an illusion trap.
-2. **Why Category B (Proposed CLI Workspace Instruction Scaffolding)?**
+2. **Historical Alignment with Category B Patterns (CLI Scaffolding):**
    - Category B harnesses rely on workspace instruction scaffolding, prompt framing, and contextual rules to guide the agent toward invoking shell tools and adhering to engineering discipline.
-   - Mentat accepts task instructions through terminal arguments, prompt directives, configuration (`.mentat_config.json`), and repository context files. The repository root `AGENTS.md` serves as the primary hypothesized instruction carrier.
-   - Because Mentat does not provide a specialized proprietary rule directory (unlike `.cursor/rules/flow.mdc` or `.windsurf/rules/flow.md`) and lacks a template in Flow's locked `flow rules` command, Mentat is classified as **Category B (Proposed CLI Workspace Instruction Scaffolding)**.
+   - Mentat historically accepted task instructions through terminal arguments, prompt directives, configuration (`.mentat_config.json`), and repository context files. The repository root `AGENTS.md` served as the primary hypothesized instruction carrier.
+   - Because Mentat's CLI repository is archived and maintenance has ceased, it is retained strictly as an **Unassessed / Deferred / Historical Candidate**, not an active Category B integration proposal.
 3. **Why Not Category C (Automated Test Gate Scaffolding)?**
    - Category C harnesses (such as Aider with `test-cmd` in `.aider.conf.yml`) provide an automated, non-agentic test execution lifecycle hook that mechanically triggers on every file edit without requiring model persuasion.
    - While Mentat supports running commands and tests within its agent loop, it does not provide an automated post-edit non-agentic lifecycle hook comparable to Aider's `test-cmd` / `auto-test`. Invocations are driven via the interactive agent loop or conversational prompting.
@@ -108,9 +108,8 @@ Understanding Mentat's architectural classification requires analyzing why it be
 ### 2.1 Phase 1: Market Intelligence & Prioritization Scoring
 
 - **Market Share & Developer Adoption (Qualitative Adoption Hypothesis):**
-  - Mentat has established an active open-source footprint as a CLI-centric AI coding assistant developed by Abante AI. Designed for software engineers who prefer terminal workflows without graphical IDE overhead, it has attracted significant developer interest on GitHub.
-  - Its user base consists primarily of developers, systems programmers, and terminal power users who prioritize command-line velocity, multi-file code editing, and Git integration.
-  - However, relative to mainstream graphical IDE extensions (Cursor, GitHub Copilot) or high-visibility CLI tools (Claude Code, Aider), Mentat represents an emerging specialized terminal agent segment.
+  - Mentat established an early open-source presence as a CLI-centric AI coding assistant developed by Abante AI. Designed for software engineers who prefer terminal workflows, it attracted significant initial interest on GitHub.
+  - However, official project notices confirm the CLI repository is archived and maintenance has ceased. In accordance with Flow's qualification criteria, archived tools are classified as historical candidates rather than active integration targets; live host trials are not recommended.
 - **Agentic Autonomy & Capability (Qualitative Autonomy Hypothesis):**
   - Mentat coordinates multi-file code editing directly across repository files and features an agent mode capable of running terminal commands and evaluating outcomes.
   - While command execution and multi-file coordination are documented capabilities, its live interaction with Flow's gate enforcement (capturing integer exit codes $0$/$1$, halting on non-zero exit, and strictly refusing to hallucinate a pass) remains an unverified hypothesis pending Four-Point Live Verification Protocol trials.
