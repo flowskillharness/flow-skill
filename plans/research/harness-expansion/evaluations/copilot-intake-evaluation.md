@@ -167,7 +167,7 @@ This repository enforces Flow discipline:
     ```bash
     gh copilot suggest "advance flow stage to 01-research"
     ```
-  - `gh copilot` was historically designed as an interactive command suggestion utility; it returned a generic natural-language text response rather than a tool invocation, and it does not read `.github/copilot-instructions.md`. Its autonomous loop and runner exit-code handling remain unassessed pending current CLI verification, and the repository is left in an unverified state.
+  - `gh copilot` was historically designed as an interactive command suggestion utility; it returned a generic natural-language text response rather than a tool invocation, and instruction file ingestion remains unverified under current CLI extensions. Its autonomous loop and runner exit-code handling remain unassessed pending current CLI verification, and the repository is left in an unverified state.
 - **The Anti-Illusion Mitigation:**
   - Flow's documentation and compatibility matrix explicitly bifurcate GitHub Copilot:
     - **VS Code Copilot Workspace:** Category B (Workspace Rule Scaffolding).

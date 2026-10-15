@@ -309,12 +309,12 @@ GitHub Copilot spans multiple surfaces:
   - Project-level standard: `.github/copilot-instructions.md` at workspace root. Automatically ingested by Copilot Chat and Agent Mode.
   - Workspace settings: `github.copilot.chat.customInstructions` in `.vscode/settings.json`.
 - **GitHub Copilot CLI:**
-  - Does *not* have an instruction ingestion mechanism or agentic loop. It only suggests one-off shell commands.
+  - Historically functions as an interactive command suggestion utility; instruction ingestion and autonomous tool loops under current extensions remain unassessed pending dedicated verification.
 
 #### 3. Execution Capability & Terminal Autonomy
 - In VS Code **Copilot Agent Mode**, Copilot can propose terminal commands to run in the VS Code terminal.
 - However, execution is **semi-autonomous**: commands typically require manual user confirmation (clicking "Run" or pressing Enter). It lacks an autonomous loop for iterative self-correction across multiple subagents.
-- Copilot CLI has zero autonomous execution capability.
+- Copilot CLI's autonomous execution capability remains unassessed in verified testing (historically suggestion-only).
 
 #### 4. Detection Heuristics
 - **Global Markers:**

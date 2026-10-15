@@ -27,7 +27,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Classification:** **Deferred Candidate (Pending Schema & Tool-Loop Verification)**.
 - **Qualification Status:** **`DEFERRED CANDIDATE (Schema & Tool-Loop Unverified; Live Trials Pending)`**.
 - **Qualification Rationale:**
-  - Continue.dev has undergone multiple configuration schema revisions across minor releases (transitioning across `config.json`, `config.yaml`, `.continue/rules/`, and `.continue/prompts/`), without a pinned, backward-compatible workspace rule schema guaranteed across versions.
+  - In desk review, Continue.dev exhibits observed configuration schema volatility across releases (iterating across `config.json`, `config.yaml`, `.continue/rules/`, and prompt files), presenting an unverified, evolving rule schema rather than a pinned, backward-compatible specification.
   - In standard developer usage, Continue functions primarily as an inline completion engine and conversational chat panel. Its autonomous multi-turn tool execution loop—specifically the ability to dispatch shell commands autonomously, inspect non-zero integer exit codes ($\text{exit} \neq 0$), and reliably halt on mechanical gate failure—has not been empirically verified against running hosts.
   - In strict compliance with Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1) and `architecture-compatibility-matrix.md` §3.4.2, advertising Continue.dev support without verified schema stability and tool loop fidelity violates Flow's "Support Thật" mandate.
   - Flow's `flow rules` command is strictly restricted to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Continue.dev is explicitly excluded from `flow rules` until it satisfies the 4-Point Live Verification Protocol.
@@ -101,13 +101,12 @@ Continue has iterated across multiple configuration mechanisms throughout its re
 - **`config.yaml` (Modern / Hub):** Recent versions migrated configuration to YAML format (`~/.continue/config.yaml` and workspace-scoped `.continue/config.yaml`), introducing structured blocks for models, context providers, and experimental rules.
 - **`.continue/rules/` Directory:** Experimental support for workspace rules placed as Markdown files under `<workspace-root>/.continue/rules/*.md`.
 - **`.continue/prompts/` Directory:** Custom slash commands defined as `.prompt` files containing prompt templates with frontmatter.
-- **Schema Fragility Assessment:** The lack of a frozen, backward-compatible workspace rule specification across minor versions creates significant integration risk. A rule file written for one minor release may be ignored by another.
+- **Schema Fragility Assessment:** In desk assessment, schema variations across releases present an integration risk where unpinned rule conventions may not be reliably ingested without version-pinned verification.
 
 #### 2.2.3 Tool Execution API & Terminal Subsystem Reality
 - **Interactive Command Suggestions vs. Autonomous Loops:** In standard operation, when a user asks Continue to run a command, Continue typically outputs a markdown code fence with a suggested terminal command or invokes the `/cmd` slash command. The developer must manually copy, paste, or click to execute the command in the IDE terminal.
 - **Experimental Agent Mode & MCP Tools:** Recent Continue builds experiment with agentic tool calling, including MCP tool servers and built-in terminal tools. However:
-  - Tool execution in Continue does not provide standardized, battle-tested feedback guarantees regarding subshell exit code propagation.
-  - If a subshell command returns an exit code of `1`, Continue's conversational stream frequently treats the non-zero status as informational error text to explain, rather than a hard halting condition that blocks further task execution.
+  - Tool execution in Continue represents an unverified loop in testing. In desk analysis, non-zero subshell exit codes (exit != 0) are hypothesized to risk being interpreted as conversational error output rather than an enforced halting gate, pending live host trials.
 - **Absence of Headless Evaluation Mode:** Continue does not offer a headless, non-interactive CLI evaluation harness (analogous to Codex's `codex exec` or Claude Code's headless evaluation). Qualification must therefore occur through live interactive host trials.
 
 #### 2.2.4 Context Budgeting & Token Dynamics
