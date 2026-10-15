@@ -60,6 +60,8 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • SWE-agent (Docker / ACI)                   │ • GitLab Duo Chat (Historical query utility; unassessed)          │
 │                                     │ • GitLab Duo Workflow (Proposed design)      │                                                  │
 │                                     │ • Sourcegraph Cody (Proposed IDE Scaffold)   │                                                  │
+│                                     │ • Augment Code (Proposed IDE Scaffold)       │ • Tabnine Inline (Completions only)              │
+│                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -556,6 +558,57 @@ Sourcegraph Cody (Sourcegraph Inc.; documentation: https://sourcegraph.com/docs/
 
 ---
 
+### Candidate 14: Augment Code (VS Code & JetBrains)
+
+#### 1. System Overview & Harness Architecture
+Augment Code (Augment Inc.; documentation: https://docs.augmentcode.com) is an AI-first developer assistant providing codebase-aware context and code generation across VS Code and JetBrains IDE extensions (full desk intake: `evaluations/augment-code-intake-evaluation.md`). In desk review, Augment Code's IDE agent and chat capabilities are evaluated as a **proposed un-implemented Category B design hypothesis**.
+
+#### 2. Execution Environment (Hypothesized for IDE Extensions)
+- Augment Code executes within the developer's local IDE workspace (VS Code or JetBrains IDE family). Flow would execute ephemerally via the project-local runner (`bash skills/flow/runner/flow.sh <command>` or `flow.cmd` on Windows), terminating immediately upon return to satisfy ADR-0001.
+- Host-global installation paths remain unverified for Augment Code; project-scoped instruction discovery and repository-vendored runner execution represent the primary hypothesis.
+
+#### 3. Extension & Integration Mechanism: Prompt Context / `AGENTS.md` (Proposed)
+- Augment Code ingests repository context and workspace conventions. In desk evaluation, project-level instruction injection via repository-root `AGENTS.md` or system prompt context configuration is the **proposed ingestion mechanism**; its parsing by Augment Code's context engine is an unverified desk hypothesis.
+- No `flow rules` template exists for Augment Code; `flow rules` remains locked to the 7 implemented templates.
+
+#### 4. Project-Local Runner Requirement (Proposed)
+- Any Augment Code instruction set would mandate invoking the repository-vendored runner (`bash skills/flow/runner/flow.sh <command>`). The hypothesized terminal tool execution loop and return path (capturing integer exit codes $0$/$1$) remain unverified design hypotheses pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical evidence — raw session transcripts, terminal tool execution logs, and verified halts on non-zero exit codes during an Augment Code IDE session — captured and archived under `plans/research/harness-expansion/evidence/`.
+- **The Marketing Illusion to Avoid:** Claiming existing or verified "Augment Code support", or asserting a `flow rules augment` template exists (it does not).
+- **Feasibility Verdict:**
+  - **Augment Code: Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
+
+---
+
+### Candidate 15: Tabnine (Chat & Workspace Agent vs Inline Completions)
+
+#### 1. System Overview & Modality Separation
+Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two sharply divergent modalities that must be strictly separated under Flow's taxonomy (full desk intake: `evaluations/tabnine-intake-evaluation.md`):
+- **Tabnine Chat & Workspace Agent:** An interactive chat and workspace agent modality available in VS Code and JetBrains IDEs that ingests repository context, answers queries, and proposes edits or shell operations. In desk review, evaluated as an **unverified Category B design hypothesis**.
+- **Tabnine Inline (Completions only):** A non-agentic inline code completion utility operating purely on editor buffers without shell tool execution or autonomous loops. Evaluated as non-agentic and classified as **Unassessed / Deferred Pending Verification** (constitutionally incompatible with Flow gating in isolation).
+
+#### 2. Execution Environment (Hypothesized for Chat & Workspace Agent)
+- Tabnine Chat executes within the local IDE extension host (VS Code / JetBrains). Flow would execute ephemerally via the project-local runner (`bash skills/flow/runner/flow.sh <command>` or `flow.cmd` on Windows), terminating immediately upon return.
+- Tabnine Inline operates exclusively within editor buffer events (keystrokes / LSP ghost text) with no terminal execution or autonomous tool loop capabilities.
+
+#### 3. Extension & Integration Mechanism: Workspace Context / `AGENTS.md`
+- For Tabnine Chat, project-level context ingestion via workspace instructions or repository-root `AGENTS.md` is the **proposed ingestion mechanism**; parsing by Tabnine's context engine is an unverified desk hypothesis. Tabnine Inline has no configuration mechanism for executing external shell gates.
+- No `flow rules` template exists for Tabnine; `flow rules` remains locked to the 7 implemented templates.
+
+#### 4. Project-Local Runner Requirement (Proposed)
+- Any Tabnine Chat instruction set would strictly mandate `bash skills/flow/runner/flow.sh <command>`. The hypothesized terminal tool execution loop, subshell invocation, and exit code capture ($0$/$1$) remain unverified hypotheses pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts and tool execution traces demonstrating that Tabnine Chat ingests the scaffolding, invokes `flow.sh`, and mechanically halts when a gate fails with exit code 1.
+- **The Marketing Illusion to Avoid:** Conflating Tabnine Inline completions (which have no tool execution capability) with Tabnine Chat agentic capabilities, or claiming a `flow rules tabnine` template exists (it does not).
+- **Feasibility Verdict:**
+  - **Tabnine (Chat & Workspace Agent): Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
+  - **Tabnine (Inline Completions): Unassessed / Deferred Pending Verification (Non-agentic; completions only, lacks terminal execution loop).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -576,6 +629,9 @@ Sourcegraph Cody (Sourcegraph Inc.; documentation: https://sourcegraph.com/docs/
 | **GitLab Duo Workflow** | Proposed `.gitlab/duo_workflow.yml` (No template) | N/A | Proposed config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **GitLab Duo Chat** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending verification)** |
 | **Sourcegraph Cody** | Workspace prompt config / OpenCTX / `AGENTS.md` | N/A | Prompt config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **Augment Code** | Prompt context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **Tabnine (Chat)** | Workspace context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **Tabnine (Inline)** | None | N/A | N/A | None | Non-agentic (Completions only) | **Unassessed / Deferred Pending Verification** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
@@ -790,3 +846,7 @@ Before declaring any harness "Supported" in official documentation or marketing,
 10. **Devin Documentation (Cognition AI):**
    - Devin Official Portal: [https://cognition.ai](https://cognition.ai)
    - Devin Documentation: [https://docs.devin.ai](https://docs.devin.ai)
+11. **Augment Code Documentation:**
+   - Augment Code Official Portal & Documentation: [https://docs.augmentcode.com](https://docs.augmentcode.com)
+12. **Tabnine Documentation:**
+   - Tabnine Official Portal & Documentation: [https://docs.tabnine.com](https://docs.tabnine.com)
