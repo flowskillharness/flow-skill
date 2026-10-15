@@ -70,10 +70,10 @@ Devin does **not** discover arbitrary host desktop skill directories:
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization
 - **Market Share & Developer Adoption (Prominent Autonomous SWE Agent):** Devin represents the pioneering commercial autonomous software engineering agent developed by Cognition AI (vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15). It commands substantial mindshare across enterprise engineering teams, venture-backed startups, and research communities focusing on autonomous coding benchmarks (e.g., SWE-bench Verified). While access is commercial and subscription-gated rather than distributed as a free mass-market IDE plugin, Devin's influence as an autonomous agent archetype is significant.
-- **Agentic Autonomy & Capability:** Devin operates at the highest tier of agentic autonomy. In an autonomous multi-turn loop, Devin plans complex tasks, browses documentation, edits code across repositories, and executes shell commands in a full Linux cloud terminal. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
+- **Agentic Autonomy & Capability:** Devin is designed and demonstrated by Cognition as an autonomous multi-turn agent. In vendor demonstrations and benchmark tasks, it is shown planning multi-step tasks, editing code across files, and executing shell commands in a cloud sandbox. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
 - **Ecosystem Openness & Stability:** Devin is a proprietary platform with a closed-source cloud orchestration runtime. However, its instruction ingestion relies on standard, human-readable repository files (`DEVIN.md`, `AGENTS.md`, and playbook knowledge entries), allowing clean, non-invasive instruction injection without proprietary runtime dependencies.
-- **Priority Score & Tier:** **Tier 2 (Provisional Internal Estimate: 72/100)**.
-  - **Score Classification:** `Provisional Internal Estimate (Desk Intake)`
+- **Priority Score & Tier:** **Tier 2 (Unverified Desk Estimate: 72/100)**.
+  - **Score Classification:** `Unverified Internal Prioritization Estimate (Desk Intake; Empirical Validation Pending)`
   - **3-Dimension Breakdown per `docs/harness-qualification-process.md` §1.1:**
     1. **Market Share & Developer Adoption (40 Points Max):** **26/40**. Prominent autonomous commercial SWE agent with substantial enterprise and venture mindshare; pioneer in autonomous SWE-bench benchmarks; commercial subscription-gated access creates a smaller broad-developer install base than consumer IDEs.
     2. **Agentic Autonomy & Capability (40 Points Max):** **32/40**. Full autonomous multi-turn loop with terminal, editor, and browser execution in cloud sandbox; capable of multi-step, multi-file engineering workflows; asynchronous execution latency and remote sandbox orchestration introduce roundtrip overhead.
@@ -87,8 +87,8 @@ Devin’s architecture separates the model planning tier from the execution envi
 1. **Agent Orchestration & Planning Tier:** The Cognition cloud platform manages the model reasoning loop, prompt history, user chat interface, browser session, and task decomposition hierarchy.
 2. **Execution Environment (Isolated Cloud MicroVM Sandbox):**
    - Each Devin task is described in vendor documentation as running inside an isolated cloud microVM sandbox.
-   - The microVM provides a full POSIX-compliant execution environment with standard development runtimes (Node.js, Python, Git, Docker, Bash).
-   - Tool execution is performed through a real shell/PTY interface (`bash`), capturing standard output, standard error, and integer exit codes.
+   - The microVM is described as providing a standard POSIX execution environment with development tools (Node.js, Python, Git, Bash).
+   - Tool execution is hypothesized to execute via a shell interface (`bash`), capturing stdout, stderr, and integer exit codes (empirical gate-stop behavior pending live cloud trials).
    - Filesystem changes occur directly in the cloned repository workspace inside the microVM.
 
 #### 2.2.2 Ingestion Mechanism: Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
