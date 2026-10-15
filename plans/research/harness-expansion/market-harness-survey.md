@@ -445,7 +445,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 ### Candidate 10: Devin Autonomous Software Engineer (Cognition AI)
 
 #### 1. System Overview & Harness Architecture
-Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and is shown in vendor demonstrations planning multi-step tasks and executing commands in a cloud sandbox.
+Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is an autonomous software engineering agent shown in vendor demonstrations operating in a cloud sandbox environment, where task planning, code editing, and terminal commands are executed under an autonomous agent loop (empirical runtime integration with Flow remains an unverified hypothesis).
 
 #### 2. Execution Environment: Cloud Sandbox Environment (Hypothesized)
 - In desk research, Devin is hypothesized to execute inside a cloud sandbox provisioned with shell, editor, and browser tools.
@@ -454,16 +454,16 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 
 #### 3. Extension & Integration Mechanism: DEVIN.md / AGENTS.md
 - Devin is hypothesized in desk review to discover repository instruction files (`DEVIN.md` / `AGENTS.md`), subject to live host verification.
-- Instruction files direct Devin's autonomous loop toward project conventions; no proprietary rule schema (`flow rules` template) exists for Devin, and `flow rules` remains locked to the 7 implemented templates.
+- In proposed integration, instruction files would direct Devin's autonomous loop toward project conventions; no proprietary rule schema (`flow rules` template) exists for Devin, and `flow rules` remains locked to the 7 implemented templates.
 - Scaffolding guidance must therefore live in `DEVIN.md` / `AGENTS.md`, kept compact to avoid context dilution across long autonomous sessions.
 
 #### 4. Project-Local Runner Requirement
 - Because Devin runs in an isolated cloud environment, the repository would require Flow vendored locally at **`skills/flow/runner/flow.sh`** for reliable execution.
-- A global installer targeting developer host registries would leave the remote cloud environment unable to locate the runner (producing immediate `ENOENT` failures).
+- A global installer targeting developer host registries is hypothesized to leave remote cloud environments unable to locate the runner (hypothesized `ENOENT` failure).
 - In proposed integration, Devin would invoke Flow ephemerally via its sandbox terminal (`bash skills/flow/runner/flow.sh <command>`); the Devin process would hold the process token and Flow would terminate immediately upon returning.
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
-- **What Real Support Looks Like:** A `DEVIN.md` / `AGENTS.md` entry directing Devin to invoke the repository-vendored runner (`skills/flow/runner/flow.sh status`, `check C-NNN`), honoring Flow's non-zero exit codes to halt the autonomous loop at gate failures.
+- **What Real Support Looks Like:** A proposed `DEVIN.md` / `AGENTS.md` entry directing Devin to invoke the repository-vendored runner (`skills/flow/runner/flow.sh status`, `check C-NNN`), where Devin is hypothesized to honor Flow's non-zero exit codes and halt the autonomous loop at gate failures (subject to Phase 4 live trials).
 - **The Marketing Illusion to Avoid:** Claiming a `DEVIN.md` template or generator exists in `flow rules` (it does not; `flow rules` is locked to seven verified templates), or referencing host-global skill paths inside the cloud sandbox.
 - **Feasibility Verdict:**
   - **Devin: Proposed Design Candidate (Unverified Category B Cloud Scaffold Hypothesis; Live Cloud Trials Pending).**
@@ -485,7 +485,7 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
-| **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud MicroVM) | Hypothesized `DEVIN.md` / `AGENTS.md` | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud Sandbox; unverified) | Hypothesized `DEVIN.md` / `AGENTS.md` (Proposed) | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---

@@ -81,7 +81,7 @@ Devin does **not** discover arbitrary host desktop skill directories:
 
 ### 2.2 Phase 2: Architecture Probing
 
-#### 2.2.1 Devin Execution Subsystem (Vendor-Described Architecture): Cloud Sandbox & Shell Execution
+#### 2.2.1 Devin Execution Subsystem (Hypothesized Architecture): Cloud Sandbox & Shell Execution
 Devin’s architecture separates the model planning tier from the execution environment:
 1. **Agent Orchestration & Planning Tier:** The Cognition cloud platform manages the model reasoning loop, prompt history, user chat interface, browser session, and task decomposition hierarchy.
 2. **Execution Environment (Isolated Cloud MicroVM Sandbox):**
@@ -97,7 +97,7 @@ Devin discovers project-level operational guidelines via repository root files:
 - **Playbook Knowledge:** Operators can configure organizational playbooks in Devin's web interface to persist cross-repository guidelines.
 - **Context Injection Dynamics (Hypothesized):** In desk review, repository instructions are hypothesized to be injected into initial prompt context; instruction files must remain compact to avoid context dilution.
 
-#### 2.2.3 Remote Cloud MicroVM Sandbox Boundary: The Host Path Disconnect
+#### 2.2.3 Remote Cloud Sandbox Boundary (Hypothesized Model): The Host Path Disconnect
 A critical technical reality governs Devin integrations due to the remote microVM boundary:
 
 ```
