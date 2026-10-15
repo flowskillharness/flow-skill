@@ -591,10 +591,10 @@ Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two 
 
 #### 2. Execution Environment (Hypothesized for Chat & Workspace Agent)
 - Tabnine Chat executes within the local IDE extension host (VS Code / JetBrains). Flow would execute ephemerally via the project-local runner (`bash skills/flow/runner/flow.sh <command>` or `flow.cmd` on Windows), terminating immediately upon return.
-- Tabnine Inline operates exclusively within editor buffer events (keystrokes / LSP ghost text) with no terminal execution or autonomous tool loop capabilities.
+- Tabnine Inline operates within editor buffer events (keystrokes / LSP ghost text) as a code completion modality; broader terminal execution and autonomous tool capabilities remain unassessed.
 
 #### 3. Extension & Integration Mechanism: Workspace Context / `AGENTS.md`
-- For Tabnine Chat, project-level context ingestion via workspace instructions or repository-root `AGENTS.md` is the **proposed ingestion mechanism**; parsing by Tabnine's context engine is an unverified desk hypothesis. Tabnine Inline has no configuration mechanism for executing external shell gates.
+- For Tabnine Chat, project-level context ingestion via workspace instructions or repository-root `AGENTS.md` is the **proposed ingestion mechanism**; parsing by Tabnine's context engine is an unverified desk hypothesis. Tabnine Inline configuration is outside Flow's build-gate integration scope.
 - No `flow rules` template exists for Tabnine; `flow rules` remains locked to the 7 implemented templates.
 
 #### 4. Project-Local Runner Requirement (Proposed)
@@ -602,10 +602,10 @@ Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two 
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:** Live empirical transcripts and tool execution traces demonstrating that Tabnine Chat ingests the scaffolding, invokes `flow.sh`, and mechanically halts when a gate fails with exit code 1.
-- **The Marketing Illusion to Avoid:** Conflating Tabnine Inline completions (which have no tool execution capability) with Tabnine Chat agentic capabilities, or claiming a `flow rules tabnine` template exists (it does not).
+- **The Marketing Illusion to Avoid:** Conflating Tabnine Inline completions (a completion-only mode outside Flow candidate scope) with Tabnine Chat agentic capabilities, or claiming a `flow rules tabnine` template exists (it does not).
 - **Feasibility Verdict:**
   - **Tabnine (Chat & Workspace Agent): Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
-  - **Tabnine (Inline Completions): Unassessed / Deferred Pending Verification (Non-agentic; completions only, lacks terminal execution loop).**
+  - **Tabnine (Inline Completions): Unassessed / Deferred Pending Verification (Completion-only mode outside Flow candidate scope; broader tool capabilities unassessed).**
 
 ---
 
@@ -631,7 +631,7 @@ Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two 
 | **Sourcegraph Cody** | Workspace prompt config / OpenCTX / `AGENTS.md` | N/A | Prompt config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Augment Code** | Prompt context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Tabnine (Chat)** | Workspace context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
-| **Tabnine (Inline)** | None | N/A | N/A | None | Non-agentic (Completions only) | **Unassessed / Deferred Pending Verification** |
+| **Tabnine (Inline)** | None | N/A | N/A | Unassessed | Completion-only modality (outside Flow scope) | **Unassessed / Deferred Pending Verification** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---

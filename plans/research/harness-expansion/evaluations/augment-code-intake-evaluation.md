@@ -82,15 +82,15 @@ Augment Code encompasses distinct developer-facing capabilities that must be sep
 │                         AUGMENT CODE MODALITY SEPARATION                               │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: Augment IDE Chat & Edits     │ Modality 2: Inline Code Completion          │
-│ (Category B: Proposed Workspace Scaffold)│ (Incompatible / Passive Autocomplete)       │
+│ (Category B: Proposed Workspace Scaffold)│ (Outside Scope / Passive Autocomplete)      │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & JetBrains IDEs    │ Environment: Editor text buffer / keystroke │
 │ Ingestion: Hypothesized prompt context / │ Ingestion: Local cursor context & file AST  │
 │ root `AGENTS.md` (no Flow template)      │                                             │
 │ Agent Loop: Multi-turn chat & multi-file │ Agent Loop: Passive token/diff prediction   │
 │ code editing proposals                   │ (No agentic conversational loop)            │
-│ Tool API: Hypothesized terminal / shell  │ Tool API: None (lacks terminal / shell tool │
-│ execution tool (unverified in Flow)      │ execution subsystem)                        │
+│ Tool API: Hypothesized terminal / shell  │ Tool API: Unassessed (completion modality   │
+│ execution tool (unverified in Flow)      │ outside Flow build-gate scope)              │
 │ Status: Proposed Design Candidate        │ Status: Outside Scope / Unassessed          │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
@@ -164,8 +164,8 @@ Augment Code does **not** qualify as Category A:
 
 ### 3.1 Latent Trap 1: Modality Confusion — Augment IDE Chat & Edits vs. Inline Completion
 - **The Pitfall:** Promoting Flow as "supporting Augment Code" without disambiguating the operational modality. A developer installs the Augment extension, relies solely on inline code autocomplete, and expects Flow stage gates to be enforced automatically.
-- **The Grounded Technical Reality:** Inline code completion operates at the keystroke level within the editor buffer. It possesses no agentic planning loop, cannot execute shell commands, and has no awareness of build gates or lifecycle receipts.
-- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that Flow compatibility is evaluated strictly for **Augment Code IDE Chat & Multi-File Code Edits** (Category B candidate), whereas inline code completion is **Incompatible / Not Applicable** for gate governance.
+- **The Grounded Technical Reality:** Inline code completion operates at the keystroke level within the editor buffer as a code-authoring completion modality; broader execution and tool capabilities remain unassessed pending dedicated verification.
+- **The Anti-Illusion Mitigation:** Documentation and evaluation records must explicitly state that Flow compatibility is evaluated strictly for **Augment Code IDE Chat & Multi-File Code Edits** (Category B candidate), whereas inline code completion is **outside Flow's build-gate integration scope**.
 
 ### 3.2 Latent Trap 2: Absence of Dedicated Flow Template in `flow rules`
 - **The Pitfall:** Falling into the "Zed Lesson" trap (`docs/harness-qualification-process.md` §2.1) by inventing a fictional configuration file (e.g., generating `.augment/rules.json` or `.augmentrules`) via a speculative `flow rules augment` command.
