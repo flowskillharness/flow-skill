@@ -66,6 +66,8 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │   *Proposed parity target                │ • Goose (.goosehints)                                            │
 │                                          │ • Amazon Q Developer (/dev) (Proposed design; un-implemented)    │
 │                                          │ • Devin (DEVIN.md / AGENTS.md) (Proposed design; un-implemented) │
+│                                          │ • SWE-agent (Container / ACI)                                    │
+│                                          │ • GitLab Duo Workflow (Proposed design; un-implemented)          │
 │ Nature: Real skill installation. Agent   │ Nature: Markdown instruction guidance.                           │
 │ runtime registers slash commands/tools.  │ Rule scaffolding is NOT native skill                             │
 │ Flow codebase placed in dedicated home.  │ installation. Injects prompts into context.                      │
@@ -74,8 +76,9 @@ To prevent confusion between directory-level tool extensions and prompt guidelin
 │ (Deterministic test command binding)     │ (Lacks terminal tool invocation)                                 │
 ├──────────────────────────────────────────┼──────────────────────────────────────────────────────────────────┤
 │ • Aider (.aider.conf.yml test-cmd)       │ • Zed Inline Editor (buffer only, no terminal tool)              │
-│ Nature: Non-agentic test execution hook. │ Nature: Inline editor buffer only.                               │
-│ Mechanical gate check on file change.    │ Lacks terminal execution capabilities.                           │
+│ Nature: Non-agentic test execution hook. │ • GitLab Duo Chat (query only, no loop)                          │
+│ Mechanical gate check on file change.    │ Nature: Inline editor buffer only.                               │
+│                                          │ Lacks terminal execution capabilities.                           │
 └──────────────────────────────────────────┴──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -127,6 +130,9 @@ The following table presents the architectural evaluation of candidate harnesses
 | **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
 | **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; hypothesized cloud sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Provisional Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
 | **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Historically functioned as query utility; current tool-loop capability unassessed (successor transition pending verification). | Unassessed / Pending Verification (Successor transition pending current-source verification) |
+| **SWE-agent** | B | PROVISIONAL (Desk-Reviewed) | Docker container execution; project-local runner required; ACI shell tool. | Provisional Candidate (Container Scaffold; Live Trial Pending) |
+| **GitLab Duo Workflow** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified Duo Workflow execution tool and rule schema. | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **GitLab Duo Chat** | D | INCOMPATIBLE | Conversational query assistant in IDE/Web UI; lacks autonomous tool loop. | Incompatible / Deferred (Category D: Query Only) |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle

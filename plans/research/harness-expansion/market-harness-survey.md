@@ -57,6 +57,8 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Goose (.goosehints)                        │                                  │
 │                                     │ • Amazon Q Developer (/dev) (Proposed design)│                                  │
 │                                     │ • Devin (DEVIN.md / Cloud Sandbox)           │                                  │
+│                                     │ • SWE-agent (Docker / ACI)                   │ • GitLab Duo Chat (Query only, no loop)          │
+│                                     │ • GitLab Duo Workflow (Proposed design)      │                                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -470,6 +472,62 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 
 ---
 
+### Candidate 11: SWE-agent (Princeton NLP / InterCode)
+
+#### 1. System Overview & Harness Architecture
+SWE-agent (Princeton NLP; derived from the InterCode research line; source: https://github.com/SWE-agent/SWE-agent, documentation: https://swe-agent.com/) is an open research agent that operates an autonomous issue-resolution loop inside an isolated Docker container. Its defining design principle is the **Agent-Computer Interface (ACI)**: a deliberately simplified set of file-viewing, file-editing, and shell tools exposed to the model instead of raw interactive shell sessions.
+
+#### 2. Execution Environment: Docker Container / ACI (Desk-Reviewed)
+- SWE-agent executes inside a per-instance Docker container; all tool invocations (including the ACI shell `execute` tool) run against the containerized filesystem.
+- The container is isolated from the developer workstation: host-global skill paths (`~/.claude/skills/flow`, `~/.agents/skills/flow`) do not exist inside the container and would produce `ENOENT` failures.
+- Container lifecycle and state persistence dynamics are desk-reviewed against the upstream repository but remain **unverified in live Flow testing**; state is assumed to require git persistence.
+
+#### 3. Extension & Integration Mechanism: Prompt Templates / `AGENTS.md`
+- SWE-agent is driven by prompt templates and per-run configuration (YAML config files selecting tools and model); it has no proprietary workspace rule schema akin to `.roomodes` or `.clinerules`.
+- Repository instructions are hypothesized to be discovered via `AGENTS.md`-style project instructions embedded in prompts; no `flow rules` template exists for SWE-agent (`flow rules` remains locked to the 7 implemented templates).
+- Scaffolding guidance must therefore live in compact prompt/config template text or `AGENTS.md`, kept small to survive the agent's bounded context.
+
+#### 4. Project-Local Runner Requirement
+- Because SWE-agent executes inside Docker, Flow must be vendored into the repository at **`skills/flow/runner/flow.sh`** before the container is provisioned (or mounted into the workspace).
+- A host-global installer leaves the container unable to locate the runner (hypothesized `ENOENT` failure at `~/.agents/skills/flow/runner/flow.sh`).
+- In proposed integration, SWE-agent would invoke Flow ephemerally via the ACI shell tool (`execute` → `bash skills/flow/runner/flow.sh <command>`); the agent holds the process token and Flow terminates immediately upon returning, satisfying ADR-0001.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** A `config/`-level prompt template plus `AGENTS.md` entry directing SWE-agent's ACI shell tool to invoke the repository-vendored runner (`skills/flow/runner/flow.sh status`, `check C-NNN`), where the agent honors non-zero exit codes and halts the autonomous Docker loop at gate failures — **subject to Phase 4 live container trials**.
+- **The Marketing Illusion to Avoid:** Claiming a `flow rules swe-agent` template exists (it does not), or referencing host-global skill paths inside the Docker container.
+- **Feasibility Verdict:**
+  - **SWE-agent: Proposed Design Candidate (Unverified Category B Container/ACI Scaffold Hypothesis; Live Container Trials Pending).**
+
+---
+
+### Candidate 12: GitLab Duo (Duo Workflow vs Duo Chat)
+
+#### 1. System Overview & Modality Separation
+GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_duo/) spans two divergent modalities that must be strictly separated under Flow's taxonomy (full desk intake: `evaluations/gitlab-duo-intake-evaluation.md`):
+- **GitLab Duo Workflow:** In vendor documentation, described as an emerging multi-step execution agent. In desk review, its capability to formulate plans, modify files, and invoke terminal subshells in local IDEs or remote CI/CD runner sandboxes is evaluated as an **unverified Category B candidate hypothesis**.
+- **GitLab Duo Chat:** A conversational query assistant in the Web UI, IDE sidebars, and Web IDE. It lacks an autonomous tool loop, cannot execute shell commands, and is classified **Category D (Deferred / Incompatible)**.
+
+#### 2. Execution Environment (Hypothesized for Duo Workflow)
+- Duo Workflow is hypothesized to execute in a local IDE workspace (GitLab Workflow extension in VS Code) or an ephemeral GitLab CI/CD runner container. Host-global paths are absent in runner sandboxes; only the cloned repository under `/builds/<group>/<project>/` exists.
+- Duo Chat has no execution environment relevant to Flow: it is query-only with no terminal tool.
+
+#### 3. Extension & Integration Mechanism: Proposed `.gitlab/duo_workflow.yml` / `AGENTS.md`
+- A `.gitlab/duo_workflow.yml` workflow configuration and repository-root `AGENTS.md` instructions are **proposed ingestion mechanisms**; their existence, schema, and parsing by the execution client are unverified desk hypotheses.
+- No `flow rules` template exists for GitLab Duo; `flow rules` remains locked to the 7 implemented templates.
+
+#### 4. Project-Local Runner Requirement (Proposed)
+- Any Duo Workflow instruction set would strictly mandate `bash skills/flow/runner/flow.sh <command>`; invoking host-global paths inside a CI runner container fails with `ENOENT`.
+- The hypothesized execution subshell would return integer exit codes ($0$/$1$) to the agent; this return path is an unverified hypothesis pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live evidence — raw transcripts, tool payloads, and integer exit codes from a Duo Workflow session — demonstrating ingestion of the scaffolding and mechanical halt on gate failure, archived under `plans/research/harness-expansion/evidence/`.
+- **The Marketing Illusion to Avoid:** Advertising generic "GitLab Duo support" (conflating query-only Duo Chat with the unverified Duo Workflow agent), or claiming a `.gitlab/duo_workflow.yml` template exists in `flow rules` (it does not).
+- **Feasibility Verdict:**
+  - **GitLab Duo Workflow: Proposed Design Candidate (Unverified Category B Rule Scaffold Hypothesis; Live Host Trials Pending).**
+  - **GitLab Duo Chat: Deferred / Incompatible (Category D: Query Only, No Loop).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -486,6 +544,9 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
 | **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud Sandbox; unverified) | Hypothesized `DEVIN.md` / `AGENTS.md` (Proposed) | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **SWE-agent** | Prompt templates / `AGENTS.md` | N/A (Docker Container) | Config templates / `AGENTS.md` | ACI shell (`execute`) | Autonomous (Docker loop) | **Tier 2 (Provisional Candidate)** |
+| **GitLab Duo Workflow** | Proposed `.gitlab/duo_workflow.yml` (No template) | N/A | Proposed config / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **GitLab Duo Chat** | None | N/A | N/A | None | Non-agentic (Query only) | **Tier 3 (Deferred / Incompatible)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
