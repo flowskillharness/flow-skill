@@ -64,7 +64,7 @@
 
 > **⚠️ PROJECT STATUS DISCLOSURE (RECLASSIFICATION):** The Mentat CLI repository (https://github.com/AbanteAI/mentat) is **archived and no longer maintained or supported** (maintenance ceased; the Mentat name has since pivoted to a separate bot product). Mentat is accordingly reclassified as an **Unassessed / Deferred / Historical (Inactive Terminal CLI)** candidate — historically significant as an early terminal coding assistant, but **live host trials are NOT recommended** due to project archival. No "supported" claim of any kind is made.
 
-Mentat (developed by Abante AI; official portal: https://mentat.ai, repository: https://github.com/AbanteAI/mentat under Apache-2.0, accessed 2026-10-15) is an open-source, terminal-based AI coding assistant. Operating from the command line, Mentat coordinates edits across multiple files and directories while integrating terminal and command execution within an interactive developer loop. Unlike basic single-file completion tools or web-based code generators, Mentat is designed to analyze codebase context, coordinate multi-file changes directly in local Git repositories, and run commands to inspect code behavior and execute tests.
+Mentat (developed by Abante AI; official portal: https://mentat.ai, repository: https://github.com/AbanteAI/mentat under Apache-2.0, accessed 2026-10-15) is an archived open-source terminal AI coding assistant. It historically operated from the command line to coordinate multi-file code modifications directly in local Git repositories and execute terminal commands. Because the CLI repository is archived, these capabilities represent historical desk review artifacts.
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
 - **Classification:** **Unassessed / Deferred / Historical (Inactive Terminal CLI)**.
@@ -75,13 +75,13 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
   - **Strict Locking of `flow rules`:** Flow's CLI rule generator is strictly locked to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), strictly verified by `tests/test_flow_rules.sh`. **No Mentat template exists in `flow rules`.** Attempting `flow rules mentat` exits with status `2` (`unknown harness: mentat`).
   - In strict accordance with Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising "Mentat support" or claiming compatibility without empirical live host verification of subshell invocation, return-code capture ($0$ vs. non-zero), and gate-stop fidelity constitutes marketing deception ("quảng cáo ảo").
   - Prospective Flow integration must rely on hypothesized prompt context, command-line arguments, or repository root `AGENTS.md` guiding the assistant to invoke the project-local runner (`skills/flow/runner/flow.sh`).
-  - Full qualification requires an interactive host terminal session executing the Four-Point Live Verification Protocol with raw execution transcripts, integer exit codes, and on-disk receipts archived to `plans/research/harness-expansion/evidence/`.
+  - Because the repository is archived and maintenance has ceased, live host trials are **not recommended**; this record is retained purely as a historical desk review artifact under Flow's qualification taxonomy.
 
 ### 1.2 Constitutional Alignment (ADR-0001 Invariants)
 Flow's constitutional identity (`docs/adr/0001-discipline-layer-identity.md`) establishes that Flow is a **discipline layer**, never an agent runtime:
 > *"Flow owns the gates and the receipts, never the runtime: a host-agnostic discipline layer that turns any coding agent into an evidence-gated, kill-honest build process — flow never holds the process token."*
 
-In desk design review, Mentat aligns with ADR-0001's fundamental invariants (empirical verification pending live host trials):
+In desk design review, Mentat's architecture was evaluated against ADR-0001's fundamental invariants (historical analysis):
 1. **Zero Resident Daemons for Flow:** Flow requires no persistent daemon, background server, or long-lived socket listener on the host system. Flow's runner executes on-demand (`bash skills/flow/runner/flow.sh <verb>`) and terminates immediately.
 2. **Process Token Ownership:** The developer and the Mentat CLI hold the process token and drive the execution loop. Flow never holds the main loop and executes strictly as an ephemeral subprocess invoked via command execution tools.
 3. **Zero Tool Interposition:** Flow does not monkey-patch, proxy, or intercept Mentat's Python internals, git operations, or LLM API calls. Gates are evaluated post-hoc by inspecting on-disk filesystem truth (`flow/`, `cards/`, `manifest-hashes.json`).
@@ -99,7 +99,7 @@ Understanding Mentat's architectural classification requires analyzing why it be
    - Because Mentat's CLI repository is archived and maintenance has ceased, it is retained strictly as an **Unassessed / Deferred / Historical Candidate**, not an active Category B integration proposal.
 3. **Why Not Category C (Automated Test Gate Scaffolding)?**
    - Category C harnesses (such as Aider with `test-cmd` in `.aider.conf.yml`) provide an automated, non-agentic test execution lifecycle hook that mechanically triggers on every file edit without requiring model persuasion.
-   - While Mentat supports running commands and tests within its agent loop, it does not provide an automated post-edit non-agentic lifecycle hook comparable to Aider's `test-cmd` / `auto-test`. Invocations are driven via the interactive agent loop or conversational prompting.
+   - While Mentat historically supported running commands and tests within its agent loop, it provided no automated post-edit non-agentic lifecycle hook comparable to Aider's `test-cmd` / `auto-test`.
 
 ---
 
@@ -112,7 +112,7 @@ Understanding Mentat's architectural classification requires analyzing why it be
   - However, official project notices confirm the CLI repository is archived and maintenance has ceased. In accordance with Flow's qualification criteria, archived tools are classified as historical candidates rather than active integration targets; live host trials are not recommended.
 - **Agentic Autonomy & Capability (Qualitative Autonomy Hypothesis):**
   - Mentat coordinates multi-file code editing directly across repository files and features an agent mode capable of running terminal commands and evaluating outcomes.
-  - While command execution and multi-file coordination are documented capabilities, its live interaction with Flow's gate enforcement (capturing integer exit codes $0$/$1$, halting on non-zero exit, and strictly refusing to hallucinate a pass) remains an unverified hypothesis pending Four-Point Live Verification Protocol trials.
+  - Whether Mentat's command execution loop and subshell invocation reliably captured integer exit codes ($0$ vs. non-zero), halted on failure, and refused to hallucinate a pass was never empirically verified in Flow live trials prior to repository archival.
 - **Ecosystem Openness & Stability (Qualitative Openness Hypothesis):**
   - Mentat is 100% open-source under the Apache-2.0 license. Distributed as a standard Python package (`pip install mentat`), it executes entirely client-side on the developer's workstation using direct API calls to model providers.
   - Configuration options are transparently managed (e.g., via `.mentat_config.json` in the git root or user configuration directories).
@@ -291,7 +291,7 @@ This runbook specifies the **Four-Point Live Verification Protocol** for qualify
   - `FAIL (Path Ignored / Unsupported)`: Mentat does not load `AGENTS.md`; assistant has no awareness of Flow directives.
   - `FAIL (Truncation / Context Loss)`: Instruction text is truncated or omitted from model context.
   - `FAIL (Host Path Confusion)`: Assistant cites non-existent global paths (`~/.claude/` or `~/.agents/`) instead of project-local runner.
-- **Verdict:** `[PROVISIONAL: PENDING LIVE TRIAL]`
+- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
 
 ---
 
@@ -312,7 +312,7 @@ This runbook specifies the **Four-Point Live Verification Protocol** for qualify
   - `FAIL (Tool Unavailable / Blocked)`: Terminal command execution is unavailable, disabled, or unsupported.
   - `FAIL (Path Resolution / ENOENT)`: Execution fails due to relative path resolution failure.
   - `FAIL (Output Truncation / Wrapper Corruption)`: Runner output is mangled or exit code is lost.
-- **Verdict:** `[PROVISIONAL: PENDING LIVE TRIAL]`
+- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
 
 ---
 
@@ -340,7 +340,7 @@ This runbook specifies the **Four-Point Live Verification Protocol** for qualify
   - `DISQUALIFIED (Pass Hallucination)`: Mentat ignores exit code `1`, claims the stage advanced, or synthesizes a fake pass claim without on-disk gate receipts.
   - `FAIL (Crash / Unhandled Exit)`: Mentat CLI, wrapper, or subshell crashes on non-zero exit code.
   - `FAIL (Tool Bypass)`: Assistant attempts to edit lifecycle metadata directly without executing the runner.
-- **Verdict:** `[PROVISIONAL: PENDING LIVE TRIAL]`
+- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
 
 ---
 
@@ -375,7 +375,7 @@ This runbook specifies the **Four-Point Live Verification Protocol** for qualify
   - `PASS`: Fresh session executes `flow.sh status`, accurately reads back stage `01-research` from disk receipts, with zero reliance on Flow background daemons.
   - `FAIL (Persistence Loss)`: State advancement artifacts are missing on disk, or fresh session fails to locate prior progress.
   - `FAIL (Daemon Dependency)`: State continuity fails because an external Flow background daemon was assumed.
-- **Verdict:** `[PROVISIONAL: PENDING LIVE TRIAL]`
+- **Verdict:** `[NOT EXECUTED: REPOSITORY ARCHIVED / MAINTENANCE CEASED]`
 
 ---
 
