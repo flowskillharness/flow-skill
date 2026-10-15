@@ -186,7 +186,7 @@ In the research-described Docker architecture, a hypothesized isolation boundary
 - **The Failure Mode (Hypothesis):**
   - In the research-described ACI environment, container interaction is wrapped with custom command utilities (`open_file`, `scroll_down`, `search_dir`, `edit_lines`).
   - If an instruction ambiguously directs the agent to "inspect Flow gates using your editor", an LLM might attempt to open `skills/flow/runner/flow.sh` with `open_file` or edit internal state files manually instead of executing the runner.
-  - If an ACI command execution wrapper hypothesizes to buffer or filter stdout/stderr, or intercept exit codes to format LLM observation blocks, a non-zero exit code ($exit \neq 0$) might be masked or treated as a catastrophic environment crash rather than a clean gate diagnostic.
+  - If an ACI command execution wrapper were to buffer or filter stdout/stderr, or intercept exit codes to format LLM observation blocks, a non-zero exit code ($exit \neq 0$) might be masked or treated as a catastrophic environment crash rather than a clean gate diagnostic.
 - **The Anti-Illusion Mitigation:**
   - Proposed instruction scaffolding would unambiguously direct SWE-agent to invoke Flow via standard bash command execution:
     ```bash
