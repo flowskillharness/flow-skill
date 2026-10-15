@@ -45,7 +45,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Live Qualification Status    │ PROPOSED CANDIDATE (Container Live Trials Pending)       │
+│ Live Qualification Status    │ PROPOSED DESIGN CANDIDATE (Container Live Trials Pending)│
 └──────────────────────────────┴─────────────────────────────────────────────────────────┘
 ```
 
