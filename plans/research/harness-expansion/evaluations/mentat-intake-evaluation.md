@@ -111,17 +111,17 @@ Understanding Mentat's architectural classification requires analyzing why it be
   - Mentat established an early open-source presence as a CLI-centric AI coding assistant developed by Abante AI. Designed for software engineers who prefer terminal workflows, it attracted significant initial interest on GitHub.
   - However, official project notices confirm the CLI repository is archived and maintenance has ceased. In accordance with Flow's qualification criteria, archived tools are classified as historical candidates rather than active integration targets; live host trials are not recommended.
 - **Agentic Autonomy & Capability (Qualitative Autonomy Hypothesis):**
-  - Mentat coordinates multi-file code editing directly across repository files and features an agent mode capable of running terminal commands and evaluating outcomes.
+  - Mentat historically supported multi-file code editing directly across repository files and featured an agent mode designed to run terminal commands and evaluate outcomes.
   - Whether Mentat's command execution loop and subshell invocation reliably captured integer exit codes ($0$ vs. non-zero), halted on failure, and refused to hallucinate a pass was never empirically verified in Flow live trials prior to repository archival.
 - **Ecosystem Openness & Stability (Qualitative Openness Hypothesis):**
-  - Mentat is 100% open-source under the Apache-2.0 license. Distributed as a standard Python package (`pip install mentat`), it executes entirely client-side on the developer's workstation using direct API calls to model providers.
+  - Mentat was published as an open-source tool under the Apache-2.0 license and historically distributed via PyPI (`pip install mentat`); official notices confirm the CLI repository is archived and maintenance has ceased.
   - Configuration options are transparently managed (e.g., via `.mentat_config.json` in the git root or user configuration directories).
 - **Prioritization Status & Hypothesis:** **`Historical / Deprecated Candidate (Repository Archived / Maintenance Ceased; Live Trials Not Recommended)`**.
   - **Status Classification:** `Unassessed / Deferred / Historical (Inactive Terminal CLI; Desk Intake Only)`.
   - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
-    1. *Market Adoption Hypothesis:* Open-source terminal AI coding assistant with dedicated community interest among terminal-first developers.
-    2. *Agentic Autonomy Hypothesis:* Combines multi-file editing with command execution; empirical subshell execution, integer exit-code propagation ($0$/$1$), and gate-stop fidelity remain unverified in Flow trials.
-    3. *Ecosystem Openness Hypothesis:* Fully open-source codebase (Apache-2.0), Python package distribution, and local host execution.
+    1. *Market Adoption Hypothesis:* Historical open-source terminal assistant; project repository is archived and CLI maintenance has ceased, so live trials are not recommended.
+    2. *Agentic Autonomy Hypothesis:* Historically combined multi-file editing with command execution; Flow subshell execution, integer exit-code propagation ($0$/$1$), and gate-stop fidelity were never empirically verified prior to archival.
+    3. *Ecosystem Openness Hypothesis:* Open-source codebase on GitHub under Apache-2.0, but project ecosystem is inactive due to repository archival.
 
 ### 2.2 Phase 2: Architecture Probing
 
@@ -379,16 +379,6 @@ This runbook specifies the **Four-Point Live Verification Protocol** for qualify
 
 ---
 
-### 4.6 Qualification Record Archival & Post-Trial Actions
+### 4.6 Qualification Record Archival & Status Statement
 
-Following the live execution of the Four-Point Live Verification Protocol in an active Mentat environment:
-1. Extract all raw CLI session logs, tool execution payloads, terminal stdout/stderr streams, integer exit codes, and agent conversational transcripts.
-2. Complete the standardized qualification record using `plans/research/harness-expansion/evidence/template-qualification-record.md`.
-3. Save and commit the qualification record to:
-   ```text
-   plans/research/harness-expansion/evidence/mentat-<version>-qualification-record.md
-   ```
-4. If and only if all four gates achieve unambiguous `PASS` verdicts:
-   - Update `plans/research/harness-expansion/architecture-compatibility-matrix.md` to reflect verified live qualification results.
-   - Update `plans/research/harness-expansion/market-harness-survey.md` with the verified qualification status.
-   - Document any recommended Mentat context loading practices (`mentat AGENTS.md`) in Flow's documentation.
+Because the Mentat CLI repository is archived and maintenance has ceased, live host trials are **NOT RECOMMENDED OR AUTHORIZED**; live qualification and matrix promotion are **NOT APPLICABLE**. This runbook section is preserved purely as a historical template artifact documenting what verification would have required prior to project archival.
