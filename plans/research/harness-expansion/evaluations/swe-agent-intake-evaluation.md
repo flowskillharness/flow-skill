@@ -232,31 +232,32 @@ To evaluate SWE-agent objectively without presupposing container behaviors, the 
   ├── Arm A: Baseline Discovery Probe (Observation Only)
   │     ├── Conditionally provision a container session (if feasibility passes)
   │     ├── Repository checkout (or equivalent working directory)
-  │     ├── Runner: reachability to skills/flow/runner/flow.sh recorded as observation
+  │     ├── Runner: conditional verification inside workspace (STOP if unreachable)
   │     ├── NO AGENTS.md, NO custom prompt config, NO instructions
   │     └── Objective: Record whatever native discovery behavior is observed (observation only)
   │
   └── Arm B: Candidate Instruction Probe (Instruction Scaffolding)
         ├── Conditional on container session being available (after feasibility)
         ├── Repository checkout (or equivalent working directory)
-        ├── Runner: reachability to skills/flow/runner/flow.sh recorded as observation
+        ├── Runner: conditional verification inside workspace (STOP if unreachable)
         ├── Candidate instruction scaffolding installed (AGENTS.md / YAML template)
         └── Objective: Execute 4-Point Gate Verification Matrix with explicit outcomes
 ```
 
 0. **Container Feasibility Probe (Prerequisite):**
-   - Before executing either arm, verify whether a SWE-agent container session can be provisioned, and separately verify whether `skills/flow/runner/flow.sh` is accessible from the working directory.
+   - Before executing either arm, verify whether a SWE-agent container session can be provisioned. Runner presence inside the trial workspace is verified separately within each arm.
    - If container provisioning itself fails, the trial records **FAIL (Infrastructure Unavailable)** (setup/infrastructure failure, distinct from harness outcome).
-   - If the container provisions but the runner is unreachable (ENOENT), the trial records **FAIL (Runner Not Reachable)** as a separate infrastructure/ mounting observation distinct from harness behavior.
+   - If the runner is unreachable (ENOENT) inside the trial workspace, the arm records **STOP (Runner Not Reachable)** as an infrastructure/setup outcome (harness behavior is not evaluated in that arm).
 
 1. **Arm A: Baseline Discovery Probe (Clean Worktree without Candidate Scaffolding):**
    - If the feasibility probe succeeded, provision a container session with the target repository cloned at `/workspace` (or equivalent working directory).
-   - Flow runner is present at `skills/flow/runner/flow.sh`, but no repository instruction file (`AGENTS.md`, `README.md` directives) or custom YAML prompt configuration is provided.
+   - Verify conditional runner presence inside the trial workspace: if `skills/flow/runner/flow.sh` is unreachable (ENOENT), record **STOP (Runner Not Reachable)** and do not evaluate Arm A harness behavior.
    - Probe SWE-agent with an unguided query: *"What engineering discipline governs this project and what gate commands are available?"*
    - *Baseline Outcome (Observation Only):* The session records whatever native discovery behavior is observed without inferring an architectural conclusion. Absence of Flow awareness is recorded as a neutral baseline observation, while unexpected Flow awareness is recorded as an observation requiring follow-up; neither outcome alone constitutes architectural proof.
 
 2. **Arm B: Candidate Instruction Probe (Isolated Session with Candidate Scaffolding):**
    - In a fresh, isolated container session (if available), introduce candidate instruction scaffolding (e.g., `AGENTS.md` containing Flow directives and runner invocation instructions, or custom YAML configuration).
+   - Verify conditional runner presence inside the trial workspace: if `skills/flow/runner/flow.sh` is unreachable (ENOENT), record **STOP (Runner Not Reachable)** and do not evaluate Arm B harness behavior.
    - Execute the complete Four-Point Gate Verification Matrix against this session.
    - Every gate evaluates explicit, non-overlapping outcomes to distinguish genuine support from illusion.
 
