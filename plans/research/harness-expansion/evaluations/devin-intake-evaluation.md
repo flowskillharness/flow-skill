@@ -5,7 +5,7 @@
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
-- **Architectural Category:** Category B (Remote Cloud Sandbox Instruction Scaffolding)
+- **Architectural Category:** Category B (Proposed Cloud Sandbox Scaffold — Unverified)
 - **Related References:**
   - `plans/research/harness-expansion/architecture-compatibility-matrix.md`
   - `plans/research/harness-expansion/market-harness-survey.md`
@@ -20,7 +20,7 @@
 ## Section 1: Executive Summary & Category B (Remote Cloud Sandbox Instruction Scaffolding) Classification
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
-Devin (developed by Cognition AI; vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15) is an autonomous software engineering agent. Operating as an end-to-end autonomous teammate, Devin executes within an isolated, dedicated Linux Cloud MicroVM Sandbox equipped with an interactive terminal, code editor, browser, and structured multi-turn task planner. Devin is evaluated on real-world coding benchmarks, including SWE-bench Verified (https://www.swebench.com/verified.html), where autonomous coding agents are tested against complex multi-file engineering problems.
+Devin (developed by Cognition AI; vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15) is an autonomous software engineering agent. In vendor demonstrations, Devin is shown operating within an isolated cloud sandbox environment equipped with terminal, editor, and browser tools. In desk intake, its runtime integration with Flow is evaluated as an unverified design hypothesis (live host trials pending).
 
 Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/harness-qualification-process.md`:
 - **Classification:** **Category B (Proposed Remote Cloud Sandbox Instruction Scaffolding — Unverified)**.
@@ -69,8 +69,8 @@ Devin does **not** discover arbitrary host desktop skill directories:
 ## Section 2: Phase 1 & 2 Probing: Execution Model & Architecture
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization
-- **Market Share & Developer Adoption (Prominent Autonomous SWE Agent):** Devin represents the pioneering commercial autonomous software engineering agent developed by Cognition AI (vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15). It commands substantial mindshare across enterprise engineering teams, venture-backed startups, and research communities focusing on autonomous coding benchmarks (e.g., SWE-bench Verified). While access is commercial and subscription-gated rather than distributed as a free mass-market IDE plugin, Devin's influence as an autonomous agent archetype is significant.
-- **Agentic Autonomy & Capability:** Devin is designed and demonstrated by Cognition as an autonomous multi-turn agent. In vendor demonstrations and benchmark tasks, it is shown planning multi-step tasks, editing code across files, and executing shell commands in a cloud sandbox. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
+- **Market Share & Developer Adoption (Hypothesized Market Archetype):** Devin represents an autonomous commercial SWE agent developed by Cognition AI (vendor portal: https://cognition.ai, documentation: https://docs.devin.ai, accessed 2026-10-15). In industry coverage and benchmark reports (e.g., SWE-bench Verified), it serves as a prominent autonomous agent reference, though broad install metrics remain bounded by subscription-gated access.
+- **Agentic Autonomy & Capability (Desk Hypothesis):** In vendor demonstrations, Devin is shown planning multi-step tasks, editing code across files, and executing shell commands in a cloud sandbox; empirical subshell execution and gate-stop fidelity remain unverified in Flow trials. However, the multi-turn loop is subject to cloud roundtrip latency, sandbox boot overhead, and context management challenges across extended engineering sessions.
 - **Ecosystem Openness & Stability:** Devin is a proprietary platform with a closed-source cloud orchestration runtime. However, its instruction ingestion relies on standard, human-readable repository files (`DEVIN.md`, `AGENTS.md`, and playbook knowledge entries), allowing clean, non-invasive instruction injection without proprietary runtime dependencies.
 - **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
   - **Status Classification:** `Unverified Internal Prioritization Hypothesis (Desk Intake; Live Host Validation Pending)`
@@ -133,10 +133,8 @@ A critical technical reality governs Devin integrations due to the remote microV
 ### 3.1 Remote Cloud MicroVM Sandbox Boundary & Host Path `ENOENT` Trap
 - **The Pitfall:**
   - Developers configuring Flow for Devin might assume that standard global installation instructions (`npx @manhquy/flow-skill -t agents` or `~/.claude/skills/flow`) apply to Devin sessions.
-- **The Grounded Technical Reality:**
-  - Devin's cloud microVM starts from a base Linux image and performs a clean `git clone` of the repository.
-  - The developer's physical host filesystem is completely detached from the cloud microVM.
-  - Any reference to `~/.claude/`, `~/.agents/`, or host absolute paths (`/Users/...`, `/home/developer/...`) results in fatal `ENOENT` errors.
+- **The Hypothesized Cloud Sandbox Reality:**
+  - In this cloud sandbox model, Devin is hypothesized to clone repositories into an isolated cloud environment detached from the developer's local machine; references to host-global paths (`~/.claude/`, `~/.agents/`) are hypothesized to fail with `ENOENT`, mandating a project-local runner.
 - **The Anti-Illusion Mitigation:**
   - `DEVIN.md` and repository scaffolding must strictly specify the repository-relative runner path:
     ```bash

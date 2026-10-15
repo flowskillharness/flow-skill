@@ -445,7 +445,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 ### Candidate 10: Devin Autonomous Software Engineer (Cognition AI)
 
 #### 1. System Overview & Harness Architecture
-Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and executes terminal commands within an isolated cloud sandbox loop.
+Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, documentation: https://docs.devin.ai/) is a fully autonomous AI software engineer operating in a cloud-hosted environment. Unlike IDE-embedded agents, Devin provisions its own isolated workspace per session, plans multi-step engineering tasks, writes and edits code, and is shown in vendor demonstrations planning multi-step tasks and executing commands in a cloud sandbox.
 
 #### 2. Execution Environment: Cloud Sandbox Environment (Hypothesized)
 - In desk research, Devin is hypothesized to execute inside a cloud sandbox provisioned with shell, editor, and browser tools.

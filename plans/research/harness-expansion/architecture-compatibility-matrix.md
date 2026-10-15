@@ -125,7 +125,7 @@ The following table presents the architectural evaluation of candidate harnesses
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
 | **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
-| **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; remote cloud microVM sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Provisional Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
+| **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; hypothesized cloud sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Provisional Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
 | **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Historically functioned as query utility; current tool-loop capability unassessed (successor transition pending verification). | Unassessed / Pending Verification (Successor transition pending current-source verification) |
 
 
