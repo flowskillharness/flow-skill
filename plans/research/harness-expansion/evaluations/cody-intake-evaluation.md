@@ -154,7 +154,7 @@ Cody provides several context ingestion pathways:
 This section evaluates the integration against Flow's Anti-Illusion Protocol (`docs/harness-qualification-process.md` §2) and architectural compatibility requirements.
 
 ### 3.1 Latent Trap 1: Modality Separation (IDE Chat & Edits vs. Web UI Search)
-- **The Pitfall:** Advertising Flow as universally compatible with "Sourcegraph Cody" without differentiating between IDE extensions and the Sourcegraph Web UI. A developer opens Sourcegraph Web Search, invokes Cody Chat to advance a Flow stage, and discovers that Web Cody cannot execute shell commands, read local disk receipts, or update cards.
+- **The Pitfall:** Advertising Flow as universally compatible with "Sourcegraph Cody" without differentiating between IDE extensions and the Sourcegraph Web UI. A developer opens Sourcegraph Web Search, invokes Cody Chat to advance a Flow stage, and discovers that Web Cody functions as a search interface without verified local terminal execution capabilities.
 - **The Grounded Technical Reality:**
   - In desk analysis, Sourcegraph Web UI Cody functions as a cloud-based code search interface; direct local subshell and filesystem execution capabilities remain unassessed pending dedicated verification.
   - In desk review, local project file edits and integrated terminal proposals are scoped to Cody running inside IDE extensions (VS Code, JetBrains, Neovim).

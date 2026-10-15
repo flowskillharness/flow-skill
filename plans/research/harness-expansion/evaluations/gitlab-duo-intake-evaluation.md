@@ -135,16 +135,16 @@ In GitLab's documented architectural blueprints, Duo Workflow is designed with a
 Duo Workflow is hypothesized to ingest repository context through repository-level configuration and workspace instructions:
 1. **Workflow Configuration (`.gitlab/duo_workflow.yml`):** Proposed workflow definition file where project-specific instructions, constraints, and tool invocation contracts can be declared.
 2. **Root Context File (`AGENTS.md`):** As GitLab tooling embraces standard agent instructions, root `AGENTS.md` provides cross-agent build discipline instructions.
-3. **Context Budgeting:** GitLab Duo Workflow is designed with bounded token budgets on system instructions to avoid attention degradation. Scaffolding rules must remain compact (strictly under 1,000 characters and 150 words) to ensure high retention during extended multi-step workflows.
+3. **Context Budgeting (Design Recommendation):** To avoid attention degradation, any candidate scaffolding rules should remain compact, delegating in-depth stage rules to repository playbooks.
 
 > **Unverified Desk Hypothesis (Anti-Illusion Disclosure):** The existence, schema, and ingestion of `.gitlab/duo_workflow.yml` (and `AGENTS.md` pickup by Duo Workflow) are **unverified desk hypotheses**. No live host trial has demonstrated that a GitLab execution client parses this file or applies its tool invocation contracts; verification remains pending live host trials under Section 4.
 
-#### 2.2.3 CI/CD Runner Sandbox vs. Local IDE Execution Boundaries
-GitLab Duo Workflow can execute in two distinct operational environments: a local developer IDE or an isolated GitLab CI/CD container runner. This introduces a critical architectural boundary:
+#### 2.2.3 Proposed Execution Environments (Desk Hypothesis): Local IDE vs. CI/CD Runner Sandbox
+In architectural evaluation, GitLab Duo Workflow is hypothesized to execute across two prospective environments: a local developer IDE or an isolated GitLab CI/CD container runner. This introduces a hypothesized architectural boundary:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                 GITLAB DUO WORKFLOW EXECUTION BOUNDARIES                               │
+│         ILLUSTRATIVE MODEL: HYPOTHESIZED WORKFLOW EXECUTION BOUNDARIES                 │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Environment A: Local IDE Workspace       │ Environment B: GitLab CI/CD Runner Sandbox  │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
@@ -169,7 +169,7 @@ GitLab Duo Workflow can execute in two distinct operational environments: a loca
 #### 2.2.4 Execution Invariants: Zero Resident Daemons & Ephemeral Invocations
 - Flow requires no resident background daemon, background server process, or persistent listening socket inside the GitLab CI/CD runner or developer IDE.
 - Every Flow command (`flow.sh status`, `flow.sh next`, `flow.sh check C-NNN`) runs as an ephemeral subshell command, outputs plain-text diagnostics, writes deterministic receipts to disk, and immediately exits.
-- Exact integer exit codes ($0$ for pass, $1$ for failure) are returned to Duo Workflow's execution client, allowing the agent to mechanically enforce gate decisions.
+- Exact integer exit codes ($0$ for pass, $1$ for failure) are hypothesized to be returned to Duo Workflow's execution client (empirical gate enforcement unverified in Flow live trials).
 
 ---
 
