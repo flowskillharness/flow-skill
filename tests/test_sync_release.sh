@@ -120,6 +120,8 @@ grep -q "Git tag v0.34.1 ALREADY exists" /tmp/sync_f.out && ck 0 0 "reports ALRE
 grep -q "Skipping skill tag command" /tmp/sync_f.out && ck 0 0 "skips skill tag command" || ck 0 1 "skips skill tag command"
 grep -q "git tag npm@" /tmp/sync_f.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
 grep -q "git tag v" /tmp/sync_f.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
+grep -q "git push origin npm@" /tmp/sync_f.out && ck 1 0 "does not emit git push origin npm@" || ck 0 0 "does not emit git push origin npm@"
+grep -q "git push origin v" /tmp/sync_f.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
 
 echo "G) unconfirmed remote tag lookup suppresses git tag commands"
 tmp=$(mktemp -d)
@@ -146,6 +148,8 @@ ck 0 $? "sync-release --instructions exit code with unreachable remote"
 grep -q "Tag creation commands suppressed for safety" /tmp/sync_g.out && ck 0 0 "reports suppression warning" || ck 0 1 "reports suppression warning"
 grep -q "git tag npm@" /tmp/sync_g.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
 grep -q "git tag v" /tmp/sync_g.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
+grep -q "git push origin npm@" /tmp/sync_g.out && ck 1 0 "does not emit git push origin npm@" || ck 0 0 "does not emit git push origin npm@"
+grep -q "git push origin v" /tmp/sync_g.out && ck 1 0 "does not emit git push origin v" || ck 0 0 "does not emit git push origin v"
 rm -rf "$tmp"
 
 echo
