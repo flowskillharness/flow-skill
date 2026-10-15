@@ -114,8 +114,10 @@ echo "F) existing tags suppress tag creation instructions and report metadata re
 node "$ROOT/scripts/sync-release.mjs" --instructions >/tmp/sync_f.out 2>&1
 ck 0 $? "sync-release --instructions exit code"
 grep -q "Both release tags already exist. This operation was metadata repair / synchronization, not a new release." /tmp/sync_f.out && ck 0 0 "reports metadata repair note" || ck 0 1 "reports metadata repair note"
-grep -q "Git tag npm@0.7.8 ALREADY exists in repository (published). Skipping npm tag command." /tmp/sync_f.out && ck 0 0 "skips npm tag command" || ck 0 1 "skips npm tag command"
-grep -q "Git tag v0.34.1 ALREADY exists in repository. Skipping skill tag command." /tmp/sync_f.out && ck 0 0 "skips skill tag command" || ck 0 1 "skips skill tag command"
+grep -q "Git tag npm@0.7.8 ALREADY exists" /tmp/sync_f.out && ck 0 0 "reports ALREADY exists for npm tag" || ck 0 1 "reports ALREADY exists for npm tag"
+grep -q "Skipping npm tag command" /tmp/sync_f.out && ck 0 0 "skips npm tag command" || ck 0 1 "skips npm tag command"
+grep -q "Git tag v0.34.1 ALREADY exists" /tmp/sync_f.out && ck 0 0 "reports ALREADY exists for skill tag" || ck 0 1 "reports ALREADY exists for skill tag"
+grep -q "Skipping skill tag command" /tmp/sync_f.out && ck 0 0 "skips skill tag command" || ck 0 1 "skips skill tag command"
 grep -q "git tag npm@" /tmp/sync_f.out && ck 1 0 "does not emit git tag npm@" || ck 0 0 "does not emit git tag npm@"
 grep -q "git tag v" /tmp/sync_f.out && ck 1 0 "does not emit git tag v" || ck 0 0 "does not emit git tag v"
 

@@ -468,29 +468,29 @@ function gitTagExists(tagName) {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    if (out.split(/\r?\n/).filter(Boolean).includes(tagName)) return true;
+    if (out.split(/\r?\n/).filter(Boolean).includes(tagName)) {
+      return { exists: true, source: 'local' };
+    }
   } catch {
-    // fall through to remote check
+    // local check failed
   }
-  // Remote check: if git is unavailable or the query fails (e.g. offline),
-  // treat the tag as not existing so offline runs still work.
   try {
     const out = execFileSync('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tagName}`], {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    return out.length > 0;
+    return { exists: out.length > 0, source: 'remote' };
   } catch {
-    return false;
+    return { exists: false, source: 'unconfirmed' };
   }
 }
 
 function printReleaseInstructions(skill_v, npm_v) {
   const npmTag = `npm@${npm_v}`;
   const skillTag = `v${skill_v}`;
-  const npmTagExists = gitTagExists(npmTag);
-  const skillTagExists = gitTagExists(skillTag);
+  const npmCheck = gitTagExists(npmTag);
+  const skillCheck = gitTagExists(skillTag);
 
   console.log(`
 ================================================================================
@@ -500,22 +500,28 @@ Skill Product: v${skill_v}
 npm Package:   ${npm_v}
 `);
 
-  if (npmTagExists && skillTagExists) {
+  if (npmCheck.exists && skillCheck.exists) {
     console.log(`[NOTE] Both release tags already exist. This operation was metadata repair / synchronization, not a new release.\n`);
   }
 
   console.log('1. Channel 1 — npm installer release (triggers npm publish workflow):');
-  if (npmTagExists) {
-    console.log(`   [INFO] Git tag ${npmTag} ALREADY exists in repository (published). Skipping npm tag command.`);
+  if (npmCheck.exists) {
+    console.log(`   [INFO] Git tag ${npmTag} ALREADY exists (${npmCheck.source}). Skipping npm tag command.`);
   } else {
+    if (npmCheck.source === 'unconfirmed') {
+      console.log(`   [WARN] Remote check for ${npmTag} unconfirmed (offline or remote inaccessible). Verify tags on GitHub before pushing.`);
+    }
     console.log(`   git tag ${npmTag}`);
     console.log(`   git push origin ${npmTag}`);
   }
 
   console.log('\n2. Channel 2 — Skill product release (GitHub Release / tags):');
-  if (skillTagExists) {
-    console.log(`   [INFO] Git tag ${skillTag} ALREADY exists in repository. Skipping skill tag command.`);
+  if (skillCheck.exists) {
+    console.log(`   [INFO] Git tag ${skillTag} ALREADY exists (${skillCheck.source}). Skipping skill tag command.`);
   } else {
+    if (skillCheck.source === 'unconfirmed') {
+      console.log(`   [WARN] Remote check for ${skillTag} unconfirmed (offline or remote inaccessible). Verify tags on GitHub before pushing.`);
+    }
     console.log(`   git tag ${skillTag}`);
     console.log(`   git push origin ${skillTag}`);
   }
