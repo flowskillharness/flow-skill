@@ -15,7 +15,7 @@
   - `docs/doc-budgets.txt`
   - `AGENTS.md`
 - **Vendor References:**
-  - AutoCodeRover Repository: https://github.com/nus-apr/auto-code-rover (National University of Singapore, Apache-2.0, accessed 2026-10-15)
+  - AutoCodeRover Repository: https://github.com/nus-apr/auto-code-rover (National University of Singapore, Sonar Source-Available License v1.0 / SPDX NOASSERTION, accessed 2026-10-15)
   - AutoCodeRover Research Paper: https://arxiv.org/abs/2404.05427 (ISSTA 2024 / arXiv, accessed 2026-10-15)
 
 ---
@@ -61,7 +61,7 @@
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 
-AutoCodeRover (developed by the School of Computing at the National University of Singapore [NUS], Automated Program Repair [APR] research group: Yuntong Zhang, Haifeng Ruan, Zhiyu Fan, and Abhik Roychoudhury; ISSTA 2024, arXiv:2404.05427; repository: https://github.com/nus-apr/auto-code-rover, Apache-2.0, accessed 2026-10-15) is an open-source autonomous program improvement and repair system. AutoCodeRover combines Large Language Models (LLMs) with Abstract Syntax Tree (AST) level code navigation, spectrum-based fault localization (SBFL), and iterative test execution to solve GitHub issues and SWE-bench benchmark tasks.
+AutoCodeRover (developed by the School of Computing at the National University of Singapore [NUS], Automated Program Repair [APR] research group: Yuntong Zhang, Haifeng Ruan, Zhiyu Fan, and Abhik Roychoudhury; ISSTA 2024, arXiv:2404.05427; repository: https://github.com/nus-apr/auto-code-rover, Sonar Source-Available License v1.0 / SPDX NOASSERTION, accessed 2026-10-15) is a source-available specialized automated program repair (APR) research system. AutoCodeRover combines Large Language Models (LLMs) with Abstract Syntax Tree (AST) level code navigation, spectrum-based fault localization (SBFL), and iterative test execution to solve GitHub issues and SWE-bench benchmark tasks.
 
 Instead of relying on raw text browsing or naive whole-file context loading, AutoCodeRover operates through structured AST queries (such as searching for specific classes, methods, or code snippets across the codebase syntax tree) to reduce token consumption and focus context on relevant code regions. When paired with reproducer scripts or test suites, it engages in an iterative fault localization, patch synthesis, and validation loop.
 
@@ -114,15 +114,15 @@ Under Flow's "Support Thật" discipline, arbitrary numeric scores are withheld 
 - **Agentic Autonomy Hypothesis (Specialized APR Autonomy):**
   - AutoCodeRover exhibits high autonomy within its domain: it autonomously navigates codebases using AST search primitives (`search_class`, `search_method`, `search_code`), analyzes error outputs or reproduction scripts, writes candidate patches, and iterates based on test execution feedback.
   - Its autonomy is structured around batch program repair rather than conversational exploration. Subshell execution, exit-code capture, and gate-stop fidelity under Flow's runner remain unverified in live trials.
-- **Ecosystem Openness Hypothesis (Open-Source Research System):**
-  - AutoCodeRover is fully open-source under the Apache-2.0 license, with a public Python codebase on GitHub.
+- **Ecosystem Openness Hypothesis (Source-Available Research System):**
+  - AutoCodeRover is published under the Sonar Source-Available License v1.0 (GitHub SPDX identifier: `NOASSERTION`); it is a source-available research codebase whose commercial use is restricted by license terms, with a public Python codebase on GitHub.
   - It supports configurable LLM backends (OpenAI, Anthropic, local models via LiteLLM/vLLM) and clear entry points (`auto_code_rover`).
 - **Prioritization Status & Hypothesis:** **`Proposed Design Candidate (Desk Intake Complete; Live Host Trials Pending)`**.
   - *Status Classification:* Category B (Proposed Container / Benchmark Scaffolding).
   - *Qualitative Assessment:*
     1. *Market Adoption Hypothesis:* Influential academic and benchmark APR system on SWE-bench; bounded everyday developer desktop presence.
     2. *Agentic Autonomy Hypothesis:* High multi-step autonomy in AST navigation, patch generation, and test-driven validation; empirical subshell gate enforcement unverified.
-    3. *Ecosystem Openness Hypothesis:* Open-source Apache-2.0 Python repository; transparent codebase and execution flow.
+    3. *Ecosystem Openness Hypothesis:* Source-available Sonar Source-Available License v1.0 Python repository (SPDX NOASSERTION); transparent codebase and execution flow; commercial use restricted by license terms.
 
 ### 2.2 Phase 2: Architecture Probing
 
@@ -139,7 +139,7 @@ In desk review of the upstream repository and publication, AutoCodeRover's execu
 
 #### 2.2.2 Ingestion Mechanism: Problem Context & Repository Instructions
 
-AutoCodeRover does not maintain a dedicated IDE configuration or extension schema. Instruction ingestion is hypothesized to occur via:
+AutoCodeRover does not maintain a dedicated IDE configuration or extension schema. As a specialized automated program repair (APR) research system, it has no established interactive harness support; instruction ingestion (including Flow integration) is unverified and hypothesized to occur via:
 1. **Problem Statement / Issue Description:**
    - In benchmark tasks, the issue description provides the primary contextual input to the agent.
    - Scaffolding directives can be prepended or appended to the problem statement to define required Flow gates and verification commands.

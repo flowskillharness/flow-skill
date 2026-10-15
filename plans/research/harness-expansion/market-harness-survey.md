@@ -761,7 +761,7 @@ In desk review, Mentat is evaluated as an **Unassessed / Deferred / Historical (
 ### Candidate 21: AutoCodeRover (Automated Program Repair Agent)
 
 #### 1. System Overview & Harness Architecture
-AutoCodeRover is an open-source (Apache-2.0, National University of Singapore) automated program repair framework combining LLMs with AST-level code navigation and iterative test execution for GitHub issue resolution (full desk intake: `evaluations/auto-code-rover-intake-evaluation.md`).
+AutoCodeRover is source-available (Sonar Source-Available License v1.0 / SPDX NOASSERTION, National University of Singapore, ISSTA 2024) specialized automated program repair (APR) research framework combining LLMs with AST-level code navigation and iterative test execution for GitHub issue resolution (full desk intake: `evaluations/auto-code-rover-intake-evaluation.md`).
 
 #### 2. Execution Environment
 - AutoCodeRover executes in a local host environment or Docker container.
@@ -1043,4 +1043,4 @@ Before declaring any harness "Supported" in official documentation or marketing,
 17. **Mentat Documentation & Repository (Historical / Archived Project):**
    - **Mentat Documentation & Repository:** https://mentat.ai · https://github.com/AbanteAI/mentat (Abante AI, Apache-2.0, accessed 2026-10-15; repository archived, CLI maintenance ceased)
 18. **AutoCodeRover Documentation & Repository:**
-   - **AutoCodeRover Documentation & Repository:** https://github.com/nus-apr/auto-code-rover · https://arxiv.org/abs/2404.05427 (National University of Singapore, Apache-2.0, accessed 2026-10-15)
+   - **AutoCodeRover Documentation & Repository:** https://github.com/nus-apr/auto-code-rover · https://arxiv.org/abs/2404.05427 (National University of Singapore, Sonar Source-Available License v1.0 / SPDX NOASSERTION, ISSTA 2024, accessed 2026-10-15)

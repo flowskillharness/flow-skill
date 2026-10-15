@@ -149,83 +149,138 @@ function runChecks() {
     pass: hashMatches,
   });
 
-  // 7. Mentions in root README.md (both skill and npm versions)
+  // 7. Root README.md table rows (Skill product and npm installer)
   const rootReadmePath = join(repoRoot, 'README.md');
-  let rootReadmeHasSkill = false;
-  let rootReadmeHasNpm = false;
-  if (existsSync(rootReadmePath) && skill_v && npm_v) {
+  if (!existsSync(rootReadmePath)) {
+    results.push({
+      surface: 'Root README.md (Skill product row)',
+      expected: `| **Skill product** | **v${skill_v || 'N/A'}** |`,
+      actual: 'FILE MISSING',
+      pass: false,
+    });
+    results.push({
+      surface: 'Root README.md (npm installer row)',
+      expected: `| **npm installer** | ... ${npm_v || 'N/A'} ships the skill above) |`,
+      actual: 'FILE MISSING',
+      pass: false,
+    });
+  } else {
     const text = readFileSync(rootReadmePath, 'utf8');
-    rootReadmeHasSkill = text.includes(`v${skill_v}`) || text.includes(skill_v);
-    rootReadmeHasNpm = text.includes(npm_v);
+    const skillRegex = skill_v
+      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Skill product\\*\\*\\s*\\|\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
+      : null;
+    const npmRegex = npm_v
+      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*npm installer\\*\\*\\s*\\|.*${escapeRegExp(npm_v)}\\s+ships the skill above\\)\\s*\\|`, 'm')
+      : null;
+    const skillPass = Boolean(skillRegex && skillRegex.test(text));
+    const npmPass = Boolean(npmRegex && npmRegex.test(text));
+    results.push({
+      surface: 'Root README.md (Skill product row)',
+      expected: skill_v ? `| **Skill product** | **v${skill_v}** |` : 'N/A',
+      actual: skillPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: skillPass,
+    });
+    results.push({
+      surface: 'Root README.md (npm installer row)',
+      expected: npm_v ? `| **npm installer** | ... ${npm_v} ships the skill above) |` : 'N/A',
+      actual: npmPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: npmPass,
+    });
   }
-  results.push({
-    surface: 'Root README.md mentions skill version',
-    expected: skill_v ? `v${skill_v} or ${skill_v}` : 'N/A',
-    actual: rootReadmeHasSkill ? 'Found' : 'MISSING',
-    pass: rootReadmeHasSkill,
-  });
-  results.push({
-    surface: 'Root README.md mentions npm version',
-    expected: npm_v || 'N/A',
-    actual: rootReadmeHasNpm ? 'Found' : 'MISSING',
-    pass: rootReadmeHasNpm,
-  });
 
-  // 8. Mentions in root README_VN.md (both skill and npm versions)
+  // 8. Root README_VN.md table rows (Skill product and npm installer)
   const rootReadmeVnPath = join(repoRoot, 'README_VN.md');
-  if (existsSync(rootReadmeVnPath)) {
-    let vnHasSkill = false;
-    let vnHasNpm = false;
-    if (skill_v && npm_v) {
-      const text = readFileSync(rootReadmeVnPath, 'utf8');
-      vnHasSkill = text.includes(`v${skill_v}`) || text.includes(skill_v);
-      vnHasNpm = text.includes(npm_v);
-    }
+  if (!existsSync(rootReadmeVnPath)) {
     results.push({
-      surface: 'Root README_VN.md mentions skill version',
-      expected: skill_v ? `v${skill_v} or ${skill_v}` : 'N/A',
-      actual: vnHasSkill ? 'Found' : 'MISSING',
-      pass: vnHasSkill,
+      surface: 'Root README_VN.md (Skill product row)',
+      expected: `| **Skill product** | **v${skill_v || 'N/A'}** |`,
+      actual: 'FILE MISSING',
+      pass: false,
     });
     results.push({
-      surface: 'Root README_VN.md mentions npm version',
-      expected: npm_v || 'N/A',
-      actual: vnHasNpm ? 'Found' : 'MISSING',
-      pass: vnHasNpm,
+      surface: 'Root README_VN.md (npm installer row)',
+      expected: `| **npm installer** | ... ${npm_v || 'N/A'} ship skill ở trên) |`,
+      actual: 'FILE MISSING',
+      pass: false,
+    });
+  } else {
+    const text = readFileSync(rootReadmeVnPath, 'utf8');
+    const skillRegex = skill_v
+      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Skill product\\*\\*\\s*\\|\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
+      : null;
+    const npmRegex = npm_v
+      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*npm installer\\*\\*\\s*\\|.*${escapeRegExp(npm_v)}\\s+ship skill ở trên\\)\\s*\\|`, 'm')
+      : null;
+    const skillPass = Boolean(skillRegex && skillRegex.test(text));
+    const npmPass = Boolean(npmRegex && npmRegex.test(text));
+    results.push({
+      surface: 'Root README_VN.md (Skill product row)',
+      expected: skill_v ? `| **Skill product** | **v${skill_v}** |` : 'N/A',
+      actual: skillPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: skillPass,
+    });
+    results.push({
+      surface: 'Root README_VN.md (npm installer row)',
+      expected: npm_v ? `| **npm installer** | ... ${npm_v} ship skill ở trên) |` : 'N/A',
+      actual: npmPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: npmPass,
     });
   }
 
-  // 9. Mentions in npm-wrapper/README.md (both skill and npm versions)
+  // 9. npm-wrapper/README.md table row
+  const isPrerelease = Boolean(npm_v && npm_v.includes('-'));
   const wrapperReadmePath = join(repoRoot, 'npm-wrapper', 'README.md');
-  let wrapperHasSkill = false;
-  let wrapperHasNpm = false;
-  if (existsSync(wrapperReadmePath) && skill_v && npm_v) {
-    const text = readFileSync(wrapperReadmePath, 'utf8');
-    wrapperHasSkill = text.includes(`v${skill_v}`) || text.includes(skill_v);
-    wrapperHasNpm = text.includes(npm_v);
-  }
-  results.push({
-    surface: 'npm-wrapper/README.md mentions versions',
-    expected: skill_v && npm_v ? `${npm_v} & v${skill_v}` : 'N/A',
-    actual: wrapperHasSkill && wrapperHasNpm ? 'Found both' : (wrapperHasNpm ? 'Missing skill' : (wrapperHasSkill ? 'Missing npm' : 'MISSING')),
-    pass: wrapperHasSkill && wrapperHasNpm,
-  });
-
-  // 10. Mentions in npm-wrapper/README_VN.md (both skill and npm versions)
-  const wrapperReadmeVnPath = join(repoRoot, 'npm-wrapper', 'README_VN.md');
-  if (existsSync(wrapperReadmeVnPath)) {
-    let wrapperVnHasSkill = false;
-    let wrapperVnHasNpm = false;
-    if (skill_v && npm_v) {
-      const text = readFileSync(wrapperReadmeVnPath, 'utf8');
-      wrapperVnHasSkill = text.includes(`v${skill_v}`) || text.includes(skill_v);
-      wrapperVnHasNpm = text.includes(npm_v);
-    }
+  const expectedWrapperRow = isPrerelease
+    ? `| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
+    : `| **Current GA** | **${npm_v}** — ships skill product **v${skill_v}** |`;
+  if (!existsSync(wrapperReadmePath)) {
     results.push({
-      surface: 'npm-wrapper/README_VN.md mentions versions',
-      expected: skill_v && npm_v ? `${npm_v} & v${skill_v}` : 'N/A',
-      actual: wrapperVnHasSkill && wrapperVnHasNpm ? 'Found both' : (wrapperVnHasNpm ? 'Missing skill' : (wrapperVnHasSkill ? 'Missing npm' : 'MISSING')),
-      pass: wrapperVnHasSkill && wrapperVnHasNpm,
+      surface: 'npm-wrapper/README.md table row',
+      expected: expectedWrapperRow,
+      actual: 'FILE MISSING',
+      pass: false,
+    });
+  } else {
+    const text = readFileSync(wrapperReadmePath, 'utf8');
+    const expectedRegex = (npm_v && skill_v)
+      ? (isPrerelease
+        ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Prerelease\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
+        : new RegExp(`^[ \\t]*\\|\\s*\\*\\*Current GA\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm'))
+      : null;
+    const matched = Boolean(expectedRegex && expectedRegex.test(text));
+    results.push({
+      surface: 'npm-wrapper/README.md table row',
+      expected: (npm_v && skill_v) ? expectedWrapperRow : 'N/A',
+      actual: matched ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: matched,
+    });
+  }
+
+  // 10. npm-wrapper/README_VN.md table row
+  const wrapperReadmeVnPath = join(repoRoot, 'npm-wrapper', 'README_VN.md');
+  const expectedWrapperVnRow = isPrerelease
+    ? `| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
+    : `| **GA hiện tại** | **${npm_v}** — ships skill product **v${skill_v}** |`;
+  if (!existsSync(wrapperReadmeVnPath)) {
+    results.push({
+      surface: 'npm-wrapper/README_VN.md table row',
+      expected: expectedWrapperVnRow,
+      actual: 'FILE MISSING',
+      pass: false,
+    });
+  } else {
+    const text = readFileSync(wrapperReadmeVnPath, 'utf8');
+    const expectedRegex = (npm_v && skill_v)
+      ? (isPrerelease
+        ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*(?:Bản thử nghiệm|Prerelease)\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
+        : new RegExp(`^[ \\t]*\\|\\s*\\*\\*GA hiện tại\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm'))
+      : null;
+    const matched = Boolean(expectedRegex && expectedRegex.test(text));
+    results.push({
+      surface: 'npm-wrapper/README_VN.md table row',
+      expected: (npm_v && skill_v) ? expectedWrapperVnRow : 'N/A',
+      actual: matched ? 'Found exact row' : 'MISSING / ROW MISMATCH',
+      pass: matched,
     });
   }
 
@@ -302,15 +357,32 @@ function syncRelease(skill_v, npm_v) {
   console.log(`\nSynchronizing release surfaces for skill v${skill_v} and npm ${npm_v}...`);
   const npmSeriesMatch = npm_v.match(/^(\d+\.\d+)/);
   const npmSeries = npmSeriesMatch ? npmSeriesMatch[1] : npm_v;
+  const isPrerelease = npm_v.includes('-');
 
   // 1. npm-wrapper/README.md
   const wrapperReadmePath = join(repoRoot, 'npm-wrapper', 'README.md');
   if (existsSync(wrapperReadmePath)) {
     let content = readFileSync(wrapperReadmePath, 'utf8');
-    content = content.replace(
-      /^[ \t]*\|\s*\*\*Current GA\*\*\s*\|[^\r\n]*/m,
-      `| **Current GA** | **${npm_v}** — ships skill product **v${skill_v}** |`
-    );
+    if (!isPrerelease) {
+      content = content.replace(
+        /^[ \t]*\|\s*\*\*Current GA\*\*\s*\|[^\r\n]*/m,
+        `| **Current GA** | **${npm_v}** — ships skill product **v${skill_v}** |`
+      );
+      content = content.replace(/^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*\r?\n?/m, '');
+    } else {
+      // Prerelease protection: preserve existing GA row, add or update Prerelease row
+      if (/^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*/m.test(content)) {
+        content = content.replace(
+          /^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*/m,
+          `| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
+        );
+      } else {
+        content = content.replace(
+          /^([ \t]*\|\s*\*\*Current GA\*\*\s*\|[^\r\n]*)/m,
+          `$1\n| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
+        );
+      }
+    }
     writeFileSync(wrapperReadmePath, content, 'utf8');
     console.log('✓ Synchronized npm-wrapper/README.md');
   }
@@ -319,10 +391,26 @@ function syncRelease(skill_v, npm_v) {
   const wrapperReadmeVnPath = join(repoRoot, 'npm-wrapper', 'README_VN.md');
   if (existsSync(wrapperReadmeVnPath)) {
     let content = readFileSync(wrapperReadmeVnPath, 'utf8');
-    content = content.replace(
-      /^[ \t]*\|\s*\*\*GA hiện tại\*\*\s*\|[^\r\n]*/m,
-      `| **GA hiện tại** | **${npm_v}** — ships skill product **v${skill_v}** |`
-    );
+    if (!isPrerelease) {
+      content = content.replace(
+        /^[ \t]*\|\s*\*\*GA hiện tại\*\*\s*\|[^\r\n]*/m,
+        `| **GA hiện tại** | **${npm_v}** — ships skill product **v${skill_v}** |`
+      );
+      content = content.replace(/^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*\r?\n?/m, '');
+    } else {
+      // Prerelease protection: preserve existing GA row, add or update prerelease row
+      if (/^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*/m.test(content)) {
+        content = content.replace(
+          /^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*/m,
+          `| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
+        );
+      } else {
+        content = content.replace(
+          /^([ \t]*\|\s*\*\*GA hiện tại\*\*\s*\|[^\r\n]*)/m,
+          `$1\n| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
+        );
+      }
+    }
     writeFileSync(wrapperReadmeVnPath, content, 'utf8');
     console.log('✓ Synchronized npm-wrapper/README_VN.md');
   }
@@ -335,9 +423,10 @@ function syncRelease(skill_v, npm_v) {
       /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
       `| **Skill product** | **v${skill_v}** |`
     );
+    const tagRef = isPrerelease ? '`@next`' : '`@latest`';
     content = content.replace(
       /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
-      `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (\`@latest\` ${npm_v} ships the skill above) |`
+      `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (${tagRef} ${npm_v} ships the skill above) |`
     );
     writeFileSync(rootReadmePath, content, 'utf8');
     console.log('✓ Synchronized root README.md');
@@ -351,11 +440,12 @@ function syncRelease(skill_v, npm_v) {
       /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
       `| **Skill product** | **v${skill_v}** |`
     );
+    const tagRef = isPrerelease ? '`@next`' : '`@latest`';
     const isVnPhrase = content.includes('ship skill ở trên');
     const tailPhrase = isVnPhrase ? 'ship skill ở trên' : 'ships the skill above';
     content = content.replace(
       /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
-      `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (\`@latest\` ${npm_v} ${tailPhrase}) |`
+      `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (${tagRef} ${npm_v} ${tailPhrase}) |`
     );
     writeFileSync(rootReadmeVnPath, content, 'utf8');
     console.log('✓ Synchronized root README_VN.md');
@@ -371,22 +461,54 @@ function syncRelease(skill_v, npm_v) {
   console.log('✓ Re-materialized skills/flow and updated manifest-hashes.json');
 }
 
+function gitTagExists(tagName) {
+  try {
+    const out = execFileSync('git', ['tag', '-l', tagName], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return out.split(/\r?\n/).filter(Boolean).includes(tagName);
+  } catch {
+    return false;
+  }
+}
+
 function printReleaseInstructions(skill_v, npm_v) {
+  const npmTag = `npm@${npm_v}`;
+  const skillTag = `v${skill_v}`;
+  const npmTagExists = gitTagExists(npmTag);
+  const skillTagExists = gitTagExists(skillTag);
+
   console.log(`
 ================================================================================
 Release Instructions (Dual-Axis Channels)
 ================================================================================
 Skill Product: v${skill_v}
 npm Package:   ${npm_v}
+`);
 
-1. Channel 1 — npm installer release (triggers npm publish workflow):
-   git tag npm@${npm_v}
-   git push origin npm@${npm_v}
+  if (npmTagExists && skillTagExists) {
+    console.log(`[NOTE] Both release tags already exist. This operation was metadata repair / synchronization, not a new release.\n`);
+  }
 
-2. Channel 2 — Skill product release (GitHub Release / tags):
-   git tag v${skill_v}
-   git push origin v${skill_v}
+  console.log('1. Channel 1 — npm installer release (triggers npm publish workflow):');
+  if (npmTagExists) {
+    console.log(`   [INFO] Git tag ${npmTag} ALREADY exists in repository (published). Skipping npm tag command.`);
+  } else {
+    console.log(`   git tag ${npmTag}`);
+    console.log(`   git push origin ${npmTag}`);
+  }
 
+  console.log('\n2. Channel 2 — Skill product release (GitHub Release / tags):');
+  if (skillTagExists) {
+    console.log(`   [INFO] Git tag ${skillTag} ALREADY exists in repository. Skipping skill tag command.`);
+  } else {
+    console.log(`   git tag ${skillTag}`);
+    console.log(`   git push origin ${skillTag}`);
+  }
+
+  console.log(`
 Commit recommendation:
    git add skills/flow/SKILL.md .claude-plugin/plugin.json portable-manifest.json \\
      npm-wrapper/package.json npm-wrapper/skills/ README.md README_VN.md \\
@@ -400,17 +522,34 @@ Commit recommendation:
 function main() {
   const args = process.argv.slice(2);
   const isSync = args.includes('--sync');
-  const isCheck = args.includes('--check') || !isSync;
+  const isInstructions = args.includes('--instructions');
+  const isCheck = args.includes('--check') || (!isSync && !isInstructions);
   const isHelp = args.includes('--help') || args.includes('-h');
 
   if (isHelp) {
-    console.log(`Usage: node scripts/sync-release.mjs [--check | --sync]
+    console.log(`Usage: node scripts/sync-release.mjs [--check | --sync | --instructions]
 
 Options:
-  --check   Validate release coherence across all versions, manifests, readmes, and changelogs (default)
-  --sync    Synchronize documentation tables across README files, trigger npm-wrapper sync, and verify
-  --help    Show this help message
+  --check         Validate release coherence across all versions, manifests, readmes, and changelogs (default)
+  --sync          Synchronize documentation tables across README files, trigger npm-wrapper sync, and verify
+  --instructions  Print release instructions and tag status for current versions without modifying files
+  --help          Show this help message
 `);
+    process.exit(0);
+  }
+
+  if (isInstructions) {
+    const skill_v = getSkillVersion();
+    const npm_v = getNpmVersion();
+    if (!skill_v) {
+      console.error('FAIL: Missing skill version in skills/flow/SKILL.md');
+      process.exit(1);
+    }
+    if (!npm_v) {
+      console.error('FAIL: Missing npm version in npm-wrapper/package.json');
+      process.exit(1);
+    }
+    printReleaseInstructions(skill_v, npm_v);
     process.exit(0);
   }
 
