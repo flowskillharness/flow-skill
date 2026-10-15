@@ -12,7 +12,7 @@ Install the **flow** skill into coding agents with one command.
 | | |
 |---|---|
 | **Package** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) (installer CLI) |
-| **Current GA** | **0.7.8** — ships skill product **v0.34.1** |
+| **Current GA** | **0.7.9** — ships skill product **v0.34.2** |
 | **Platforms** | macOS · Linux · Windows (same Node path) |
 | **Requirement** | Node.js **≥ 22.14** |
 | **Source** | [github.com/manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |

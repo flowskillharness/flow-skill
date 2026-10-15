@@ -2,6 +2,11 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.9] - 2026-10-15 — ships skill v0.34.2 (stable / latest)
+
+- **Skill Product v0.34.2 Parity:** Ships skill product v0.34.2 with expanded 21-harness market research, release coherence tooling, and documentation hardening.
+- **Automated Release Coherence:** Upgraded installer packaging synchronization, enforced mandatory bilingual README validation, and eliminated release drift.
+
 ## [0.7.8] - 2026-10-14 — ships skill v0.34.1 (stable / latest)
 
 ### Added

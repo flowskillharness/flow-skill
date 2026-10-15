@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.34.2] - 2026-10-15
+
+- **Comprehensive 21-Harness Market Expansion:** Formally authored, validated, and integrated desk intake evaluations for 21 market harnesses across Tier 1, Tier 2, and Tier 3 categories (including Cursor, Zed, Roo Code, Cline, Windsurf, OpenHands, Aider, Copilot, Goose, Amazon Q Developer, Devin, SWE-agent, GitLab Duo, Sourcegraph Cody, Augment Code, Tabnine, Plandex, Trae Dual A/B, PearAI, AutoCodeRover, and historical profiles for Void and Mentat).
+- **Unified Release Pipeline & Fail-Closed Gate Automation:** Built `scripts/sync-release.mjs` with `--check` and `--sync` modes, automated dual-axis release coherence validation, hardened multi-locale README synchronization, and fail-closed local/remote tag suppression to eliminate release drift.
+- **Dedicated Release Test Suite:** Added `tests/test_sync_release.sh` registered in `tests/manifest.txt` covering read-only coherence, table row validation, prerelease protection, and remote tag failure suppression.
+
 ## [0.34.1] - 2026-10-14
 
 - **Transactional ownership installer (npm channel):** upgrades replace the destructive rm-then-copy contract with a receipt-driven transaction — strict input validation, read-only conflict/collision/root-mismatch survey (no `--force`), staged candidate preserving user files (inside managed dirs too), rename-only backup/promote with promoted-tree verification against the staged expectation, and `recoveryPath` reporting when a rollback rename fails. Installed receipts are regenerated from staged bytes and own only source files, so preserved customs are never pruned later. `CLEANUP_SUBDIRS` removed (clean cutover). Details: `npm-wrapper/SECURITY.md`, `docs/system-architecture.md`.
