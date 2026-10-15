@@ -28,7 +28,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 - **Qualification Rationale:**
   - Flow implements native workspace rule scaffolding for GitHub Copilot via `flow rules copilot --write`, materializing `.github/copilot-instructions.md`.
   - In strict adherence to Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), claiming general "GitHub Copilot support" without explicitly distinguishing the VS Code workspace environment from the standalone `gh copilot` CLI is marketing deception ("quảng cáo ảo").
-  - The standalone `gh copilot` CLI is an interactive query and command suggestion utility that completely lacks an autonomous tool execution loop, has no workspace instruction ingestion mechanism, and cannot execute Flow's gated build lifecycle. It is classified as **Category D (Deferred / Incompatible)**.
+  - The standalone `gh copilot` CLI historically functions as an interactive command suggestion utility without an autonomous tool execution loop; its capability under current GitHub CLI extensions remains unassessed pending dedicated verification (classified as Category D / Unassessed).
   - In VS Code, GitHub Copilot Chat and Agent Mode ingest `.github/copilot-instructions.md` as repository-level prompt guidance. However, standard Copilot Chat operates primarily as a conversational assistant that proposes terminal commands to the operator rather than executing them in an autonomous, unprompted loop; only Agent Mode or explicit terminal execution actions dispatch commands into the integrated terminal.
   - Static generation of `.github/copilot-instructions.md` does not constitute empirical proof of live gate enforcement. Because GitHub Copilot lacks an unauthenticated, local headless execution CLI for automated CI qualification, full qualification requires an interactive host session executing the Four-Point Live Verification Protocol with raw tool transcripts, terminal payloads, exit codes, and receipts committed to `plans/research/harness-expansion/evidence/`.
 
@@ -86,24 +86,24 @@ GitHub Copilot spans two fundamentally divergent operational modalities that req
 - **Tool Execution:** In standard chat, Copilot proposes terminal commands that the user can execute via a single click ("Run in Terminal"). In Agent Mode / Copilot Edits, Copilot can propose and trigger terminal tool execution in the integrated terminal.
 - **Classification:** Category B (Workspace Rule Scaffolding).
 
-#### Modality 2: GitHub Copilot CLI (`gh copilot`) (Category D: Deferred / Incompatible)
+#### Modality 2: GitHub Copilot CLI (`gh copilot`) (Category D / Unassessed: Deferred)
 - **Environment:** Standalone terminal extension for the GitHub CLI (`gh copilot suggest`, `gh copilot explain`).
-- **Absence of Tool Execution Loop:** `gh copilot` is a non-agentic interactive query utility. It receives a natural language question (e.g., `gh copilot suggest "undo last git commit"`) and outputs suggested bash commands. It possesses no autonomous multi-turn tool invocation loop, cannot execute subshells, and cannot evaluate exit codes.
-- **Absence of Instruction Ingestion:** It does not parse `.github/copilot-instructions.md`, `AGENTS.md`, or any project configuration files.
-- **Classification:** Category D (Deferred / Incompatible). Claiming Flow support for `gh copilot` is strictly prohibited.
+- **Historical Query Scope:** `gh copilot` was designed as an interactive command suggestion utility without an autonomous multi-turn tool execution loop; its capability under current/emerging CLI extensions remains unassessed pending dedicated host verification.
+- **Absence of Verified Instruction Ingestion:** It has no verified mechanism to parse `.github/copilot-instructions.md`, `AGENTS.md`, or project build contracts.
+- **Classification:** Category D / Unassessed (Deferred). Claiming Flow support for `gh copilot` is strictly prohibited without live verification evidence.
 
 ---
 
 ## Section 2: Phase 1 & 2 Technical Probing: Execution Model & Architecture
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization
-- **Market Share & Developer Adoption (Massive Developer Adoption):** GitHub Copilot commands the largest commercial developer user base in the AI coding assistant market. Backed by Microsoft and GitHub, it is integrated across millions of developer workstations, enterprise organizations, and GitHub Enterprise subscriptions. Its presence in VS Code makes it an ubiquitous tool for professional software engineering teams.
+- **Market Share & Developer Adoption:** GitHub Copilot represents a widely deployed commercial developer assistant in the AI coding market. Backed by Microsoft and GitHub, it has extensive enterprise adoption and broad distribution across the VS Code ecosystem.
 - **Agentic Autonomy & Capability (Constrained Loop):** While GitHub Copilot has evolved from inline completions to conversational chat, Copilot Edits, and Agent Mode, its autonomous task loop remains constrained compared to autonomous agent harnesses (such as Cursor Composer, Claude Code, or Codex CLI). Standard chat relies heavily on single-turn user prompts and terminal approval prompts; it requires human driving to progress through multi-stage lifecycles.
 - **Ecosystem Openness & Stability:** GitHub Copilot is a proprietary, closed-source extension ecosystem governed by GitHub terms of service. However, its workspace instruction mechanism (`.github/copilot-instructions.md`) is publicly documented, standardized across repositories, and based on plain Markdown, providing a stable, low-fragility configuration surface.
 - **Priority Tier Score:** **Tier 2 (Provisional Internal Estimate: 70/100)**.
   - **Score Classification:** `Provisional Internal Estimate (Desk Intake)`
   - **3-Dimension Breakdown per `docs/harness-qualification-process.md` §1.1:**
-    1. **Market Share & Developer Adoption (40 Points Max):** **36/40**. Massive developer adoption across the global GitHub and VS Code ecosystem; premier commercial coding assistant in enterprise and open-source environments.
+    1. **Market Share & Developer Adoption (40 Points Max):** **36/40**. Extensive developer adoption across the global GitHub and VS Code ecosystem, with high enterprise penetration.
     2. **Agentic Autonomy & Capability (40 Points Max):** **18/40**. Constrained autonomous task loop compared to Composer/Agent harnesses; relies heavily on user turn prompts and terminal approval; standard chat only suggests terminal commands to the operator rather than running them in an autonomous self-correcting loop.
     3. **Ecosystem Openness & Stability (20 Points Max):** **16/20**. Proprietary extension with closed-source runtime and cloud backend; offset by publicly documented, stable, standard Markdown configuration schema (`.github/copilot-instructions.md`) with zero complex schema fragility.
   - **Total Score:** **70/100** -> Priority Tier 2 (Evaluated / Scaffolding Target, range 50–74).
