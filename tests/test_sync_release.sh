@@ -250,6 +250,71 @@ after_j_status="$(git -C "$tmp/r" status --porcelain)"
 [ "$before_j_status" = "$after_j_status" ] && ck 0 0 "working tree 100% clean, zero writes" || ck 0 1 "working tree 100% clean, zero writes"
 rm -rf "$tmp"
 
+echo "K) gh release integration branches with mocked gh (existing, create-failure, create-success)"
+tmp=$(mktemp -d)
+git clone --bare -q "$ROOT" "$tmp/origin.git"
+git clone -q "$tmp/origin.git" "$tmp/r"
+git -C "$tmp/r" config user.email "test@example.com"
+git -C "$tmp/r" config user.name "Test Runner"
+cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
+git -C "$tmp/r" add scripts/
+git -C "$tmp/r" commit -qm "sync scripts"
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+
+mock_bin="$tmp/bin"
+mkdir -p "$mock_bin"
+cat > "$mock_bin/gh" << "EOF"
+#!/usr/bin/env bash
+mode="${GH_MOCK_MODE:-exists}"
+if [ "$1" = "release" ] && [ "$2" = "view" ]; then
+  if [ "$mode" = "exists" ]; then
+    echo "{\"tagName\":\"$3\"}"
+    exit 0
+  else
+    echo "release not found" >&2
+    exit 1
+  fi
+fi
+if [ "$1" = "release" ] && [ "$2" = "create" ]; then
+  if [ "$mode" = "create_fail" ]; then
+    echo "mock gh release create error" >&2
+    exit 1
+  else
+    echo "https://github.com/manhquydev/flow-skill/releases/tag/$3"
+    exit 0
+  fi
+fi
+exit 0
+EOF
+chmod +x "$mock_bin/gh"
+
+# Test K1: Mock gh release view returns 0 (existing release):
+# Assert output contains "GitHub Release for v" and "already exists. Skipping release creation."
+GH_MOCK_MODE="exists" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k1.out" 2>&1
+ck 0 $? "K1: sync-release exits 0 when release already exists"
+grep -q "GitHub Release for v" "$tmp/k1.out" && ck 0 0 "K1: output contains 'GitHub Release for v'" || ck 0 1 "K1: output contains 'GitHub Release for v'"
+grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck 0 0 "K1: output contains 'already exists. Skipping release creation.'" || ck 0 1 "K1: output contains 'already exists. Skipping release creation.'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'"
+
+# Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
+# Assert exit code is 1.
+# Assert output contains "FAIL: Could not create GitHub Release for v"
+# Assert output does NOT contain "RELEASE SHIP SUCCESSFUL"
+GH_MOCK_MODE="create_fail" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k2.out" 2>&1
+ck 1 $? "K2: sync-release exits 1 when gh release create fails"
+grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" || ck 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out" && ck 1 0 "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
+
+# Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
+# Assert output contains "GitHub Release created for v"
+GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k3.out" 2>&1
+ck 0 $? "K3: sync-release exits 0 when gh release create succeeds"
+grep -q "GitHub Release created for v" "$tmp/k3.out" && ck 0 0 "K3: output contains 'GitHub Release created for v'" || ck 0 1 "K3: output contains 'GitHub Release created for v'"
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'"
+
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

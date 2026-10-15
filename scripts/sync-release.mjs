@@ -877,11 +877,19 @@ To execute this release live, re-run with --yes:
     const viewOut = execFileSync('gh', ['release', 'view', skillTag, '--json', 'tagName'], {
       cwd: repoRoot,
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
     if (viewOut) releaseExists = true;
-  } catch {
-    releaseExists = false;
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString() : '';
+    // If error is release not found (404), releaseExists stays false (safe to create)
+    // If error is network/auth failure, report error and abort rather than blindly attempting create:
+    if (stderr.toLowerCase().includes('release not found') || err.status === 1) {
+      releaseExists = false;
+    } else {
+      console.error(`\nFAIL: Could not check GitHub Release status for ${skillTag}: ${stderr.trim() || err.message}`);
+      process.exit(err.status ?? 1);
+    }
   }
 
   if (releaseExists) {
