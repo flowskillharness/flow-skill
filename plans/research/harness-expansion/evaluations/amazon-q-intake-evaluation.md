@@ -40,7 +40,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 │                      AMAZON Q DEVELOPER EVALUATION SUMMARY                             │
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B (Workspace Rule Scaffolding for IDE /dev)    │
-│                              │ Deferred / Unassessed (Standalone CLI Chat; Successor Transition Pending)           │
+│                              │ Unassessed (Standalone CLI Chat; Successor Transition Pending)                      │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Ingestion Mechanism (IDE)    │ Hypothesized manual prompt context / AGENTS.md (no template) │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
@@ -60,7 +60,7 @@ Flow's constitutional identity (`docs/adr/0001-discipline-layer-identity.md`) es
 
 In desk design review, Amazon Q Developer (/dev agent) aligns with ADR-0001's fundamental invariants (empirical verification pending live host trials):
 1. **Zero Resident Daemons:** Flow requires no persistent background daemon, server process, or background AWS service daemon inside or outside the developer workspace. Flow operates purely as an ephemeral executable.
-2. **Process Token Ownership:** Amazon Q Developer holds the process token and manages the `/dev` feature development loop. Flow executes strictly as an ephemeral subprocess invoked via the agent's command execution tool, terminating as soon as the command returns.
+2. **Process Token Ownership:** In this proposed integration, Amazon Q Developer holds the process token. Flow would execute strictly as an ephemeral subprocess invoked via the agent's command execution tool, terminating as soon as the command returns.
 3. **Zero Tool Interposition:** Flow does not monkey-patch, proxy, or intercept Amazon Q's internal tool dispatch pipeline, AWS SDK calls, or language server protocols. Gates are verified post-hoc by re-reading filesystem ground truth (`flow/`, `cards/`, `manifest-hashes.json`).
 4. **Deterministic Shell Contract:** Stage transitions, gate validations, and card checks occur strictly via `bash skills/flow/runner/flow.sh <verb>` (or `flow.cmd <verb>` on native Windows), returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostics.
 5. **Rejection of AWS Resident Service / Server Daemons:** Attempting to run Flow as an AWS Lambda background polling service, Amazon ECS task daemon, or persistent background EC2 socket is constitutionally forbidden under ADR-0001. Flow's state lives in Git and bounded filesystem artifacts, never in remote memory heaps of persistent cloud servers.
@@ -73,7 +73,7 @@ Amazon Q Developer spans two distinct execution modalities that require strict s
 │                      AMAZON Q DEVELOPER MODALITY SEPARATION                            │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: IDE /dev Agent               │ Modality 2: Standalone `q` CLI              │
-│ (Category B: Workspace Rule Scaffolding) │ (Deferred / Unassessed; Successor Transition Pending)       │
+│ (Category B: Workspace Rule Scaffolding) │ (Unassessed; Successor Transition Pending)                  │
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: VS Code & JetBrains IDEs    │ Environment: Terminal shell (`q chat`)      │
 │ Agent Loop: Multi-turn `/dev` task loop  │ Agent Loop: Unassessed (Historically        │
