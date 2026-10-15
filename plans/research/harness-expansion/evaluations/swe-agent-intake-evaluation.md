@@ -35,12 +35,12 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 ├──────────────────────────────┬─────────────────────────────────────────────────────────┤
 │ Architectural Classification │ Category B: Proposed Container Agent Scaffold (Hypothesis)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Ingestion Mechanism          │ Repository instructions / Prompt configuration templates│
+│ Ingestion Mechanism          │ Hypothesized config templates / `AGENTS.md` (Unverified)│
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Execution Environment        │ Isolated Linux Docker Container Sandbox (`/workspace`)  │
+│ Execution Environment        │ Research-described Docker Sandbox (Unverified in Flow)  │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Tool Execution API           │ Agent-Computer Interface (ACI) shell command execution  │
-│                              │ (`execute`)                                             │
+│ Tool Execution API           │ Research-described ACI shell tool (exit fidelity        │
+│                              │ unverified)                                             │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
@@ -51,9 +51,9 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 
 | Dimension | Specification & Desk Assessment |
 | :--- | :--- |
-| **Ingestion Mechanism** | Repository instructions / Prompt configuration templates (`config/*.yaml`, `AGENTS.md`) |
-| **Execution Environment** | Isolated Linux Docker Container Sandbox (`/workspace` or `/testbed`) |
-| **Tool Execution API** | Agent-Computer Interface (ACI) shell command execution (`execute`) |
+| **Ingestion Mechanism** | Hypothesized config templates / `AGENTS.md` (Unverified in Flow trials) |
+| **Execution Environment** | Research-described Docker Sandbox (`/workspace`; unverified in Flow trials) |
+| **Tool Execution API** | Research-described ACI shell command execution (`execute`; exit fidelity unverified) |
 | **ADR-0001 Compliance** | `PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token` |
 | **Live Qualification Status** | `PROPOSED DESIGN CANDIDATE (Container Live Trials Pending)` |
 
