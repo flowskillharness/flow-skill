@@ -1,7 +1,7 @@
 # Harness Intake Evaluation: SWE-agent (Princeton NLP / InterCode)
 
 - **Document Version:** 1.0.0
-- **Evaluation Status:** Provisional Candidate (Desk Intake Complete; Container Live Trials Pending)
+- **Evaluation Status:** Proposed Design Candidate (Desk Intake Complete; Container Live Trials Pending)
 - **Evaluation Date:** 2026-10-15
 - **Constitutional Anchor:** `docs/adr/0001-discipline-layer-identity.md` (Discipline-Layer Identity)
 - **Governing Process:** `docs/harness-qualification-process.md` (Harness Research & Qualification Process SOP)
@@ -55,7 +55,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
 | **Execution Environment** | Isolated Linux Docker Container Sandbox (`/workspace` or `/testbed`) |
 | **Tool Execution API** | Agent-Computer Interface (ACI) shell command execution (`execute`) |
 | **ADR-0001 Compliance** | `PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token` |
-| **Live Qualification Status** | `PROVISIONAL CANDIDATE (Container Live Trials Pending)` |
+| **Live Qualification Status** | `PROPOSED DESIGN CANDIDATE (Container Live Trials Pending)` |
 
 ### 1.2 Constitutional Alignment (ADR-0001 Invariants)
 Flow's constitutional identity (`docs/adr/0001-discipline-layer-identity.md`) establishes that Flow is a **discipline layer**, never an agent runtime:
