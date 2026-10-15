@@ -127,13 +127,13 @@ The following table presents the architectural evaluation of candidate harnesses
 | **OpenHands** | B | **CONDITIONAL** | Microagent prompt (`.openhands/microagents/flow.md`) restricted to project-local paths inside Docker. | **Provisional Candidate (Container Scaffold)** |
 | **GitHub Copilot** | B | **CONDITIONAL** | Context instructions (`.github/copilot-instructions.md`) restricted to interactive developer guidance. | **Provisional Candidate (Interactive Guidance)** |
 | **Goose** | B | PROVISIONAL (Desk-Reviewed) | Project hints (`.goosehints`) directing `developer__shell` to run `flow.sh`; ephemeral runner, zero daemons. | **Provisional Candidate (Instruction Scaffold)** |
-| **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
-| **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; hypothesized cloud sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Provisional Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
+| **Amazon Q (/dev)** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; no template in flow rules (scaffold un-implemented). | Proposed Design Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **Devin** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; hypothesized cloud sandbox; unverified DEVIN.md/AGENTS.md ingestion. | Proposed Design Candidate (Proposed Cloud Sandbox Scaffold; Host Trial Pending) |
 | **Amazon Q CLI** | Unassessed | PENDING-VERIFICATION | Historically functioned as query utility; current tool-loop capability unassessed (successor transition pending verification). | Unassessed / Pending Verification (Successor transition pending current-source verification) |
 | **SWE-agent** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; research-described Docker sandbox and ACI shell tool; runner paths and exit-code fidelity unverified. | Proposed Design Candidate (Proposed Container Scaffold; Live Trial Pending) |
-| **GitLab Duo Workflow** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified Duo Workflow execution tool and rule schema. | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **GitLab Duo Workflow** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified Duo Workflow execution tool and rule schema. | Proposed Design Candidate (Proposed Rule Scaffold; Host Trial Pending) |
 | **GitLab Duo Chat** | Unassessed | PENDING-VERIFICATION | Historically conversational query assistant in IDE/Web UI; tool loop unassessed pending dedicated verification. | Unassessed / Deferred Pending Verification (Historical query utility) |
-| **Sourcegraph Cody** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified OpenCTX/prompt ingestion and terminal tool loop. | Provisional Candidate (Proposed Rule Scaffold; Host Trial Pending) |
+| **Sourcegraph Cody** | B (Proposed) | DESIGN HYPOTHESIS (Unverified) | Desk-evaluated design proposal; unverified OpenCTX/prompt ingestion and terminal tool loop. | Proposed Design Candidate (Proposed Rule Scaffold; Host Trial Pending) |
 
 
 ### 3.4 Case Study: Rejection of Pseudo-Rules (`.zed/rules.md`) and Unverified Scaffolding (`continue`) — The Anti-Illusion ("Support Thật") Principle
