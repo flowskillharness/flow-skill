@@ -15,6 +15,9 @@
 - **Vendor References:**
   - Trae Official Portal: https://www.trae.ai (ByteDance, accessed 2026-10-15)
   - Trae Documentation: https://docs.trae.ai (accessed 2026-10-15)
+  - Trae Skills Documentation: https://docs.trae.ai/ide/skills (accessed 2026-10-15)
+  - Trae Rules Documentation: https://docs.trae.ai/ide/rules (accessed 2026-10-15)
+  - Trae Agent Mode Documentation: https://docs.trae.ai/ide/agent-mode (accessed 2026-10-15)
 ---
 
 ## Executive Summary & Overview Table
@@ -36,11 +39,12 @@
 │                              │ global ~/.trae/user_rules (plus root AGENTS.md)         │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ Execution Environment        │ Developer IDE (VS Code-based IDE with Chat & Agent      │
-│                              │ Mode; local workspace or remote SSH)                    │
+│                              │ Mode; local workspace or remote SSH; live               │
+│                              │ qualification scoped to local Agent Mode)               │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
-│ Tool Execution API           │ Vendor-documented terminal command execution in Agent   │
-│                              │ Mode (Flow gate-stop fidelity unverified in live        │
-│                              │ trials)                                                 │
+│ Tool Execution API           │ Hypothesized terminal command tool in Agent Mode        │
+│                              │ based on vendor overview (exact tool API name and       │
+│                              │ Flow gate-stop fidelity unverified in live trials)      │
 ├──────────────────────────────┼─────────────────────────────────────────────────────────┤
 │ ADR-0001 Compliance          │ PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero     │
 │                              │ daemons, host holds token                               │
@@ -54,8 +58,8 @@
 | **Architectural Classification** | Dual Category A (Proposed Native Skill Target: `~/.trae/skills/`, `.trae/skills/`) / Category B (Proposed Project Rules: `.trae/rules/`, `~/.trae/user_rules`) & Unassessed / Deferred (Inline Completions) |
 | **Ingestion Mechanism (Cat A)** | Documented native dynamic skill discovery: `~/.trae/skills/<skill>/SKILL.md` (global; Windows `%userprofile%/.trae/skills`) or `.trae/skills/<skill>/SKILL.md` (project) |
 | **Ingestion Mechanism (Cat B)** | Documented project rules directory `.trae/rules/*.md` or global `~/.trae/user_rules` (plus workspace context / root `AGENTS.md`) |
-| **Execution Environment** | Developer IDE (VS Code-based IDE with Chat & Agent Mode; local workspace or remote SSH) |
-| **Tool Execution API** | Vendor-documented terminal command execution in Agent Mode (Flow gate-stop fidelity unverified in live trials) |
+| **Execution Environment** | Developer IDE (VS Code-based IDE with Chat & Agent Mode; local workspace or remote SSH; live qualification scoped to local Agent Mode) |
+| **Tool Execution API** | Hypothesized terminal command tool in Agent Mode based on vendor overview (exact tool API name and Flow gate-stop fidelity unverified in live trials) |
 | **ADR-0001 Compliance** | `PROVISIONAL (Desk-Reviewed): Ephemeral runner, zero daemons, host holds token` |
 | **Live Qualification Status** | `PROPOSED DESIGN CANDIDATE (Desk Intake Complete; Live Host Trials Pending)` |
 ---
@@ -80,6 +84,7 @@ Under Flow's **"Support Thật" (Honest Support)** principle codified in `docs/h
   - While terminal command execution and skill/rule discovery are documented vendor capabilities in Trae, the harness's actual runtime behavior when executing Flow—specifically whether it dynamically loads Flow's `SKILL.md`, reliably inspects integer return codes ($0$ vs. non-zero), halts unconditionally on gate failures ($\text{exit} \neq 0$), and refrains from hallucinating gate progression—remains an **unverified desk hypothesis**.
   - In strict accordance with Flow's **Anti-Illusion Protocol** (`docs/harness-qualification-process.md` §2.1), advertising "Trae support" without empirical verification of its tool execution loop, skill discovery, and gate-stop fidelity constitutes marketing deception ("quảng cáo ảo").
   - Flow's `flow rules` dispatcher is strictly locked to **seven verified harness templates** (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`), verified by `tests/test_flow_rules.sh`. **No dedicated Trae template currently exists in `flow rules`.** Ingestion of `.trae/rules/` and `.trae/skills/` must be verified in live trials before recommending either as supported or adding a template.
+  - **Live Trial Scope:** Live trials are scoped to **local Agent Mode** only. Remote SSH capabilities are vendor-documented but remain **separately unqualified** until tested in dedicated live trials with dedicated runner paths and on-disk receipts.
   - Full qualification requires an interactive host session executing the Two-Arm Live Verification Protocol with raw tool transcripts, integer exit codes, and on-disk receipts archived to `plans/research/harness-expansion/evidence/`.
 
 ### 1.2 Constitutional Alignment (ADR-0001 Invariants)
@@ -213,6 +218,7 @@ In accordance with Flow's "Support Thật" discipline, arbitrary numeric scores 
 #### 2.2.5 Execution Boundaries: Local IDE & Remote SSH vs. Cloud AI Backend
 - While model inference is processed on cloud AI infrastructure, tool execution and file modifications occur within the developer's workspace (either a local directory or a remote SSH connection).
 - The Flow runner (`skills/flow/runner/flow.sh`) executes ephemerally within the active shell environment (local POSIX / Git Bash or remote SSH shell). Cloud components cannot execute local runner scripts directly; all executions must run through the IDE terminal subsystem.
+- **Live Qualification Scope:** Live trials are scoped to **local Agent Mode** (local workspace shell). Remote SSH execution remains **separately unqualified** until tested with dedicated runner paths and archived receipts under the Two-Arm Live Verification Protocol.
 
 ---
 

@@ -62,7 +62,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Sourcegraph Cody (Proposed IDE Scaffold)   │                                                  │
 │                                     │ • Augment Code (Proposed IDE Scaffold)       │ • Tabnine Inline (Completions only)              │
 │                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
-│                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│                                                  │
+│                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│ • Void Editor (Historical / Inactive Open-Source IDE) │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -666,6 +666,37 @@ In desk review, Trae is evaluated as a **proposed un-implemented Dual Category A
   - **Trae: Proposed Design Candidate (Unverified Dual Category A / Category B Hypothesis; Live Host Trials Pending).**
 ---
 
+### Candidate 18: Void Editor (Open-Source AI Code Editor) — Historical / Deprecated Candidate
+
+#### 1. System Overview & Harness Architecture
+Void Editor (official portal: https://voideditor.com, repository: https://github.com/voideditor/void, documentation: https://docs.voideditor.com) is an open-source (Apache-2.0 / MIT) AI code editor built as a VS Code fork, marketed as an open-source Cursor alternative (full desk intake: `evaluations/void-intake-evaluation.md`). It offered a Chat mode and an autonomous Agent mode, with customizable AI model backends spanning commercial APIs and local model servers (Ollama, vLLM).
+
+**Market Status Disclosure (Deprecation / Inactivity):** Void Editor is an **inactive / deprecated open-source project**. Development has ceased (deprecation notice; repository effectively archived for historical interest), and the project is retained here purely as a **historical candidate**. Live host trials are **not recommended**; no "supported" claim of any kind is made.
+
+In desk review, Void is evaluated as an **Unassessed / Deferred / Historical (Inactive Open-Source IDE)** candidate under Tier 3, not an active design proposal.
+
+#### 2. Execution Environment: Local IDE Workspace
+- Void executed locally on the developer's workstation as a VS Code fork with Chat and Agent modes.
+- Any hypothetical Flow integration would execute ephemerally via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>`), terminating immediately upon return.
+- Zero Flow Daemons (ADR-0001): Flow operates exclusively as a stateless, host-invoked discipline layer; it would not run as or spawn persistent background daemons, language servers, or socket listeners. The host editor holds the execution process token.
+
+#### 3. Extension & Integration Mechanism: Workspace Context / Prompt Rules / `AGENTS.md`
+- Hypothesized Ingestion Mechanism (historical, unverified): workspace context / prompt rules configuration plus repository-root `AGENTS.md`. No authoritative schema was verified before project inactivity.
+- No `flow rules` template exists for Void; `flow rules` remains strictly locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules void` fails with exit code 2.
+
+#### 4. Project-Local Runner Requirement
+- Any hypothetical integration mandates `bash skills/flow/runner/flow.sh <command>` — project-vendored runner invocation with the Flow runner tree present in the project workspace.
+- The Agent mode's terminal tool execution, exit-code capture fidelity (integer exit codes $0$/$1$, halting on non-zero exit, refusing to hallucinate a pass), and gate-stop behavior were **never empirically verified** and now remain permanently unverified given project inactivity.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts, terminal tool execution logs, and gate-stop verification — archived under `plans/research/harness-expansion/evidence/`. For an inactive project, even this bar is moot: live trials are not recommended and none were ever captured.
+- **The Marketing Illusion to Avoid:** Claiming verified support, an active integration path, or a non-existent `flow rules void` template. Advertising an inactive editor as a compatible harness would be precisely the "quảng cáo ảo" (marketing theater) ADR-0001 forbids.
+- **Feasibility Verdict:**
+  - **Void Agent: Historical / Deprecated Candidate — Unassessed / Deferred (Project Inactive; Live Trials Not Recommended).**
+  - **Void Quick Edit: Unassessed / Deferred Pending Verification (Inline editing mode outside Flow build-gate scope; broader capabilities unassessed).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -692,6 +723,7 @@ In desk review, Trae is evaluated as a **proposed un-implemented Dual Category A
 | **Plandex** | Project plan context / `AGENTS.md` (No template) | N/A | Proposed plan / `AGENTS.md` | Built-in command tool (`exec`) | Autonomous (Configurable auto-debug; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Trae** | \`.trae/skills/\` (\`SKILL.md\`) & \`.trae/rules/\` | \`~/.trae/skills/\` & \`~/.trae/user_rules\` | \`.trae/skills/flow/\` & \`.trae/rules/flow.md\` | Integrated terminal tool (unverified API name / host trial pending) | Autonomous (Agent Mode; live trial pending) | **Tier 1 / Tier 2 (Dual A/B Proposed Candidate)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
+| **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Autonomous (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
 
 ---
 
@@ -915,3 +947,5 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Plandex Documentation: [https://docs.plandex.ai](https://docs.plandex.ai)
 14. **Trae Documentation & Official Site:**
    - **Trae Documentation & Official Site:** https://www.trae.ai · https://docs.trae.ai (ByteDance, accessed 2026-10-15)
+15. **Void Editor Documentation & Repository (Historical / Inactive Project):**
+   - **Void Editor Documentation & Repository:** https://voideditor.com · https://github.com/voideditor/void · https://docs.voideditor.com (Open Source, accessed 2026-10-15)
