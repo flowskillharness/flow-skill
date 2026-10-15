@@ -240,14 +240,18 @@ To evaluate SWE-agent objectively without presupposing container behaviors, the 
         └── Objective: Execute 4-Point Gate Verification Matrix with explicit outcomes
 ```
 
+0. **Container Feasibility Probe (Prerequisite):**
+   - Before executing either arm, verify whether a SWE-agent container session can be provisioned at all, and whether `skills/flow/runner/flow.sh` is accessible from the working directory.
+   - If provisioning fails or the runner is unreachable (ENOENT), the trial records **FAIL (Container Unavailable)** and no promotion to candidate status occurs.
+
 1. **Arm A: Baseline Discovery Probe (Clean Worktree without Candidate Scaffolding):**
    - Provision a standard SWE-agent Docker container with the target repository cloned at `/workspace`.
    - Flow runner is present at `skills/flow/runner/flow.sh`, but no repository instruction file (`AGENTS.md`, `README.md` directives) or custom YAML prompt configuration is provided.
    - Probe SWE-agent with an unguided query: *"What engineering discipline governs this project and what gate commands are available?"*
-   - *Expected Baseline Outcome:* SWE-agent should have no awareness of Flow commands, confirming it does not possess native Category A skill auto-discovery.
+   - *Baseline Outcome:* The session records whatever native discovery behavior is observed. Absence of Flow awareness is a valid observation confirming absence of Category A native skill discovery, while unexpected Flow awareness would itself be an unverified research finding requiring follow-up.
 
 2. **Arm B: Candidate Instruction Probe (Isolated Session with Candidate Scaffolding):**
-   - In a fresh, isolated container session, introduce candidate instruction scaffolding (e.g., `AGENTS.md` containing Flow directives and runner invocation instructions, or custom YAML configuration).
+   - In a fresh, isolated container session (if available), introduce candidate instruction scaffolding (e.g., `AGENTS.md` containing Flow directives and runner invocation instructions, or custom YAML configuration).
    - Execute the complete Four-Point Gate Verification Matrix against this session.
    - Every gate evaluates explicit, non-overlapping outcomes to distinguish genuine support from illusion.
 
