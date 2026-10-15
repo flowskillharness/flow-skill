@@ -62,6 +62,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 │                                     │ • Sourcegraph Cody (Proposed IDE Scaffold)   │                                                  │
 │                                     │ • Augment Code (Proposed IDE Scaffold)       │ • Tabnine Inline (Completions only)              │
 │                                     │ • Tabnine (Proposed Chat Scaffold)           │                                                  │
+│                                     │ • Plandex (Proposed CLI / Sandboxed Plan Scaffold)│                                                  │
 └─────────────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
@@ -609,6 +610,32 @@ Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two 
 
 ---
 
+### Candidate 16: Plandex (Terminal AI Coding Engine)
+
+#### 1. System Overview & Harness Architecture
+Plandex (Plandex Inc.; repository: https://github.com/plandex-ai/plandex, documentation: https://docs.plandex.ai) is an open-source (Apache-2.0) terminal-based AI coding engine written in Go, designed for complex software development tasks spanning multiple files and directories (full desk intake: `evaluations/plandex-intake-evaluation.md`). Plandex operates through an isolated, git-backed sandbox branch model combined with built-in command execution and auto-debugging under configurable autonomy. Its active deployment model centers on a self-hosted server deployment (run locally via binary or Docker container; Plandex Cloud is winding down and closed to new users per official README). In desk review, Plandex is evaluated as a **proposed un-implemented Category B design hypothesis**.
+
+#### 2. Execution Environment: Local Terminal / CLI
+- Plandex executes within the developer's local terminal via its Go CLI client communicating with the self-hosted engine server.
+- Flow would execute ephemerally via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>` or `flow.cmd` on Windows), terminating immediately upon return.
+- Flow Process Boundary: While Plandex utilizes an underlying background engine or server in its client-server model, Flow execution must remain strictly an ephemeral subshell invocation; Flow will not run as or spawn persistent background daemons or socket listeners (ADR-0001).
+
+#### 3. Extension & Integration Mechanism: Project Plan Context / `AGENTS.md`
+- Hypothesized Ingestion Mechanism: Project-level instruction ingestion via repository-root `AGENTS.md` (e.g. loaded via `plandex load` or referenced in plan prompts) represents an unverified integration hypothesis. Plandex vendor documentation defines no directory-based skill discovery standard (`~/.agents/skills/`).
+- Crucially, no `flow rules` template exists for Plandex; `flow rules` remains locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules plandex` fails with exit code 2.
+
+#### 4. Project-Local Runner Requirement
+- Project-Local Runner Requirement: Proposed integration mandates invoking the project-vendored runner (`bash skills/flow/runner/flow.sh <command>`). Host-global skill directory resolution remains unverified for Plandex, requiring the Flow runner tree to be present in the project workspace.
+- The built-in command tool execution loop and exit-code fidelity (capturing integer exit codes $0$/$1$, halting on non-zero exit, and strictly refusing to hallucinate a pass) remain an unverified hypothesis pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts, command execution receipts, and gate-stop verification — raw session transcripts demonstrating that Plandex loads `AGENTS.md`, invokes `bash skills/flow/runner/flow.sh <command>`, captures real exit codes, and strictly halts when a gate fails — captured and archived under `plans/research/harness-expansion/evidence/`.
+- **The Marketing Illusion to Avoid:** Claiming verified support or a non-existent `flow rules plandex` template, or conflating sandboxed plan generation / diff creation with Flow gate enforcement. Staging diffs in a Plandex sandbox does not satisfy Flow gates without real on-disk materialized receipts.
+- **Feasibility Verdict:**
+  - **Plandex: Proposed Design Candidate (Unverified Category B Rule/Plan Scaffold Hypothesis; Live Host Trials Pending).**
+
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -632,6 +659,7 @@ Tabnine (Tabnine Inc.; documentation: https://docs.tabnine.com) encompasses two 
 | **Augment Code** | Prompt context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Tabnine (Chat)** | Workspace context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Tabnine (Inline)** | None | N/A | N/A | Unassessed | Completion-only modality (outside Flow scope) | **Unassessed / Deferred Pending Verification** |
+| **Plandex** | Project plan context / `AGENTS.md` (No template) | N/A | Proposed plan / `AGENTS.md` | Built-in command tool (`exec`) | Autonomous (Configurable auto-debug; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
@@ -850,3 +878,7 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Augment Code Official Portal & Documentation: [https://docs.augmentcode.com](https://docs.augmentcode.com)
 12. **Tabnine Documentation:**
    - Tabnine Official Portal & Documentation: [https://docs.tabnine.com](https://docs.tabnine.com)
+13. **Plandex Documentation:**
+   - Plandex Official Portal: [https://plandex.ai](https://plandex.ai)
+   - Plandex GitHub Repository: [https://github.com/plandex-ai/plandex](https://github.com/plandex-ai/plandex)
+   - Plandex Documentation: [https://docs.plandex.ai](https://docs.plandex.ai)
