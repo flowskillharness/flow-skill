@@ -25,7 +25,7 @@ stage tiến. Kill tại một cổng là kết quả hợp lệ, được tôn 
 
 | | |
 |---|---|
-| **Skill product** | **v0.34.3** |
+| **Skill product** | **v0.34.2** |
 | **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) **0.7.x** (`@latest` 0.7.10 ship skill ở trên) |
 | **Website** | **[flowskill.io.vn](https://flowskill.io.vn)** |
 | **Test / CI** | [`tests/manifest.txt`](tests/manifest.txt) · Ubuntu · macOS · Windows |
