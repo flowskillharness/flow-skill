@@ -466,7 +466,7 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 - **What Real Support Looks Like:** A `DEVIN.md` / `AGENTS.md` entry directing Devin to invoke the repository-vendored runner (`skills/flow/runner/flow.sh status`, `check C-NNN`), honoring Flow's non-zero exit codes to halt the autonomous loop at gate failures.
 - **The Marketing Illusion to Avoid:** Claiming a `DEVIN.md` template or generator exists in `flow rules` (it does not; `flow rules` is locked to seven verified templates), or referencing host-global skill paths inside the cloud sandbox.
 - **Feasibility Verdict:**
-  - **Devin: Tier 2 Priority Candidate (Provisional Proposed Category B Scaffold; Score 72/100 Desk Estimate; Live Cloud Trials Pending).**
+  - **Devin: Proposed Design Candidate (Unverified Category B Cloud Scaffold Hypothesis; Live Cloud Trials Pending).**
 
 ---
 
@@ -485,7 +485,7 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
-| **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud MicroVM) | Hypothesized `DEVIN.md` / `AGENTS.md` | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Tier 2 (Provisional Proposed Scaffold)** |
+| **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud MicroVM) | Hypothesized `DEVIN.md` / `AGENTS.md` | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
