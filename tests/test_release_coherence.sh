@@ -137,6 +137,39 @@ ck 1 $? "npm-wrapper readme drift fails"
 grep -q 'npm-wrapper/README.md does not match current versions' /tmp/coh5.out && ck 0 0 "detects npm-wrapper readme drift" || ck 0 1 "detects npm-wrapper readme drift"
 rm -rf "$tmp"
 
+echo "F) deleting npm-wrapper/README_VN.md fails coherence"
+tmp=$(mktemp -d)
+mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/skills/flow/references" "$tmp/r/.claude-plugin" \
+  "$tmp/r/npm-wrapper" "$tmp/r/tests" "$tmp/r/scripts" "$tmp/r/.github/workflows"
+cp "$HERE/../scripts/check-release-coherence.sh" "$tmp/r/scripts/"
+cp "$HERE/../skills/flow/SKILL.md" "$tmp/r/skills/flow/"
+cp "$HERE/../skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
+cp "$HERE/../portable-manifest.json" "$tmp/r/"
+cp "$HERE/../.claude-plugin/plugin.json" "$tmp/r/.claude-plugin/"
+cp "$HERE/../npm-wrapper/package.json" "$tmp/r/npm-wrapper/"
+cp "$HERE/../npm-wrapper/README.md" "$tmp/r/npm-wrapper/"
+cp "$HERE/../CHANGELOG.md" "$tmp/r/"
+cp "$HERE/../npm-wrapper/CHANGELOG.md" "$tmp/r/npm-wrapper/"
+cp "$HERE/../README.md" "$tmp/r/"
+cp "$HERE/../README_VN.md" "$tmp/r/"
+cp "$HERE/../tests/manifest.txt" "$tmp/r/tests/"
+cp "$HERE/../.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/"
+cp "$HERE/../skills/flow/runner/attestations.sh" "$tmp/r/skills/flow/runner/"
+cp "$HERE/../skills/flow/references/attestations.md" "$tmp/r/skills/flow/references/"
+n=0
+while IFS= read -r suite || [ -n "$suite" ]; do
+  suite="${suite%$'\r'}"
+  case "$suite" in
+    ''|\#*) continue ;;
+  esac
+  n=$((n + 1))
+  : > "$tmp/r/tests/$suite"
+done < "$tmp/r/tests/manifest.txt"
+bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh6.out 2>&1
+ck 1 $? "missing npm-wrapper/README_VN.md fails"
+grep -q 'missing npm-wrapper/README_VN.md' /tmp/coh6.out && ck 0 0 "names the missing file" || ck 0 1 "names the missing file"
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

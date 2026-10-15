@@ -468,7 +468,19 @@ function gitTagExists(tagName) {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    return out.split(/\r?\n/).filter(Boolean).includes(tagName);
+    if (out.split(/\r?\n/).filter(Boolean).includes(tagName)) return true;
+  } catch {
+    // fall through to remote check
+  }
+  // Remote check: if git is unavailable or the query fails (e.g. offline),
+  // treat the tag as not existing so offline runs still work.
+  try {
+    const out = execFileSync('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tagName}`], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return out.length > 0;
   } catch {
     return false;
   }
