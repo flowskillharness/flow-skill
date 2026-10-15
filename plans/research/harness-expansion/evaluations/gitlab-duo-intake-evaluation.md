@@ -19,7 +19,7 @@
 
 ---
 
-## Section 1: Executive Summary & Modality Separation (Category B & Category D)
+## Section 1: Executive Summary & Modality Separation (Proposed Duo Workflow & Unassessed Duo Chat)
 
 ### 1.1 Executive Summary & "Support Thật" Qualification Status
 GitLab Duo (developed by GitLab Inc.; vendor portal: https://docs.gitlab.com/ee/user/gitlab_duo/, documentation: https://docs.gitlab.com/ee/user/duo_workflow/, accessed 2026-10-15) is an AI-assisted capability suite integrated throughout the GitLab DevSecOps platform, IDE extensions (GitLab Workflow for Visual Studio Code, JetBrains IDEs, and GitLab Web IDE), and GitLab CI/CD container runner environments.
