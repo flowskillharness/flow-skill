@@ -79,16 +79,16 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 │                         GITLAB DUO MODALITY SEPARATION                                 │
 ├──────────────────────────────────────────┬─────────────────────────────────────────────┤
 │ Modality 1: GitLab Duo Workflow          │ Modality 2: GitLab Duo Chat                 │
-│ (Category B: Proposed Workspace Scaffold)│ (Category D: Deferred / Conversational)     │
+│ (Category B: Proposed Workspace Scaffold)│ (Unassessed / Deferred Pending Verification)│
 ├──────────────────────────────────────────┼─────────────────────────────────────────────┤
 │ Environment: IDE Extension & CI Runners  │ Environment: Web UI, Web IDE, IDE Sidebar   │
 │ Ingestion: `.gitlab/duo_workflow.yml` or │ Ingestion: Interactive chat prompt context  │
 │ root `AGENTS.md`                         │ (No verified workspace rule schema)         │
-│ Agent Loop: Multi-turn autonomous plan & │ Agent Loop: Single-turn Q&A / conversational│
-│ execution loop                           │ only (non-agentic)                          │
-│ Tool API: Terminal/execution subshell    │ Tool API: None (Suggests markdown snippets; │
-│ execution tool                           │ cannot execute shell commands)              │
-│ Status: Provisional Candidate            │ Status: Deferred / Incompatible             │
+│ Agent Loop: Multi-turn autonomous plan & │ Agent Loop: Unassessed (Historically        │
+│ execution loop                           │ conversational)                             │
+│ Tool API: Terminal/execution subshell    │ Tool API: Unassessed (Historically suggests │
+│ execution tool                           │ snippets; tool execution unassessed)        │
+│ Status: Provisional Candidate            │ Status: Unassessed / Deferred               │
 └──────────────────────────────────────────┴─────────────────────────────────────────────┘
 ```
 
@@ -98,11 +98,11 @@ GitLab Duo spans two fundamentally divergent operational modalities that must be
 - **Tool Execution:** Duo Workflow provides an autonomous execution subshell capable of invoking bash commands in the workspace environment, capturing stdout/stderr, and receiving exit codes.
 - **Classification:** Category B (Proposed Workspace Rule Scaffolding).
 
-#### Modality 2: GitLab Duo Chat (Category D: Deferred for Basic Duo Chat)
+#### Modality 2: GitLab Duo Chat (Unassessed / Deferred Pending Verification)
 - **Environment:** GitLab Web UI, GitLab Web IDE, and IDE sidebar panels.
 - **Conversational Scope:** Functions primarily as an interactive code explanation, documentation lookup, and refactoring assistant. It answers developer queries and suggests code blocks in Markdown.
-- **Lack of Autonomous Shell Loop:** Standard Duo Chat does not possess an autonomous tool execution loop; it cannot invoke `flow.sh`, inspect non-zero exit codes, or halt automated workflows upon gate failures.
-- **Classification:** Category D (Deferred / Incompatible for basic conversational chat).
+- **Tool Execution Scope:** In verified testing, standard Duo Chat historically operates as a conversational query assistant; an autonomous tool execution loop and runner exit-code handling remain unassessed pending dedicated live verification.
+- **Classification:** Unassessed / Deferred Pending Verification (Historically conversational).
 
 ---
 
