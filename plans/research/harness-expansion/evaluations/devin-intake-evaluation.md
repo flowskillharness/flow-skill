@@ -75,14 +75,14 @@ Devin does **not** discover arbitrary host desktop skill directories:
 - **Priority Score & Tier:** **Tier 2 (Unverified Desk Estimate: 72/100)**.
   - **Score Classification:** `Unverified Internal Prioritization Estimate (Desk Intake; Empirical Validation Pending)`
   - **3-Dimension Breakdown per `docs/harness-qualification-process.md` §1.1:**
-    1. **Market Share & Developer Adoption (40 Points Max):** **26/40**. Prominent autonomous commercial SWE agent with substantial enterprise and venture mindshare; pioneer in autonomous SWE-bench benchmarks; commercial subscription-gated access creates a smaller broad-developer install base than consumer IDEs.
-    2. **Agentic Autonomy & Capability (40 Points Max):** **32/40**. Full autonomous multi-turn loop with terminal, editor, and browser execution in cloud sandbox; capable of multi-step, multi-file engineering workflows; asynchronous execution latency and remote sandbox orchestration introduce roundtrip overhead.
-    3. **Ecosystem Openness & Stability (20 Points Max):** **14/20**. Proprietary platform, closed cloud runtime; playbook instructions (`DEVIN.md` / `AGENTS.md`) provide plain Markdown ingestion, but internal agent scheduling, prompt assembly, and sandboxing infrastructure are closed-source.
+    1. **Market Share & Developer Adoption (40 Points Max):** **26/40 (Desk Estimate)**. Prominent autonomous commercial SWE agent with enterprise mindshare; subscription-gated access creates a smaller broad-developer install base than consumer IDEs.
+    2. **Agentic Autonomy & Capability (40 Points Max):** **32/40 (Desk Hypothesis)**. Vendor demonstrations and benchmark reports show multi-turn loop with terminal, editor, and browser tools; empirical tool-loop and gate-stop fidelity remain unverified in live Flow trials.
+    3. **Ecosystem Openness & Stability (20 Points Max):** **14/20**. Proprietary platform, closed cloud runtime; hypothesized plain Markdown ingestion (`DEVIN.md` / `AGENTS.md`), while agent orchestration and sandbox infrastructure are proprietary.
   - **Total Score:** **72/100** -> Priority Tier 2 (Evaluated / Scaffolding Target, range 50–74).
 
 ### 2.2 Phase 2: Architecture Probing
 
-#### 2.2.1 Devin Execution Subsystem: Isolated Cloud MicroVM Sandbox & PTY Terminal
+#### 2.2.1 Devin Execution Subsystem (Vendor-Described Architecture): Cloud Sandbox & Shell Execution
 Devin’s architecture separates the model planning tier from the execution environment:
 1. **Agent Orchestration & Planning Tier:** The Cognition cloud platform manages the model reasoning loop, prompt history, user chat interface, browser session, and task decomposition hierarchy.
 2. **Execution Environment (Isolated Cloud MicroVM Sandbox):**
@@ -91,7 +91,7 @@ Devin’s architecture separates the model planning tier from the execution envi
    - Tool execution is hypothesized to execute via a shell interface (`bash`), capturing stdout, stderr, and integer exit codes (empirical gate-stop behavior pending live cloud trials).
    - Filesystem changes occur directly in the cloned repository workspace inside the microVM.
 
-#### 2.2.2 Ingestion Mechanism: Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
+#### 2.2.2 Ingestion Mechanism (Hypothesized): Workspace Instructions (`DEVIN.md` / `AGENTS.md`)
 Devin discovers project-level operational guidelines via repository root files:
 - **`DEVIN.md` (Vendor-Documented Standard):** Documented by Cognition AI as Devin's repository instruction convention; hypothesized to be ingested at repository initialization (empirical ingestion fidelity pending live host trials).
 - **`AGENTS.md` (Open Standard):** Hypothesized cross-agent repository instruction format; live ingestion behavior remains subject to Phase 4 trials.
@@ -122,10 +122,10 @@ A critical technical reality governs Devin integrations due to the remote microV
   bash skills/flow/runner/flow.sh <command>
   ```
 
-#### 2.2.4 Execution Invariants: Zero Resident Daemons & Ephemeral Invocations
+#### 2.2.4 Execution Invariants (Proposed Model): Zero Resident Daemons & Ephemeral Invocations
 - Flow requires no resident background daemon, server process, or persistent listening socket inside the microVM.
 - Every Flow command (`flow.sh status`, `flow.sh next`, `flow.sh check C-NNN`) runs as an ephemeral subshell command, outputs plain-text diagnostics, writes deterministic receipts to disk, and immediately exits.
-- Integer exit codes ($0$ for clean pass, non-zero for gate failure) are returned directly to Devin's tool execution loop.
+- Integer exit codes ($0$ for clean pass, non-zero for gate failure) are expected to be returned directly to Devin's tool execution loop (empirical gate-stop behavior pending live cloud trials).
 
 ---
 

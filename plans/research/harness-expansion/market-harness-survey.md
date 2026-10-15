@@ -485,7 +485,7 @@ Devin (developed by Cognition AI; vendor portal: https://cognition.ai/devin, doc
 | **Goose** | `.goosehints` | `~/.config/goose/` | `.goosehints` | `developer__shell` / `execute` | Autonomous (Multi-turn loop) | **Tier 2 (Provisional Candidate)** |
 | **Copilot CLI** | None | N/A | N/A | None | Unassessed (Query utility) | **Tier 3 (Deferred / Unassessed; pending CLI probe)** |
 | **Amazon Q (/dev)** | Manual prompt context (No flow rules template) | N/A | Manual prompt context | Terminal/Build tool | Hypothesized autonomous (/dev mode; live trial pending) | **Tier 2 (Provisional Un-implemented Design Proposal)** |
-| **Devin** | `DEVIN.md` / `AGENTS.md` | N/A (Cloud MicroVM) | `DEVIN.md` / `AGENTS.md` | `bash` (MicroVM terminal) | Hypothesized autonomous (Cloud loop; live trial pending) | **Tier 2 (Provisional Proposed Scaffold)** |
+| **Devin** | Hypothesized `DEVIN.md` / `AGENTS.md` (No template) | N/A (Cloud MicroVM) | Hypothesized `DEVIN.md` / `AGENTS.md` | `bash` (Cloud sandbox terminal; unverified) | Hypothesized autonomous (Cloud loop; live trial pending) | **Tier 2 (Provisional Proposed Scaffold)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
