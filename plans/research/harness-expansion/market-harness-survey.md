@@ -50,7 +50,7 @@ In the AI tooling ecosystem, many tools claim "universal compatibility" by simpl
 ├─────────────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────┤
 │ • Cursor (Native ~/.cursor/skills)  │ • Roo Code (.roomodes)                       │ • GitHub Copilot CLI (Unassessed query utility)   │
 │ • Zed Agent (~/.agents/skills)      │ • Windsurf (Cascade)                         │ • Zed Inline Editor (no bash)    │
-│                                     │ • Cline (.clinerules)                        │ • Amazon Q CLI (Historical query utility; successor capability unassessed)         │
+│ • Trae (Dual Category A Native Skills & Category B Builder Scaffold) │ • Cline (.clinerules)                        │ • Amazon Q CLI (Historical query utility; successor capability unassessed)         │
 │                                     │ • Aider (Test Hook)                          │                                  │
 │                                     │ • OpenHands (Docker)                         │                                  │
 │                                     │ • Copilot VSCode Agent                       │                                  │
@@ -636,6 +636,36 @@ Plandex (Plandex Inc.; repository: https://github.com/plandex-ai/plandex, docume
 
 ---
 
+### Candidate 17: Trae (Dual Category A Native Skills & Category B Builder Agent)
+
+#### 1. System Overview & Harness Architecture
+Trae (ByteDance; official portal: https://www.trae.ai, documentation: https://docs.trae.ai) is an adaptive, AI-first code editor built upon a VS Code foundation (full desk intake: `evaluations/trae-intake-evaluation.md`). Trae provides multiple interaction modalities: an interactive Chat panel, an autonomous multi-turn **Builder agent** with integrated terminal execution and workspace editing capabilities, and inline code completion. Architecturally, Trae presents a unique dual-category integration profile:
+- **Category A (Native Skill Target):** Documented support for directory-based dynamic skill discovery via `SKILL.md` located at user-global (`~/.trae/skills/`) and project-local (`.trae/skills/`) paths.
+- **Category B (Project Rules Scaffolding):** Documented project rules support at `.trae/rules/*.md` and user-level global rules at `~/.trae/user_rules`, complemented by repository-root `AGENTS.md`.
+
+In desk review, Trae is evaluated as a **proposed un-implemented Dual Category A / Category B candidate**, pending live empirical verification of Builder agent terminal execution and gate enforcement.
+
+#### 2. Execution Environment: Local IDE with Chat & Builder Modes
+- Trae executes locally on the developer's workstation within an integrated IDE environment offering Chat and Builder modes.
+- Flow executes ephemerally via project-local runner invocation (`bash skills/flow/runner/flow.sh <command>` or `<skill-dir>\runner\flow.cmd <command>` on Windows), terminating immediately upon completion.
+- Zero Flow Daemons (ADR-0001): In strict adherence to ADR-0001, Flow operates exclusively as a stateless, host-invoked discipline layer. Flow will not run as or spawn persistent background daemons, language servers, or socket listeners within Trae. The Trae Builder agent holds the execution process token.
+
+#### 3. Extension & Integration Mechanism: Documented `SKILL.md` Paths & Project Rules
+- **Arm A (Category A Native Skill Discovery):** Documented `SKILL.md` paths (`.trae/skills/flow/SKILL.md` at project level or `~/.trae/skills/flow/SKILL.md` globally) provide a host-native target for Flow's standard skill bundle.
+- **Arm B (Category B Project Rules):** Documented project rules (`.trae/rules/flow.md` or `.trae/rules/*.md`) allow injecting discipline constraints and runner invocation instructions into the Builder agent's context.
+- Crucially, no `flow rules` template exists for Trae; `flow rules` remains strictly locked to seven implemented scaffolding templates (`cursor`, `windsurf`, `roo`, `cline`, `aider`, `openhands`, `copilot`). Attempting `flow rules trae` fails with exit code 2. Workspace rules must be staged manually for evaluation.
+
+#### 4. Project-Local Runner Requirement
+- Project-Local Runner Requirement: Proposed integration mandates invoking the project-vendored runner (`bash skills/flow/runner/flow.sh <command>`). Host-global skill directory resolution remains unverified in live execution, requiring the Flow runner tree to be present in the project workspace.
+- The Builder agent's integrated terminal execution tool (`run_command`), exit-code capture fidelity (capturing integer exit codes $0$/$1$, halting on non-zero exit, and strictly refusing to hallucinate a pass), and refusal to proceed on gate failure remain an unverified hypothesis pending live host trials.
+
+#### 5. Authenticity Evaluation (Support Thật vs. Illusion)
+- **What Real Support Looks Like:** Live empirical transcripts across Arm A (native skill discovery) and Arm B (project rules), capturing command execution receipts, integer exit codes, and verified gate-stop behavior — raw session transcripts demonstrating that Trae Builder discovers the skill or ingests `.trae/rules/`, invokes `bash skills/flow/runner/flow.sh <command>`, captures real exit codes, and strictly halts when a gate fails — captured and archived under `plans/research/harness-expansion/evidence/`.
+- **The Marketing Illusion to Avoid:** Claiming verified support or a non-existent `flow rules trae` template, or assuming that vendor documentation of `SKILL.md` support translates to verified execution without live empirical transcripts.
+- **Feasibility Verdict:**
+  - **Trae: Proposed Design Candidate (Unverified Dual Category A / Category B Hypothesis; Live Host Trials Pending).**
+---
+
 ## 3. Cross-Harness Comparison & Technical Matrix
 
 | Harness | Primary Configuration | Global Path | Project Path | Terminal Tool | Execution Autonomy | Feasibility Tier |
@@ -660,6 +690,7 @@ Plandex (Plandex Inc.; repository: https://github.com/plandex-ai/plandex, docume
 | **Tabnine (Chat)** | Workspace context / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool | Hypothesized autonomous (Live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
 | **Tabnine (Inline)** | None | N/A | N/A | Unassessed | Completion-only modality (outside Flow scope) | **Unassessed / Deferred Pending Verification** |
 | **Plandex** | Project plan context / `AGENTS.md` (No template) | N/A | Proposed plan / `AGENTS.md` | Built-in command tool (`exec`) | Autonomous (Configurable auto-debug; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **Trae** | \`.trae/skills/\` (\`SKILL.md\`) & \`.trae/rules/\` | \`~/.trae/skills/\` & \`~/.trae/user_rules\` | \`.trae/skills/flow/\` & \`.trae/rules/flow.md\` | Integrated terminal tool (\`run_command\`) | Autonomous (Builder mode; live trial pending) | **Tier 1 / Tier 2 (Dual A/B Proposed Candidate)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 
 ---
@@ -882,3 +913,5 @@ Before declaring any harness "Supported" in official documentation or marketing,
    - Plandex Official Portal: [https://plandex.ai](https://plandex.ai)
    - Plandex GitHub Repository: [https://github.com/plandex-ai/plandex](https://github.com/plandex-ai/plandex)
    - Plandex Documentation: [https://docs.plandex.ai](https://docs.plandex.ai)
+14. **Trae Documentation & Official Site:**
+   - **Trae Documentation & Official Site:** https://www.trae.ai · https://docs.trae.ai (ByteDance, accessed 2026-10-15)

@@ -106,10 +106,10 @@ However, from Flow's discipline-layer perspective, this integration highlights a
 Understanding Plandex's architectural classification requires analyzing why it belongs in Category B rather than Category A or Category C:
 1. **Why Not Category A (Native Skill Target)?**
    - Category A harnesses natively scan for and discover directory-based skill bundles containing `SKILL.md` from standardized host locations (e.g., Claude Code reading `~/.claude/skills/flow`, Codex reading `~/.codex/skills/flow`, or Zed reading `~/.agents/skills/flow`).
-   - Plandex does **not** discover directory-based skill bundles. It has no native skill directory scanner and does not parse `SKILL.md` manifests. Advertising Plandex as a native skill target would be an illusion trap.
+   - In desk review of official vendor documentation, no documented native directory-based skill discovery mechanism conforming to `SKILL.md` bundles (such as `~/.agents/skills/` or `~/.claude/skills/`) was identified for Plandex. Claiming Category A native skill discovery without empirical evidence would be an illusion trap.
 2. **Why Category B (Proposed CLI / Sandboxed Plan Scaffolding)?**
    - Category B harnesses rely on workspace instruction scaffolding, prompt framing, and contextual rules to guide the agent toward invoking shell tools and adhering to engineering discipline.
-   - Plandex accepts instructions through prompt tasks (`plandex tell`), loaded context files (`plandex load`), or repository root instruction files (`AGENTS.md`).
+   - Plandex accepts task instructions through prompts (`plandex tell`) and loaded context files (`plandex load`); whether repository root instruction files (`AGENTS.md`) are automatically ingested as build discipline context remains an integration hypothesis to be verified during Gate 1 testing.
    - Although Plandex combines sandboxed diff planning with integrated command execution and auto-debugging, it does not have a vendor-specified rule folder format (such as `.cursor/rules/flow.mdc` or `.windsurf/rules/flow.md`). Furthermore, Flow's `flow rules` is locked to 7 templates and does not support Plandex. Plandex is therefore classified as **Category B (Proposed CLI / Sandboxed Plan Scaffolding)**.
 3. **Why Not Category C (Automated Test Gate Scaffolding)?**
    - Category C harnesses (such as Aider with `test-cmd` in `.aider.conf.yml`) provide an automated, non-agentic test execution lifecycle hook that mechanically triggers on every file edit without requiring model persuasion.
