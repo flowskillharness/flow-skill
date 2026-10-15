@@ -63,9 +63,9 @@ Flow's constitutional identity (`docs/adr/0001-discipline-layer-identity.md`) es
 
 In desk design review, SWE-agent aligns with ADR-0001's fundamental invariants (empirical verification pending container live trials):
 1. **Zero Resident Daemons:** Flow requires no persistent daemon, background server, or long-lived socket listener inside or outside the SWE-agent Docker container. Flow executes purely per-command.
-2. **Process Token Ownership:** SWE-agent holds the process token and manages the autonomous multi-turn reasoning and tool invocation loop. Flow executes strictly as an ephemeral subprocess invoked via SWE-agent's shell command tool, terminating immediately when the command returns.
-3. **Zero Tool Interposition:** Flow does not monkey-patch, wrap, or intercept SWE-agent's internal ACI dispatcher, Docker container communication socket, or model query loop. Flow evaluates gates post-hoc by re-reading ground truth directly from workspace filesystem artifacts (`flow/*.md`, `cards/C-NNN.md`, `manifest-hashes.json`).
-4. **Deterministic Shell Contract:** All stage transitions, gate validations, and card checks execute strictly via `bash skills/flow/runner/flow.sh <command>`, returning an unambiguous integer exit code ($0$ for pass, $1$ for failure) with plain-text diagnostics.
+2. **Process Token Ownership (Proposed Integration):** In proposed integration, SWE-agent holds the process token. Flow would execute strictly as an ephemeral subprocess invoked via SWE-agent's shell command tool, terminating when the command returns.
+3. **Zero Tool Interposition:** Flow does not monkey-patch, wrap, or intercept container communication or model query loops. Gates are evaluated post-hoc by reading filesystem ground truth.
+4. **Deterministic Shell Contract (Hypothesis):** Flow stage transitions and card checks are designed to execute via `bash skills/flow/runner/flow.sh <command>`, returning an integer exit code ($0$ for pass, $1$ for failure); empirical ACI exit-code fidelity and gate enforcement remain unverified in Flow live trials.
 
 ### 1.3 Why Category B (Container Scaffolding) and Not Category A (Native Skill Target)?
 Harnesses in **Category A (Native Skill Targets)** natively auto-discover directory-based skill bundles containing `SKILL.md` from a standard host location (e.g., Claude Code reading `~/.claude/skills/flow`, Codex CLI reading `~/.codex/skills/flow`, or universal agents reading `~/.agents/skills/flow`).
@@ -73,8 +73,8 @@ Harnesses in **Category A (Native Skill Targets)** natively auto-discover direct
 SWE-agent does **not** discover arbitrary host desktop skill directories:
 - **Sandbox Isolation:** SWE-agent provisions an isolated Docker container for each repository problem instance. The container filesystem is completely separated from the host operating system.
 - **Absence of Host Global Paths:** Even if a user installs Flow globally on their host machine (e.g., `/home/user/.agents/skills/flow`), the Docker container cannot access that path. The host `$HOME` directory is not mounted into the container.
-- **Instruction Scaffolding Modality:** SWE-agent ingests operational rules either through repository-vendored instruction files (such as `AGENTS.md` or `README.md`) or custom prompt configuration templates (`swe-agent/config/*.yaml`).
-- **Project-Local Runner Requirement:** Flow interacts with SWE-agent strictly by providing instruction scaffolding that directs the in-container agent to invoke the project-local runner (`bash skills/flow/runner/flow.sh <command>`). SWE-agent is therefore unequivocally classified as **Category B (Container Agent Instruction Scaffolding)**.
+- **Instruction Scaffolding Modality (Hypothesis):** Per research documentation, SWE-agent accepts operational instructions via configurable prompt configuration templates (`swe-agent/config/*.yaml`). Ingestion of repository files (`AGENTS.md`, `README.md`) as automatic Flow rule carriers is an unverified hypothesis pending live container trials.
+- **Project-Local Runner Requirement (Hypothesis):** Flow integration is proposed to direct the in-container agent to invoke the project-local runner (`bash skills/flow/runner/flow.sh <command>`). This runner invocation and exit-code fidelity remains unverified pending live container trials; SWE-agent is proposed as **Category B (Proposed Container Agent Scaffold — Unverified)**.
 
 ---
 
@@ -82,70 +82,56 @@ SWE-agent does **not** discover arbitrary host desktop skill directories:
 
 ### 2.1 Phase 1: Market Intelligence & Prioritization
 
-- **Market Share & Developer Adoption (Qualitative Benchmark Assessment):**
-  - Score: **22/40**.
+- **Market Adoption Hypothesis (Benchmark Presence):**
   - SWE-agent (Princeton NLP / InterCode) is a premier academic and industry benchmark harness, widely recognized for establishing baseline agent performance on SWE-bench and SWE-bench Lite. It is frequently utilized in AI research laboratories, evaluation pipelines, and agent benchmarking competitions.
   - However, unlike general commercial desktop IDE extensions (e.g., Cursor, GitHub Copilot) or standalone developer desktop CLIs (e.g., Claude Code), SWE-agent's primary user base consists of AI researchers, benchmark evaluators, and autonomous framework builders rather than everyday application developers. Its general desktop developer footprint is bounded accordingly.
-- **Agentic Autonomy & Capability:**
-  - Score: **32/40**.
+- **Agentic Autonomy & Capability Hypothesis (Research-Described):**
   - SWE-agent exhibits high multi-turn autonomy. Powered by frontier LLMs, it autonomously inspects repository file hierarchies, executes searches, writes patches, and runs shell commands within its Docker container.
   - Its autonomy is structured around the Agent-Computer Interface (ACI), which provides specialized shell-based actions (file navigation, line editing, search) alongside general command execution.
   - Constraints include container turn limits, API cost ceilings, and the potential for context window degradation across extended multi-turn interactions.
-- **Ecosystem Openness & Stability:**
-  - Score: **14/20**.
-  - SWE-agent is fully open source under the permissive Apache-2.0 license, with active public development on GitHub.
+- **Ecosystem Openness Hypothesis (Vendor/Research Described):**
+  - SWE-agent is described as open source under the Apache-2.0 license, with active public development on GitHub.
   - Configuration is highly modular, utilizing YAML configuration files (`config/*.yaml`) to specify system prompts, instance templates, environment commands, and demonstrations.
   - Points are deducted because SWE-agent's ACI environment setup is tightly coupled to specific Docker image environments, conda/virtualenv activations, and custom command wrapper definitions that can vary across benchmark tasks.
-- **Priority Tier & Feasibility Score:**
-  - **Total Score:** **68/100** -> **Priority Tier 2 (Evaluated / Scaffolding Target, range 50–74)**.
-  - **Score Classification:** `Provisional Internal Estimate (Desk Intake)`.
-
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                      SWE-AGENT PRIORITY SCORING BREAKDOWN                              │
-├──────────────────────────────────────────┬──────────────┬──────────────────────────────┤
-│ Evaluation Dimension                     │ Points (Max) │ Provisional Intake Score     │
-├──────────────────────────────────────────┼──────────────┼──────────────────────────────┤
-│ 1. Market Share & Developer Adoption     │      40      │ 22/40 (Benchmark standard)   │
-│ 2. Agentic Autonomy & Capability         │      40      │ 32/40 (High multi-turn loop) │
-│ 3. Ecosystem Openness & Stability        │      20      │ 14/20 (Apache-2.0, YAML cfg) │
-├──────────────────────────────────────────┼──────────────┼──────────────────────────────┤
-│ TOTAL SCORE                              │     100      │ 68/100 (Priority Tier 2)     │
-└──────────────────────────────────────────┴──────────────┴──────────────────────────────┘
-```
+- **Prioritization Status & Hypothesis:** **Proposed Design Candidate (Unverified Internal Desk Hypothesis)**.
+  - **Status Classification:** `Unverified Internal Prioritization Hypothesis (Desk Intake; Live Host Validation Pending)`
+  - **Qualitative Assessment (Numeric Scoring Withheld Pending Live Evidence):**
+    1. **Market Adoption Hypothesis:** Widely recognized benchmark evaluation harness on SWE-bench within academic and AI research communities.
+    2. **Agentic Autonomy Hypothesis:** Research-described autonomous multi-turn loop using custom ACI shell commands; empirical subshell execution, exit-code capture, and gate-stop fidelity remain unverified in Flow trials.
+    3. **Ecosystem Openness Hypothesis:** Open-source research system under Apache-2.0 with configurable YAML prompt templates.
 
 ### 2.2 Phase 2: Architecture Probing
 
-#### 2.2.1 Host Orchestrator vs. Docker Container Sandbox
-SWE-agent's execution model is decoupled into two distinct runtime layers:
+#### 2.2.1 Host Orchestrator vs. Docker Container Sandbox (Research-Described Architecture)
+In the upstream research paper and vendor documentation, SWE-agent's execution model is described as decoupled into two distinct runtime layers:
 1. **Outer Host Orchestration Layer (Python):**
    - The outer loop runs on the host system (via `run.py` or `sweagent/agent/`).
    - It communicates with the LLM API provider, manages conversational trajectories, formats prompts according to YAML configuration templates, and dispatches actions to the execution environment.
 2. **Execution Sandbox (Docker Runtime):**
-   - All tool actions execute inside a sandboxed Linux Docker container.
-   - The target git repository is cloned or mounted into the container at a designated working directory (conventionally `/workspace` or `/testbed`).
+   - Research documentation describes all tool actions as executing inside a sandboxed Linux Docker container.
+   - The target git repository is described as cloned or mounted into the container at a designated working directory (conventionally `/workspace` or `/testbed`).
    - The container environment contains standard Linux POSIX utilities (`bash`, `git`, `coreutils`, `python`) alongside benchmark-specific dependencies.
 
 #### 2.2.2 Ingestion Mechanism: Repository Instructions & Prompt Configuration Templates
-SWE-agent does not possess a proprietary skill directory discovery engine. Instead, instruction ingestion occurs through two primary channels:
+SWE-agent does not possess a proprietary skill directory discovery engine. In upstream research, instruction ingestion is described as occurring through two primary channels:
 - **YAML Prompt Configuration Templates:**
   - SWE-agent configurations (such as `config/default.yaml` or custom config files) define the `system_template`, `instance_template`, and command definitions.
   - Operational instructions regarding engineering discipline can be directly integrated into the prompt template or loaded dynamically.
 - **Repository-Level Instruction Files:**
-  - When SWE-agent initializes an environment for a repository, it typically ingests repository-level documentation (such as `README.md`, `AGENTS.md`, or issue description context).
-  - Placing Flow operational directives in a repository-level instruction file (e.g., `AGENTS.md`) or task specification informs the agent of Flow's gates, phase progression commands, and card verification rules.
+  - In research documentation, SWE-agent initializes environments using repository context (such as issue descriptions and repository file structure); the specific ingestion behavior for `README.md` or `AGENTS.md` as automatic Flow rule carriers remains unverified in Flow testing.
+  - In proposed Flow integration, Flow operational directives would be placed in a repository-level instruction file (e.g., `AGENTS.md`) or task specification to inform the agent of Flow's gates, phase progression commands, and card verification rules.
 
-#### 2.2.3 Tool Execution API: Agent-Computer Interface (ACI) vs. Standard Bash Subshell
-SWE-agent's central architectural contribution is the **Agent-Computer Interface (ACI)**:
+#### 2.2.3 Tool Execution API (Research-Described): Agent-Computer Interface (ACI) vs. Standard Bash Subshell
+The upstream research paper describes the **Agent-Computer Interface (ACI)** as SWE-agent's central architectural contribution:
 - Traditional raw bash subshells present significant challenges for LLMs: commands can dump thousands of lines of log output, enter blocking interactive prompts (e.g., `vim`, `less`), or emit ambiguous error streams.
 - The ACI addresses this by providing tailored shell utility functions installed inside the container bash environment:
   - File viewing with pagination/windowing: `open_file <path> <line_num>`, `scroll_down`, `scroll_up`.
   - Search utilities: `search_dir <search_term>`, `search_file <search_term> <path>`.
   - File editing: `edit_lines <start> <end>`, `create_file <path>`.
   - General command execution: SWE-agent provides an `execute` / bash execution command that dispatches shell commands to the container's bash session.
-- **Flow Command Execution Compatibility:**
-  - Flow commands (`flow.sh status`, `flow.sh next`, `flow.sh check C-NNN`) are non-interactive, print bounded plain-text diagnostics, and exit immediately with an unambiguous integer status ($0$ or $1$).
-  - SWE-agent executes Flow commands via its shell execution mechanism:
+- Flow Command Execution Compatibility (Hypothesis):
+  - Flow commands (`flow.sh status`, `flow.sh next`, `flow.sh check C-NNN`) are designed to be non-interactive, print bounded plain-text diagnostics, and exit immediately with an unambiguous integer status ($0$ or $1$).
+  - Whether SWE-agent's ACI shell execution mechanism can reliably dispatch Flow commands with exact exit-code propagation remains unverified pending live container trials:
     ```bash
     bash skills/flow/runner/flow.sh <command>
     ```
