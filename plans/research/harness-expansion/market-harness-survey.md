@@ -754,7 +754,7 @@ In desk review, PearAI is evaluated as a **Proposed Design Candidate (Unverified
 | **Trae** | `.trae/skills/` (`SKILL.md`) & `.trae/rules/` | `~/.trae/skills/` & `~/.trae/user_rules` | `.trae/skills/flow/` & `.trae/rules/flow.md` | Hypothesized terminal tool (unverified API name / host trial pending) | Autonomous (Local Agent Mode; live trial pending) | **Dual A/B Proposed Candidate (Local Agent Mode; Live Trial Pending)** |
 | **Amazon Q CLI** | None | N/A | N/A | None | Unassessed (Query utility; successor unassessed) | **Unassessed (Historical query utility; current successor capability unassessed)** |
 | **Void** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Unassessed (never verified; project inactive) | Unassessed (Agent mode; never verified; project inactive) | **Tier 3 (Deferred / Historical Candidate; project inactive)** |
-| **PearAI** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool (unverified API) | Autonomous (Creator/Agent mode; live trial pending) | **Proposed B (Design Hypothesis; Unverified)** |
+| **PearAI** | Workspace prompt config / `AGENTS.md` (No template) | N/A | Proposed prompt / `AGENTS.md` | Hypothesized terminal tool (unverified API) | Autonomy unverified; live trial pending | **Proposed B (Design Hypothesis; Unverified)** |
 
 ---
 
