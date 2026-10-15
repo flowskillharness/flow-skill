@@ -429,7 +429,7 @@ Amazon Q Developer (developed by Amazon Web Services; vendor portal: https://aws
 #### 4. Execution Capability & Mechanical Gate Enforcement
 - **Terminal & Build Tool Invocation (Hypothesis):** In `/dev` mode, the agent is hypothesized to dispatch Flow lifecycle commands (`status`, `next`, `check C-NNN`) via its workspace execution tool.
 - **Gate-Stop Invariant (Pending Verification):** Flow's non-zero exit codes ($exit \neq 0$) must be captured and returned to the `/dev` agent loop to mandate an immediate halt, preventing hallucinated gate passes (subject to Phase 4 live verification).
-- **CLI Limitation:** The standalone `q` CLI has not demonstrated an autonomous multi-turn tool execution loop in verified testing (unassessed pending current AWS/Kiro documentation).
+- **CLI Limitation:** The standalone `q` CLI historically functions as an interactive command query utility; an autonomous multi-turn tool execution loop remains unassessed pending current AWS/Kiro documentation.
 
 #### 5. Authenticity Evaluation (Support Thật vs. Illusion)
 - **What Real Support Looks Like:**
@@ -509,7 +509,7 @@ GitLab Duo (GitLab Inc.; documentation: https://docs.gitlab.com/ee/user/gitlab_d
 
 #### 2. Execution Environment (Hypothesized for Duo Workflow)
 - Duo Workflow is hypothesized to execute in a local IDE workspace (GitLab Workflow extension in VS Code) or an ephemeral GitLab CI/CD runner container. Host-global paths are absent in runner sandboxes; only the cloned repository under `/builds/<group>/<project>/` exists.
-- In verified testing, Duo Chat has not demonstrated an execution environment relevant to Flow: it historically operates as a query utility without an autonomous terminal tool loop (unassessed pending dedicated verification).
+- In vendor documentation and desk analysis, Duo Chat historically operates as a conversational query utility; its current execution environment and tool-loop capabilities remain unassessed pending dedicated live verification.
 
 #### 3. Extension & Integration Mechanism: Proposed `.gitlab/duo_workflow.yml` / `AGENTS.md`
 - A `.gitlab/duo_workflow.yml` workflow configuration and repository-root `AGENTS.md` instructions are **proposed ingestion mechanisms**; their existence, schema, and parsing by the execution client are unverified desk hypotheses.
