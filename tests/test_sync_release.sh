@@ -458,13 +458,10 @@ m_target="$(winpath "$sym_script")"
 node "$m_target" --check > "$tmp_m/m.out" 2>&1
 m_rc=$?
 
-if ! command -v cygpath >/dev/null 2>&1; then
-  ck 0 $m_rc "symlinked sync-release --check exits 0"
-  [ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
-  grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
-else
-  echo "  skip [M: Windows symlink --check skipped; Linux/macOS require exit 0 and PASS]"
-fi
+ck 0 $m_rc "symlinked sync-release --check exits 0"
+[ "$m_rc" -ne 0 ] && cat "$tmp_m/m.out" >&2
+[ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
+grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
 rm -rf "$tmp_m"
 
 echo

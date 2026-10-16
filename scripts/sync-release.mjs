@@ -19,7 +19,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
 
 function escapeRegExp(string) {
