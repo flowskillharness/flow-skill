@@ -35,7 +35,7 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
   - Case E failed earlier due to Git Bash `/tmp` paths passed into `node [eval] readFileSync`.
 
 - Run 38895281465, job 116954165025 (Windows bash-suite) on commit `93d2b6d`:
-  - All 75 bash suites passed (`ALL SUITES PASSED`, `TOTAL wall_s=3593` / 59m53s).
+  - All registered bash suites passed (`ALL SUITES PASSED`, `TOTAL wall_s=3593` / 59m53s).
   - The job was cancelled at 60m right before the PowerShell installer step due to execution time variance (previous green head 053b0c4 had `TOTAL wall_s=3236` / 54m37s; ~11% variance).
   - Timeout budget in `ci.yml` increased from 60m to 80m.
 ## Required Fixes
