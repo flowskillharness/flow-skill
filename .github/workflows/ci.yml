@@ -27,10 +27,10 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     # Windows Git Bash is the slow cell: measured 54m37s (green) vs 60m10s (cancellation
-    # on run 38895281465 at 59m53s bash suite + PowerShell step). Windows gets 80m
-    # to provide headroom and prevent timeout cancellation. Ubuntu (~8m) / macOS (~11–13m)
-    # stay at 15m. Re-measure before trimming this back.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || 15 }}
+    # on run 38895281465 at 59m53s bash suite + PowerShell step), getting 80m headroom.
+    # macOS measured 14m51s suite (TOTAL wall_s=891) plus post-job cleanup, exceeding 15m;
+    # macOS gets 25m headroom. Ubuntu (~8m) stays at 15m.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || (matrix.os == 'macos-latest' && 25 || 15) }}
     steps:
       - uses: actions/checkout@v4
 
