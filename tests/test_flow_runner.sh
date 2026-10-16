@@ -183,6 +183,114 @@ else
 fi
 rm -rf "$IT"
 
+echo "J) flow gate [--card C-NNN|<stage>] --json closed envelope"
+SB="$(mktemp -d)"; export FLOW_PROJECT_ROOT="$SB"; mkdir -p "$SB/flow" "$SB/cards"
+PY_BIN="$(command -v python3 2>/dev/null || command -v python 2>/dev/null || true)"
+
+# 1. Clean stage gate: exit 0, valid JSON, clean: true, findings: []
+stage_clean "00-idea" "$SB/flow/00-idea.md"
+out="$(bash "$RUN" gate 00-idea --json 2>&1)"; rc=$?
+ck 0 $rc "clean stage gate --json exit 0"
+has "$out" '"schema_version":1' "clean stage JSON carries schema_version 1"
+has "$out" '"kind":"gate.report"' "clean stage JSON carries kind gate.report"
+has "$out" '"target":"00-idea"' "clean stage JSON carries target 00-idea"
+has "$out" '"clean":true' "clean stage JSON carries clean: true"
+has "$out" '"findings":\[\]' "clean stage JSON carries empty findings array"
+if [ -n "$PY_BIN" ]; then
+  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is True; assert d["findings"] == []; assert d["target"] == "00-idea"' 2>/dev/null
+  ck 0 $? "clean stage JSON parses via python"
+fi
+# Flag-order parity: gate --json 00-idea
+out_pre="$(bash "$RUN" gate --json 00-idea 2>&1)"; rc_pre=$?
+ck 0 $rc_pre "gate --json 00-idea flag-order exit 0"
+ck "$out" "$out_pre" "gate --json 00-idea identical to gate 00-idea --json"
+
+# 2. Dirty stage gate: unchecked + [FILL] + midtier findings, quotes and backslashes
+echo "web" > "$SB/PROJECT_TYPE"
+printf '# 01-research\n## Gate\n- [ ] unchecked item with "quotes" and \\backslashes\\\n[FILL: placeholder text]\n## What exists already\n1. single entry\n' > "$SB/flow/01-research.md"
+out="$(bash "$RUN" gate 01-research --json 2>&1)"; rc=$?
+ck 1 $rc "dirty stage gate --json exit 1"
+has "$out" '"clean":false' "dirty stage JSON carries clean: false"
+has "$out" '"target":"01-research"' "dirty stage JSON carries target 01-research"
+has "$out" 'unchecked gate boxes:' "findings carry unchecked section"
+has "$out" 'unfilled \[FILL\] placeholders:' "findings carry FILL section"
+has "$out" 'What exists already' "findings carry midtier violation"
+if [ -n "$PY_BIN" ]; then
+  printf '%s' "$out" | "$PY_BIN" -c '
+import sys, json, re
+d = json.load(sys.stdin)
+assert d["clean"] is False
+assert d["target"] == "01-research"
+# Each line remains its own array element (headings + detail lines)
+assert len(d["findings"]) >= 5
+assert any("quotes" in f and "backslashes" in f for f in d["findings"])
+assert any("What exists already" in f for f in d["findings"])
+# Findings include L<line>: prefix from scan_gate detail lines
+assert any(re.match(r"^L[0-9]+:", f) for f in d["findings"])
+' 2>/dev/null
+  ck 0 $? "dirty stage JSON with L<line>: prefix and quotes/backslashes parses via python"
+fi
+
+# 3. Missing stage artifact file: exit 1, clean: false, findings has missing file
+out="$(bash "$RUN" gate 02-scope --json 2>&1)"; rc=$?
+ck 1 $rc "missing stage artifact gate --json exit 1"
+has "$out" '"clean":false' "missing stage JSON carries clean: false"
+has "$out" 'missing file:' "missing stage JSON carries missing file finding"
+if [ -n "$PY_BIN" ]; then
+  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is False; assert any("missing file:" in f for f in d["findings"])' 2>/dev/null
+  ck 0 $? "missing stage JSON parses via python"
+fi
+
+# 4. Clean card gate: exit 0, valid JSON, clean: true, target: C-001
+printf '# C-001 — clean\nstatus: todo\ndeps: none\n## Scope\nscope\n## Allowed files\nfile.txt\n## Verify\n- [x] verify\n## Done-evidence\nurl\n## Evidence\n(empty until done)\n' > "$SB/cards/C-001.md"
+out_card="$(bash "$RUN" gate --card C-001 --json 2>&1)"; rc=$?
+ck 0 $rc "clean card gate --card --json exit 0"
+has "$out_card" '"target":"C-001"' "clean card JSON carries target C-001"
+has "$out_card" '"clean":true' "clean card JSON carries clean: true"
+has "$out_card" '"findings":\[\]' "clean card JSON carries empty findings"
+# Flag-order parity: gate --json --card C-001
+out_card_pre="$(bash "$RUN" gate --json --card C-001 2>&1)"; rc_card_pre=$?
+ck 0 $rc_card_pre "gate --json --card C-001 flag-order exit 0"
+ck "$out_card" "$out_card_pre" "gate --json --card C-001 identical to gate --card C-001 --json"
+# 5. Dirty card gate: exit 1, valid JSON, clean: false, findings non-empty
+printf '# C-002 — dirty\nstatus: todo\ndeps: none\n## Scope\nscope\n## Allowed files\nfile.txt\n## Verify\n- [ ] verify\n[FILL: placeholder]\n## Done-evidence\nurl\n## Evidence\n(empty until done)\n' > "$SB/cards/C-002.md"
+out="$(bash "$RUN" gate --card C-002 --json 2>&1)"; rc=$?
+ck 1 $rc "dirty card gate --card --json exit 1"
+has "$out" '"target":"C-002"' "dirty card JSON carries target C-002"
+has "$out" '"clean":false' "dirty card JSON carries clean: false"
+has "$out" 'unchecked gate boxes:' "dirty card findings carry unchecked"
+
+# 6. Nonexistent card: exit 2, fails loudly, no JSON report
+out="$(bash "$RUN" gate --card C-999 --json 2>&1)"; rc=$?
+ck 2 $rc "nonexistent card gate --card --json exit 2"
+has "$out" "card not found" "reports card not found for nonexistent card"
+
+# 7. Unknown stage / unknown extra args: exit 2
+out="$(bash "$RUN" gate 99-unknown --json 2>&1)"; rc=$?
+ck 2 $rc "unknown stage gate --json exit 2"
+out="$(bash "$RUN" gate 00-idea --json extra 2>&1)"; rc=$?
+ck 2 $rc "extra args gate 00-idea --json extra exit 2"
+out="$(bash "$RUN" gate 00-idea extra 2>&1)"; rc=$?
+ck 2 $rc "extra args gate 00-idea extra prose exit 2"
+out="$(bash "$RUN" gate --card C-001 --json extra 2>&1)"; rc=$?
+ck 2 $rc "extra args gate --card C-001 --json extra exit 2"
+
+# 8. Prose parity without --json
+out="$(bash "$RUN" gate 00-idea 2>&1)"; rc=$?
+ck 0 $rc "prose clean stage exit 0"
+has "$out" "clean" "prose clean stage reports clean"
+out="$(bash "$RUN" gate 01-research 2>&1)"; rc=$?
+ck 1 $rc "prose dirty stage exit 1"
+has "$out" "unchecked gate boxes:" "prose dirty stage reports findings"
+out="$(bash "$RUN" gate --card C-001 2>&1)"; rc=$?
+ck 0 $rc "prose clean card exit 0"
+has "$out" "clean" "prose clean card reports clean"
+out="$(bash "$RUN" gate --card C-002 2>&1)"; rc=$?
+ck 1 $rc "prose dirty card exit 1"
+has "$out" "unchecked gate boxes:" "prose dirty card reports findings"
+
+rm -rf "$SB"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

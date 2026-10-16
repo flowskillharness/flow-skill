@@ -17,7 +17,7 @@ is no fragment loader (ADR-0001).
 | `/flow card start C-NNN` | `bash <skill>/runner/flow.sh card start C-NNN` | Optional in-flight mark (`cards/.inflight`); does not touch gated `status:`. |
 | `/flow card done C-NNN` | `bash <skill>/runner/flow.sh card done C-NNN` | CLI `done` under the same rules as `check`; then semantic review. |
 | `/flow check C-NNN` | `bash <skill>/runner/flow.sh check C-NNN` | After PASS, semantic card review (`law/CLAUDE.md`). FAIL/Never: SKILL.md STOP + Dispatch. |
-| `/flow gate <stage>` (or `--card C-NNN`) | `bash <skill>/runner/flow.sh gate <stage\|--card C-NNN>` | Read-only mechanical scan; relay findings. `next`/`check` own progression. |
+| `/flow gate <stage>` (or `--card C-NNN`) | `bash <skill>/runner/flow.sh gate <stage\|--card C-NNN> [--json]` | Read-only mechanical scan; relay findings. `next`/`check` own progression. Optional `--json` emits one closed `gate.report` envelope (`schema_version`, `kind`, `target`, `clean`, `findings[]`). Exit 0 clean / 1 findings / 2 error. |
 | `/flow contract` | `bash <skill>/runner/flow.sh contract` | Advisory client base-URL vs served-path drift; confirm on the running app. |
 | `/flow tokens` | `bash <skill>/runner/flow.sh tokens` | Advisory DESIGN.md token unused/mismatch; dated amendment if intentional. |
 | `/flow coherence` | `bash <skill>/runner/flow.sh coherence` | Advisory version-field drift; semantic contradictions stay a human challenge. |

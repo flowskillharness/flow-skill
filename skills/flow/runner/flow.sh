@@ -2019,31 +2019,115 @@ cmd_skip() {
   return 0
 }
 
+_emit_gate_report_json() { # $1=target $2=file
+  local target="$1" file="$2"
+  local scan_out scan_rc=0
+  scan_out="$(scan_gate "$file")" || scan_rc=$?
+  if [ "$scan_rc" -eq 0 ]; then
+    printf '{"schema_version":1,"kind":"gate.report","target":"%s","clean":true,"findings":[]}\n' \
+      "$(_json_str "$target")"
+    return 0
+  fi
+  local farr="" ffirst=1 line trimmed
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    trimmed="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -n "$trimmed" ] || continue
+    if [ "$ffirst" -eq 1 ]; then
+      farr="\"$(_json_str "$trimmed")\""
+      ffirst=0
+    else
+      farr="$farr,\"$(_json_str "$trimmed")\""
+    fi
+  done <<EOF
+$scan_out
+EOF
+  printf '{"schema_version":1,"kind":"gate.report","target":"%s","clean":false,"findings":[%s]}\n' \
+    "$(_json_str "$target")" "$farr"
+  return "$scan_rc"
+}
+
 cmd_gate() {
   # Read-only mechanical gate scan (no unlock, no template copy, no durable writes):
   # the ONLY flow.sh verb the graph executor may run from topology cmd position
   # (`check` mutates story/trace on pass and stays Must-ask). Exit 0 clean / 1 findings.
-  local target="${1:-}"
-  if [ "$target" = "--card" ]; then
-    local card="${2:-}" f
-    if [ -z "$card" ]; then echo "usage: /flow gate --card C-NNN"; return 2; fi
-    f="$(resolve_card_file "$card" 2>/dev/null)"
-    if [ -z "$f" ]; then echo "usage: /flow gate --card C-NNN"; return 2; fi
+  local opt_json=0
+  local opt_card=""
+  local is_card=0
+  local stage=""
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --json)
+        if [ "$opt_json" -eq 1 ]; then
+          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          return 2
+        fi
+        opt_json=1
+        shift
+        ;;
+      --card)
+        if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
+          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          return 2
+        fi
+        is_card=1
+        shift
+        if [ $# -eq 0 ]; then
+          echo "usage: /flow gate --card C-NNN [--json]"
+          return 2
+        fi
+        opt_card="$1"
+        shift
+        ;;
+      *)
+        if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
+          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          return 2
+        fi
+        stage="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ "$is_card" -eq 1 ]; then
+    local f
+    f="$(resolve_card_file "$opt_card" 2>/dev/null)"
+    if [ -z "$f" ]; then echo "usage: /flow gate --card C-NNN [--json]"; return 2; fi
     # A nonexistent card is NOT a gate verdict: reporting it as exit 1 would journal a
     # typo'd id as a genuine red review and burn a two-strikes repair budget.
-    if [ ! -f "$f" ]; then echo "FAIL: card not found for '$card' (looked for $f)"; return 2; fi
-    echo "GATE card ${card}:"
+    if [ ! -f "$f" ]; then echo "FAIL: card not found for '$opt_card' (looked for $f)"; return 2; fi
+    local target_name
+    target_name="$(basename "$f" .md)"
+    if [ "$opt_json" -eq 1 ]; then
+      _emit_gate_report_json "$target_name" "$f"
+      return $?
+    fi
+    echo "GATE card ${opt_card}:"
     if scan_gate "$f"; then echo "  clean"; return 0; fi
     return 1
   fi
-  local known=0 s
-  for s in $STAGES; do [ "$s" = "$target" ] && known=1; done
-  if [ "$known" -eq 0 ]; then
-    echo "usage: /flow gate <stage: $STAGES> | /flow gate --card C-NNN"
+
+  if [ -z "$stage" ]; then
+    echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
     return 2
   fi
-  echo "GATE stage ${target}:"
-  if scan_gate "$FLOW_DIR/$target.md"; then echo "  clean"; return 0; fi
+
+  local known=0 s
+  for s in $STAGES; do [ "$s" = "$stage" ] && known=1; done
+  if [ "$known" -eq 0 ]; then
+    echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+    return 2
+  fi
+
+  if [ "$opt_json" -eq 1 ]; then
+    _emit_gate_report_json "$stage" "$FLOW_DIR/$stage.md"
+    return $?
+  fi
+
+  echo "GATE stage ${stage}:"
+  if scan_gate "$FLOW_DIR/$stage.md"; then echo "  clean"; return 0; fi
   return 1
 }
 
