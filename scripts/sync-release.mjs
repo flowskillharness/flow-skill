@@ -726,8 +726,23 @@ To execute this release live, re-run with --yes:
         console.log(`  + ${f}`);
       }
       execFileSync('git', ['add', '--', ...dirtyReleaseFiles], { cwd: repoRoot, stdio: 'inherit' });
-      execFileSync('git', ['commit', '-m', `chore(release): prepare v${skill_v} / npm@${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
-      console.log(`✓ Committed release files: chore(release): prepare v${skill_v} / npm@${npm_v}`);
+      let hasStaged = false;
+      try {
+        execFileSync('git', ['diff', '--cached', '--quiet', '--', ...dirtyReleaseFiles], { cwd: repoRoot, stdio: 'ignore' });
+        hasStaged = false;
+      } catch (err) {
+        if (err.status === 1) {
+          hasStaged = true;
+        } else {
+          throw err;
+        }
+      }
+      if (hasStaged) {
+        execFileSync('git', ['commit', '-m', `chore(release): prepare v${skill_v} / npm@${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+        console.log(`✓ Committed release files: chore(release): prepare v${skill_v} / npm@${npm_v}`);
+      } else {
+        console.log('✓ Release preparation files produced no index diff (e.g. CRLF normalization). Skipping commit.');
+      }
     } else {
       console.log('✓ Release preparation files are already clean / committed.');
     }
@@ -751,8 +766,23 @@ To execute this release live, re-run with --yes:
     if (i18nDirty) {
       console.log('Committing updated docs/i18n-pairs.txt...');
       execFileSync('git', ['add', 'docs/i18n-pairs.txt'], { cwd: repoRoot, stdio: 'inherit' });
-      execFileSync('git', ['commit', '-m', `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
-      console.log(`✓ Committed docs/i18n-pairs.txt: docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`);
+      let hasI18nStaged = false;
+      try {
+        execFileSync('git', ['diff', '--cached', '--quiet', '--', 'docs/i18n-pairs.txt'], { cwd: repoRoot, stdio: 'ignore' });
+        hasI18nStaged = false;
+      } catch (err) {
+        if (err.status === 1) {
+          hasI18nStaged = true;
+        } else {
+          throw err;
+        }
+      }
+      if (hasI18nStaged) {
+        execFileSync('git', ['commit', '-m', `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+        console.log(`✓ Committed docs/i18n-pairs.txt: docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`);
+      } else {
+        console.log('✓ docs/i18n-pairs.txt produced no index diff (e.g. CRLF normalization). Skipping commit.');
+      }
     } else {
       console.log('✓ docs/i18n-pairs.txt is already clean / up to date.');
     }
@@ -899,11 +929,23 @@ To execute this release live, re-run with --yes:
     console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
   }
 
+function execGh(args, options = {}) {
+  if (process.platform === 'win32') {
+    // Windows: Node execFileSync('gh') bypasses PATHEXT when looking up extensionless
+    // commands, skipping a mock `gh.cmd` in PATH and locating system `gh.exe` instead.
+    // Wrap through cmd.exe /d /s /c so PATHEXT finds `gh.cmd` in PATH before `gh.exe`.
+    // Quote every argument to prevent injection.
+    const cmdLine = ['gh', ...args].map(a => `"${String(a).replace(/"/g, '""')}"`).join(' ');
+    return execFileSync('cmd.exe', ['/d', '/s', '/c', cmdLine], options);
+  }
+  return execFileSync('gh', args, options);
+}
+
   // Handle GitHub Release for v<skill_v> (fail-closed if creation fails; handles existing tag with missing release)
   console.log(`\nChecking GitHub Release for ${skillTag}...`);
   let releaseExists = false;
   try {
-    const viewOut = execFileSync('gh', ['release', 'view', skillTag, '--json', 'tagName'], {
+    const viewOut = execGh(['release', 'view', skillTag, '--json', 'tagName'], {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -927,7 +969,7 @@ To execute this release live, re-run with --yes:
   } else {
     console.log(`Creating official GitHub Release for ${skillTag}...`);
     try {
-      execFileSync('gh', ['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
+      execGh(['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
         cwd: repoRoot,
         stdio: 'inherit',
       });
