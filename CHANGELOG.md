@@ -2,10 +2,9 @@
 
 ## [Unreleased]
 
-### Added
+## [0.34.4] - 2026-10-16
 - `flow ready --json`: closed `ready.report` envelope (buildable cards with deps/allowed-files/wave, blocked reasons, warnings, advisory parallel groups, auto state) for host orchestrators; unknown arguments now fail loudly (exit 2) instead of being ignored.
 - `flow auto --parallel`: records the parallel policy (`parallel: true`) in auto-state after the same attested preflight and prints advisory first-fit waves; the host still places and waits (ADR-0001: no scheduler).
-
 ## [0.34.3] - 2026-10-15
 - **Unified release automation (scripts/sync-release.mjs + scripts/release.sh):** Fail-closed dual-axis coherence, strictly non-mutating dry-run (recursive SHA-256 tree hash), fail-closed local+remote tag suppression, and portable read-only battery.
 

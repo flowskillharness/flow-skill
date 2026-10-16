@@ -90,7 +90,7 @@ After installation completes, restart or reload your coding agent, then run:
 
 | | |
 |---|---|
-| **Current GA** | **0.7.10** — ships skill product **v0.34.2** |
+| **Current GA** | **0.7.11** — ships skill product **v0.34.4** |
 | **Node.js** | `>= 22.14.0` |
 | **Documentation** | [flowskill.io.vn](https://flowskill.io.vn) |
 | **Repository** | [GitHub: manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |

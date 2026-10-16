@@ -2,6 +2,9 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.11] - 2026-10-16 — ships skill v0.34.4 (stable / latest)
+- **Skill Product v0.34.4 Parity:** Ships skill v0.34.4 with `flow ready --json` machine envelope for host orchestrators and `flow auto --parallel` advisory wave policy.
+
 ## [0.7.10] - 2026-10-15 — ships skill v0.34.2 (stable / latest)
 - **Skill Product v0.34.2 Parity:** Ships skill v0.34.2 with 21-harness market research and unified release automation tooling.
 

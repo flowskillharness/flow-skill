@@ -90,7 +90,7 @@ Sau khi cài đặt hoàn tất, hãy khởi động lại hoặc tải lại co
 
 | | |
 |---|---|
-| **GA hiện tại** | **0.7.10** — ships skill product **v0.34.2** |
+| **GA hiện tại** | **0.7.11** — ships skill product **v0.34.4** |
 | **Node.js** | `>= 22.14.0` |
 | **Tài liệu** | [flowskill.io.vn](https://flowskill.io.vn) |
 | **Kho lưu trữ** | [GitHub: manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |
