@@ -14,7 +14,12 @@ blocking release confidence and false-failing an otherwise healthy 263/1 test ru
 - Case K sampled the ambient shared global `${TMPDIR:-/tmp}` before and after running the 13-fixture batch (~6–8 seconds runtime).
 - Case K allowed only `[ "$delta" -le 1 ]` ambient noise, but background system/agent processes on the shared macOS runner created 2 unrelated directories in the shared temp root during the execution window.
 - The failure was not a Flow runner rundir leak; `cmd_eval` in `flow.sh` cleans each per-fixture `rundir` immediately via `rm -rf "$rundir"` on normal completion, skip, and abort paths.
-
+- PR #39 head `a93cc9b`:
+  - Case K passed with delta=0 on both macOS run attempts.
+  - Ubuntu and Windows passed.
+  - macOS attempt 1 cancelled at 15m20s.
+  - macOS attempt 2 cancelled at 15m04s after `TOTAL wall_s=891` (~14m51s) and `ALL SUITES PASSED`, before post-job cleanup finished.
+  - Confirmed workflow timeout: `.github/workflows/ci.yml:33` assigned macOS 15m, leaving zero headroom for the 14m51s suite plus runner steps.
 ## Hypothesis (Race / Ambient Noise)
 Sampling the global shared `${TMPDIR:-/tmp}` exposes Case K to a non-deterministic race with unrelated concurrent processes on the runner machine. Setting a dedicated private `mktemp -d` root as `TMPDIR` for the batch invocation isolates Flow-owned temp directory creation to an unshared namespace, eliminating ambient noise while strictly measuring whether Flow leaves any residual rundirs.
 
@@ -27,7 +32,7 @@ Sampling the global shared `${TMPDIR:-/tmp}` exposes Case K to a non-determinist
 6. The private root is cleaned up after assertion verification and in `_cleanup_all`.
 7. Runner eval STOP zones (`_eval_engine_run`, `_run_with_timeout`) and runner code remain untouched.
 8. Bash 3.2 compatible, zero new dependencies.
-
+9. `.github/workflows/ci.yml`: macOS `bash-suite` timeout budget increased to 25m (measured 14m51s suite + post-job need); documented in `docs/release-process.md`.
 ## Non-Goals
 - No changes to `skills/flow/runner/flow.sh`.
 - No widening of tolerance thresholds in the shared global namespace.

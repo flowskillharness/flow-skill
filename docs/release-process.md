@@ -21,7 +21,7 @@ Ops detail and token hygiene live in [`npm-wrapper/RELEASE_CHECKLIST.md`](../npm
 skills/flow/**  ──sync──►  npm-wrapper/skills/flow  (prepack / CI Materialize)
        │
        ├── push master (paths) ──► CI: bash-suite 3-OS + npm-wrapper Node matrix
-                            Windows bash-suite timeout = 80m; others 15m
+                            Windows bash-suite timeout = 80m; macOS 25m; others 15m
        │
        └── git tag npm@X.Y.Z + push ──► publish-npm-wrapper.yml
                                          environment: npm-publish (required reviewer)
@@ -36,7 +36,7 @@ Nightly (cron) ──► smoke.mjs vs dist-tags next + latest (clean cwd, no npm
 | Job | Typical duration | Timeout budget |
 |---|---|---|
 | bash-suite ubuntu | ~8 min | 15m |
-| bash-suite macOS | ~11–13 min | 15m |
+| bash-suite macOS | ~11–15 min (measured 14m51s suite + post-job need, previous ~11–13m typical) | **25m** |
 | bash-suite Windows | ~54–60 min (measured 54m37s–59m53s across full registered suite) | **80m** |
 | npm-wrapper matrix | ~15–40s / cell | 10m |
 

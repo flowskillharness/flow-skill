@@ -7,6 +7,7 @@
 - **Windows release pipeline & fixture path fixes:** `scripts/sync-release.mjs` checks `git diff --cached --quiet` before committing release preparation and i18n files to prevent failures when CRLF normalization makes `git add` a no-op; wraps `gh` execution through `cmd.exe /d /c` with bare `gh` on Windows so mock `gh.cmd` wins from PATH directory precedence; `tests/test_sync_release.sh` uses `winpath` for paths passed to `node` in test fixtures.
 - **CI Windows bash-suite timeout:** Increased `ci.yml` `bash-suite` Windows job timeout budget to 80m (measured 54m37s–59m53s across all registered bash suites with variance) to prevent timeout cancellation before the PowerShell installer step; updated `docs/release-process.md` CI facts.
 - **CI eval test isolation:** `tests/test_flow_eval.sh` Case K isolates the full 13-fixture batch under a dedicated private `TMPDIR` root to eliminate ambient directory noise on shared runner hosts while strictly asserting exact zero residual temp directories.
+- **CI macOS bash-suite timeout:** Increased `ci.yml` `bash-suite` macOS job timeout budget to 25m (measured 14m51s suite plus post-job need, exceeding previous 15m limit) to prevent workflow timeout cancellation after suite pass; updated `docs/release-process.md` CI facts.
 
 ## [0.34.4] - 2026-10-16
 - `flow ready --json`: closed `ready.report` envelope (buildable cards with deps/allowed-files/wave, blocked reasons, warnings, advisory parallel groups, auto state) for host orchestrators; unknown arguments now fail loudly (exit 2) instead of being ignored.
