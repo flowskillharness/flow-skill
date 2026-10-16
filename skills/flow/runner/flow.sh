@@ -2076,24 +2076,25 @@ _card_allowed_files() { # $1 = card file
   awk '/^## Allowed files/{f=1; next} f && /^## /{f=0} f && NF{print}' "$1"
 }
 
-cmd_ready() {
-  if ! planning_complete; then
-    echo "FAIL: planning not complete - no cards to schedule yet."
-    return 1
-  fi
-  local any_buildable=0
+# ---- ready scan: one collector shared by prose ready, ready --json, and auto --parallel ----
+# Record stream (TAB-separated, one record per line, in encounter order):
+#   B<TAB>id<TAB>deps-text   buildable card start; following A records are its raw allowed lines
+#   A<TAB>text               raw '## Allowed files' line of the current B record
+#   X<TAB>id<TAB>reason      blocked card
+#   N<TAB>text               advisory note (dep evidence floor / auto receipts), printed verbatim
+#   E<TAB>text               no cards exist yet
+#   F<TAB>1                  auto enforcing: todo cards exist but none buildable (non-green graph)
+_ready_scan() {
+  local f id st deps dep ok any_buildable=0 any_todo=0
   local total; total="$(highest_card)"
-  if [ "$total" -le 0 ]; then echo "No cards created yet. Run '/flow card'."; return 0; fi
-  echo "flow ready - buildable todo cards (deps met). Operator dispatches; runner advises."
-  echo "Parallel only when allowed-files do NOT overlap (review the lists below)."
-  echo
-  local f id st deps dep ok
+  if [ "$total" -le 0 ]; then printf 'E\tNo cards created yet. Run '"'"'/flow card'"'"'.\n'; return 0; fi
   for f in "$CARDS_DIR"/C-*.md; do
     [ -e "$f" ] || continue
     id="$(basename "$f" .md)"
     st="$(card_status "$f")"
     [ "$st" = "todo" ] || continue
-    deps="$(grep -m1 -E '^deps:' "$f" | sed 's/^deps:[[:space:]]*//' | tr -d '\r')"
+    any_todo=1
+    deps="$(grep -m1 -E '^deps:' "$f" | sed 's/^deps:[[:space:]]*//' | tr -d '\r' | tr '\t' ' ')"
     ok=1
     # deps met if every referenced card is status done AND Evidence passes world-state
     # signal floor (hand-edit done without multi-signal cannot unblock dependents).
@@ -2106,50 +2107,276 @@ cmd_ready() {
         ok=0
       elif ! _card_done_evidence_ok "$depfile"; then
         ok=0
-        echo "  note: dep $(basename "$depfile" .md) is status=done but ## Evidence fails world-state signal (re-check or paste real proof)"
+        printf 'N\t  note: dep %s is status=done but ## Evidence fails world-state signal (re-check or paste real proof)\n' "$(basename "$depfile" .md)"
       elif _att_auto_is_enforcing; then
         depid="$(basename "$depfile" .md)"
         if ! _att_accepted_semantic card "$depid" || ! _att_accepted_live "$depid"; then
           ok=0
-          echo "  note: dep $depid missing current semantic/live receipts (auto active)"
+          printf 'N\t  note: dep %s missing current semantic/live receipts (auto active)\n' "$depid"
         fi
       fi
     done
     if [ "$ok" -eq 1 ]; then
-      echo "  BUILDABLE $id  (deps: ${deps:-none})"
-      _card_allowed_files "$f" | sed 's/^/      allowed: /'
       any_buildable=1
+      printf 'B\t%s\t%s\n' "$id" "${deps:-none}"
+      _card_allowed_files "$f" | while IFS= read -r _afl; do [ -n "$_afl" ] && printf 'A\t%s\n' "$_afl"; done
     else
-      echo "  blocked   $id  (deps unmet or evidence floor failed: ${deps:-none})"
+      printf 'X\t%s\tdeps unmet or evidence floor failed: %s\n' "$id" "${deps:-none}"
     fi
   done
   # Auto-active: if any todo cards exist but none are buildable, exit non-zero so
   # automation cannot treat a fully receipt-blocked graph as green.
-  if _att_auto_is_enforcing; then
-    local any_todo=0
-    for f in "$CARDS_DIR"/C-*.md; do
-      [ -e "$f" ] || continue
-      [ "$(card_status "$f")" = "todo" ] && any_todo=1
-    done
-    if [ "${any_todo:-0}" -eq 1 ] && [ "${any_buildable:-0}" -eq 0 ]; then
-      return 1
-    fi
+  if _att_auto_is_enforcing && [ "$any_todo" -eq 1 ] && [ "$any_buildable" -eq 0 ]; then
+    printf 'F\t1\n'
   fi
   return 0
 }
 
+# Materialize per-buildable-card files from a scan: $2/order (ids in card order),
+# $2/cards/<id>.deps (deps text), $2/cards/<id>.raw (raw allowed-files lines).
+_ready_scan_cards() { # $1 = scan file, $2 = out dir
+  local scan="$1" out="$2" line id=""
+  mkdir -p "$out/cards"
+  : > "$out/order"
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      B$'\t'*)
+        id="$(printf '%s' "$line" | cut -f2)"
+        printf '%s\n' "$id" >> "$out/order"
+        printf '%s\n' "$(printf '%s' "$line" | cut -f3-)" > "$out/cards/$id.deps"
+        : > "$out/cards/$id.raw"
+        ;;
+      A$'\t'*)
+        [ -n "$id" ] || continue
+        printf '%s\n' "$(printf '%s' "$line" | cut -f2-)" >> "$out/cards/$id.raw"
+        ;;
+    esac
+  done < "$scan"
+}
+
+# Group buildable cards into advisory parallel waves. Greedy first-fit in card order:
+# a card joins the first wave whose members share NO allowed-files token with it (same
+# _ws_tokens normalization as 'workspace check', so the two can never diverge on what a
+# card claims to own). A card with NO declared allowed files conflicts with everything —
+# the overlap cannot be disproven — so it always opens its own wave, and no card joins a
+# wave that contains such a wildcard. Prints W<TAB><wave#><TAB>ids per wave.
+_ready_waves() { # $1 = scan file
+  local scan="$1" td line card_id k placed shared ids
+  td="$(mktemp -d)"; _register_td "$td"
+  _ready_scan_cards "$scan" "$td"
+  [ -s "$td/order" ] || return 0
+  local nw=0
+  while IFS= read -r card_id || [ -n "$card_id" ]; do
+    [ -n "$card_id" ] || continue
+    _ws_tokens < "$td/cards/$card_id.raw" > "$td/cards/$card_id.tokens" 2>/dev/null || : > "$td/cards/$card_id.tokens"
+    placed=0
+    if [ -s "$td/cards/$card_id.tokens" ]; then
+      k=1
+      while [ "$k" -le "$nw" ]; do
+        if [ ! -f "$td/wave$k.wild" ]; then
+          shared="$(grep -Fxf "$td/cards/$card_id.tokens" "$td/wave$k.tokens" 2>/dev/null | grep . || true)"
+          if [ -z "$shared" ]; then
+            # grep -Fxf needs no sortedness — wave token order is irrelevant
+            cat "$td/cards/$card_id.tokens" >> "$td/wave$k.tokens"
+            printf '%s\n' "$card_id" >> "$td/wave$k.ids"
+            placed=1
+            break
+          fi
+        fi
+        k=$((k+1))
+      done
+    fi
+    if [ "$placed" -eq 0 ]; then
+      nw=$((nw+1))
+      cat "$td/cards/$card_id.tokens" > "$td/wave$nw.tokens"
+      printf '%s\n' "$card_id" > "$td/wave$nw.ids"
+      [ -s "$td/cards/$card_id.tokens" ] || : > "$td/wave$nw.wild"
+    fi
+  done < "$td/order"
+  k=1
+  while [ "$k" -le "$nw" ]; do
+    ids="$(tr '\n' ' ' < "$td/wave$k.ids" | sed 's/ $//')"
+    printf 'W\t%s\t%s\n' "$k" "$ids"
+    k=$((k+1))
+  done
+  return 0
+}
+
+_ready_prose() {
+  if ! planning_complete; then
+    echo "FAIL: planning not complete - no cards to schedule yet."
+    return 1
+  fi
+  local td; td="$(mktemp -d)"; _register_td "$td"
+  _ready_scan > "$td/scan"
+  local first; first="$(head -n 1 "$td/scan" 2>/dev/null || true)"
+  case "$first" in
+    E$'\t'*)
+      printf '%s\n' "$(printf '%s' "$first" | cut -f2-)"
+      return 0
+      ;;
+  esac
+  echo "flow ready - buildable todo cards (deps met). Operator dispatches; runner advises."
+  echo "Parallel only when allowed-files do NOT overlap (review the lists below)."
+  echo
+  local line kind rest rc=0
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    kind="$(printf '%s' "$line" | cut -f1)"
+    rest="$(printf '%s' "$line" | cut -f2-)"
+    case "$kind" in
+      B) printf '  BUILDABLE %s  (deps: %s)\n' "$(printf '%s' "$rest" | cut -f1)" "$(printf '%s' "$rest" | cut -f2-)" ;;
+      A) printf '      allowed: %s\n' "$rest" ;;
+      X) printf '  blocked   %s  (%s)\n' "$(printf '%s' "$rest" | cut -f1)" "$(printf '%s' "$rest" | cut -f2-)" ;;
+      N) printf '%s\n' "$rest" ;;
+      F) rc=1 ;;
+    esac
+  done < "$td/scan"
+  return "$rc"
+}
+
+# Closed ready.report envelope (display-only, mirrors doctor.report conventions).
+# Hosts place and wait per references/host-agnostic-parallel.md; waves are advisory.
+_ready_json() {
+  if ! planning_complete; then
+    printf '{"schema_version":1,"kind":"ready.report","planning_complete":false,"note":"%s","buildable":[],"blocked":[],"warnings":[],"groups":[],"auto":"INACTIVE","parallel_policy":false}\n' \
+      "$(_json_str "planning not complete - no cards to schedule yet.")"
+    return 1
+  fi
+  local td; td="$(mktemp -d)"; _register_td "$td"
+  _ready_scan > "$td/scan"
+  local note="" line kind rest id
+  line="$(head -n 1 "$td/scan" 2>/dev/null || true)"
+  case "$line" in
+    E$'\t'*) note="$(printf '%s' "$line" | cut -f2-)" ;;
+  esac
+  _ready_scan_cards "$td/scan" "$td"
+  while IFS= read -r card_id || [ -n "$card_id" ]; do
+    [ -n "$card_id" ] || continue
+    _ws_tokens < "$td/cards/$card_id.raw" > "$td/cards/$card_id.tokens" 2>/dev/null || : > "$td/cards/$card_id.tokens"
+  done < "$td/order"
+  _ready_waves "$td/scan" > "$td/waves"
+  : > "$td/wavemap"
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      W$'\t'*)
+        for id in $(printf '%s' "$line" | cut -f3); do
+          printf '%s\t%s\n' "$id" "$(printf '%s' "$line" | cut -f2)" >> "$td/wavemap"
+        done
+        ;;
+    esac
+  done < "$td/waves"
+  local ast pol="false"
+  _att_auto_state_read > "$td/autostate" 2>/dev/null || true
+  ast="$(head -n 1 "$td/autostate" 2>/dev/null || true)"
+  [ -n "$ast" ] || ast="INACTIVE"
+  if [ "$ast" = "ACTIVE" ] && [ "${_ATT_A_parallel:-}" = "true" ]; then pol="true"; fi
+  local rc=0
+  local bl="" bl_first=1 card_id deps darr farr wv dfirst ffirst item
+  while IFS= read -r card_id || [ -n "$card_id" ]; do
+    [ -n "$card_id" ] || continue
+    deps="$(cat "$td/cards/$card_id.deps" 2>/dev/null || true)"
+    darr=""; dfirst=1
+    for id in $(printf '%s' "$deps" | grep -oiE 'C-[0-9]+' || true); do
+      if [ "$dfirst" -eq 1 ]; then darr="\"$(_json_str "$id")\""; dfirst=0
+      else darr="$darr,\"$(_json_str "$id")\""; fi
+    done
+    farr=""; ffirst=1
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -n "$line" ] || continue
+      if [ "$ffirst" -eq 1 ]; then farr="\"$(_json_str "$line")\""; ffirst=0
+      else farr="$farr,\"$(_json_str "$line")\""; fi
+    done < "$td/cards/$card_id.tokens"
+    wv="$(awk -F'\t' -v c="$card_id" '$1==c{print $2; exit}' "$td/wavemap" 2>/dev/null)"
+    [ -n "$wv" ] || wv=1
+    item="{\"id\":\"$(_json_str "$card_id")\",\"deps\":[$darr],\"allowed_files\":[$farr],\"wave\":$wv}"
+    if [ "$bl_first" -eq 1 ]; then bl="$item"; bl_first=0
+    else bl="$bl,$item"; fi
+  done < "$td/order"
+  local bk="" bk_first=1
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    kind="$(printf '%s' "$line" | cut -f1)"
+    case "$kind" in
+      X)
+        rest="$(printf '%s' "$line" | cut -f2-)"
+        item="{\"id\":\"$(_json_str "$(printf '%s' "$rest" | cut -f1)")\",\"reason\":\"$(_json_str "$(printf '%s' "$rest" | cut -f2-)")\"}"
+        if [ "$bk_first" -eq 1 ]; then bk="$item"; bk_first=0
+        else bk="$bk,$item"; fi
+        ;;
+      F) rc=1 ;;
+    esac
+  done < "$td/scan"
+  local wn="" wn_first=1
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      N$'\t'*)
+        if [ "$wn_first" -eq 1 ]; then wn="\"$(_json_str "$(printf '%s' "$line" | cut -f2-)")\""; wn_first=0
+        else wn="$wn,\"$(_json_str "$(printf '%s' "$line" | cut -f2-)")\""; fi
+        ;;
+    esac
+  done < "$td/scan"
+  local grp="" gfirst=1 gids g1
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      W$'\t'*)
+        gids=""; g1=1
+        for id in $(printf '%s' "$line" | cut -f3); do
+          if [ "$g1" -eq 1 ]; then gids="\"$(_json_str "$id")\""; g1=0
+          else gids="$gids,\"$(_json_str "$id")\""; fi
+        done
+        if [ "$gfirst" -eq 1 ]; then grp="[$gids]"; gfirst=0
+        else grp="$grp,[$gids]"; fi
+        ;;
+    esac
+  done < "$td/waves"
+  printf '{"schema_version":1,"kind":"ready.report","planning_complete":true,"note":"%s","buildable":[%s],"blocked":[%s],"warnings":[%s],"groups":[%s],"auto":"%s","parallel_policy":%s}\n' \
+    "$(_json_str "$note")" "$bl" "$bk" "$wn" "$grp" "$(_json_str "$ast")" "$pol"
+  return "$rc"
+}
+
+cmd_ready() {
+  # flow ready [--json] — buildable todo cards (deps met); --json emits the closed
+  # ready.report envelope (display-only). Unknown args fail loudly.
+  local json=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --json) json=1 ;;
+      *) echo "usage: /flow ready [--json]"; return 2 ;;
+    esac
+    shift
+  done
+  if [ "$json" -eq 1 ]; then _ready_json; return $?; fi
+  _ready_prose
+  return $?
+}
+
 cmd_auto() {
-  # flow auto [stop] — activate/refresh attested auto policy, or clear it
-  local sub="${1:-}"
-  if [ "$sub" = "stop" ]; then
-    if [ -n "${2:-}" ]; then echo "usage: /flow auto stop"; return 2; fi
+  # flow auto [--parallel] — activate/refresh attested auto policy, or 'auto stop' to clear it.
+  # --parallel records the parallel policy in auto-state and prints advisory waves; it never
+  # places, waits, or schedules anything (host owns occupants per host-agnostic-parallel.md).
+  local parallel=0 stop=0 a
+  for a in "$@"; do
+    case "$a" in
+      --parallel) parallel=1 ;;
+      stop) stop=1 ;;
+      *) echo "usage: /flow auto | /flow auto --parallel | /flow auto stop"; return 2 ;;
+    esac
+  done
+  if [ "$stop" -eq 1 ]; then
+    if [ "$#" -ne 1 ]; then echo "usage: /flow auto stop"; return 2; fi
     _att_auto_lock_acquire || return 1
     _att_auto_clear
     _att_auto_lock_release
     echo "PASS: auto state cleared (manual warning-only mode)."
     return 0
   fi
-  if [ -n "$sub" ]; then echo "usage: /flow auto | /flow auto stop"; return 2; fi
+  _ATT_W_parallel=""
+  [ "$parallel" -eq 1 ] && _ATT_W_parallel="true"
 
   lock_acquire auto || return 1
   _att_auto_lock_acquire || return 1
@@ -2216,6 +2443,20 @@ cmd_auto() {
   echo "PASS: auto ACTIVE on branch '$br' ($(highest_card) cards)."
   echo "  check/card done/ready/merged workspace remove now require current receipts."
   echo "  stop: /flow auto stop"
+  if [ "$parallel" -eq 1 ]; then
+    echo
+    echo "Parallel policy recorded (auto-state 'parallel: true'). Advisory waves (first-fit allowed-files non-overlap):"
+    local _aw_td; _aw_td="$(mktemp -d)"; _register_td "$_aw_td"
+    _ready_scan > "$_aw_td/scan"
+    _ready_waves "$_aw_td/scan" > "$_aw_td/waves"
+    local _aw_line
+    while IFS= read -r _aw_line || [ -n "$_aw_line" ]; do
+      [ -n "$_aw_line" ] || continue
+      case "$_aw_line" in
+        W$'\t'*) printf '  wave %s: %s\n' "$(printf '%s' "$_aw_line" | cut -f2)" "$(printf '%s' "$_aw_line" | cut -f3)" ;;
+      esac
+    done < "$_aw_td/waves"
+  fi
   echo
   echo "Orchestration remains skill-driven (AUTO principles); receipts are the mechanical trust floor."
   echo "Run '/flow ready' to see parallel-safe groups."
@@ -6322,7 +6563,7 @@ case "$cmd" in
   mode)           cmd_mode "${1:-}" ;;
   project-type)   cmd_project_type "${1:-}" ;;
   skip)           cmd_skip "$@" ;;
-  ready)          cmd_ready ;;
+  ready)          cmd_ready "$@" ;;
   workspace)      cmd_workspace "$@" ;;
   loop-prep)      cmd_loop_prep "$@" ;;
   loop-log)       cmd_loop_log "$@" ;;

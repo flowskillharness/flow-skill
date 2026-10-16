@@ -958,6 +958,7 @@ _att_auto_state_read() { # sets _ATT_A_*; echoes INACTIVE|ACTIVE|STALE|INVALID
   local p; p="$(_att_auto_state_path)"
   _ATT_A_schema=""; _ATT_A_status=""; _ATT_A_activated_at=""; _ATT_A_activated_by=""
   _ATT_A_integration_branch=""; _ATT_A_risk_fingerprint=""; _ATT_A_contract_fingerprint=""
+  _ATT_A_parallel=""
   if [ ! -f "$p" ]; then echo "INACTIVE"; return 0; fi
   if ! _att_parse_auto_file "$p"; then echo "INVALID"; return 0; fi
   # revalidate
@@ -975,7 +976,7 @@ _att_parse_auto_file() {
       *) return 1 ;;
     esac
     case "$k" in
-      schema|status|activated_at|activated_by|integration_branch|risk_fingerprint|contract_fingerprint) : ;;
+      schema|status|activated_at|activated_by|integration_branch|risk_fingerprint|contract_fingerprint|parallel) : ;;
       *) return 1 ;;
     esac
     case " $seen " in *" $k "*) return 1 ;; esac
@@ -988,6 +989,8 @@ _att_parse_auto_file() {
       integration_branch) _ATT_A_integration_branch="$v" ;;
       risk_fingerprint) _ATT_A_risk_fingerprint="$v" ;;
       contract_fingerprint) _ATT_A_contract_fingerprint="$v" ;;
+      parallel) [ "$v" = "true" ] || return 1
+        _ATT_A_parallel="$v" ;;
     esac
   done < "$f"
   [ "$_ATT_A_schema" = "$_ATT_AUTO_SCHEMA" ] || return 1
@@ -1027,6 +1030,10 @@ integration_branch: ${_ATT_W_integration_branch}
 risk_fingerprint: ${_ATT_W_risk_fingerprint}
 contract_fingerprint: ${_ATT_W_contract_fingerprint}
 "
+  if [ -n "${_ATT_W_parallel:-}" ]; then
+    body="${body}parallel: true
+"
+  fi
   _att_atomic_write "$path" "$body"
 }
 

@@ -140,6 +140,8 @@ git's own "a branch can only be checked out in one worktree" refusal is the guar
 `add` fails verbatim rather than double-creating. Run `/flow workspace doctor` after an `auto` run
 to reconcile any worktree it left as an orphan tree (no side-file record).
 
+`flow auto --parallel` declares the parallel policy mechanically: same preflights as plain `auto`, then records `parallel: true` in `.flow/auto-state` and prints advisory waves. Waves are a deterministic first-fit partition of the current buildable set in card-number order: a card joins the first wave sharing NO allowed-files token with any member (`_ws_tokens` normalization, same as `workspace check`); a card with no declared allowed files conflicts with everything and always opens its own wave. The machine surface for re-deriving waves mid-run is `flow ready --json` (closed `ready.report` envelope) — waves are advisory and re-checkable after every wave returns; placement and waiting stay with the host (`host-agnostic-parallel.md`). `auto stop` clears the policy with the rest of the state.
+
 ## Security-class halt (never silent, never planner-decided)
 auth · authorization · admin-surface exposure · tenancy · payments · data loss/migration ·
 removing/weakening validation. On any: stop, write the `DEBT.md` line with the concrete
