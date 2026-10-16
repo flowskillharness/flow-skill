@@ -1,7 +1,7 @@
 # Plan: Deterministic Private TMPDIR for Flow Eval Residue Test (Case K)
 
 ## Who Is Hurt
-Maintainers; post-merge CI on macOS (`bash-suite` job 116954165025 on run 38941087736, master commit `1a187f0`) failed `tests/test_flow_eval.sh` Case K with:
+Maintainers; post-merge CI on macOS (`bash-suite` job 117108600939 on run 38941087736, master commit `1a187f0`) failed `tests/test_flow_eval.sh` Case K with:
 ```
 FAIL [TMPDIR delta=2 after a full 13-fixture batch - rundir cleanup regression]
 ```
@@ -33,6 +33,7 @@ Sampling the global shared `${TMPDIR:-/tmp}` exposes Case K to a non-determinist
 7. Runner eval STOP zones (`_eval_engine_run`, `_run_with_timeout`) and runner code remain untouched.
 8. Bash 3.2 compatible, zero new dependencies.
 9. `.github/workflows/ci.yml`: macOS `bash-suite` timeout budget increased to 25m (measured 14m51s suite + post-job need); documented in `docs/release-process.md`.
+10. Case K validates `mktemp -d` creation non-emptiness and directory existence (failing closed with exit 1 if unavailable), uses portable `find "$priv_tmp" -type d` without `-maxdepth`, and asserts `find` success without swallowing exit codes.
 ## Non-Goals
 - No changes to `skills/flow/runner/flow.sh`.
 - No widening of tolerance thresholds in the shared global namespace.
