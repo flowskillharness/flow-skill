@@ -933,10 +933,17 @@ function execGh(args, options = {}) {
   if (process.platform === 'win32') {
     // Windows: Node execFileSync('gh') bypasses PATHEXT when looking up extensionless
     // commands, skipping a mock `gh.cmd` in PATH and locating system `gh.exe` instead.
-    // Wrap through cmd.exe /d /s /c so PATHEXT finds `gh.cmd` in PATH before `gh.exe`.
-    // Quote every argument to prevent injection.
-    const cmdLine = ['gh', ...args].map(a => `"${String(a).replace(/"/g, '""')}"`).join(' ');
-    return execFileSync('cmd.exe', ['/d', '/s', '/c', cmdLine], options);
+    // Wrap through cmd.exe /d /c without /s, leaving bare `gh` unquoted so cmd.exe
+    // searches PATH with PATHEXT (.cmd before .exe). Quote only arguments with spaces/metachars.
+    const quoteArg = (a) => {
+      const s = String(a);
+      if (/[\s&<>()@^|"]/.test(s)) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+    const cmdLine = ['gh', ...args.map(quoteArg)].join(' ');
+    return execFileSync('cmd.exe', ['/d', '/c', cmdLine], options);
   }
   return execFileSync('gh', args, options);
 }

@@ -414,7 +414,9 @@ echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"
 tmp_l=$(mktemp -d)
 L_IMPORTER="$tmp_l/importer.mjs"
 cat > "$L_IMPORTER" << 'EOF'
-const mod = await import(process.argv[2]);
+import { pathToFileURL } from 'node:url';
+const target = pathToFileURL(process.argv[2]).href;
+const mod = await import(target);
 const assert = (await import('node:assert')).strict;
 assert.equal(mod.npmSpawnHelper().cmd, process.execPath, 'sync helper argv[0] must be process.execPath');
 assert.equal(mod.npmTestHelper().cmd, process.execPath, 'test helper argv[0] must be process.execPath');
@@ -427,6 +429,9 @@ EOF
 node "$(winpath "$L_IMPORTER")" "$(winpath "$ROOT/scripts/sync-release.mjs")" > "$tmp_l/l.out" 2>&1
 l_rc=$?
 ck 0 $l_rc "npm spawn helper uses node (no npm.cmd); import does not run CLI"
+if [ "$l_rc" -ne 0 ]; then
+  cat "$tmp_l/l.out" >&2
+fi
 if grep -q "HELPERS OK" "$tmp_l/l.out"; then
   ck 0 0 "helper assertions executed"
 else
@@ -442,11 +447,21 @@ echo "M) CLI entry guard symlink regression: symlinked script must execute main(
 tmp_m=$(mktemp -d)
 sym_script="$tmp_m/sym_sync_release.mjs"
 ln -s "$ROOT/scripts/sync-release.mjs" "$sym_script"
-node "$(winpath "$sym_script")" --check > "$tmp_m/m.out" 2>&1
-ck 0 $? "symlinked sync-release --check exits 0"
-[ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"
+m_target="$(winpath "$sym_script")"
+node "$m_target" --check > "$tmp_m/m.out" 2>&1
+m_rc=$?
+
 if ! command -v cygpath >/dev/null 2>&1; then
-  grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || ck 0 1 "symlinked invocation runs main() and reports PASS"
+  ck 0 $m_rc "symlinked sync-release --check exits 0"
+  [ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
+  grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
+else
+  if [ -s "$tmp_m/m.out" ]; then
+    ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)"
+  else
+    ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"
+    cat "$tmp_m/m.out" >&2
+  fi
 fi
 rm -rf "$tmp_m"
 
