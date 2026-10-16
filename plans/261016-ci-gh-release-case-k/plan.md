@@ -34,6 +34,10 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
   - Cases K2–K4 failed with exit 4 because Node's `execFileSync('gh')` on Windows bypassed `mock_bin/gh` (extensionless bash script) and called system `gh.exe`.
   - Case E failed earlier due to Git Bash `/tmp` paths passed into `node [eval] readFileSync`.
 
+- Run 38895281465, job 116954165025 (Windows bash-suite) on commit `93d2b6d`:
+  - All 75 bash suites passed (`ALL SUITES PASSED`, `TOTAL wall_s=3593` / 59m53s).
+  - The job was cancelled at 60m right before the PowerShell installer step due to execution time variance (previous green head 053b0c4 had `TOTAL wall_s=3236` / 54m37s; ~11% variance).
+  - Timeout budget in `ci.yml` increased from 60m to 80m.
 ## Required Fixes
 1. `scripts/pack-rehearsal.sh` canonicalizes all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
 2. `scripts/sync-release.mjs` replaces both npm spawn sites with `process.execPath` (node), matching `npm-wrapper/package.json`:
@@ -48,6 +52,7 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
 9. `tests/test_sync_release.sh` Case L asserts, via a real file importer, that both exported helpers set `cmd` to `process.execPath`, never reference `npm.cmd`, and importing the module does not execute the CLI.
 10. `tests/test_flow_rules.sh` case D: when `cygpath` exists (Windows Git Bash), translates `.aider.conf.yml` path via `cygpath -w` for Windows python.
 11. `npm-wrapper/test/installer.test.mjs` regression: verifies symlink-spelled dest refusal and physical dest acceptance.
+12. `.github/workflows/ci.yml`: increased Windows `bash-suite` timeout budget to 80m (15m unchanged for others) to account for measured variance (54m37s–59m53s); updated `docs/release-process.md` CI facts table.
 
 ## Acceptance Criteria
 1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes.
