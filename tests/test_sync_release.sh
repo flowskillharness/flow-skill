@@ -204,8 +204,20 @@ git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts" || true
-[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
+commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
+  if ! git -C "$tmp/r" diff --cached --quiet; then
+    echo "FAIL: git commit failed for scripts/: $commit_err" >&2
+    exit 1
+  fi
+}
+if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
+  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
+  exit 1
+fi
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+  exit 1
+}
 
 before_tree_hash="$(portable_hash "$tmp/r")"
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -240,8 +252,20 @@ git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts" || true
-[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
+commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
+  if ! git -C "$tmp/r" diff --cached --quiet; then
+    echo "FAIL: git commit failed for scripts/: $commit_err" >&2
+    exit 1
+  fi
+}
+if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
+  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
+  exit 1
+fi
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+  exit 1
+}
 git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
 
 before_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -268,8 +292,20 @@ git -C "$tmp/r" checkout -B master 2>/dev/null || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts" || true
-[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
+commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
+  if ! git -C "$tmp/r" diff --cached --quiet; then
+    echo "FAIL: git commit failed for scripts/: $commit_err" >&2
+    exit 1
+  fi
+}
+if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
+  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
+  exit 1
+fi
+ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+  exit 1
+}
 
 dumped_k_files=""
 ck_k() {

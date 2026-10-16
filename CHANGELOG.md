@@ -1,7 +1,7 @@
 # Changelog
 
 ## [Unreleased]
-- **CI release test diagnostics:** `tests/test_sync_release.sh` Case K captures and echoes process output and exit codes upon assertion failures to surface exact release pipeline abort lines in CI logs; ensures master branch checkout in test fixture.
+- **CI release test diagnostics:** `tests/test_sync_release.sh` Case K captures and echoes process output and exit codes upon assertion failures to surface release pipeline aborts in CI logs; ensures master branch in test fixture for worktree runs.
 
 ## [0.34.4] - 2026-10-16
 - `flow ready --json`: closed `ready.report` envelope (buildable cards with deps/allowed-files/wave, blocked reasons, warnings, advisory parallel groups, auto state) for host orchestrators; unknown arguments now fail loudly (exit 2) instead of being ignored.
