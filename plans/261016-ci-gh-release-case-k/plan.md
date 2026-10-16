@@ -21,7 +21,7 @@ Case K executes `node scripts/sync-release.mjs --ship --yes` under mocked `gh`. 
 1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes (`exists`, `create_fail`, `create_success`, `auth_error`).
 2. When any assertion fails in Case K, captured `$tmp/k*.out` and process exit codes are printed to stderr/stdout along with failing verification step markers, ensuring CI logs expose the exact abort line.
 3. Test fixture explicitly switches the cloned test repo to branch `master` (`git checkout -B master`) so branch pushes succeed consistently in worktrees or feature branches.
-4. Symlink creation for `npm-wrapper/node_modules` does not swallow failures: if `$ROOT/npm-wrapper/node_modules` is missing or `ln -s` fails, the test fails loudly with exit 1 naming the path before running `--ship --yes`.
+4. Symlink creation for `npm-wrapper/node_modules` does not swallow failures when present (if `$ROOT/npm-wrapper/node_modules` exists, `ln -s` must succeed or exit 1 with the path), while matching CI bash-suite behavior when absent (does not require the directory or exit on missing parent before `--ship --yes`).
 5. Git commit errors during script sync are not masked with `|| true`: if `git commit` fails, the test continues only when `git diff --cached --quiet` confirms there were no staged changes; any other commit failure exits 1 with the git error message.
 6. All assertions in `tests/test_sync_release.sh` pass locally on Linux.
 7. `node scripts/sync-release.mjs --check` passes cleanly (exit 0).

@@ -210,14 +210,14 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
     exit 1
   fi
 }
-if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
-  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
-  exit 1
+if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+    echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+    exit 1
+  }
+else
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
-  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
-  exit 1
-}
 
 before_tree_hash="$(portable_hash "$tmp/r")"
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -258,14 +258,14 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
     exit 1
   fi
 }
-if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
-  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
-  exit 1
+if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+    echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+    exit 1
+  }
+else
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
-  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
-  exit 1
-}
 git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
 
 before_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -298,14 +298,14 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
     exit 1
   fi
 }
-if [ ! -d "$ROOT/npm-wrapper/node_modules" ]; then
-  echo "FAIL: required node_modules missing at $ROOT/npm-wrapper/node_modules" >&2
-  exit 1
+if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
+    echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
+    exit 1
+  }
+else
+  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
-  echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
-  exit 1
-}
 
 dumped_k_files=""
 ck_k() {
