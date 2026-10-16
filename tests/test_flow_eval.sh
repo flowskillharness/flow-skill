@@ -60,7 +60,7 @@ mkmock() {
   } > "$MOCKBIN/claude"
   chmod +x "$MOCKBIN/claude"
 }
-_cleanup_all() { rm -rf "$MOCKBIN" 2>/dev/null; [ -n "${SB:-}" ] && rm -rf "$SB" 2>/dev/null; }
+_cleanup_all() { rm -rf "$MOCKBIN" 2>/dev/null; [ -n "${SB:-}" ] && rm -rf "$SB" 2>/dev/null; [ -n "${priv_tmp:-}" ] && rm -rf "$priv_tmp" 2>/dev/null; }
 trap _cleanup_all EXIT
 
 # ---------- A) fixture mechanical-pass proof (Phase 1 step 5 mechanisms) ----------
@@ -344,22 +344,23 @@ clean
 # ---------- K) robustness: no prompt temp files remain after a normal run ----------
 echo "K) no prompt-file residue after a normal (uninterrupted) run"
 newsb
-before_count=$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d 2>/dev/null | wc -l)
+priv_tmp="$(mktemp -d)"
+before_count=$(find "$priv_tmp" -maxdepth 1 -type d 2>/dev/null | wc -l)
 mkmock '
 nonce_line="$(printf "%s" "$prompt" | grep -oE "GATE-EVAL-[A-Za-z0-9-]+: FLAG" | head -1)"
 marker="${nonce_line% FLAG}"
 printf "%s PASS\n" "$marker"
 '
-batch_out="$(PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 3 --timeout 20 2>&1)"
+batch_out="$(TMPDIR="$priv_tmp" PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 3 --timeout 20 2>&1)"
 # this mock always returns PASS regardless of fixture, so FLAG-expected fixtures
 # correctly mismatch - assert all heading-mapped fixtures were genuinely evaluated
 # (not silently skipped), not that they all matched.
 has "$batch_out" "of 13 evaluated" "the full 13-fixture batch actually completed (not a silent skip)"
-after_count=$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d 2>/dev/null | wc -l)
-# Allow +/-1 ambient noise from other processes on the system - the real regression this test
-# guards is "N rundirs leak per batch", which would show +6 or more, not +/-1.
+after_count=$(find "$priv_tmp" -maxdepth 1 -type d 2>/dev/null | wc -l)
 delta=$((after_count - before_count)); [ "$delta" -lt 0 ] && delta=$((-delta))
-if [ "$delta" -le 1 ]; then echo "  ok   [TMPDIR delta=$delta after a full 13-fixture batch (no rundir residue - allowing +/-1 ambient noise)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 13-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
+if [ "$delta" -eq 0 ]; then echo "  ok   [TMPDIR delta=0 after a full 13-fixture batch (zero rundir residue in private TMPDIR)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 13-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
+rm -rf "$priv_tmp"
+priv_tmp=""
 clean
 
 # ---------- L) results/report cases ----------
