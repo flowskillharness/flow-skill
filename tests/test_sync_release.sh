@@ -454,14 +454,18 @@ echo "M) CLI entry guard symlink regression: symlinked script must execute main(
 tmp_m=$(mktemp -d)
 sym_script="$tmp_m/sym_sync_release.mjs"
 ln -s "$ROOT/scripts/sync-release.mjs" "$sym_script"
-m_target="$(winpath "$sym_script")"
-node "$m_target" --check > "$tmp_m/m.out" 2>&1
-m_rc=$?
+if [ ! -L "$sym_script" ]; then
+  echo "  skip [M: platform cannot create symlinks (ln -s created a copy); macOS/Linux symlink alias regression asserted there]"
+else
+  m_target="$(winpath "$sym_script")"
+  node "$m_target" --check > "$tmp_m/m.out" 2>&1
+  m_rc=$?
 
-ck 0 $m_rc "symlinked sync-release --check exits 0"
-[ "$m_rc" -ne 0 ] && cat "$tmp_m/m.out" >&2
-[ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
-grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
+  ck 0 $m_rc "symlinked sync-release --check exits 0"
+  [ "$m_rc" -ne 0 ] && cat "$tmp_m/m.out" >&2
+  [ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
+  grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
+fi
 rm -rf "$tmp_m"
 
 echo
