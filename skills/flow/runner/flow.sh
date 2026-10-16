@@ -2056,11 +2056,27 @@ cmd_gate() {
   local is_card=0
   local stage=""
 
+  _gate_usage() {
+    if [ "$opt_json" -eq 1 ]; then
+      echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+    else
+      echo "usage: /flow gate <stage: $STAGES> | /flow gate --card C-NNN"
+    fi
+  }
+
+  _gate_card_usage() {
+    if [ "$opt_json" -eq 1 ]; then
+      echo "usage: /flow gate --card C-NNN [--json]"
+    else
+      echo "usage: /flow gate --card C-NNN"
+    fi
+  }
+
   while [ $# -gt 0 ]; do
     case "$1" in
       --json)
         if [ "$opt_json" -eq 1 ]; then
-          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          _gate_usage
           return 2
         fi
         opt_json=1
@@ -2068,13 +2084,13 @@ cmd_gate() {
         ;;
       --card)
         if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
-          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          _gate_usage
           return 2
         fi
         is_card=1
         shift
         if [ $# -eq 0 ]; then
-          echo "usage: /flow gate --card C-NNN [--json]"
+          _gate_card_usage
           return 2
         fi
         opt_card="$1"
@@ -2082,7 +2098,7 @@ cmd_gate() {
         ;;
       *)
         if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
-          echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+          _gate_usage
           return 2
         fi
         stage="$1"
@@ -2094,7 +2110,7 @@ cmd_gate() {
   if [ "$is_card" -eq 1 ]; then
     local f
     f="$(resolve_card_file "$opt_card" 2>/dev/null)"
-    if [ -z "$f" ]; then echo "usage: /flow gate --card C-NNN [--json]"; return 2; fi
+    if [ -z "$f" ]; then _gate_card_usage; return 2; fi
     # A nonexistent card is NOT a gate verdict: reporting it as exit 1 would journal a
     # typo'd id as a genuine red review and burn a two-strikes repair budget.
     if [ ! -f "$f" ]; then echo "FAIL: card not found for '$opt_card' (looked for $f)"; return 2; fi
@@ -2110,14 +2126,14 @@ cmd_gate() {
   fi
 
   if [ -z "$stage" ]; then
-    echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+    _gate_usage
     return 2
   fi
 
   local known=0 s
   for s in $STAGES; do [ "$s" = "$stage" ] && known=1; done
   if [ "$known" -eq 0 ]; then
-    echo "usage: /flow gate <stage: $STAGES> [--json] | /flow gate --card C-NNN [--json]"
+    _gate_usage
     return 2
   fi
 

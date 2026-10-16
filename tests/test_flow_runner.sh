@@ -8,7 +8,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 pass=0; fail=0
 ck() { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected $1 got $2"; fail=$((fail+1)); fi; }
-has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3]"; fail=$((fail+1)); fi; }
+has() { if printf '%s' "$1" | grep -q -e "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3]"; fail=$((fail+1)); fi; }
+no()  { if printf '%s' "$1" | grep -q -e "$2"; then echo "  FAIL [$3] (unexpected: $2)"; fail=$((fail+1)); else echo "  ok   [$3]"; pass=$((pass+1)); fi; }
 
 stage_clean() { printf '#%s\n## Gate\n- [x] honestly done\n\nreal content.\n' "$1" > "$2"; }
 
@@ -265,16 +266,34 @@ out="$(bash "$RUN" gate --card C-999 --json 2>&1)"; rc=$?
 ck 2 $rc "nonexistent card gate --card --json exit 2"
 has "$out" "card not found" "reports card not found for nonexistent card"
 
-# 7. Unknown stage / unknown extra args: exit 2
-out="$(bash "$RUN" gate 99-unknown --json 2>&1)"; rc=$?
-ck 2 $rc "unknown stage gate --json exit 2"
+# 7. Error handling & legacy usage parity: exit 2
+out="$(bash "$RUN" gate bogus 2>&1)"; rc=$?
+ck 2 $rc "legacy gate bogus exit 2"
+has "$out" "usage: /flow gate <stage:" "legacy gate bogus outputs stage usage"
+no "$out" "--json" "legacy gate bogus does not mention --json"
+
+out="$(bash "$RUN" gate --card 2>&1)"; rc=$?
+ck 2 $rc "legacy gate --card exit 2"
+ck "usage: /flow gate --card C-NNN" "$out" "legacy gate --card outputs exact legacy card usage"
+
+out="$(bash "$RUN" gate --card junk 2>&1)"; rc=$?
+ck 2 $rc "legacy gate --card junk exit 2"
+ck "usage: /flow gate --card C-NNN" "$out" "legacy gate --card junk outputs exact legacy card usage"
+
+out="$(bash "$RUN" gate bogus --json 2>&1)"; rc=$?
+ck 2 $rc "gate bogus --json exit 2"
+has "$out" "[--json]" "gate bogus --json usage mentions optional --json"
+
 out="$(bash "$RUN" gate 00-idea --json extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate 00-idea --json extra exit 2"
+has "$out" "[--json]" "extra args with --json shows --json usage"
+
 out="$(bash "$RUN" gate 00-idea extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate 00-idea extra prose exit 2"
+no "$out" "--json" "extra args without --json does not mention --json"
+
 out="$(bash "$RUN" gate --card C-001 --json extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate --card C-001 --json extra exit 2"
-
 # 8. Prose parity without --json
 out="$(bash "$RUN" gate 00-idea 2>&1)"; rc=$?
 ck 0 $rc "prose clean stage exit 0"
