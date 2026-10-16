@@ -36,7 +36,7 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
 
 - Run 38895281465, job 116954165025 (Windows bash-suite) on commit `93d2b6d`:
   - All registered bash suites passed (`ALL SUITES PASSED`, `TOTAL wall_s=3593` / 59m53s).
-  - The job was cancelled at 60m right before the PowerShell installer step due to execution time variance (previous green head 053b0c4 had `TOTAL wall_s=3236` / 54m37s; ~11% variance).
+  - Bash suites ALL PASSED at wall_s=3593; PowerShell step header was present, with cancellation at 60m10s before PowerShell tests actually ran, due to execution time variance (previous green head 053b0c4 had `TOTAL wall_s=3236` / 54m37s; ~11% variance).
   - Timeout budget in `ci.yml` increased from 60m to 80m.
 ## Required Fixes
 1. `scripts/pack-rehearsal.sh` canonicalizes all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
@@ -45,7 +45,7 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
    - live battery test: pretest `node scripts/sync.mjs`, then `node --test --test-concurrency=1` on the same test files listed in `npm-wrapper/package.json` "test" (`npmTestHelper()`). No `npm.cmd`, no `shell: true`, no `--skip-battery`.
 3. `scripts/sync-release.mjs` CLI entry guard uses `realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])` (with fallback to URL comparison on error) so symlink aliases like macOS `/var` -> `/private/var` match correctly while preventing dynamic imports from calling `main()`.
 4. `scripts/sync-release.mjs` Step 5 and Step 7 check `git diff --cached --quiet` before committing release preparation and i18n files, skipping the commit cleanly if CRLF normalization made the add a no-op.
-5. `scripts/sync-release.mjs` wraps `gh` execution on Windows through `cmd.exe /d /s /c` (`execGh`), ensuring PATHEXT finds mock `gh.cmd` in PATH before system `gh.exe`.
+5. `scripts/sync-release.mjs` wraps `gh` execution on Windows through `cmd.exe /d /c` with bare `gh` (`execGh`); the mock `gh.cmd` wins because its directory precedes `gh.exe` on PATH.
 6. `tests/test_sync_release.sh` Case K writes a `gh.cmd` delegating to `%~dp0gh %*`.
 7. `tests/test_sync_release.sh` defines `winpath()` (`cygpath -w` on Windows) for all fixture paths passed to `node` arguments or eval scripts.
 8. `tests/test_sync_release.sh` Case M asserts that executing `sync-release.mjs` via a symlink invokes `main()` and produces non-empty output, catching any future realpath guard regressions on Linux.
@@ -60,7 +60,7 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
 3. Refusal of unexpected ancestor symlinks in the installer is 100% preserved (no skip flags, no internal realpath bypass).
 4. `scripts/sync-release.mjs` CLI entry guard uses `realpathSync` on both sides to handle symlink aliases like macOS `/var`.
 5. Both npm spawn sites in `scripts/sync-release.mjs` use `process.execPath`; no `npm.cmd` remains.
-6. Windows `gh` execution wraps via `cmd.exe /d /s /c` finding `gh.cmd`.
+6. Windows `gh` execution wraps via `cmd.exe /d /c` with bare `gh` (`execGh`), finding `gh.cmd` via PATH directory precedence.
 7. All 59 assertions in `tests/test_sync_release.sh` pass locally, all 42 in `tests/test_flow_rules.sh`, and `node scripts/sync-release.mjs --check` exits 0.
 
 ## Non-Regressions

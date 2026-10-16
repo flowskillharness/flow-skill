@@ -252,7 +252,7 @@ node /path/to/flow-skill/npm-wrapper/scripts/smoke.mjs <exact-version>
 | Expect `npm dist-tag add` in GHA OIDC | E401; use manual bootstrap token |
 | Publish skill version as npm version (`@0.22.0`) | Does not exist; confuses users |
 | `npm i` alone for end users | No postinstall; must **run** the CLI |
-| Assume Windows bash suite < 15m | Full suite ~18m+; budget is 30m |
+| Assume Windows bash suite < 15m | Full suite measured ~54–64m; budget is 80m |
 | Re-add `NODE_AUTH_TOKEN must be empty` CI guard | Breaks setup-node OIDC (0% pass) |
 | Tag `v*` expecting npm publish | Wrong tag shape; need `npm@*` |
 
