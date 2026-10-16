@@ -74,9 +74,16 @@ ln -s "$RUN" "$AIDER_TEST_DIR/skills/flow/runner/flow.sh"
 )
 no "$(cat "$AIDER_TEST_DIR/.aider.conf.yml")" "check-doc-budgets\.sh" "materialized .aider.conf.yml does not contain check-doc-budgets.sh"
 
+# Python on Windows cannot open Git Bash /tmp/... paths (FileNotFoundError). When cygpath
+# exists (Windows Git Bash), translate to a native Windows path for the python -c open().
+AIDER_CONF_FOR_PY="$AIDER_TEST_DIR/.aider.conf.yml"
+if command -v cygpath >/dev/null 2>&1; then
+  AIDER_CONF_FOR_PY="$(cygpath -w "$AIDER_CONF_FOR_PY")"
+fi
+
 test_cmd="$("$PY" -c '
 import re
-with open("'"$AIDER_TEST_DIR"'/.aider.conf.yml") as f:
+with open(r"'"$AIDER_CONF_FOR_PY"'") as f:
     text = f.read()
 try:
     import yaml

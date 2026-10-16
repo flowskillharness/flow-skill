@@ -13,13 +13,13 @@
  *   node scripts/sync-release.mjs --sync
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
 
 function escapeRegExp(string) {
@@ -452,13 +452,60 @@ function syncRelease(skill_v, npm_v) {
   }
 
   // 5. Trigger npm run sync inside npm-wrapper
-  console.log('\nRunning "npm run sync" inside npm-wrapper...');
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  execFileSync(npmCmd, ['run', 'sync'], {
-    cwd: join(repoRoot, 'npm-wrapper'),
-    stdio: 'inherit',
-  });
+  console.log('\nRunning npm-wrapper sync inside npm-wrapper...');
+  execFileSync(
+    npmSpawnHelper().cmd,
+    npmSpawnHelper().args,
+    {
+      cwd: join(repoRoot, 'npm-wrapper'),
+      stdio: 'inherit',
+    }
+  );
   console.log('✓ Re-materialized skills/flow and updated manifest-hashes.json');
+}
+
+// Resolve the interpreter and args for spawning npm-wrapper lifecycle scripts directly
+// via node, avoiding `npm.cmd` — Node 22 on Windows refuses execFileSync of a .cmd
+// (spawnSync EINVAL). Matches npm-wrapper/package.json scripts ("sync": "node scripts/sync.mjs",
+// "test": "node --test --test-concurrency=1 test/...").
+export function npmSpawnHelper() {
+  return {
+    cmd: process.execPath,
+    args: ['scripts/sync.mjs'],
+    // cwd must be repoRoot/npm-wrapper
+  };
+}
+
+export function npmTestHelper() {
+  return {
+    cmd: process.execPath,
+    args: ['--test', '--test-concurrency=1', 'test/installer.test.mjs', 'test/detect.test.mjs', 'test/cli.test.mjs', 'test/lock-atomicity.test.mjs', 'test/sync-manifest.test.mjs'],
+    // pretest (`node scripts/sync.mjs`) is invoked by npmSpawnHelper() beforehand
+  };
+}
+
+export function buildWin32GhCommandLine(args) {
+  const quoteArg = (a) => {
+    const s = String(a);
+    if (/[\s&<>()@^|"]/.test(s)) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+  return ['gh', ...args.map(quoteArg)].join(' ');
+}
+
+function execGh(args, options = {}) {
+  if (process.platform === 'win32') {
+    // Windows: Node execFileSync('gh') bypasses PATHEXT when looking up extensionless
+    // commands, skipping a mock `gh.cmd` in PATH and locating system `gh.exe` instead.
+    // Wrap through cmd.exe /d /c without /s, leaving bare `gh` unquoted so cmd.exe
+    // searches PATH. The mock wins because its directory is first on PATH, and
+    // cmd.exe searches that directory with PATHEXT. Quote only arguments with spaces/metachars.
+    const cmdLine = buildWin32GhCommandLine(args);
+    return execFileSync('cmd.exe', ['/d', '/c', cmdLine], options);
+  }
+  return execFileSync('gh', args, options);
 }
 
 function gitTagExists(tagName) {
@@ -703,8 +750,23 @@ To execute this release live, re-run with --yes:
         console.log(`  + ${f}`);
       }
       execFileSync('git', ['add', '--', ...dirtyReleaseFiles], { cwd: repoRoot, stdio: 'inherit' });
-      execFileSync('git', ['commit', '-m', `chore(release): prepare v${skill_v} / npm@${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
-      console.log(`✓ Committed release files: chore(release): prepare v${skill_v} / npm@${npm_v}`);
+      let hasStaged = false;
+      try {
+        execFileSync('git', ['diff', '--cached', '--quiet', '--', ...dirtyReleaseFiles], { cwd: repoRoot, stdio: 'ignore' });
+        hasStaged = false;
+      } catch (err) {
+        if (err.status === 1) {
+          hasStaged = true;
+        } else {
+          throw err;
+        }
+      }
+      if (hasStaged) {
+        execFileSync('git', ['commit', '-m', `chore(release): prepare v${skill_v} / npm@${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+        console.log(`✓ Committed release files: chore(release): prepare v${skill_v} / npm@${npm_v}`);
+      } else {
+        console.log('✓ Release preparation files produced no index diff (e.g. CRLF normalization). Skipping commit.');
+      }
     } else {
       console.log('✓ Release preparation files are already clean / committed.');
     }
@@ -728,8 +790,23 @@ To execute this release live, re-run with --yes:
     if (i18nDirty) {
       console.log('Committing updated docs/i18n-pairs.txt...');
       execFileSync('git', ['add', 'docs/i18n-pairs.txt'], { cwd: repoRoot, stdio: 'inherit' });
-      execFileSync('git', ['commit', '-m', `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
-      console.log(`✓ Committed docs/i18n-pairs.txt: docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`);
+      let hasI18nStaged = false;
+      try {
+        execFileSync('git', ['diff', '--cached', '--quiet', '--', 'docs/i18n-pairs.txt'], { cwd: repoRoot, stdio: 'ignore' });
+        hasI18nStaged = false;
+      } catch (err) {
+        if (err.status === 1) {
+          hasI18nStaged = true;
+        } else {
+          throw err;
+        }
+      }
+      if (hasI18nStaged) {
+        execFileSync('git', ['commit', '-m', `docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`], { cwd: repoRoot, stdio: 'inherit' });
+        console.log(`✓ Committed docs/i18n-pairs.txt: docs(i18n): update pair hashes for v${skill_v} / ${npm_v}`);
+      } else {
+        console.log('✓ docs/i18n-pairs.txt produced no index diff (e.g. CRLF normalization). Skipping commit.');
+      }
     } else {
       console.log('✓ docs/i18n-pairs.txt is already clean / up to date.');
     }
@@ -755,9 +832,10 @@ To execute this release live, re-run with --yes:
   // i. If any check fails, aborts immediately.
   console.log('\nStep 8/8: Running entire verification battery...');
   // In dry-run mode, run ONLY strictly read-only checks. Avoid scripts that invoke
-  // `npm run sync` (release-preflight.sh and `npm test` via its `pretest` hook) and
-  // node test files that write runtime state; the tree must stay byte-identical.
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  // `npm run sync` (release-preflight.sh) and node test files that write runtime state;
+  // the tree must stay byte-identical.
+  // Live battery invokes npm-wrapper lifecycle steps directly via node (npmSpawnHelper /
+  // npmTestHelper) — Node 22 on Windows refuses execFileSync of npm.cmd (spawnSync EINVAL).
   const battery = isDryRun
     ? [
         { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
@@ -773,7 +851,12 @@ To execute this release live, re-run with --yes:
         { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
         { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
         { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
-        { name: 'npm test --prefix npm-wrapper', cmd: npmCmd, args: ['test', '--prefix', 'npm-wrapper'] },
+        // npm test equivalent, run directly: pretest is `node scripts/sync.mjs`, then
+        // `node --test --test-concurrency=1` on the same files as package.json "test".
+        // Both steps invoke node via npmSpawnHelper/npmTestHelper — never npm.cmd, which
+        // Node 22 on Windows refuses with spawnSync EINVAL.
+        { name: 'npm-wrapper sync (pretest)', cmd: npmSpawnHelper().cmd, args: npmSpawnHelper().args, cwd: 'npm-wrapper' },
+        { name: 'npm test --prefix npm-wrapper', cmd: npmTestHelper().cmd, args: npmTestHelper().args, cwd: 'npm-wrapper' },
       ];
 
   const dryRunFailures = [];
@@ -870,11 +953,12 @@ To execute this release live, re-run with --yes:
     console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
   }
 
+
   // Handle GitHub Release for v<skill_v> (fail-closed if creation fails; handles existing tag with missing release)
   console.log(`\nChecking GitHub Release for ${skillTag}...`);
   let releaseExists = false;
   try {
-    const viewOut = execFileSync('gh', ['release', 'view', skillTag, '--json', 'tagName'], {
+    const viewOut = execGh(['release', 'view', skillTag, '--json', 'tagName'], {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -898,7 +982,7 @@ To execute this release live, re-run with --yes:
   } else {
     console.log(`Creating official GitHub Release for ${skillTag}...`);
     try {
-      execFileSync('gh', ['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
+      execGh(['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
         cwd: repoRoot,
         stdio: 'inherit',
       });
@@ -1022,4 +1106,21 @@ Options:
   process.exit(0);
 }
 
-main();
+// Run the CLI only when executed directly (not when imported for helpers/tests).
+// Both sides must use realpathSync so symlink aliases (such as macOS /var -> /private/var)
+// do not cause a false-negative mismatch between Node's import.meta.url (physical) and
+// process.argv[1] (caller spelling). Fall back to pathToFileURL URL compare only if realpath throws.
+function isCliEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    const thisPath = realpathSync(fileURLToPath(import.meta.url));
+    const entryPath = realpathSync(process.argv[1]);
+    return thisPath === entryPath;
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href;
+  }
+}
+
+if (isCliEntry()) {
+  main();
+}
