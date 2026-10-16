@@ -47,11 +47,12 @@ npx @manhquy/flow-skill@latest
 ```
 
 Luôn dùng `@latest`. Đừng chỉ `npm i` package — lệnh đó không copy skill.
-Đừng pin `@0.34.1` trên npm — đó là version skill, không phải installer.
+Đừng dùng version của skill product để pin package npm — đó là version skill,
+không phải installer.
 
 Hai số version (cố ý): package npm = installer CLI; skill product =
 `SKILL.md` `metadata.version`. `--help` in cả hai:
-`flow-skill v0.7.8 (ships skill v0.34.1)`.
+`flow-skill v<package-version> (ships skill v<skill-version>)`.
 
 Hướng dẫn: [Cài đặt và lần chạy đầu](https://flowskill.io.vn/vi/docs/tutorials/install-and-first-run/).
 Flag: [npm-wrapper/README_VN.md](./npm-wrapper/README_VN.md).

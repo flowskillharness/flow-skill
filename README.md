@@ -48,12 +48,12 @@ npx @manhquy/flow-skill@latest
 ```
 
 Always use `@latest`. Do not `npm i` the package alone — that does not copy
-the skill. Do not pin `@0.34.1` on npm — that is the skill version, not the
-installer.
+the skill. Do not use a skill product version as an npm package pin — that is
+the skill version, not the installer.
 
 Two version numbers (intentional): npm package = installer CLI; skill product
 = `SKILL.md` `metadata.version`. `--help` prints both:
-`flow-skill v0.7.8 (ships skill v0.34.1)`.
+`flow-skill v<package-version> (ships skill v<skill-version>)`.
 
 Walkthrough: [Install and first run](https://flowskill.io.vn/docs/tutorials/install-and-first-run/).
 Flags: [npm-wrapper/README.md](./npm-wrapper/README.md).
