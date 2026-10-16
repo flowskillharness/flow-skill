@@ -288,7 +288,10 @@ git clone --bare -q "$ROOT" "$tmp/origin.git"
 git clone -q "$tmp/origin.git" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
-git -C "$tmp/r" checkout -B master 2>/dev/null || true
+checkout_err=$(git -C "$tmp/r" checkout -B master 2>&1) || {
+  echo "FAIL: could not check out master in Case K fixture: $checkout_err" >&2
+  exit 1
+}
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
