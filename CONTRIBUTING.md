@@ -1,70 +1,54 @@
 # Contributing to flow
 
-`flow` is a solo-maintained project right now. Issues and PRs are welcome; there is no
-formal governance process yet — it will grow if/when contribution volume needs it.
+Thank you for your interest in contributing! `flow` is a gated build discipline skill and harness for coding agents, guiding software delivery from idea to real, verifiable world-state evidence. For higher-level overviews and tutorials, visit [flowskill.io.vn](https://flowskill.io.vn) or explore the [`docs/`](docs/) directory.
 
-## Running the test suite
+Contributors of all experience levels are welcome. Please read this guide and [`AGENTS.md`](AGENTS.md) (the repo standing orders) before opening a pull request.
 
-```
+## Developer Quickstart
+
+Clone the repository and verify your local environment:
+
+```bash
+git clone https://github.com/manhquydev/flow-skill.git
+cd flow-skill
+
+# Run the primary bash test suite (must be green before opening a PR)
 bash tests/run_all.sh
+
+# When touching npm-wrapper installer or sync scripts
+cd npm-wrapper && npm test && cd ..
+
+# When editing documentation files
+bash scripts/check-doc-budgets.sh
 ```
 
-Add new coverage as `tests/test_flow_<area>.sh` (see existing files for the pattern) when
-you touch `runner/flow.sh` or `harness/`. The suite must pass on Windows (Git Bash), macOS,
-and Ubuntu — avoid GNU-only flags (`grep -P`, `\b` in `grep -E`) since macOS ships BSD grep.
+## Repository Conventions
 
-CI runs the full suite on three OSes; **Windows Git Bash is much slower** (~18–25 min for the
-full matrix cell). Prefer not adding multi-second `sleep` loops unless the test is specifically
-about timeouts. Per-suite timing is printed as `wall_s=` in `run_all.sh` output.
+Our contributor standards prioritize stability across operating systems and agent runtimes. Full standing orders live in [`AGENTS.md`](AGENTS.md) — follow its "one home per fact" rule:
 
-npm-wrapper tests:
+- **Bash 3.2 compatibility:** All shell scripts must remain macOS / BSD grep compatible (`grep -E` without GNU-specific flags like `\b` or `grep -P`).
+- **Zero new runtime dependencies:** The core skill runner runs on native host utilities; do not add external CLI/runtime requirements.
+- **Test suite registration:** Every new bash suite must add `tests/test_<name>.sh` **and** a corresponding entry in `tests/manifest.txt` in the exact same change.
+- **Doc budgets enforced:** Key markdown files are budgeted in `docs/doc-budgets.txt`. Verify with `bash scripts/check-doc-budgets.sh`.
+- **Dual versioning:** Skill product (`skills/flow/SKILL.md`) and npm installer (`npm-wrapper/package.json`) versions are managed on separate release axes. Contributors should **never** bump version fields in PRs (see [`docs/release-process.md`](docs/release-process.md)).
+- **Branch boundaries:** `website/` is managed on a dedicated branch (`feat/flow-website`). Never commit edits to `website/` on `master` PRs.
+- **Evaluation STOP zones:** Never modify `_eval_engine_run` or `_run_with_timeout` in `skills/flow/runner/flow.sh`. If a task requires touching them, stop and discuss with maintainers first.
+- **Conventional commits:** Follow conventional commit prefixes mirroring our git log (`feat`, `fix`, `docs`, `test`, `chore`).
 
-```
-cd npm-wrapper && npm test
-```
+## Pull Request Flow
 
-## Conventions
+1. **Fork and branch:** Create a descriptive branch from `master` (e.g., `fix/doctor-path-check`, `docs/clarify-cards`).
+2. **Scope small:** Keep changes focused on a single concern. Match your test evidence to the surface touched (consult [`AGENTS.md`](AGENTS.md) test-evidence protocol).
+3. **Use the PR template:** Fill out all checkboxes in [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) including local test output.
+4. **CI validation:** Automated CI runs cross-OS tests (Ubuntu, macOS, Windows Git Bash) and npm-wrapper matrices on `master`. Maintainers review and merge approved PRs into `master`. Note that GHA triggers on `master` pushes and PRs targeting `master`.
 
-- kebab-case for shell/markdown filenames; Python uses snake_case.
-- YAGNI / KISS / DRY — prefer small focused changes over speculative abstraction.
-- Never edit `_templates/` or a live project's `flow/`/`cards/` state by hand during a run —
-  those are the runner's contract with the operator.
-- Keep **skill product** versions in sync:
-  - `skills/flow/SKILL.md` → `metadata.version`
-  - `.claude-plugin/plugin.json` → `version`
-  - `portable-manifest.json` → `version`  
-  `/flow coherence` checks this. Do **not** set npm package version equal to skill product
-  version by default — they are separate axes (see below).
+## Issue and PR Templates
 
-## Two version axes
+- Report harness bugs via [Bug Report form](.github/ISSUE_TEMPLATE/bug_report.yml).
+- Report installer bugs via [npm-wrapper Bug Report](.github/ISSUE_TEMPLATE/bug-report-npm-wrapper.yml).
+- Propose enhancements via [Feature Request form](.github/ISSUE_TEMPLATE/feature_request.yml).
+- Security vulnerabilities: **never** file a public issue. See [`SECURITY.md`](SECURITY.md) for private reporting channels.
 
-| Axis | Bump when | Example |
-|---|---|---|
-| Skill product | runner / harness / references behavior | `0.24.0` in SKILL.md |
-| npm installer (`npm-wrapper/package.json`) | installer CLI, targets, publish pipeline | `0.1.0` (GA on `latest`) |
+## Code of Conduct
 
-End users install with `npx @manhquy/flow-skill` (must **run** it — bare `npm i` alone only fetches the CLI).  
-Full release procedure: [`docs/release-process.md`](docs/release-process.md).  
-Harness preflight (coherence + doctor + dual-version): `bash scripts/release-preflight.sh`.  
-npm auth / dist-tag ops: [`npm-wrapper/RELEASE_CHECKLIST.md`](npm-wrapper/RELEASE_CHECKLIST.md).
-
-## Pull requests
-
-- Describe what changed and why, not just what.
-- Link the issue if one exists.
-- Keep the diff scoped to one concern.
-- If you change skill content that ships in the npm tarball, note that a later **npm-wrapper**
-  release (`npm run sync` + tag `npm@…`) is required for registry users to receive it.
-
-## Brand
-
-Brand guidelines live in [`brand/brand-guidelines.md`](brand/brand-guidelines.md).
-See [`brand/CONTRIBUTING-brand.md`](brand/CONTRIBUTING-brand.md) for asset and copy contribution rules.
-
-## Reporting a security issue
-
-See `SECURITY.md` — do not open a public issue for a vulnerability.
-
-## Code of conduct
-
-Be respectful, assume good faith, no harassment. Issues that don't meet this will be closed.
+This project adheres to the Contributor Covenant. Please review [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) before participating in our community.

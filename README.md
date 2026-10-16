@@ -12,7 +12,7 @@
 [![npm](https://img.shields.io/npm/v/@manhquy/flow-skill?label=npm&color=cb3837)](https://www.npmjs.com/package/@manhquy/flow-skill)
 [![website](https://img.shields.io/badge/website-flowskill.io.vn-1aa3c4)](https://flowskill.io.vn)
 [![tests](https://img.shields.io/badge/tests-manifest.txt-brightgreen)](tests/manifest.txt)
-[![CI](https://img.shields.io/badge/CI-GitHub%20Actions%20%C2%B7%203%20OS-blue)](.github/workflows/ci.yml)
+[![CI](https://github.com/manhquydev/flow-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/manhquydev/flow-skill/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Flow owns the gates and the receipts, never the runtime
@@ -79,10 +79,16 @@ Open a fresh agent session, say what you want to build, then type `/flow`
 Full table: [`skills/flow/SKILL.md`](skills/flow/SKILL.md) ·
 [docs/reference/commands](https://flowskill.io.vn/docs/reference/commands).
 
-## Contribute
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local dev setup, coding conventions, and PR flow.
 
 ```bash
 bash tests/run_all.sh    # suites from tests/manifest.txt
 ```
+
+## License
+
+[MIT](LICENSE) © 2026 manhquydev.
 
 Release notes: [`CHANGELOG.md`](./CHANGELOG.md).

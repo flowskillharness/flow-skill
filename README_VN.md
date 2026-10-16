@@ -12,7 +12,7 @@
 [![npm](https://img.shields.io/npm/v/@manhquy/flow-skill?label=npm&color=cb3837)](https://www.npmjs.com/package/@manhquy/flow-skill)
 [![website](https://img.shields.io/badge/website-flowskill.io.vn-1aa3c4)](https://flowskill.io.vn)
 [![tests](https://img.shields.io/badge/tests-manifest.txt-brightgreen)](tests/manifest.txt)
-[![CI](https://img.shields.io/badge/CI-GitHub%20Actions%20%C2%B7%203%20OS-blue)](.github/workflows/ci.yml)
+[![CI](https://github.com/manhquydev/flow-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/manhquydev/flow-skill/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Flow sở hữu cổng và biên nhận, không bao giờ sở hữu runtime
@@ -79,8 +79,14 @@ Bảng đầy đủ: [`skills/flow/SKILL.md`](skills/flow/SKILL.md) ·
 
 ## Đóng góp
 
+Xem [`CONTRIBUTING.md`](CONTRIBUTING.md) để biết hướng dẫn cài đặt dev local, quy ước code và quy trình PR.
+
 ```bash
 bash tests/run_all.sh    # bộ test từ tests/manifest.txt
 ```
+
+## Giấy phép
+
+[MIT](LICENSE) © 2026 manhquydev.
 
 Ghi chú phát hành: [`CHANGELOG.md`](./CHANGELOG.md).

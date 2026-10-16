@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a bug or unexpected behavior in the flow skill harness
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue!
+        For installer / `npx @manhquy/flow-skill` bugs, please use the [npm-wrapper bug report](https://github.com/manhquydev/flow-skill/issues/new?template=bug-report-npm-wrapper.yml) instead.
+        For security issues, do **not** open a public issue — see [SECURITY.md](https://github.com/manhquydev/flow-skill/blob/master/SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Flow version
+      description: Output of `/flow doctor --json` (or `flow-skill --help` first line, or `skills/flow/SKILL.md` version)
+      placeholder: "v0.34.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux / Ubuntu
+        - macOS
+        - Windows (Git Bash)
+        - Windows (WSL)
+        - Windows (PowerShell / cmd)
+        - Other (specify below)
+    validations:
+      required: true
+  - type: dropdown
+    id: host-agent
+    attributes:
+      label: Host agent
+      options:
+        - Claude Code
+        - Codex CLI
+        - Antigravity
+        - Cursor
+        - Standalone CLI (bash flow.sh)
+        - Other (specify below)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe what you observed, including any error messages or unexpected gate behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      description: Clear and concise description of what you expected flow to do.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, prompts, or reproduction steps.
+      placeholder: |
+        1. Open session in project ...
+        2. Run `/flow ...`
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output or logs
+      description: Paste terminal output, `/flow doctor` output, or `.flow/` error logs (please redact sensitive information).
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: This is not a security vulnerability (see [SECURITY.md](https://github.com/manhquydev/flow-skill/blob/master/SECURITY.md))
+          required: true

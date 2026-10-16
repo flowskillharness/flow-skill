@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest an idea or enhancement for flow
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement!
+        Please review [AGENTS.md](https://github.com/manhquydev/flow-skill/blob/master/AGENTS.md) and [docs/adr/0001-discipline-layer-identity.md](https://github.com/manhquydev/flow-skill/blob/master/docs/adr/0001-discipline-layer-identity.md) before proposing runtime extensions — flow owns the gates and receipts, not the runtime.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is.
+      placeholder: "I encounter difficulty when..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative solutions or features you've considered.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, or agent behavior examples here.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues to verify this feature hasn't already been proposed
+          required: true
+        - label: This request aligns with flow's discipline-layer identity (ADR-0001)
+          required: true
