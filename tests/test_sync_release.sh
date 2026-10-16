@@ -401,6 +401,28 @@ grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
 ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
 rm -rf "$tmp"
 
+echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"
+# Windows Node 22 refuses execFileSync of a .cmd (spawnSync EINVAL). Assert the exported
+# helpers resolve to process.execPath and never reference npm.cmd, and that importing the
+# module does not execute the CLI (main() is guarded by the pathToFileURL entry check).
+tmp_l=$(mktemp -d)
+L_IMPORTER="$tmp_l/importer.mjs"
+cat > "$L_IMPORTER" << 'EOF'
+const mod = await import(process.argv[2]);
+const assert = (await import('node:assert')).strict;
+assert.equal(mod.npmSpawnHelper().cmd, process.execPath, 'sync helper argv[0] must be process.execPath');
+assert.equal(mod.npmTestHelper().cmd, process.execPath, 'test helper argv[0] must be process.execPath');
+const all = JSON.stringify([mod.npmSpawnHelper(), mod.npmTestHelper()]);
+assert.ok(!all.includes('npm.cmd'), 'no helper may reference npm.cmd');
+assert.ok(all.includes('scripts/sync.mjs'), 'sync step must run node scripts/sync.mjs');
+assert.ok(all.includes('--test'), 'test step must run node --test');
+console.log('HELPERS OK');
+EOF
+node "$L_IMPORTER" "$ROOT/scripts/sync-release.mjs" > "$tmp_l/l.out" 2>&1
+ck 0 $? "npm spawn helper uses node (no npm.cmd); import does not run CLI"
+grep -q "HELPERS OK" "$tmp_l/l.out" && ck 0 0 "helper assertions executed" || ck 0 1 "helper assertions executed"
+rm -rf "$tmp_l"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1

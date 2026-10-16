@@ -15,7 +15,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
@@ -452,13 +452,36 @@ function syncRelease(skill_v, npm_v) {
   }
 
   // 5. Trigger npm run sync inside npm-wrapper
-  console.log('\nRunning "npm run sync" inside npm-wrapper...');
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  execFileSync(npmCmd, ['run', 'sync'], {
-    cwd: join(repoRoot, 'npm-wrapper'),
-    stdio: 'inherit',
-  });
+  console.log('\nRunning npm-wrapper sync inside npm-wrapper...');
+  execFileSync(
+    npmSpawnHelper().cmd,
+    npmSpawnHelper().args,
+    {
+      cwd: join(repoRoot, 'npm-wrapper'),
+      stdio: 'inherit',
+    }
+  );
   console.log('✓ Re-materialized skills/flow and updated manifest-hashes.json');
+}
+
+// Resolve the interpreter and args for spawning npm-wrapper lifecycle scripts directly
+// via node, avoiding `npm.cmd` — Node 22 on Windows refuses execFileSync of a .cmd
+// (spawnSync EINVAL). Matches npm-wrapper/package.json scripts ("sync": "node scripts/sync.mjs",
+// "test": "node --test --test-concurrency=1 test/...").
+export function npmSpawnHelper() {
+  return {
+    cmd: process.execPath,
+    args: ['scripts/sync.mjs'],
+    // cwd must be repoRoot/npm-wrapper
+  };
+}
+
+export function npmTestHelper() {
+  return {
+    cmd: process.execPath,
+    args: ['--test', '--test-concurrency=1', 'test/installer.test.mjs', 'test/detect.test.mjs', 'test/cli.test.mjs', 'test/lock-atomicity.test.mjs', 'test/sync-manifest.test.mjs'],
+    // pretest (`node scripts/sync.mjs`) is invoked by npmSpawnHelper() beforehand
+  };
 }
 
 function gitTagExists(tagName) {
@@ -755,9 +778,10 @@ To execute this release live, re-run with --yes:
   // i. If any check fails, aborts immediately.
   console.log('\nStep 8/8: Running entire verification battery...');
   // In dry-run mode, run ONLY strictly read-only checks. Avoid scripts that invoke
-  // `npm run sync` (release-preflight.sh and `npm test` via its `pretest` hook) and
-  // node test files that write runtime state; the tree must stay byte-identical.
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  // `npm run sync` (release-preflight.sh) and node test files that write runtime state;
+  // the tree must stay byte-identical.
+  // Live battery invokes npm-wrapper lifecycle steps directly via node (npmSpawnHelper /
+  // npmTestHelper) — Node 22 on Windows refuses execFileSync of npm.cmd (spawnSync EINVAL).
   const battery = isDryRun
     ? [
         { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
@@ -773,7 +797,12 @@ To execute this release live, re-run with --yes:
         { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
         { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
         { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
-        { name: 'npm test --prefix npm-wrapper', cmd: npmCmd, args: ['test', '--prefix', 'npm-wrapper'] },
+        // npm test equivalent, run directly: pretest is `node scripts/sync.mjs`, then
+        // `node --test --test-concurrency=1` on the same files as package.json "test".
+        // Both steps invoke node via npmSpawnHelper/npmTestHelper — never npm.cmd, which
+        // Node 22 on Windows refuses with spawnSync EINVAL.
+        { name: 'npm-wrapper sync (pretest)', cmd: npmSpawnHelper().cmd, args: npmSpawnHelper().args, cwd: 'npm-wrapper' },
+        { name: 'npm test --prefix npm-wrapper', cmd: npmTestHelper().cmd, args: npmTestHelper().args, cwd: 'npm-wrapper' },
       ];
 
   const dryRunFailures = [];
@@ -1022,4 +1051,10 @@ Options:
   process.exit(0);
 }
 
-main();
+// Run the CLI only when executed directly (not when imported for helpers/tests).
+// pathToFileURL comparison is required for Windows drive-letter paths. When this module is
+// dynamically imported, process.argv[1] is the importer's entry (or empty), never this
+// file, so the strict-equality check below correctly skips main().
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

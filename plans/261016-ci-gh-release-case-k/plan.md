@@ -1,9 +1,9 @@
-# Plan: CI GitHub Release Case K Diagnostics & Pack-Rehearsal Physical Path Fix
+# Plan: CI GitHub Release Case K Diagnostics, Pack-Rehearsal Physical Path, and Windows npm.cmd EINVAL Fix
 
 ## Who Is Hurt
 Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.sh` Case K, blocking release confidence across multiple operating systems.
 
-## Evidence & Confirmed Root Cause
+## Evidence & Confirmed Root Causes
 - GitHub Actions run 38741314141, job 116443435209 (macOS bash-suite) and the Windows job of the same run:
   - Case K banner, followed by 9 assertion failures with node output suppressed into `$tmp/k*.out`.
 - PR #35 run 38850224190, job 116809585980 (macOS bash-suite) on commit `a97837a`:
@@ -15,24 +15,35 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
     ```
     ✗ claude -> /var/folders/.../tmp.Cy1A3fT1Yi/.claude/skills/flow  (destination ancestor symlink refused: /var)
     ```
-  - On macOS, default `TMPDIR` is located under `/var/folders/...`, where `/var` is a system symlink pointing to `/private/var`.
-  - The installer's `assertNoAncestorSymlinks` deliberately lstats every ancestor segment as spelled to prevent symlink traversal attacks. Because `pack-rehearsal.sh` passed raw `mktemp -d` paths, the `/var` segment triggered the security check.
-  - Ubuntu has no `/var` symlink, so Case K passed on Linux.
+  - On macOS, default `TMPDIR` is located under `/var/folders/...`, where `/var` is a system symlink pointing to `/private/var`. The installer's `assertNoAncestorSymlinks` deliberately lstats every ancestor segment as spelled to prevent symlink traversal attacks; raw `mktemp -d` paths triggered the check. Ubuntu has no `/var` symlink, so Case K passed on Linux.
 
-## Required Fix
-1. In `scripts/pack-rehearsal.sh`, canonicalize all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
-2. In `npm-wrapper/test/installer.test.mjs`, add a regression test confirming that:
-   - A destination path spelled through an ancestor symlink continues to be refused (`destination ancestor symlink refused`).
-   - A destination path using the physical path (`pwd -P` / `realpathSync`) succeeds without error.
-3. In `tests/test_sync_release.sh`, retain the four `--ship --yes` integrations in Case K, failure output dumping (`ck_k`), worktree master branch safety, and safe node_modules symlink handling.
+- Run 38854333940, job 116822620461 (Windows bash-suite) on commit `d109f38`:
+  - macOS and Ubuntu passed; Windows died in Step 4/8 across Case K and earlier cases:
+    ```
+    Error: spawnSync npm.cmd EINVAL (errno -4071) at scripts/sync-release.mjs:457
+    ```
+  - Node 22 on Windows refuses `execFileSync('npm.cmd', ...)` without a shell. The same pattern existed in the live battery (`npm.cmd test --prefix npm-wrapper`).
+
+## Required Fixes
+1. `scripts/pack-rehearsal.sh` canonicalizes all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
+2. `scripts/sync-release.mjs` replaces both npm spawn sites with `process.execPath` (node), matching `npm-wrapper/package.json`:
+   - sync step: `node scripts/sync.mjs` with cwd `npm-wrapper` (`npmSpawnHelper()`).
+   - live battery test: pretest `node scripts/sync.mjs`, then `node --test --test-concurrency=1` on the same test files listed in `npm-wrapper/package.json` "test" (`npmTestHelper()`). No `npm.cmd`, no `shell: true`, no `--skip-battery`.
+3. `scripts/sync-release.mjs` main() is guarded by the `pathToFileURL(process.argv[1])` vs `import.meta.url` entry check so the module can be imported for the helper assertions without running the CLI.
+4. `tests/test_sync_release.sh` Case L asserts, via a real file importer (`node importer.mjs <sync-release.mjs>`), that:
+   - Both exported helpers set `cmd` to `process.execPath`.
+   - Neither helper's args reference `npm.cmd`.
+   - Importing the module does not execute the CLI.
+5. `tests/test_flow_rules.sh` case D: the python `open()` of `.aider.conf.yml` used a Git Bash `/tmp/...` path, which Windows python cannot open (FileNotFoundError), causing the subsequent `flow status` fallback assertion to miss its expected content. When `cygpath` exists, the test now passes `cygpath -w` of the yml path to python. The hostile-inflight assertion is unchanged, and Linux (no cygpath) keeps the literal path.
+6. `npm-wrapper/test/installer.test.mjs` regression: a destination path spelled through an ancestor symlink continues to be refused (`destination ancestor symlink refused`); the physical path (`realpathSync`) is accepted.
 
 ## Acceptance Criteria
 1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes.
-2. `scripts/pack-rehearsal.sh` canonicalizes `WORKDIR`, `PREFIX`, and `DEST` using physical path resolution (`cd "$dir" && pwd -P`).
+2. `scripts/pack-rehearsal.sh` canonicalizes `WORKDIR`, `PREFIX`, and `DEST` using physical path resolution.
 3. Refusal of unexpected ancestor symlinks in the installer is 100% preserved (no skip flags, no internal realpath bypass).
 4. Regression test in `npm-wrapper/test/installer.test.mjs` verifies symlink-spelled dest refusal and physical dest acceptance.
-5. All 54 assertions in `tests/test_sync_release.sh` pass locally.
-6. `npm test --prefix npm-wrapper` passes all 68 tests cleanly.
+5. Both npm spawn sites in `scripts/sync-release.mjs` use `process.execPath`; no `npm.cmd` remains.
+6. All 56 assertions in `tests/test_sync_release.sh` pass locally, all 42 in `tests/test_flow_rules.sh`, and `node scripts/sync-release.mjs --check` exits 0.
 
 ## Non-Regressions
 - Dry-run mode (`--ship --dry-run`) remains strictly read-only and non-mutating.
