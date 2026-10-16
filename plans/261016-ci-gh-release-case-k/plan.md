@@ -1,4 +1,4 @@
-# Plan: CI GitHub Release Case K Diagnostics, Pack-Rehearsal Physical Path, and Windows npm.cmd EINVAL Fix
+# Plan: CI GitHub Release Case K Diagnostics, Pack-Rehearsal Physical Path, and macOS/Windows Guard Fixes
 
 ## Who Is Hurt
 Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.sh` Case K, blocking release confidence across multiple operating systems.
@@ -24,26 +24,28 @@ Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.
     ```
   - Node 22 on Windows refuses `execFileSync('npm.cmd', ...)` without a shell. The same pattern existed in the live battery (`npm.cmd test --prefix npm-wrapper`).
 
+- Run 38859524391, job 116838395958 (macOS bash-suite) on commit `70e7828`:
+  - Every `test_sync_release` case exited 0 with empty output (`k1.out`..`k4.out` were 0 bytes).
+  - The direct-run guard `import.meta.url === pathToFileURL(process.argv[1]).href` failed on macOS because Node resolves `import.meta.url` to the physical realpath (`file:///private/var/...`) while `process.argv[1]` had the `/var/folders/...` spelling. `main()` was never invoked.
+
 ## Required Fixes
 1. `scripts/pack-rehearsal.sh` canonicalizes all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
 2. `scripts/sync-release.mjs` replaces both npm spawn sites with `process.execPath` (node), matching `npm-wrapper/package.json`:
    - sync step: `node scripts/sync.mjs` with cwd `npm-wrapper` (`npmSpawnHelper()`).
    - live battery test: pretest `node scripts/sync.mjs`, then `node --test --test-concurrency=1` on the same test files listed in `npm-wrapper/package.json` "test" (`npmTestHelper()`). No `npm.cmd`, no `shell: true`, no `--skip-battery`.
-3. `scripts/sync-release.mjs` main() is guarded by the `pathToFileURL(process.argv[1])` vs `import.meta.url` entry check so the module can be imported for the helper assertions without running the CLI.
-4. `tests/test_sync_release.sh` Case L asserts, via a real file importer (`node importer.mjs <sync-release.mjs>`), that:
-   - Both exported helpers set `cmd` to `process.execPath`.
-   - Neither helper's args reference `npm.cmd`.
-   - Importing the module does not execute the CLI.
-5. `tests/test_flow_rules.sh` case D: the python `open()` of `.aider.conf.yml` used a Git Bash `/tmp/...` path, which Windows python cannot open (FileNotFoundError), causing the subsequent `flow status` fallback assertion to miss its expected content. When `cygpath` exists, the test now passes `cygpath -w` of the yml path to python. The hostile-inflight assertion is unchanged, and Linux (no cygpath) keeps the literal path.
-6. `npm-wrapper/test/installer.test.mjs` regression: a destination path spelled through an ancestor symlink continues to be refused (`destination ancestor symlink refused`); the physical path (`realpathSync`) is accepted.
+3. `scripts/sync-release.mjs` CLI entry guard uses `realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])` (with fallback to URL comparison on error) so symlink aliases like macOS `/var` -> `/private/var` match correctly while preventing dynamic imports from calling `main()`.
+4. `tests/test_sync_release.sh` Case M asserts that executing `sync-release.mjs` via a symlink invokes `main()` and produces non-empty output, catching any future realpath guard regressions on Linux.
+5. `tests/test_sync_release.sh` Case L asserts, via a real file importer, that both exported helpers set `cmd` to `process.execPath`, never reference `npm.cmd`, and importing the module does not execute the CLI.
+6. `tests/test_flow_rules.sh` case D: when `cygpath` exists (Windows Git Bash), translates `.aider.conf.yml` path via `cygpath -w` for Windows python.
+7. `npm-wrapper/test/installer.test.mjs` regression: verifies symlink-spelled dest refusal and physical dest acceptance.
 
 ## Acceptance Criteria
 1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes.
 2. `scripts/pack-rehearsal.sh` canonicalizes `WORKDIR`, `PREFIX`, and `DEST` using physical path resolution.
 3. Refusal of unexpected ancestor symlinks in the installer is 100% preserved (no skip flags, no internal realpath bypass).
-4. Regression test in `npm-wrapper/test/installer.test.mjs` verifies symlink-spelled dest refusal and physical dest acceptance.
+4. `scripts/sync-release.mjs` CLI entry guard uses `realpathSync` on both sides to handle symlink aliases like macOS `/var`.
 5. Both npm spawn sites in `scripts/sync-release.mjs` use `process.execPath`; no `npm.cmd` remains.
-6. All 56 assertions in `tests/test_sync_release.sh` pass locally, all 42 in `tests/test_flow_rules.sh`, and `node scripts/sync-release.mjs --check` exits 0.
+6. All 59 assertions in `tests/test_sync_release.sh` pass locally, all 42 in `tests/test_flow_rules.sh`, and `node scripts/sync-release.mjs --check` exits 0.
 
 ## Non-Regressions
 - Dry-run mode (`--ship --dry-run`) remains strictly read-only and non-mutating.

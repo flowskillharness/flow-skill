@@ -13,7 +13,7 @@
  *   node scripts/sync-release.mjs --sync
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -1052,9 +1052,20 @@ Options:
 }
 
 // Run the CLI only when executed directly (not when imported for helpers/tests).
-// pathToFileURL comparison is required for Windows drive-letter paths. When this module is
-// dynamically imported, process.argv[1] is the importer's entry (or empty), never this
-// file, so the strict-equality check below correctly skips main().
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Both sides must use realpathSync so symlink aliases (such as macOS /var -> /private/var)
+// do not cause a false-negative mismatch between Node's import.meta.url (physical) and
+// process.argv[1] (caller spelling). Fall back to pathToFileURL URL compare only if realpath throws.
+function isCliEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    const thisPath = realpathSync(fileURLToPath(import.meta.url));
+    const entryPath = realpathSync(process.argv[1]);
+    return thisPath === entryPath;
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }

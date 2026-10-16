@@ -423,6 +423,19 @@ ck 0 $? "npm spawn helper uses node (no npm.cmd); import does not run CLI"
 grep -q "HELPERS OK" "$tmp_l/l.out" && ck 0 0 "helper assertions executed" || ck 0 1 "helper assertions executed"
 rm -rf "$tmp_l"
 
+echo "M) CLI entry guard symlink regression: symlinked script must execute main()"
+# On macOS, /var/folders is a symlink to /private/var/folders. If the direct-run guard
+# compares raw URLs without realpathSync, main() silently no-ops (exit 0, empty output).
+# Assert that executing sync-release.mjs via a symlinked path runs main() and prints output.
+tmp_m=$(mktemp -d)
+sym_script="$tmp_m/sym_sync_release.mjs"
+ln -s "$ROOT/scripts/sync-release.mjs" "$sym_script"
+node "$sym_script" --check > "$tmp_m/m.out" 2>&1
+ck 0 $? "symlinked sync-release --check exits 0"
+[ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"
+grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || ck 0 1 "symlinked invocation runs main() and reports PASS"
+rm -rf "$tmp_m"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
