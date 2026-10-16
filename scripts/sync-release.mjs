@@ -484,6 +484,30 @@ export function npmTestHelper() {
   };
 }
 
+export function buildWin32GhCommandLine(args) {
+  const quoteArg = (a) => {
+    const s = String(a);
+    if (/[\s&<>()@^|"]/.test(s)) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+  return ['gh', ...args.map(quoteArg)].join(' ');
+}
+
+function execGh(args, options = {}) {
+  if (process.platform === 'win32') {
+    // Windows: Node execFileSync('gh') bypasses PATHEXT when looking up extensionless
+    // commands, skipping a mock `gh.cmd` in PATH and locating system `gh.exe` instead.
+    // Wrap through cmd.exe /d /c without /s, leaving bare `gh` unquoted so cmd.exe
+    // searches PATH. The mock wins because its directory is first on PATH, and
+    // cmd.exe searches that directory with PATHEXT. Quote only arguments with spaces/metachars.
+    const cmdLine = buildWin32GhCommandLine(args);
+    return execFileSync('cmd.exe', ['/d', '/c', cmdLine], options);
+  }
+  return execFileSync('gh', args, options);
+}
+
 function gitTagExists(tagName) {
   try {
     const out = execFileSync('git', ['tag', '-l', tagName], {
@@ -929,24 +953,6 @@ To execute this release live, re-run with --yes:
     console.log(`[INFO] Tag ${skillTag} already exists on remote/local. Skipping tag push.`);
   }
 
-function execGh(args, options = {}) {
-  if (process.platform === 'win32') {
-    // Windows: Node execFileSync('gh') bypasses PATHEXT when looking up extensionless
-    // commands, skipping a mock `gh.cmd` in PATH and locating system `gh.exe` instead.
-    // Wrap through cmd.exe /d /c without /s, leaving bare `gh` unquoted so cmd.exe
-    // searches PATH with PATHEXT (.cmd before .exe). Quote only arguments with spaces/metachars.
-    const quoteArg = (a) => {
-      const s = String(a);
-      if (/[\s&<>()@^|"]/.test(s)) {
-        return `"${s.replace(/"/g, '""')}"`;
-      }
-      return s;
-    };
-    const cmdLine = ['gh', ...args.map(quoteArg)].join(' ');
-    return execFileSync('cmd.exe', ['/d', '/c', cmdLine], options);
-  }
-  return execFileSync('gh', args, options);
-}
 
   // Handle GitHub Release for v<skill_v> (fail-closed if creation fails; handles existing tag with missing release)
   console.log(`\nChecking GitHub Release for ${skillTag}...`);

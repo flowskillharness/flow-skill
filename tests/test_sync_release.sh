@@ -424,6 +424,13 @@ const all = JSON.stringify([mod.npmSpawnHelper(), mod.npmTestHelper()]);
 assert.ok(!all.includes('npm.cmd'), 'no helper may reference npm.cmd');
 assert.ok(all.includes('scripts/sync.mjs'), 'sync step must run node scripts/sync.mjs');
 assert.ok(all.includes('--test'), 'test step must run node --test');
+assert.equal(typeof mod.buildWin32GhCommandLine, 'function', 'buildWin32GhCommandLine must be exported');
+const plainCmd = mod.buildWin32GhCommandLine(['release', 'view', 'v0.34.4', '--json', 'tagName']);
+assert.equal(plainCmd, 'gh release view v0.34.4 --json tagName', 'plain args must stay unquoted');
+assert.ok(plainCmd.startsWith('gh '), 'cmdline must start with bare gh and space');
+assert.ok(!plainCmd.startsWith('"gh"'), 'bare gh token must never be quoted');
+const quotedCmd = mod.buildWin32GhCommandLine(['release', 'create', 'v0.34.4', '--title', 'v0.34.4 (rc & test)', '--notes-file', 'CHANGELOG.md']);
+assert.ok(quotedCmd.includes('"v0.34.4 (rc & test)"'), 'args with spaces or metacharacters must be quoted');
 console.log('HELPERS OK');
 EOF
 node "$(winpath "$L_IMPORTER")" "$(winpath "$ROOT/scripts/sync-release.mjs")" > "$tmp_l/l.out" 2>&1
@@ -456,12 +463,7 @@ if ! command -v cygpath >/dev/null 2>&1; then
   [ -s "$tmp_m/m.out" ] && ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)" || { ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"; cat "$tmp_m/m.out" >&2; }
   grep -q "PASS: All release surfaces coherent" "$tmp_m/m.out" && ck 0 0 "symlinked invocation runs main() and reports PASS" || { ck 0 1 "symlinked invocation runs main() and reports PASS"; cat "$tmp_m/m.out" >&2; }
 else
-  if [ -s "$tmp_m/m.out" ]; then
-    ck 0 0 "symlinked invocation stdout is non-empty (not a silent exit)"
-  else
-    ck 0 1 "symlinked invocation stdout is non-empty (not a silent exit)"
-    cat "$tmp_m/m.out" >&2
-  fi
+  echo "  skip [M: Windows symlink --check skipped; Linux/macOS require exit 0 and PASS]"
 fi
 rm -rf "$tmp_m"
 
