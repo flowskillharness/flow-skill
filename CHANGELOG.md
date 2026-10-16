@@ -1,7 +1,7 @@
 # Changelog
 
 ## [Unreleased]
-- **CI release test diagnostics:** `tests/test_sync_release.sh` Case K captures and echoes process output and exit codes upon assertion failures to surface release pipeline aborts in CI logs; ensures master branch in test fixture for worktree runs.
+- **Release test & pack-rehearsal physical path fix:** `scripts/pack-rehearsal.sh` resolves temporary directories to physical paths (`pwd -P`) before installer invocations so macOS `/var` symlink ancestors under `/var/folders` do not trigger destination ancestor symlink refusals during release rehearsal; `tests/test_sync_release.sh` Case K captures and echoes abort output on failure and ensures master branch in test fixture.
 
 ## [0.34.4] - 2026-10-16
 - `flow ready --json`: closed `ready.report` envelope (buildable cards with deps/allowed-files/wave, blocked reasons, warnings, advisory parallel groups, auto state) for host orchestrators; unknown arguments now fail loudly (exit 2) instead of being ignored.

@@ -1,48 +1,45 @@
-# Plan: CI GitHub Release Case K Diagnostics & Failure Visibility
+# Plan: CI GitHub Release Case K Diagnostics & Pack-Rehearsal Physical Path Fix
 
 ## Who Is Hurt
-Maintainers; macOS and Windows CI pipelines run red on `tests/test_sync_release.sh` Case K, blocking release confidence across multiple operating systems.
+Maintainers; macOS and Windows CI pipelines ran red on `tests/test_sync_release.sh` Case K, blocking release confidence across multiple operating systems.
 
-## Evidence
+## Evidence & Confirmed Root Cause
 - GitHub Actions run 38741314141, job 116443435209 (macOS bash-suite) and the Windows job of the same run:
-  - Case K banner, then git's "On branch master / nothing to commit, working tree clean", followed by 9 assertion failures.
-  - K1 and K3 exited 1 instead of 0. Expected strings ("GitHub Release for v", "already exists. Skipping release creation.", "RELEASE SHIP SUCCESSFUL", "GitHub Release created for v", "FAIL: Could not create GitHub Release for v", "Could not check GitHub Release status") never appeared.
-  - K2 and K4 exit-code checks passed (exit 1), but message checks failed.
-  - Test redirected node output to `$tmp/k*.out`, completely hiding the real abort line in CI logs.
-- Current master HEAD `479efff4b4dd68e36f689858c17b3ba1cc8bcf12` macOS job failed the same step (run 38843168819).
+  - Case K banner, followed by 9 assertion failures with node output suppressed into `$tmp/k*.out`.
+- PR #35 run 38850224190, job 116809585980 (macOS bash-suite) on commit `a97837a`:
+  - With diagnostic output enabled in Case K, captured `k1.out` exposed the exact abort:
+    ```
+    FAIL: Verification step "pack-rehearsal" failed (exit code 1). Aborting release.
+    ```
+  - Inside `scripts/pack-rehearsal.sh`, the real project install invocation (`"$BIN" --yes --project --dir "$DEST"`) aborted with:
+    ```
+    ✗ claude -> /var/folders/.../tmp.Cy1A3fT1Yi/.claude/skills/flow  (destination ancestor symlink refused: /var)
+    ```
+  - On macOS, default `TMPDIR` is located under `/var/folders/...`, where `/var` is a system symlink pointing to `/private/var`.
+  - The installer's `assertNoAncestorSymlinks` deliberately lstats every ancestor segment as spelled to prevent symlink traversal attacks. Because `pack-rehearsal.sh` passed raw `mktemp -d` paths, the `/var` segment triggered the security check.
+  - Ubuntu has no `/var` symlink, so Case K passed on Linux.
 
-## Current Status: macOS Abort Unproven
-The macOS cause remains strictly unconfirmed until a CI log captures and displays `k*.out`. The macOS log already confirmed the working directory was "On branch master". The fixture addition of `checkout -B master` is solely so a non-master worktree clone can push `origin master` during local or branch testing; it is NOT the macOS CI fix. On local Linux, the full Case K integration suite passes completely (all 13 assertions in Case K pass, full battery runs and succeeds). Therefore, this change does not speculate or inject an unproven macOS fix, but ensures that any abort during the release pipeline is surfaced loudly with captured output and exit codes.
-
-## Hypothesis
-Case K executes `node scripts/sync-release.mjs --ship --yes` under mocked `gh`. In CI on macOS (and previously Windows), the release pipeline exits 1 prior to the GitHub Release view/create block. Because standard output and error were redirected to `$tmp/k*.out`, the exact failing step or error condition was obscured in CI job logs. macOS abort remains unproven until `k*.out` is in a log. Separately, in non-master worktrees or PR branch checkouts, cloning `$ROOT` resulted in a non-master branch that caused `sync-release.mjs` to fail when pushing `origin master`.
+## Required Fix
+1. In `scripts/pack-rehearsal.sh`, canonicalize all temp directories (`WORKDIR`, `PREFIX`, `DEST`) to physical paths using `to_physical` (`(cd "$dir" && pwd -P)`). On macOS, this resolves `/var/folders/...` to `/private/var/folders/...`, eliminating the symlinked `/var` ancestor while keeping installer security checks fully enforced.
+2. In `npm-wrapper/test/installer.test.mjs`, add a regression test confirming that:
+   - A destination path spelled through an ancestor symlink continues to be refused (`destination ancestor symlink refused`).
+   - A destination path using the physical path (`pwd -P` / `realpathSync`) succeeds without error.
+3. In `tests/test_sync_release.sh`, retain the four `--ship --yes` integrations in Case K, failure output dumping (`ck_k`), worktree master branch safety, and safe node_modules symlink handling.
 
 ## Acceptance Criteria
-1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes (`exists`, `create_fail`, `create_success`, `auth_error`).
-2. When any assertion fails in Case K, captured `$tmp/k*.out` and process exit codes are printed to stderr/stdout along with failing verification step markers, ensuring CI logs expose the exact abort line.
-3. Test fixture explicitly switches the cloned test repo to branch `master` (`git checkout -B master`) so branch pushes succeed consistently in worktrees or feature branches.
-4. Symlink creation for `npm-wrapper/node_modules` does not swallow failures when present (if `$ROOT/npm-wrapper/node_modules` exists, `ln -s` must succeed or exit 1 with the path), while matching CI bash-suite behavior when absent (does not require the directory or exit on missing parent before `--ship --yes`).
-5. Git commit errors during script sync are not masked with `|| true`: if `git commit` fails, the test continues only when `git diff --cached --quiet` confirms there were no staged changes; any other commit failure exits 1 with the git error message.
-6. All assertions in `tests/test_sync_release.sh` pass locally on Linux.
-7. `node scripts/sync-release.mjs --check` passes cleanly (exit 0).
-
-## Baseline
-- Ubuntu bash-suite: passes.
-- macOS bash-suite: 9 Case K assertion failures (abort cause hidden in `$tmp/k*.out`).
-- Local Linux baseline: 54 passed, 0 failed.
+1. Full end-to-end integration coverage of `node scripts/sync-release.mjs --ship --yes` remains intact in Case K across all four mocked `gh` modes.
+2. `scripts/pack-rehearsal.sh` canonicalizes `WORKDIR`, `PREFIX`, and `DEST` using physical path resolution (`cd "$dir" && pwd -P`).
+3. Refusal of unexpected ancestor symlinks in the installer is 100% preserved (no skip flags, no internal realpath bypass).
+4. Regression test in `npm-wrapper/test/installer.test.mjs` verifies symlink-spelled dest refusal and physical dest acceptance.
+5. All 54 assertions in `tests/test_sync_release.sh` pass locally.
+6. `npm test --prefix npm-wrapper` passes all 68 tests cleanly.
 
 ## Non-Regressions
-- Dry-run mode (`--ship --dry-run`) remains strictly read-only and non-mutating (Case H).
+- Dry-run mode (`--ship --dry-run`) remains strictly read-only and non-mutating.
 - Fail-closed remote abort behavior remains preserved (Cases F, G, J).
 - Live verification battery still runs in full on real `--ship --yes` invocations.
 - No new runtime dependencies, bash 3.2 compatibility preserved.
-
-## Scope & Files
-- `tests/test_sync_release.sh`: Add failure diagnosis helper (`ck_k`) printing `k*.out` and exit codes upon assertion failures; enforce strict symlink and commit validation; ensure master branch checkout in test fixture.
-- `CHANGELOG.md`: Record diagnostic test improvement under `[Unreleased]`.
-- `plans/261016-ci-gh-release-case-k/plan.md`: This documentation.
+- No edits to `website/` or eval STOP zones.
 
 ## Rollback
-Revert the branch commit or delete branch `fix/ci-gh-release-case-k`. Risk is low as changes are scoped to test diagnostic output and test harness fixture setup.
-
-Self-ship allowed only after independent review and test suite execution.
+Revert the branch commit or delete branch `fix/ci-gh-release-case-k`.
