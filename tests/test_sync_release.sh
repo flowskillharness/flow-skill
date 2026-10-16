@@ -204,8 +204,8 @@ git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts"
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+git -C "$tmp/r" commit -qm "sync scripts" || true
+[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
 
 before_tree_hash="$(portable_hash "$tmp/r")"
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -240,8 +240,8 @@ git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts"
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+git -C "$tmp/r" commit -qm "sync scripts" || true
+[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
 git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
 
 before_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
@@ -264,12 +264,36 @@ git clone --bare -q "$ROOT" "$tmp/origin.git"
 git clone -q "$tmp/origin.git" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
+git -C "$tmp/r" checkout -B master 2>/dev/null || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
-git -C "$tmp/r" commit -qm "sync scripts"
-ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules"
+git -C "$tmp/r" commit -qm "sync scripts" || true
+[ -d "$ROOT/npm-wrapper/node_modules" ] && ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>/dev/null || true
 
+dumped_k_files=""
+ck_k() {
+  local expected="$1" got="$2" label="$3" outfile="${4:-}" rc="${5:-unknown}"
+  if [ "$expected" = "$got" ]; then
+    echo "  ok   [$label]"
+    pass=$((pass+1))
+  else
+    echo "  FAIL [$label] expected=$expected got=$got (exit code: $rc)"
+    fail=$((fail+1))
+    if [ -n "$outfile" ] && [ -f "$outfile" ]; then
+      case " $dumped_k_files " in
+        *" $outfile "*) ;;
+        *)
+          dumped_k_files="$dumped_k_files $outfile"
+          echo "=== Captured output ($outfile) [rc=$rc] ==="
+          cat "$outfile"
+          echo "=== End captured output ==="
+          grep -E "FAIL: Verification step|Aborting" "$outfile" | tail -5 || true
+          ;;
+      esac
+    fi
+  fi
+}
 mock_bin="$tmp/bin"
 mkdir -p "$mock_bin"
 cat > "$mock_bin/gh" << "EOF"
@@ -303,36 +327,39 @@ chmod +x "$mock_bin/gh"
 # Test K1: Mock gh release view returns 0 (existing release):
 # Assert output contains "GitHub Release for v" and "already exists. Skipping release creation."
 GH_MOCK_MODE="exists" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k1.out" 2>&1
-ck 0 $? "K1: sync-release exits 0 when release already exists"
-grep -q "GitHub Release for v" "$tmp/k1.out" && ck 0 0 "K1: output contains 'GitHub Release for v'" || ck 0 1 "K1: output contains 'GitHub Release for v'"
-grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck 0 0 "K1: output contains 'already exists. Skipping release creation.'" || ck 0 1 "K1: output contains 'already exists. Skipping release creation.'"
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'"
+k1_rc=$?
+ck_k 0 $k1_rc "K1: sync-release exits 0 when release already exists" "$tmp/k1.out" $k1_rc
+grep -q "GitHub Release for v" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc
+grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc
 
 # Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
 # Assert exit code is 1.
 # Assert output contains "FAIL: Could not create GitHub Release for v"
 # Assert output does NOT contain "RELEASE SHIP SUCCESSFUL"
 GH_MOCK_MODE="create_fail" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k2.out" 2>&1
-ck 1 $? "K2: sync-release exits 1 when gh release create fails"
-grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" || ck 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'"
+k2_rc=$?
+ck_k 1 $k2_rc "K2: sync-release exits 1 when gh release create fails" "$tmp/k2.out" $k2_rc
+grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck_k 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
-ck 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
+ck_k 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k2.out" $k2_rc
 
 # Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
 # Assert output contains "GitHub Release created for v"
 GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k3.out" 2>&1
-ck 0 $? "K3: sync-release exits 0 when gh release create succeeds"
-grep -q "GitHub Release created for v" "$tmp/k3.out" && ck 0 0 "K3: output contains 'GitHub Release created for v'" || ck 0 1 "K3: output contains 'GitHub Release created for v'"
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" || ck 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'"
+k3_rc=$?
+ck_k 0 $k3_rc "K3: sync-release exits 0 when gh release create succeeds" "$tmp/k3.out" $k3_rc
+grep -q "GitHub Release created for v" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc
 
 # Test K4: Mock gh release view fails with auth/network error:
 # Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
 GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$tmp/r/scripts/sync-release.mjs" --ship --yes > "$tmp/k4.out" 2>&1
-ck 1 $? "K4: sync-release exits 1 when gh release view has auth/network error"
-grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck 0 0 "K4: output contains 'Could not check GitHub Release status'" || ck 0 1 "K4: output contains 'Could not check GitHub Release status'"
+k4_rc=$?
+ck_k 1 $k4_rc "K4: sync-release exits 1 when gh release view has auth/network error" "$tmp/k4.out" $k4_rc
+grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck_k 0 0 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
-ck 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'"
-
+ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
 rm -rf "$tmp"
 
 echo
