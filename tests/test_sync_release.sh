@@ -218,8 +218,6 @@ if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
 
 before_tree_hash="$(portable_hash "$tmp/r")"
@@ -252,6 +250,7 @@ tmp=$(mktemp -d)
 git clone --no-tags -q "$ROOT" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
+git -C "$tmp/r" checkout -B master >/dev/null 2>&1 || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
@@ -266,8 +265,6 @@ if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
 git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
 
@@ -304,14 +301,21 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
     exit 1
   fi
 }
+git -C "$tmp/r" push -q origin master
 if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
   ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
+
+k_skill_v=$(node -e 'const m = require("fs").readFileSync("'"$tmp"'/r/skills/flow/SKILL.md", "utf8").match(/version:\s*"([^"]+)"/); console.log(m[1])')
+k_npm_v=$(node -p 'require("'"$tmp"'/r/npm-wrapper/package.json").version')
+clean_k_tags() {
+  git -C "$tmp/origin.git" tag -d "npm@$k_npm_v" "v$k_skill_v" >/dev/null 2>&1 || true
+  git -C "$tmp/r" tag -d "npm@$k_npm_v" "v$k_skill_v" >/dev/null 2>&1 || true
+}
+clean_k_tags
 
 dumped_k_files=""
 ck_k() {
@@ -340,6 +344,13 @@ mock_bin="$tmp/bin"
 mkdir -p "$mock_bin"
 cat > "$mock_bin/gh" << "EOF"
 #!/usr/bin/env bash
+if [ "$1" = "api" ]; then
+  head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
+  cat << JSON
+{"check_runs":[{"id":1,"name":"all-checks-passed","head_sha":"$head_sha","status":"completed","conclusion":"success"}]}
+JSON
+  exit 0
+fi
 mode="${GH_MOCK_MODE:-exists}"
 if [ "$1" = "release" ] && [ "$2" = "view" ]; then
   if [ "$mode" = "exists" ]; then
@@ -378,6 +389,7 @@ grep -q "GitHub Release for v" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'G
 grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc
 
+clean_k_tags
 # Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
 # Assert exit code is 1.
 # Assert output contains "FAIL: Could not create GitHub Release for v"
@@ -389,6 +401,7 @@ grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck_k 0 0 
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
 ck_k 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k2.out" $k2_rc
 
+clean_k_tags
 # Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
 # Assert output contains "GitHub Release created for v"
 GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
@@ -397,6 +410,7 @@ ck_k 0 $k3_rc "K3: sync-release exits 0 when gh release create succeeds" "$tmp/k
 grep -q "GitHub Release created for v" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc
 
+clean_k_tags
 # Test K4: Mock gh release view fails with auth/network error:
 # Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
 GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1

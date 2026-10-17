@@ -61,19 +61,20 @@ need an alternative write path — re-check npm changelog before that date.
 
 - [x] Trusted Publisher: `owner=manhquydev`, `repo=flow-skill`, `workflow=publish-npm-wrapper.yml`,
       `environment=npm-publish` (cross-account OK). Confirmed live rc.2+.
-- [x] GitHub Environment `npm-publish` with required reviewer.
+- [ ] GitHub Environment `npm-publish` with required reviewer (RELEASE BLOCKER: API reports `protection_rules: []`; repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion).
 - [x] Repo public (OIDC audience).
 - [ ] Optional: `npm profile get` when diagnosing account issues.
 
-## Canonical Release Command (`scripts/release.sh`)
+## Canonical Two-Phase Release Command (`scripts/release.sh`)
 
-From the repo root, run the unified release automation that automates surface synchronization, release preparation commits, i18n pair hash recording, the full 7-gate verification battery, tagging, and push:
+Releases follow a two-phase lifecycle (Phase 1 preparation in PR, Phase 2 promotion on master HEAD). From the repository root, run the release promotion automation:
 
 ```bash
-# Non-mutating pre-flight verification:
+# Non-mutating pre-flight verification & promotion readiness preview:
 bash scripts/release.sh --dry-run
 
-# Live release execution (creates tags, pushes master and tags):
+# Live release promotion (requires 100% clean master matching origin/master with green CI;
+# BLOCKED until owner configures npm-publish environment protection rules above):
 bash scripts/release.sh --yes
 ```
 
