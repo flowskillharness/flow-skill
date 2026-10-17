@@ -7,8 +7,15 @@ export const RECEIPT_OMP_MIN_VERSION = '0.7.8';
 
 /**
  * Parse a strict SemVer 2.0.0 string with optional leading 'v'.
+ *
+ * Numeric components whose value exceeds Number.MAX_SAFE_INTEGER are returned
+ * as `bigint` (see {@link parseNumeric}), so `major`/`minor`/`patch` are typed
+ * `number | bigint`. Note that `JSON.stringify` without a replacer throws
+ * `TypeError: Do not know how to serialize a BigInt` when serializing such a
+ * descriptor; convert bigints (e.g. via a replacer or `String()`) first.
+ *
  * @param {string} v
- * @returns {{ major: number, minor: number, patch: number, prerelease: string[] | null, build: string[] | null } | null}
+ * @returns {{ major: number | bigint, minor: number | bigint, patch: number | bigint, prerelease: string[] | null, build: string[] | null } | null}
  */
 const SEMVER_RE =
   /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
