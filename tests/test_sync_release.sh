@@ -516,7 +516,7 @@ git -C "$tmp/r" remote set-url origin "https://github.com/other-org/malicious-re
 PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k8.out" 2>&1
 k8_rc=$?
 ck_k 1 $k8_rc "K8: sync-release exits 1 on non-canonical repository remote" "$tmp/k8.out" $k8_rc
-grep -q "Remote origin is not an accepted canonical repository URL" "$tmp/k8.out" && ck_k 0 0 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc || ck_k 0 1 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k8.out" && ck_k 0 0 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc || ck_k 0 1 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k8.out"
 ck_k 1 $? "K8: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k8.out" $k8_rc
 [ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K8: zero tags created on wrong remote" || ck_k 0 1 "K8: zero tags created on wrong remote"
@@ -527,7 +527,7 @@ git -C "$tmp/r" remote set-url origin "https://user:SECRET_SENTINEL@invalid.exam
 PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k9.out" 2>&1
 k9_rc=$?
 ck_k 1 $k9_rc "K9: sync-release exits 1 on credential-bearing remote at evil host" "$tmp/k9.out" $k9_rc
-grep -q "Remote origin is not an accepted canonical repository URL" "$tmp/k9.out" && ck_k 0 0 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc || ck_k 0 1 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k9.out" && ck_k 0 0 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc || ck_k 0 1 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc
 grep -q "SECRET_SENTINEL" "$tmp/k9.out"
 ck_k 1 $? "K9: output has ZERO occurrence of SECRET_SENTINEL (no credential leak)" "$tmp/k9.out" $k9_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k9.out"
@@ -541,7 +541,7 @@ git -C "$tmp/r" remote set-url origin "https://evil.example/github.com/manhquyde
 PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k10.out" 2>&1
 k10_rc=$?
 ck_k 1 $k10_rc "K10: sync-release exits 1 on lookalike host with embedded github.com path" "$tmp/k10.out" $k10_rc
-grep -q "Remote origin is not an accepted canonical repository URL" "$tmp/k10.out" && ck_k 0 0 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc || ck_k 0 1 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k10.out" && ck_k 0 0 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc || ck_k 0 1 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc
 grep -q "evil.example" "$tmp/k10.out"
 ck_k 1 $? "K10: output has ZERO occurrence of evil.example (never prints raw URL)" "$tmp/k10.out" $k10_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k10.out"

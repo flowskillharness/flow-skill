@@ -57,7 +57,7 @@ GA (non-prerelease) auto-routes to `latest`; pre-release publish **never** moves
 **Hard deadline: ~2027-01** — npm deprecates bypass-2FA tokens for publish; dist-tag may still
 need an alternative write path — re-check npm changelog before that date.
 
-## Prereqs (one-time — done)
+## Release Prerequisites & Security Gates (Incomplete: Reviewer Required)
 
 - [x] Trusted Publisher: `owner=manhquydev`, `repo=flow-skill`, `workflow=publish-npm-wrapper.yml`,
       `environment=npm-publish` (cross-account OK). Confirmed live rc.2+.

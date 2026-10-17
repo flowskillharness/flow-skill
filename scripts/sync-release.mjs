@@ -647,38 +647,59 @@ const CANONICAL_REMOTE_URL_PATTERNS = [
 ];
 
 function getRepoCoordinates() {
-  let remoteUrl = '';
-  try {
-    remoteUrl = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-  } catch {
-    // fallback
-  }
-  if (!remoteUrl) {
+  const getUrls = (configKey) => {
     try {
-      remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
+      const out = execFileSync('git', ['config', '--get-all', configKey], {
         cwd: repoRoot,
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
       }).trim();
+      if (out) return out.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    } catch {
+      // not configured
+    }
+    return [];
+  };
+
+  let fetchUrls = getUrls('remote.origin.url');
+  if (fetchUrls.length === 0) {
+    try {
+      const out = execFileSync('git', ['remote', 'get-url', 'origin'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+      if (out) fetchUrls = [out];
     } catch {
       // unreadable
     }
   }
 
-  if (!remoteUrl) {
+  let pushUrls = getUrls('remote.origin.pushurl');
+  if (pushUrls.length === 0) {
+    pushUrls = fetchUrls;
+  }
+
+  if (fetchUrls.length === 0 && pushUrls.length === 0) {
     return { ok: false, reason: 'Remote origin URL could not be determined from git config or git remote.' };
   }
 
-  const matchesCanonical = CANONICAL_REMOTE_URL_PATTERNS.some(p => p.test(remoteUrl));
-  if (!matchesCanonical) {
-    return {
-      ok: false,
-      reason: `Remote origin is not an accepted canonical repository URL for ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}. Expected exact HTTPS, SSH, or git protocol format on github.com without userinfo credentials.`,
-    };
+  for (const url of fetchUrls) {
+    if (!CANONICAL_REMOTE_URL_PATTERNS.some(p => p.test(url))) {
+      return {
+        ok: false,
+        reason: `Remote origin fetch URL is not an accepted canonical repository URL for ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}. Expected exact HTTPS, SSH, or git protocol format on github.com without userinfo credentials.`,
+      };
+    }
+  }
+
+  for (const url of pushUrls) {
+    if (!CANONICAL_REMOTE_URL_PATTERNS.some(p => p.test(url))) {
+      return {
+        ok: false,
+        reason: `Remote origin push URL is not an accepted canonical repository URL for ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}. Expected exact HTTPS, SSH, or git protocol format on github.com without userinfo credentials.`,
+      };
+    }
   }
 
   return { ok: true, owner: CANONICAL_REPO_OWNER, repo: CANONICAL_REPO_NAME };
@@ -693,7 +714,7 @@ function checkCiStatus(headSha) {
   try {
     const out = execGh([
       'api',
-      `repos/${coords.owner}/${coords.repo}/commits/${headSha}/check-runs`,
+      `repos/${coords.owner}/${coords.repo}/commits/${headSha}/check-runs?check_name=all-checks-passed&per_page=100`,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -968,7 +989,10 @@ To execute release promotion live, re-run with --yes:
       console.log(`[WARN] Git tag ${skillTag} already exists (${skillTagStatus.source}).`);
     }
   }
-  console.log(`✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.`);
+  if (!npmTagStatus.exists && !skillTagStatus.exists
+      && npmTagStatus.source !== 'unconfirmed' && skillTagStatus.source !== 'unconfirmed') {
+    console.log(`✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.`);
+  }
 
   const localHead = getLocalHeadSha();
   if (!localHead) {
@@ -1056,27 +1080,15 @@ To execute release promotion live, re-run with --yes:
     }
   }
 
-  // 7. Verification battery
+  // 7. Verification battery (read-only verification of release coherence, doc budgets, and rules)
   console.log('\nStep 8/8: Running verification battery...');
-  const battery = isDryRun
-    ? [
-        { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
-        { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
-        { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
-        { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
-        { name: 'test_release_coherence', cmd: 'bash', args: ['tests/test_release_coherence.sh'] },
-      ]
-    : [
-        { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
-        { name: 'release-preflight', cmd: 'bash', args: ['scripts/release-preflight.sh'] },
-        { name: 'pack-rehearsal', cmd: 'bash', args: ['scripts/pack-rehearsal.sh'] },
-        { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
-        { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
-        { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
-        { name: 'npm-wrapper sync (pretest)', cmd: npmSpawnHelper().cmd, args: npmSpawnHelper().args, cwd: 'npm-wrapper' },
-        { name: 'npm test --prefix npm-wrapper', cmd: npmTestHelper().cmd, args: npmTestHelper().args, cwd: 'npm-wrapper' },
-      ];
-
+  const battery = [
+    { name: 'check-release-coherence', cmd: 'bash', args: ['scripts/check-release-coherence.sh'] },
+    { name: 'check-doc-budgets', cmd: 'bash', args: ['scripts/check-doc-budgets.sh'] },
+    { name: 'test_doc_budgets', cmd: 'bash', args: ['tests/test_doc_budgets.sh'] },
+    { name: 'test_flow_rules', cmd: 'bash', args: ['tests/test_flow_rules.sh'] },
+    { name: 'test_release_coherence', cmd: 'bash', args: ['tests/test_release_coherence.sh'] },
+  ];
   const dryRunFailures = [];
   for (const step of battery) {
     console.log(`\n>>> Running ${step.name}...`);
@@ -1170,18 +1182,31 @@ To execute release promotion live, re-run with --yes:
   console.log('Pushing to Remote');
   console.log('================================================================================\n');
 
-  console.log('Pushing master branch to origin...');
-  execFileSync('git', ['push', 'origin', 'master'], { cwd: repoRoot, stdio: 'inherit' });
-  console.log('✓ Verified master on origin');
-
-  console.log(`Pushing tag ${npmTag} to origin...`);
-  execFileSync('git', ['push', 'origin', npmTag], { cwd: repoRoot, stdio: 'inherit' });
-  console.log(`✓ Pushed tag ${npmTag} to origin`);
-
-  console.log(`Pushing tag ${skillTag} to origin...`);
-  execFileSync('git', ['push', 'origin', skillTag], { cwd: repoRoot, stdio: 'inherit' });
-  console.log(`✓ Pushed tag ${skillTag} to origin`);
-
+  console.log(`Pushing master, tag ${npmTag}, and tag ${skillTag} to origin atomically...`);
+  try {
+    execFileSync('git', ['push', '--atomic', 'origin', 'master', npmTag, skillTag], {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    });
+    console.log('✓ Successfully pushed master and release tags to origin.');
+  } catch (err) {
+    console.error(`\nFAIL: Atomic push to origin failed (exit code ${err.status ?? 1}).`);
+    const remoteNpm = gitTagExists(npmTag);
+    const remoteSkill = gitTagExists(skillTag);
+    if (!remoteNpm.exists && !remoteSkill.exists && remoteNpm.source !== 'unconfirmed' && remoteSkill.source !== 'unconfirmed') {
+      console.log('Rolling back locally created tags to restore clean state for retry...');
+      try {
+        execFileSync('git', ['tag', '-d', npmTag], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
+        execFileSync('git', ['tag', '-d', skillTag], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
+        console.log('✓ Local tags rolled back.');
+      } catch {
+        console.warn('[WARN] Could not clean up local tags after push failure.');
+      }
+    } else {
+      console.error('[WARN] Remote tag state cannot be confirmed as empty or tags reached remote. Keeping local tags intact to prevent state drift.');
+    }
+    process.exit(err.status ?? 1);
+  }
   // Handle GitHub Release for v<skill_v>
   console.log(`\nChecking GitHub Release for ${skillTag}...`);
   let releaseExists = false;

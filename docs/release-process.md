@@ -139,7 +139,7 @@ bash scripts/release.sh --yes
 5. **Coherence & Non-Drift Gate**: All release surfaces are coherent, synchronization produces zero drift (no file modifications), and committed i18n pair hashes match.
 6. **Exact-HEAD CI Status Gate**: Authoritative GitHub Actions check `all-checks-passed` (verified from app slug `github-actions`) on the exact `master` HEAD commit must be completed with `conclusion: success`.
 7. **Environment Protection Gate**: Queries GitHub Actions environment `npm-publish` via `gh api` and fails closed if `required_reviewers` rule is missing or empty.
-8. **Verification Battery**: Runs `check-release-coherence.sh`, `release-preflight.sh`, `pack-rehearsal.sh`, `check-doc-budgets.sh`, `test_doc_budgets.sh`, `test_flow_rules.sh`, and `npm test --prefix npm-wrapper`.
+8. **Verification Battery (Read-Only)**: Runs read-only checks `check-release-coherence.sh`, `check-doc-budgets.sh`, `tests/test_doc_budgets.sh`, `tests/test_flow_rules.sh`, and `tests/test_release_coherence.sh` (strictly non-mutating; preflight and full test suite already executed in Phase 1 PR and verified by CI on exact master HEAD).
 9. **Tagging, Pushing & GitHub Release**: Creates git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to origin, creates the official GitHub Release for `v<skill_v>`, and displays next steps. Zero file modifications occur on `master`.
 ## Skill product release (e.g. v0.24.0)
 
@@ -161,9 +161,9 @@ bash scripts/release.sh --yes
 4. **Ship skill homes**
    - Dev: `bash install.sh global` / `pwsh install.ps1 global`, or
    - Users: next npm-wrapper release that re-syncs and publishes (below).
-5. **Optional git tag**
-   - `git tag v0.24.0 && git push origin v0.24.0` + GitHub Release notes.
-   - **Does not** publish npm.
+5. **Tagging and GitHub Release (Retired manual path)**
+   - Direct manual `git tag v... && git push origin v...` is strictly retired because it bypasses required CI and environment protection gates.
+   - All release tags (`v<skill_v>` and `npm@<npm_v>`) and official GitHub Releases are created and pushed solely by the canonical promotion workflow: `bash scripts/release.sh --yes`.
 
 ### Bundled tree integrity receipt (Full-tree manifest-hashes.json)
 
