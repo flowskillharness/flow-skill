@@ -198,17 +198,20 @@ has "$out" '"target":"00-idea"' "clean stage JSON carries target 00-idea"
 has "$out" '"clean":true' "clean stage JSON carries clean: true"
 has "$out" '"findings":\[\]' "clean stage JSON carries empty findings array"
 if [ -n "$PY_BIN" ]; then
-  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is True; assert d["findings"] == []; assert d["target"] == "00-idea"' 2>/dev/null
+  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is True; assert d["findings"] == []; assert d["target"] == "00-idea"'
   ck 0 $? "clean stage JSON parses via python"
+else
+  echo "  skip [clean stage JSON parses via python] (no python on this PATH)"
 fi
 # Flag-order parity: gate --json 00-idea
 out_pre="$(bash "$RUN" gate --json 00-idea 2>&1)"; rc_pre=$?
 ck 0 $rc_pre "gate --json 00-idea flag-order exit 0"
 ck "$out" "$out_pre" "gate --json 00-idea identical to gate 00-idea --json"
 
-# 2. Dirty stage gate: unchecked + [FILL] + midtier findings, quotes and backslashes
+# 2. Dirty stage gate: unchecked + [FILL] + midtier findings, quotes, backslashes, and real TAB
 echo "web" > "$SB/PROJECT_TYPE"
-printf '# 01-research\n## Gate\n- [ ] unchecked item with "quotes" and \\backslashes\\\n[FILL: placeholder text]\n## What exists already\n1. single entry\n' > "$SB/flow/01-research.md"
+TAB_CHAR="$(printf '\t')"
+printf '# 01-research\n## Gate\n- [ ] unchecked item with "quotes", \\backslashes\\ and tab1%stomb\n[FILL: placeholder text]\n## What exists already\n1. single entry\n' "$TAB_CHAR" > "$SB/flow/01-research.md"
 out="$(bash "$RUN" gate 01-research --json 2>&1)"; rc=$?
 ck 1 $rc "dirty stage gate --json exit 1"
 has "$out" '"clean":false' "dirty stage JSON carries clean: false"
@@ -228,18 +231,23 @@ assert any("quotes" in f and "backslashes" in f for f in d["findings"])
 assert any("What exists already" in f for f in d["findings"])
 # Findings include L<line>: prefix from scan_gate detail lines
 assert any(re.match(r"^L[0-9]+:", f) for f in d["findings"])
-' 2>/dev/null
-  ck 0 $? "dirty stage JSON with L<line>: prefix and quotes/backslashes parses via python"
+# Real TAB preservation: parsed JSON finding contains literal tab character (\t)
+assert any("tab1\ttomb" in f for f in d["findings"]), "literal tab not preserved in findings: %r" % (d["findings"],)
+'
+  ck 0 $? "dirty stage JSON with L<line>: prefix, TAB, and quotes/backslashes parses via python"
+else
+  echo "  skip [dirty stage JSON with L<line>: prefix, TAB, and quotes/backslashes parses via python] (no python on this PATH)"
 fi
-
 # 3. Missing stage artifact file: exit 1, clean: false, findings has missing file
 out="$(bash "$RUN" gate 02-scope --json 2>&1)"; rc=$?
 ck 1 $rc "missing stage artifact gate --json exit 1"
 has "$out" '"clean":false' "missing stage JSON carries clean: false"
 has "$out" 'missing file:' "missing stage JSON carries missing file finding"
 if [ -n "$PY_BIN" ]; then
-  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is False; assert any("missing file:" in f for f in d["findings"])' 2>/dev/null
+  printf '%s' "$out" | "$PY_BIN" -c 'import sys, json; d = json.load(sys.stdin); assert d["clean"] is False; assert any("missing file:" in f for f in d["findings"])'
   ck 0 $? "missing stage JSON parses via python"
+else
+  echo "  skip [missing stage JSON parses via python] (no python on this PATH)"
 fi
 
 # 4. Clean card gate: exit 0, valid JSON, clean: true, target: C-001
@@ -282,11 +290,11 @@ ck "usage: /flow gate --card C-NNN" "$out" "legacy gate --card junk outputs exac
 
 out="$(bash "$RUN" gate bogus --json 2>&1)"; rc=$?
 ck 2 $rc "gate bogus --json exit 2"
-has "$out" "[--json]" "gate bogus --json usage mentions optional --json"
+has "$out" '\[--json\]' "gate bogus --json usage mentions optional --json"
 
 out="$(bash "$RUN" gate 00-idea --json extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate 00-idea --json extra exit 2"
-has "$out" "[--json]" "extra args with --json shows --json usage"
+has "$out" '\[--json\]' "extra args with --json shows --json usage"
 
 out="$(bash "$RUN" gate 00-idea extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate 00-idea extra prose exit 2"
@@ -294,6 +302,15 @@ no "$out" "--json" "extra args without --json does not mention --json"
 
 out="$(bash "$RUN" gate --card C-001 --json extra 2>&1)"; rc=$?
 ck 2 $rc "extra args gate --card C-001 --json extra exit 2"
+
+# 7b. Empty first positional argument must fail loud with exit 2 (no silent scan drop)
+out="$(bash "$RUN" gate "" 00-idea 2>&1)"; rc=$?
+ck 2 $rc "gate empty-arg 00-idea exit 2"
+ck "usage: /flow gate <stage: 00-idea 01-research 02-scope 03-prd 04-adr 05-contract> | /flow gate --card C-NNN" "$out" "gate empty-arg outputs legacy usage"
+
+out="$(bash "$RUN" gate "" 2>&1)"; rc=$?
+ck 2 $rc "gate empty-arg alone exit 2"
+ck "usage: /flow gate <stage: 00-idea 01-research 02-scope 03-prd 04-adr 05-contract> | /flow gate --card C-NNN" "$out" "gate empty-arg alone outputs legacy usage"
 # 8. Prose parity without --json
 out="$(bash "$RUN" gate 00-idea 2>&1)"; rc=$?
 ck 0 $rc "prose clean stage exit 0"

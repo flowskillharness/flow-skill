@@ -2019,6 +2019,14 @@ cmd_skip() {
   return 0
 }
 
+_gate_json_finding() {
+  # JSON string escape preserving TAB (\t), backslash (\\), double-quote (\"),
+  # while stripping other ASCII control characters (0x00-0x08, 0x0A-0x1F, 0x7F).
+  local tab
+  tab="$(printf '\t')"
+  printf '%s' "${1:-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e "s/${tab}/\\\\t/g" | tr -d '\000-\010\012-\037\177'
+}
+
 _emit_gate_report_json() { # $1=target $2=file
   local target="$1" file="$2"
   local scan_out scan_rc=0
@@ -2034,10 +2042,10 @@ _emit_gate_report_json() { # $1=target $2=file
     trimmed="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
     [ -n "$trimmed" ] || continue
     if [ "$ffirst" -eq 1 ]; then
-      farr="\"$(_json_str "$trimmed")\""
+      farr="\"$(_gate_json_finding "$trimmed")\""
       ffirst=0
     else
-      farr="$farr,\"$(_json_str "$trimmed")\""
+      farr="$farr,\"$(_gate_json_finding "$trimmed")\""
     fi
   done <<EOF
 $scan_out
@@ -2055,6 +2063,7 @@ cmd_gate() {
   local opt_card=""
   local is_card=0
   local stage=""
+  local stage_set=0
 
   _gate_usage() {
     if [ "$opt_json" -eq 1 ]; then
@@ -2083,7 +2092,7 @@ cmd_gate() {
         shift
         ;;
       --card)
-        if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
+        if [ "$is_card" -eq 1 ] || [ "$stage_set" -eq 1 ]; then
           _gate_usage
           return 2
         fi
@@ -2097,11 +2106,12 @@ cmd_gate() {
         shift
         ;;
       *)
-        if [ "$is_card" -eq 1 ] || [ -n "$stage" ]; then
+        if [ "$is_card" -eq 1 ] || [ "$stage_set" -eq 1 ]; then
           _gate_usage
           return 2
         fi
         stage="$1"
+        stage_set=1
         shift
         ;;
     esac
