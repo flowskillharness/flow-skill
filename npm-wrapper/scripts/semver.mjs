@@ -10,14 +10,28 @@ export const RECEIPT_OMP_MIN_VERSION = '0.7.8';
  * @param {string} v
  * @returns {{ major: number, minor: number, patch: number, prerelease: string[] | null, build: string[] | null } | null}
  */
+const SEMVER_RE =
+  /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
 export function parseSemver(v) {
   if (typeof v !== 'string') return null;
-  const match = v.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/);
+  const match = v.trim().match(SEMVER_RE);
   if (!match) return null;
   const major = parseInt(match[1], 10);
   const minor = parseInt(match[2], 10);
   const patch = parseInt(match[3], 10);
-  const prerelease = match[4] !== undefined ? match[4].split('.') : null;
+
+  let prerelease = null;
+  if (match[4] !== undefined) {
+    prerelease = match[4].split('.');
+    for (const id of prerelease) {
+      // Numeric prerelease identifiers MUST NOT include leading zeroes (e.g. '01' is invalid, '0' is valid).
+      if (/^\d+$/.test(id) && !/^(0|[1-9]\d*)$/.test(id)) {
+        return null;
+      }
+    }
+  }
+
   const build = match[5] !== undefined ? match[5].split('.') : null;
   return { major, minor, patch, prerelease, build };
 }

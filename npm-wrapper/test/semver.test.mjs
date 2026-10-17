@@ -31,13 +31,68 @@ test('parseSemver parses standard SemVer 2.0.0 strings correctly', () => {
     prerelease: ['rc', '1'],
     build: ['build', '42'],
   });
+  // Valid nonnumeric identifiers and build metadata
+  assert.deepEqual(parseSemver('0.7.8-0'), {
+    major: 0,
+    minor: 7,
+    patch: 8,
+    prerelease: ['0'],
+    build: null,
+  });
+  assert.deepEqual(parseSemver('0.7.8-rc-1'), {
+    major: 0,
+    minor: 7,
+    patch: 8,
+    prerelease: ['rc-1'],
+    build: null,
+  });
+  assert.deepEqual(parseSemver('0.7.8-01a'), {
+    major: 0,
+    minor: 7,
+    patch: 8,
+    prerelease: ['01a'],
+    build: null,
+  });
+  assert.deepEqual(parseSemver('0.7.8+01'), {
+    major: 0,
+    minor: 7,
+    patch: 8,
+    prerelease: null,
+    build: ['01'],
+  });
+});
 
+test('parseSemver strictly rejects invalid SemVer 2.0.0 strings', () => {
+  // Non-strings / empty
   assert.equal(parseSemver(''), null);
   assert.equal(parseSemver(null), null);
   assert.equal(parseSemver(undefined), null);
   assert.equal(parseSemver('not-a-version'), null);
   assert.equal(parseSemver('1.2'), null);
   assert.equal(parseSemver('1.2.3.4'), null);
+
+  // Leading zeroes in core numeric identifiers (major, minor, patch)
+  assert.equal(parseSemver('01.2.3'), null);
+  assert.equal(parseSemver('1.02.3'), null);
+  assert.equal(parseSemver('1.2.03'), null);
+  assert.equal(parseSemver('00.1.2'), null);
+
+  // Leading zeroes in numeric prerelease identifiers
+  assert.equal(parseSemver('0.7.8-01'), null);
+  assert.equal(parseSemver('0.7.8-00'), null);
+  assert.equal(parseSemver('0.7.8-beta.01'), null);
+
+  // Malformed / empty prerelease components
+  assert.equal(parseSemver('0.7.8-'), null);
+  assert.equal(parseSemver('0.7.8-alpha..1'), null);
+  assert.equal(parseSemver('0.7.8-alpha.'), null);
+  assert.equal(parseSemver('0.7.8-.alpha'), null);
+
+  // Malformed / empty build components
+  assert.equal(parseSemver('0.7.8+'), null);
+  assert.equal(parseSemver('0.7.8+build..1'), null);
+  assert.equal(parseSemver('0.7.8+build.'), null);
+  assert.equal(parseSemver('0.7.8+.build'), null);
 });
 
 test('compareSemver respects major, minor, and patch precedence', () => {
@@ -127,4 +182,8 @@ test('supportsReceiptAndOmp: invalid and non-semver inputs return false', () => 
   assert.equal(supportsReceiptAndOmp('latest'), false);
   assert.equal(supportsReceiptAndOmp('next'), false);
   assert.equal(supportsReceiptAndOmp('invalid.version'), false);
+  assert.equal(supportsReceiptAndOmp('01.7.8'), false);
+  assert.equal(supportsReceiptAndOmp('0.7.8-01'), false);
+  assert.equal(supportsReceiptAndOmp('0.7.8-'), false);
+  assert.equal(supportsReceiptAndOmp('0.7.8+'), false);
 });
