@@ -2716,6 +2716,10 @@ cmd_debt() {
         is_add=1
         shift
         local what="${1:-}" exposure="${2:-}" close="${3:-}"
+        if [ "$what" = "--json" ]; then
+          _debt_usage
+          return 2
+        fi
         if [ -z "$what" ] || [ -z "$exposure" ] || [ -z "$close" ]; then
           echo 'usage: /flow debt add "<what skipped>" "<exposure>" "<close-before condition>"'
           return 1

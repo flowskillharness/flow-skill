@@ -482,6 +482,10 @@ ck 2 $rc_err "extra arg debt --json extra exit 2"
 out_err="$(bash "$RUN" debt --json add "what" "exp" "close" 2>&1)"; rc_err=$?
 ck 2 $rc_err "invalid flag on add debt --json add exit 2"
 
+out_err="$(bash "$RUN" debt add --json "foo" "bar" 2>&1)"; rc_err=$?
+ck 2 $rc_err "debt add --json \"foo\" \"bar\" exit 2"
+has "$out_err" "usage: /flow debt" "debt add --json prints usage"
+
 out_err="$(bash "$RUN" debt bogus 2>&1)"; rc_err=$?
 ck 2 $rc_err "unknown subcommand debt bogus exit 2"
 
