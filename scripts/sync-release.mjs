@@ -632,13 +632,19 @@ function getRemoteMasterSha() {
     const match = out.match(/^([0-9a-f]{40})\s+refs\/heads\/master/);
     return match ? match[1] : null;
   } catch (err) {
-    const stderr = err.stderr ? err.stderr.toString().trim() : '';
-    return { error: stderr || err.message };
+    const rawStderr = err.stderr ? err.stderr.toString().trim() : '';
+    const sanitized = (rawStderr || err.message || '').replace(/([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)[^@/\s]+@/g, '$1***@');
+    return { error: sanitized };
   }
 }
-
 const CANONICAL_REPO_OWNER = 'manhquydev';
 const CANONICAL_REPO_NAME = 'flow-skill';
+
+const CANONICAL_REMOTE_URL_PATTERNS = [
+  /^https:\/\/github\.com\/manhquydev\/flow-skill(?:\.git)?$/,
+  /^git@github\.com:manhquydev\/flow-skill(?:\.git)?$/,
+  /^ssh:\/\/git@github\.com\/manhquydev\/flow-skill(?:\.git)?$/,
+];
 
 function getRepoCoordinates() {
   let remoteUrl = '';
@@ -646,7 +652,7 @@ function getRepoCoordinates() {
     remoteUrl = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
       cwd: repoRoot,
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
   } catch {
     // fallback
@@ -656,7 +662,7 @@ function getRepoCoordinates() {
       remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
         cwd: repoRoot,
         encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'ignore'],
       }).trim();
     } catch {
       // unreadable
@@ -667,24 +673,15 @@ function getRepoCoordinates() {
     return { ok: false, reason: 'Remote origin URL could not be determined from git config or git remote.' };
   }
 
-  const m = remoteUrl.match(/github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/);
-  if (!m) {
+  const matchesCanonical = CANONICAL_REMOTE_URL_PATTERNS.some(p => p.test(remoteUrl));
+  if (!matchesCanonical) {
     return {
       ok: false,
-      reason: `Remote origin "${remoteUrl}" is not a valid GitHub repository URL. Promotion is restricted to canonical ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}.`,
+      reason: `Remote origin is not an accepted canonical repository URL for ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}. Expected exact HTTPS, SSH, or git protocol format on github.com without userinfo credentials.`,
     };
   }
 
-  const owner = m[1];
-  const repo = m[2];
-  if (owner !== CANONICAL_REPO_OWNER || repo !== CANONICAL_REPO_NAME) {
-    return {
-      ok: false,
-      reason: `Remote origin points to "${owner}/${repo}", expected canonical "${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}". Refusing promotion on non-canonical repository.`,
-    };
-  }
-
-  return { ok: true, owner, repo };
+  return { ok: true, owner: CANONICAL_REPO_OWNER, repo: CANONICAL_REPO_NAME };
 }
 
 function checkCiStatus(headSha) {
@@ -928,6 +925,17 @@ To execute release promotion live, re-run with --yes:
     console.log('✓ Current branch is "master".');
   }
 
+  const coords = getRepoCoordinates();
+  if (!coords.ok) {
+    if (!isDryRun) {
+      console.error(`\nFAIL: Remote origin repository validation failed: ${coords.reason}`);
+      process.exit(1);
+    } else {
+      console.log(`[WARN] Remote origin repository validation: ${coords.reason}`);
+    }
+  } else {
+    console.log(`✓ Remote origin verified canonical (${coords.owner}/${coords.repo}).`);
+  }
   const npmTag = `npm@${npm_v}`;
   const skillTag = `v${skill_v}`;
   const npmTagStatus = gitTagExists(npmTag);
@@ -961,18 +969,6 @@ To execute release promotion live, re-run with --yes:
     }
   }
   console.log(`✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.`);
-
-  const coords = getRepoCoordinates();
-  if (!coords.ok) {
-    if (!isDryRun) {
-      console.error(`\nFAIL: Remote origin repository validation failed: ${coords.reason}`);
-      process.exit(1);
-    } else {
-      console.log(`[WARN] Remote origin repository validation: ${coords.reason}`);
-    }
-  } else {
-    console.log(`✓ Remote origin verified canonical (${coords.owner}/${coords.repo}).`);
-  }
 
   const localHead = getLocalHeadSha();
   if (!localHead) {
