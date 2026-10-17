@@ -218,8 +218,6 @@ if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
 
 before_tree_hash="$(portable_hash "$tmp/r")"
@@ -252,6 +250,7 @@ tmp=$(mktemp -d)
 git clone --no-tags -q "$ROOT" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
+git -C "$tmp/r" checkout -B master >/dev/null 2>&1 || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/
@@ -266,10 +265,9 @@ if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
-git -C "$tmp/r" remote set-url origin /dev/null/nonexistent
+git -C "$tmp/r" config url."/dev/null/nonexistent".insteadOf "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
 
 before_j_head="$(git -C "$tmp/r" rev-parse HEAD)"
 before_j_status="$(git -C "$tmp/r" status --porcelain)"
@@ -287,8 +285,8 @@ rm -rf "$tmp"
 
 echo "K) gh release integration branches with mocked gh (existing, create-failure, create-success)"
 tmp=$(mktemp -d)
-git clone --bare -q "$ROOT" "$tmp/origin.git"
-git clone -q "$tmp/origin.git" "$tmp/r"
+git clone --bare --no-tags -q "$ROOT" "$tmp/origin.git"
+git clone --no-tags -q "$tmp/origin.git" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
 checkout_err=$(git -C "$tmp/r" checkout -B master 2>&1) || {
@@ -304,14 +302,37 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
     exit 1
   fi
 }
+git -C "$tmp/r" push -q origin master
+git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
 if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
   ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
     exit 1
   }
-else
-  ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" 2>&1 || true
 fi
+
+k_skill_v=$(node -e 'const fs = require("node:fs"); const m = fs.readFileSync(process.argv[1], "utf8").match(/version:\s*"([^"]+)"/); console.log(m[1])' "$(winpath "$tmp/r/skills/flow/SKILL.md")")
+k_npm_v=$(node -e 'const p = process.argv[1]; console.log(require(p).version)' "$(winpath "$tmp/r/npm-wrapper/package.json")")
+clean_k_tags() {
+  if [ -n "${k_npm_v:-}" ]; then
+    git -C "$tmp/origin.git" tag -d "npm@$k_npm_v" >/dev/null 2>&1 || true
+    git -C "$tmp/r" tag -d "npm@$k_npm_v" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${k_skill_v:-}" ]; then
+    git -C "$tmp/origin.git" tag -d "v$k_skill_v" >/dev/null 2>&1 || true
+    git -C "$tmp/r" tag -d "v$k_skill_v" >/dev/null 2>&1 || true
+  fi
+  for t in $(git -C "$tmp/origin.git" tag -l | tr -d '\r'); do
+    git -C "$tmp/origin.git" tag -d "$t" >/dev/null 2>&1 || true
+  done
+  for t in $(git -C "$tmp/r" tag -l | tr -d '\r'); do
+    git -C "$tmp/r" tag -d "$t" >/dev/null 2>&1 || true
+  done
+  [ -z "$(git -C "$tmp/origin.git" tag -l)" ] || { echo "FAIL: origin tags remain after clean_k_tags" >&2; exit 1; }
+  [ -z "$(git -C "$tmp/r" tag -l)" ] || { echo "FAIL: local tags remain after clean_k_tags" >&2; exit 1; }
+}
+clean_k_tags
 
 dumped_k_files=""
 ck_k() {
@@ -341,6 +362,42 @@ mkdir -p "$mock_bin"
 cat > "$mock_bin/gh" << "EOF"
 #!/usr/bin/env bash
 mode="${GH_MOCK_MODE:-exists}"
+ci_app="${GH_MOCK_CI_APP:-github-actions}"
+env_protection="${GH_MOCK_ENV_PROTECTION:-approved}"
+
+if [ "$1" = "api" ]; then
+  case "$2" in
+    *commits/*/check-runs*)
+      head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
+      cat << JSON
+{"check_runs":[{"id":1,"name":"all-checks-passed","head_sha":"$head_sha","status":"completed","conclusion":"success","app":{"slug":"$ci_app"}}]}
+JSON
+      exit 0
+      ;;
+    *environments/npm-publish*)
+      if [ "$env_protection" = "empty" ]; then
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[]}
+JSON
+        exit 0
+      elif [ "$env_protection" = "wait_timer" ]; then
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[{"type":"wait_timer","wait_timer":10,"reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
+JSON
+        exit 0
+      elif [ "$env_protection" = "error" ]; then
+        echo "gh: Not Found (HTTP 404)" >&2
+        exit 1
+      else
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[{"type":"required_reviewers","reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
+JSON
+        exit 0
+      fi
+      ;;
+  esac
+fi
+
 if [ "$1" = "release" ] && [ "$2" = "view" ]; then
   if [ "$mode" = "exists" ]; then
     echo "{\"tagName\":\"$3\"}"
@@ -378,6 +435,7 @@ grep -q "GitHub Release for v" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'G
 grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc
 
+clean_k_tags
 # Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
 # Assert exit code is 1.
 # Assert output contains "FAIL: Could not create GitHub Release for v"
@@ -388,7 +446,10 @@ ck_k 1 $k2_rc "K2: sync-release exits 1 when gh release create fails" "$tmp/k2.o
 grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck_k 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
 ck_k 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k2.out" $k2_rc
+grep -qE "Git tag .* already exists" "$tmp/k2.out"
+ck_k 1 $? "K2: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k2.out" $k2_rc
 
+clean_k_tags
 # Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
 # Assert output contains "GitHub Release created for v"
 GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
@@ -396,7 +457,10 @@ k3_rc=$?
 ck_k 0 $k3_rc "K3: sync-release exits 0 when gh release create succeeds" "$tmp/k3.out" $k3_rc
 grep -q "GitHub Release created for v" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc
+grep -qE "Git tag .* already exists" "$tmp/k3.out"
+ck_k 1 $? "K3: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k3.out" $k3_rc
 
+clean_k_tags
 # Test K4: Mock gh release view fails with auth/network error:
 # Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
 GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1
@@ -405,6 +469,87 @@ ck_k 1 $k4_rc "K4: sync-release exits 1 when gh release view has auth/network er
 grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck_k 0 0 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
 ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
+grep -qE "Git tag .* already exists" "$tmp/k4.out"
+ck_k 1 $? "K4: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k4.out" $k4_rc
+
+clean_k_tags
+# Test K5: Spoofed CI check app (e.g. app slug "malicious-bot" instead of "github-actions") fails closed:
+GH_MOCK_CI_APP="malicious-bot" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k5.out" 2>&1
+k5_rc=$?
+ck_k 1 $k5_rc "K5: sync-release exits 1 when CI check run app is not github-actions" "$tmp/k5.out" $k5_rc
+grep -q "expected authoritative \"github-actions\"" "$tmp/k5.out" && ck_k 0 0 "K5: output flags non-authoritative app slug" "$tmp/k5.out" $k5_rc || ck_k 0 1 "K5: output flags non-authoritative app slug" "$tmp/k5.out" $k5_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k5.out"
+ck_k 1 $? "K5: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k5.out" $k5_rc
+grep -qE "Git tag .* already exists" "$tmp/k5.out"
+ck_k 1 $? "K5: output does NOT contain 'Git tag already exists'" "$tmp/k5.out" $k5_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K5: zero tags created on CI app spoof" || ck_k 0 1 "K5: zero tags created on CI app spoof"
+
+clean_k_tags
+# Test K6: Environment npm-publish with protection_rules=[] fails closed before any git tag/push:
+GH_MOCK_ENV_PROTECTION="empty" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
+k6_rc=$?
+ck_k 1 $k6_rc "K6: sync-release exits 1 when npm-publish environment lacks required_reviewers" "$tmp/k6.out" $k6_rc
+grep -q "has no required_reviewers protection rule configured" "$tmp/k6.out" && ck_k 0 0 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k6.out"
+ck_k 1 $? "K6: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k6.out" $k6_rc
+grep -qE "Git tag .* already exists" "$tmp/k6.out"
+ck_k 1 $? "K6: output does NOT contain 'Git tag already exists'" "$tmp/k6.out" $k6_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when protection rules empty" || ck_k 0 1 "K6: zero tags created when protection rules empty"
+[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero remote tags pushed when protection rules empty" || ck_k 0 1 "K6: zero remote tags pushed when protection rules empty"
+
+clean_k_tags
+# Test K7: Environment npm-publish with wait_timer rule having reviewers fails closed (type must be required_reviewers):
+GH_MOCK_ENV_PROTECTION="wait_timer" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k7.out" 2>&1
+k7_rc=$?
+ck_k 1 $k7_rc "K7: sync-release exits 1 when protection rule type is not required_reviewers" "$tmp/k7.out" $k7_rc
+grep -q "has no required_reviewers protection rule configured" "$tmp/k7.out" && ck_k 0 0 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc || ck_k 0 1 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k7.out"
+ck_k 1 $? "K7: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k7.out" $k7_rc
+grep -qE "Git tag .* already exists" "$tmp/k7.out"
+ck_k 1 $? "K7: output does NOT contain 'Git tag already exists'" "$tmp/k7.out" $k7_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K7: zero tags created on invalid rule type" || ck_k 0 1 "K7: zero tags created on invalid rule type"
+
+clean_k_tags
+# Test K8: Non-canonical repository remote URL refuses promotion fail-closed before any commit/tag/push:
+git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/other-org/malicious-repo.git"
+git -C "$tmp/r" remote set-url origin "https://github.com/other-org/malicious-repo.git"
+PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k8.out" 2>&1
+k8_rc=$?
+ck_k 1 $k8_rc "K8: sync-release exits 1 on non-canonical repository remote" "$tmp/k8.out" $k8_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k8.out" && ck_k 0 0 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc || ck_k 0 1 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k8.out"
+ck_k 1 $? "K8: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k8.out" $k8_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K8: zero tags created on wrong remote" || ck_k 0 1 "K8: zero tags created on wrong remote"
+
+clean_k_tags
+# Test K9: Credential-bearing or invalid remote origin fails closed before any tag/push without leaking credentials in output:
+git -C "$tmp/r" remote set-url origin "https://user:SECRET_SENTINEL@invalid.example/manhquydev/flow-skill.git"
+PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k9.out" 2>&1
+k9_rc=$?
+ck_k 1 $k9_rc "K9: sync-release exits 1 on credential-bearing remote at evil host" "$tmp/k9.out" $k9_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k9.out" && ck_k 0 0 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc || ck_k 0 1 "K9: output reports sanitized canonical remote error" "$tmp/k9.out" $k9_rc
+grep -q "SECRET_SENTINEL" "$tmp/k9.out"
+ck_k 1 $? "K9: output has ZERO occurrence of SECRET_SENTINEL (no credential leak)" "$tmp/k9.out" $k9_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k9.out"
+ck_k 1 $? "K9: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k9.out" $k9_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K9: zero tags created on credential-bearing remote" || ck_k 0 1 "K9: zero tags created on credential-bearing remote"
+[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K9: zero remote tags pushed on credential-bearing remote" || ck_k 0 1 "K9: zero remote tags pushed on credential-bearing remote"
+
+clean_k_tags
+# Test K10: Lookalike evil host with unanchored github.com path fails closed before any tag/push without leaking URL:
+git -C "$tmp/r" remote set-url origin "https://evil.example/github.com/manhquydev/flow-skill"
+PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k10.out" 2>&1
+k10_rc=$?
+ck_k 1 $k10_rc "K10: sync-release exits 1 on lookalike host with embedded github.com path" "$tmp/k10.out" $k10_rc
+grep -q "not an accepted canonical repository URL" "$tmp/k10.out" && ck_k 0 0 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc || ck_k 0 1 "K10: output reports sanitized canonical remote error" "$tmp/k10.out" $k10_rc
+grep -q "evil.example" "$tmp/k10.out"
+ck_k 1 $? "K10: output has ZERO occurrence of evil.example (never prints raw URL)" "$tmp/k10.out" $k10_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k10.out"
+ck_k 1 $? "K10: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k10.out" $k10_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K10: zero tags created on lookalike remote" || ck_k 0 1 "K10: zero tags created on lookalike remote"
+[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K10: zero remote tags pushed on lookalike remote" || ck_k 0 1 "K10: zero remote tags pushed on lookalike remote"
+git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" config --unset url."file://$tmp/origin.git".insteadOf "https://github.com/other-org/malicious-repo.git" || true
 rm -rf "$tmp"
 
 echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"

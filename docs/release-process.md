@@ -87,53 +87,60 @@ node scripts/sync-release.mjs --sync
 
 `node scripts/sync-release.mjs --check` validates version alignment across `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, `portable-manifest.json`, `npm-wrapper/package.json`, root and wrapper READMEs (EN and VN), changelogs, runner hash, and dual-axis non-equality (`npm_v !== skill_v`).
 
-## Canonical Chronological Release Workflow
+## Canonical Two-Phase Release Workflow
 
-The entire release pipeline is unified into a single fail-closed execution via `bash scripts/release.sh`:
+Releases follow a strict two-phase lifecycle: **Phase 1 (Preparation in PR)** followed by **Phase 2 (Promotion of Pre-Verified Master HEAD)**.
+
+> **RELEASE BLOCKER NOTICE (Environment Protection Enforced):**
+> The release promotion executor (`scripts/sync-release.mjs`) strictly queries GitHub Actions environment `npm-publish` via `gh api` and fails closed before creating or pushing any git tag if `protection_rules` lacks a `required_reviewers` rule with at least one reviewer.
+> The repository currently reports `protection_rules: []`. A repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion (`--ship --yes`) can succeed.
+> A passing CI check (`all-checks-passed` from `github-actions`) on `master` HEAD validates test and build correctness only; the release executor refuses live promotion without environment reviewer protection rules.
+
+### Phase 1: Release Preparation (PR Branch)
+
+All changes, documentation updates, version bumps, and synchronizations are performed in a pull request branch before merging to `master`:
+
+1. **Bump versions and update changelogs**:
+   - Skill product: `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, `portable-manifest.json`, and `CHANGELOG.md`.
+   - npm installer: `npm-wrapper/package.json` and `npm-wrapper/CHANGELOG.md`.
+2. **Synchronize release surfaces**:
+   ```bash
+   node scripts/sync-release.mjs --sync
+   ```
+3. **Record i18n pair hashes**:
+   ```bash
+   bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md
+   bash scripts/check-i18n-pairs.sh record README.md
+   ```
+4. **Validate release coherence locally**:
+   ```bash
+   node scripts/sync-release.mjs --check
+   ```
+5. **Commit and open PR**: Commit all release preparation files and merge to `master` once CI passes.
+
+### Phase 2: Release Promotion (Master HEAD)
+
+Once the preparation PR is merged to `master` and the GitHub Actions CI suite (`all-checks-passed`) passes on `origin/master`, execute release promotion:
 
 ```bash
-# Preview release readiness, simulate checks, and verify gates non-mutatingly:
+# Preview promotion readiness, simulate checks, and verify gates non-mutatingly:
 bash scripts/release.sh --dry-run
 
-# Execute full live release (synchronize surfaces, commit release prep & i18n hashes, run battery, tag, and push):
+# Execute live promotion (requires 100% clean master matching origin/master with green CI):
 bash scripts/release.sh --yes
 ```
 
-### The 8 Unified Steps Automated by `scripts/release.sh`:
+### Promotion Gates Automated by `scripts/release.sh`:
 
-1. **Safety Precondition Check**: Validates that the working tree is clean or contains only valid release surface files. In live mode, fails loudly if unrelated uncommitted changes exist.
-2. **Version Resolution**: Reads skill product version (`skills/flow/SKILL.md`) and npm package version (`npm-wrapper/package.json`).
-3. **Changelog Validation**: Verifies changelog entries exist for both versions in `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
-4. **Surface Synchronization**: Synchronizes table rows across all 4 README files (`npm-wrapper/README.md`, `npm-wrapper/README_VN.md`, `README.md`, `README_VN.md`), preserves GA rows for prereleases, and re-materializes bundled assets via `npm run sync` in `npm-wrapper`.
-5. **Release Commit**: Commits release preparation files (`chore(release): prepare v<skill_v> / npm@<npm_v>`).
-6. **i18n Pair Hash Recording**: Records committed `HEAD` blob hashes for `README.md` and `npm-wrapper/README.md` via `scripts/check-i18n-pairs.sh record`.
-7. **i18n Commit**: Commits updated pair hashes in `docs/i18n-pairs.txt` (`docs(i18n): update pair hashes for v<skill_v> / <npm_v>`).
-8. **Verification Battery & Tagging/Push**:
-   - Runs the entire verification battery:
-     - `check-release-coherence.sh`
-     - `release-preflight.sh`
-     - `pack-rehearsal.sh`
-     - `check-doc-budgets.sh`
-     - `test_doc_budgets.sh`
-     - `test_flow_rules.sh`
-     - `npm test --prefix npm-wrapper`
-   - In `--dry-run`: outputs `DRY-RUN SUCCESS: All gates passed. The release is 100% verified and ready to ship.` and exits 0 (strictly non-mutating).
-   - In live mode (requires `--yes`): checks tag existence, creates new git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to remote origin, and displays GitHub Actions approval instructions.
-   - **GitHub Release creation**: GitHub Releases belong to the Skill Product axis (`v<skill_v>`). A GitHub Release with release notes is created for `v<skill_v>` (e.g. `gh release create v<skill_v> --notes-file CHANGELOG.md`). The npm installer axis (`npm@<version>`) triggers the OIDC npm publish pipeline to npmjs.com and does NOT automatically generate a GitHub Release (any installer GitHub Release is optional and manual).
-
-### Manual Step-by-Step Breakdown (Reference)
-
-For developers wishing to perform manual or partial steps:
-
-1. **Decide version bump**: Update `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, and `portable-manifest.json` for skill; or `cd npm-wrapper && npm version <patch|minor|prerelease> --no-git-tag-version`.
-2. **Add release notes**: `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
-3. **Synchronize surfaces**: `node scripts/sync-release.mjs --sync`.
-4. **Commit changes**: `git commit -m "chore(release): prepare v<skill_v> / npm@<npm_v>"`.
-5. **Record i18n hashes**: `bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md` and `README.md`, then commit `docs/i18n-pairs.txt`.
-6. **Verification battery**: `bash scripts/release-preflight.sh && bash scripts/pack-rehearsal.sh`.
-7. **Tag**: `git tag npm@<npm_v>` and `git tag v<skill_v>`.
-8. **Push**: `git push origin master && git push origin npm@<npm_v> && git push origin v<skill_v>`.
-9. **GitHub Release (Skill Product)**: `gh release create v<skill_v> --notes-file CHANGELOG.md`. The npm installer axis triggers OIDC publish to npmjs.com and does not automatically generate a GitHub Release.
+1. **Cleanliness Gate**: The working tree and index must be 100% clean (zero uncommitted, staged, or untracked files).
+2. **Version & Changelog Gate**: Versions exist in manifests and changelog entries exist for both versions in `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
+3. **Branch & Remote Equality Gate**: Current branch must be `master`, and local `HEAD` commit SHA must match live remote `origin/master`.
+4. **Tag Preconditions Gate**: Release tags `npm@<npm_v>` and `v<skill_v>` must not already exist locally or remotely. Remote connectivity must be confirmed.
+5. **Coherence & Non-Drift Gate**: All release surfaces are coherent, synchronization produces zero drift (no file modifications), and committed i18n pair hashes match.
+6. **Exact-HEAD CI Status Gate**: Authoritative GitHub Actions check `all-checks-passed` (verified from app slug `github-actions`) on the exact `master` HEAD commit must be completed with `conclusion: success`.
+7. **Environment Protection Gate**: Queries GitHub Actions environment `npm-publish` via `gh api` and fails closed if `required_reviewers` rule is missing or empty.
+8. **Verification Battery (Read-Only)**: Runs read-only checks `check-release-coherence.sh`, `check-doc-budgets.sh`, `tests/test_doc_budgets.sh`, `tests/test_flow_rules.sh`, and `tests/test_release_coherence.sh` (strictly non-mutating; preflight and full test suite already executed in Phase 1 PR and verified by CI on exact master HEAD).
+9. **Tagging, Pushing & GitHub Release**: Creates git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to origin, creates the official GitHub Release for `v<skill_v>`, and displays next steps. Zero file modifications occur on `master`.
 ## Skill product release (e.g. v0.24.0)
 
 1. **Implement + tests**
@@ -154,9 +161,9 @@ For developers wishing to perform manual or partial steps:
 4. **Ship skill homes**
    - Dev: `bash install.sh global` / `pwsh install.ps1 global`, or
    - Users: next npm-wrapper release that re-syncs and publishes (below).
-5. **Optional git tag**
-   - `git tag v0.24.0 && git push origin v0.24.0` + GitHub Release notes.
-   - **Does not** publish npm.
+5. **Tagging and GitHub Release (Retired manual path)**
+   - Direct manual `git tag v... && git push origin v...` is strictly retired because it bypasses required CI and environment protection gates.
+   - All release tags (`v<skill_v>` and `npm@<npm_v>`) and official GitHub Releases are created and pushed solely by the canonical promotion workflow: `bash scripts/release.sh --yes`.
 
 ### Bundled tree integrity receipt (Full-tree manifest-hashes.json)
 
