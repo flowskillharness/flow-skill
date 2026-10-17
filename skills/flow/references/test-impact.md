@@ -56,8 +56,6 @@ Execute suites using `bash tests/<suite>.sh`. Each manifest suite is grouped und
 - `test_flow_status_legibility.sh`
 - `test_flow_rules.sh`
 - `test_flow_scenarios.sh`
-- `test_flow_eval.sh`
-- `test_eval_fixture_lint.sh`
 - `test_flow_loop.sh`
 - `test_flow_consistency.sh`
 - `test_flow_constitution.sh`
@@ -75,6 +73,10 @@ Execute suites using `bash tests/<suite>.sh`. Each manifest suite is grouped und
 ### Doctor (`skills/flow/runner/doctor*`, `flow.sh:cmd_doctor`)
 Source lives under runner (`skills/flow/runner/doctor_helper.py`, `doctor-checks.tsv`, `flow.sh:cmd_doctor`).
 - `test_flow_doctor.sh`
+
+### Eval (`skills/flow/eval/**`, `flow.sh:cmd_eval`, `references/gate-eval.md`)
+- `test_flow_eval.sh`
+- `test_eval_fixture_lint.sh`
 
 ### Harness (`skills/flow/harness/`)
 - `test_flow_harness.sh`
@@ -132,7 +134,7 @@ Targeted suites guide local inner-loop development; do not default to running th
 1. **Recommended Local Escalation (`bash tests/run_all.sh`)**:
    - **Cross-cutting runner or harness edits**: changes to core dispatch (`_dispatch`,
      `scan_gate`, option parsers in `flow.sh`) or durable database schemas and migrations
-     (`_db.py`, `_migrations.py`).
+     (`_db.py`, `skills/flow/harness/schema/*.sql`).
    - **Cross-platform path or process containment**: changes touching Windows path
      translation (cygpath, UNC, drive letters), macOS symlink resolution (`/private/var`),
      or process supervision/signals in `adapter-hooks/` and attestation supervisors.
