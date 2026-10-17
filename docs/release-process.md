@@ -91,10 +91,10 @@ node scripts/sync-release.mjs --sync
 
 Releases follow a strict two-phase lifecycle: **Phase 1 (Preparation in PR)** followed by **Phase 2 (Promotion of Pre-Verified Master HEAD)**.
 
-> **RELEASE BLOCKER NOTICE (Environment Protection):**
-> GitHub Actions environment `npm-publish` currently reports `protection_rules: []` (no required reviewers configured).
-> A repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion (`--ship --yes`) can be authorized.
-> A passing CI check (`all-checks-passed`) on `master` HEAD validates test and build correctness only; it does **not** authorize automated npm publishing without environment reviewer protection rules.
+> **RELEASE BLOCKER NOTICE (Environment Protection Enforced):**
+> The release promotion executor (`scripts/sync-release.mjs`) strictly queries GitHub Actions environment `npm-publish` via `gh api` and fails closed before creating or pushing any git tag if `protection_rules` lacks a `required_reviewers` rule with at least one reviewer.
+> The repository currently reports `protection_rules: []`. A repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion (`--ship --yes`) can succeed.
+> A passing CI check (`all-checks-passed` from `github-actions`) on `master` HEAD validates test and build correctness only; the release executor refuses live promotion without environment reviewer protection rules.
 
 ### Phase 1: Release Preparation (PR Branch)
 
@@ -137,9 +137,10 @@ bash scripts/release.sh --yes
 3. **Branch & Remote Equality Gate**: Current branch must be `master`, and local `HEAD` commit SHA must match live remote `origin/master`.
 4. **Tag Preconditions Gate**: Release tags `npm@<npm_v>` and `v<skill_v>` must not already exist locally or remotely. Remote connectivity must be confirmed.
 5. **Coherence & Non-Drift Gate**: All release surfaces are coherent, synchronization produces zero drift (no file modifications), and committed i18n pair hashes match.
-6. **Exact-HEAD CI Status Gate**: GitHub Actions check `all-checks-passed` on the exact `master` HEAD commit must be completed with `conclusion: success`.
-7. **Verification Battery**: Runs `check-release-coherence.sh`, `release-preflight.sh`, `pack-rehearsal.sh`, `check-doc-budgets.sh`, `test_doc_budgets.sh`, `test_flow_rules.sh`, and `npm test --prefix npm-wrapper`.
-8. **Tagging, Pushing & GitHub Release**: Creates git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to origin, creates the official GitHub Release for `v<skill_v>`, and displays next steps. Zero file modifications occur on `master`.
+6. **Exact-HEAD CI Status Gate**: Authoritative GitHub Actions check `all-checks-passed` (verified from app slug `github-actions`) on the exact `master` HEAD commit must be completed with `conclusion: success`.
+7. **Environment Protection Gate**: Queries GitHub Actions environment `npm-publish` via `gh api` and fails closed if `required_reviewers` rule is missing or empty.
+8. **Verification Battery**: Runs `check-release-coherence.sh`, `release-preflight.sh`, `pack-rehearsal.sh`, `check-doc-budgets.sh`, `test_doc_budgets.sh`, `test_flow_rules.sh`, and `npm test --prefix npm-wrapper`.
+9. **Tagging, Pushing & GitHub Release**: Creates git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to origin, creates the official GitHub Release for `v<skill_v>`, and displays next steps. Zero file modifications occur on `master`.
 ## Skill product release (e.g. v0.24.0)
 
 1. **Implement + tests**

@@ -344,14 +344,38 @@ mock_bin="$tmp/bin"
 mkdir -p "$mock_bin"
 cat > "$mock_bin/gh" << "EOF"
 #!/usr/bin/env bash
-if [ "$1" = "api" ]; then
-  head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
-  cat << JSON
-{"check_runs":[{"id":1,"name":"all-checks-passed","head_sha":"$head_sha","status":"completed","conclusion":"success"}]}
-JSON
-  exit 0
-fi
 mode="${GH_MOCK_MODE:-exists}"
+ci_app="${GH_MOCK_CI_APP:-github-actions}"
+env_protection="${GH_MOCK_ENV_PROTECTION:-approved}"
+
+if [ "$1" = "api" ]; then
+  case "$2" in
+    *commits/*/check-runs*)
+      head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
+      cat << JSON
+{"check_runs":[{"id":1,"name":"all-checks-passed","head_sha":"$head_sha","status":"completed","conclusion":"success","app":{"slug":"$ci_app"}}]}
+JSON
+      exit 0
+      ;;
+    *environments/npm-publish*)
+      if [ "$env_protection" = "empty" ]; then
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[]}
+JSON
+        exit 0
+      elif [ "$env_protection" = "error" ]; then
+        echo "gh: Not Found (HTTP 404)" >&2
+        exit 1
+      else
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[{"type":"required_reviewers","reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
+JSON
+        exit 0
+      fi
+      ;;
+  esac
+fi
+
 if [ "$1" = "release" ] && [ "$2" = "view" ]; then
   if [ "$mode" = "exists" ]; then
     echo "{\"tagName\":\"$3\"}"
@@ -419,6 +443,27 @@ ck_k 1 $k4_rc "K4: sync-release exits 1 when gh release view has auth/network er
 grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck_k 0 0 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc
 grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
 ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
+
+clean_k_tags
+# Test K5: Spoofed CI check app (e.g. app slug "malicious-bot" instead of "github-actions") fails closed:
+GH_MOCK_CI_APP="malicious-bot" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k5.out" 2>&1
+k5_rc=$?
+ck_k 1 $k5_rc "K5: sync-release exits 1 when CI check run app is not github-actions" "$tmp/k5.out" $k5_rc
+grep -q "expected authoritative \"github-actions\"" "$tmp/k5.out" && ck_k 0 0 "K5: output flags non-authoritative app slug" "$tmp/k5.out" $k5_rc || ck_k 0 1 "K5: output flags non-authoritative app slug" "$tmp/k5.out" $k5_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k5.out"
+ck_k 1 $? "K5: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k5.out" $k5_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K5: zero tags created on CI app spoof" || ck_k 0 1 "K5: zero tags created on CI app spoof"
+
+clean_k_tags
+# Test K6: Environment npm-publish with protection_rules=[] fails closed before any git tag/push:
+GH_MOCK_ENV_PROTECTION="empty" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
+k6_rc=$?
+ck_k 1 $k6_rc "K6: sync-release exits 1 when npm-publish environment lacks required_reviewers" "$tmp/k6.out" $k6_rc
+grep -q "has no required_reviewers protection rule configured" "$tmp/k6.out" && ck_k 0 0 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k6.out"
+ck_k 1 $? "K6: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k6.out" $k6_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when protection rules empty" || ck_k 0 1 "K6: zero tags created when protection rules empty"
+[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero remote tags pushed when protection rules empty" || ck_k 0 1 "K6: zero remote tags pushed when protection rules empty"
 rm -rf "$tmp"
 
 echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"

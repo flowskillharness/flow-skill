@@ -61,7 +61,7 @@ need an alternative write path — re-check npm changelog before that date.
 
 - [x] Trusted Publisher: `owner=manhquydev`, `repo=flow-skill`, `workflow=publish-npm-wrapper.yml`,
       `environment=npm-publish` (cross-account OK). Confirmed live rc.2+.
-- [ ] GitHub Environment `npm-publish` with required reviewer (RELEASE BLOCKER: API reports `protection_rules: []`; repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion).
+- [ ] GitHub Environment `npm-publish` with required reviewer (RELEASE BLOCKER: API reports `protection_rules: []`; executor strictly enforces required reviewer rule before creating tags; repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion).
 - [x] Repo public (OIDC audience).
 - [ ] Optional: `npm profile get` when diagnosing account issues.
 

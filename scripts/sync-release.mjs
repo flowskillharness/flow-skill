@@ -637,11 +637,29 @@ function getRemoteMasterSha() {
   }
 }
 
+function getRepoCoordinates() {
+  try {
+    const remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+    const m = remoteUrl.match(/github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/);
+    if (m) {
+      return { owner: m[1], repo: m[2] };
+    }
+  } catch {
+    // fallback
+  }
+  return { owner: 'manhquydev', repo: 'flow-skill' };
+}
+
 function checkCiStatus(headSha) {
   try {
+    const coords = getRepoCoordinates();
     const out = execGh([
       'api',
-      `repos/{owner}/{repo}/commits/${headSha}/check-runs`,
+      `repos/${coords.owner}/${coords.repo}/commits/${headSha}/check-runs`,
     ], {
       cwd: repoRoot,
       encoding: 'utf8',
@@ -664,6 +682,12 @@ function checkCiStatus(headSha) {
         reason: `Check run head_sha (${check.head_sha}) does not match HEAD (${headSha}).`,
       };
     }
+    if (check.app?.slug !== 'github-actions') {
+      return {
+        ok: false,
+        reason: `Check run "all-checks-passed" was created by app "${check.app?.slug || 'unknown'}", expected authoritative "github-actions".`,
+      };
+    }
     if (check.status !== 'completed') {
       return {
         ok: false,
@@ -682,6 +706,44 @@ function checkCiStatus(headSha) {
     return {
       ok: false,
       reason: `Could not query GitHub Actions check runs via "gh api": ${stderr || err.message}`,
+    };
+  }
+}
+
+function checkNpmPublishEnvironmentProtection() {
+  try {
+    const coords = getRepoCoordinates();
+    const out = execGh([
+      'api',
+      `repos/${coords.owner}/${coords.repo}/environments/npm-publish`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const data = JSON.parse(out);
+    if (!data || typeof data !== 'object') {
+      return {
+        ok: false,
+        reason: 'Invalid response from GitHub environments API (not a valid JSON object).',
+      };
+    }
+    const rules = Array.isArray(data.protection_rules) ? data.protection_rules : [];
+    const reviewerRule = rules.find(r => r && (r.type === 'required_reviewers' || Array.isArray(r.reviewers)));
+    const reviewerCount = reviewerRule && Array.isArray(reviewerRule.reviewers) ? reviewerRule.reviewers.length : 0;
+
+    if (!reviewerRule || reviewerCount < 1) {
+      return {
+        ok: false,
+        reason: `Environment "npm-publish" has no required_reviewers protection rule configured (observed ${reviewerCount} reviewer(s)). Tagging npm@* triggers immediate OIDC publishing. Configure required reviewers in GitHub Repository Settings -> Environments -> npm-publish before live promotion.`,
+      };
+    }
+    return { ok: true, reviewerCount, rule: reviewerRule };
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString().trim() : '';
+    return {
+      ok: false,
+      reason: `Could not query GitHub environment "npm-publish" protection rules via "gh api": ${stderr || err.message}`,
     };
   }
 }
@@ -994,10 +1056,18 @@ To execute release promotion live, re-run with --yes:
   }
 
   if (isDryRun) {
-    if (ciVerifiedInDryRun) {
-      console.log('\nDRY-RUN SUCCESS: Local verification battery and GitHub Actions CI (all-checks-passed) verified.\n');
+    const envDryRun = checkNpmPublishEnvironmentProtection();
+    if (envDryRun.ok) {
+      console.log(`✓ Environment "npm-publish" protection verified (${envDryRun.reviewerCount} required reviewer(s)).`);
     } else {
-      console.log('\nDRY-RUN SUCCESS: Local verification battery passed. (GitHub Actions CI status unverified in this environment; promotion with --yes requires green all-checks-passed CI on origin/master).\n');
+      console.log(`[WARN] Environment "npm-publish" reviewer protection unverified: ${envDryRun.reason}`);
+    }
+    if (ciVerifiedInDryRun && envDryRun.ok) {
+      console.log('\nDRY-RUN SUCCESS: Local battery, CI (all-checks-passed), and npm-publish environment protection verified.\n');
+    } else if (ciVerifiedInDryRun) {
+      console.log('\nDRY-RUN SUCCESS: Local battery and CI verified. (npm-publish environment protection unverified; promotion with --yes requires configured required reviewers).\n');
+    } else {
+      console.log('\nDRY-RUN SUCCESS: Local verification battery passed. (GitHub Actions CI status and environment protection unverified in this environment; promotion with --yes requires green all-checks-passed CI on origin/master and reviewer protection rules).\n');
     }
     process.exit(0);
   }
@@ -1022,6 +1092,16 @@ To execute release promotion live, re-run with --yes:
     console.error(`\nFAIL: Git tag ${skillTag} already exists (${preTagSkillStatus.source}). Refusing promotion.`);
     process.exit(1);
   }
+
+  // Environment reviewer protection gate: fail-closed before any git tag/push
+  console.log('\nVerifying GitHub Actions environment "npm-publish" reviewer protection rules...');
+  const envResult = checkNpmPublishEnvironmentProtection();
+  if (!envResult.ok) {
+    console.error(`\nFAIL: Environment protection verification failed: ${envResult.reason}`);
+    console.error('Aborting promotion before creating tags or pushing to origin.');
+    process.exit(1);
+  }
+  console.log(`✓ Environment "npm-publish" protection verified (${envResult.reviewerCount} required reviewer(s)).`);
 
   console.log('\n================================================================================');
   console.log('Tagging Release');
