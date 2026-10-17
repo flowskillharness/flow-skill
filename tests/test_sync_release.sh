@@ -302,6 +302,8 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   fi
 }
 git -C "$tmp/r" push -q origin master
+git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
 if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
   ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
@@ -361,6 +363,11 @@ JSON
       if [ "$env_protection" = "empty" ]; then
         cat << 'JSON'
 {"name":"npm-publish","protection_rules":[]}
+JSON
+        exit 0
+      elif [ "$env_protection" = "wait_timer" ]; then
+        cat << 'JSON'
+{"name":"npm-publish","protection_rules":[{"type":"wait_timer","wait_timer":10,"reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
 JSON
         exit 0
       elif [ "$env_protection" = "error" ]; then
@@ -464,6 +471,30 @@ grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k6.out"
 ck_k 1 $? "K6: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k6.out" $k6_rc
 [ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when protection rules empty" || ck_k 0 1 "K6: zero tags created when protection rules empty"
 [ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero remote tags pushed when protection rules empty" || ck_k 0 1 "K6: zero remote tags pushed when protection rules empty"
+
+clean_k_tags
+# Test K7: Environment npm-publish with wait_timer rule having reviewers fails closed (type must be required_reviewers):
+GH_MOCK_ENV_PROTECTION="wait_timer" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k7.out" 2>&1
+k7_rc=$?
+ck_k 1 $k7_rc "K7: sync-release exits 1 when protection rule type is not required_reviewers" "$tmp/k7.out" $k7_rc
+grep -q "has no required_reviewers protection rule configured" "$tmp/k7.out" && ck_k 0 0 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc || ck_k 0 1 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k7.out"
+ck_k 1 $? "K7: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k7.out" $k7_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K7: zero tags created on invalid rule type" || ck_k 0 1 "K7: zero tags created on invalid rule type"
+
+clean_k_tags
+# Test K8: Non-canonical repository remote URL refuses promotion fail-closed before any commit/tag/push:
+git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/other-org/malicious-repo.git"
+git -C "$tmp/r" remote set-url origin "https://github.com/other-org/malicious-repo.git"
+PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k8.out" 2>&1
+k8_rc=$?
+ck_k 1 $k8_rc "K8: sync-release exits 1 on non-canonical repository remote" "$tmp/k8.out" $k8_rc
+grep -q "expected canonical \"manhquydev/flow-skill\"" "$tmp/k8.out" && ck_k 0 0 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc || ck_k 0 1 "K8: output reports non-canonical remote error" "$tmp/k8.out" $k8_rc
+grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k8.out"
+ck_k 1 $? "K8: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k8.out" $k8_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K8: zero tags created on wrong remote" || ck_k 0 1 "K8: zero tags created on wrong remote"
+git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" config --unset url."file://$tmp/origin.git".insteadOf "https://github.com/other-org/malicious-repo.git" || true
 rm -rf "$tmp"
 
 echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"

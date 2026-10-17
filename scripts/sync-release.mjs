@@ -637,26 +637,63 @@ function getRemoteMasterSha() {
   }
 }
 
+const CANONICAL_REPO_OWNER = 'manhquydev';
+const CANONICAL_REPO_NAME = 'flow-skill';
+
 function getRepoCoordinates() {
+  let remoteUrl = '';
   try {
-    const remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
+    remoteUrl = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
-    const m = remoteUrl.match(/github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/);
-    if (m) {
-      return { owner: m[1], repo: m[2] };
-    }
   } catch {
     // fallback
   }
-  return { owner: 'manhquydev', repo: 'flow-skill' };
+  if (!remoteUrl) {
+    try {
+      remoteUrl = execFileSync('git', ['remote', 'get-url', 'origin'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim();
+    } catch {
+      // unreadable
+    }
+  }
+
+  if (!remoteUrl) {
+    return { ok: false, reason: 'Remote origin URL could not be determined from git config or git remote.' };
+  }
+
+  const m = remoteUrl.match(/github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/);
+  if (!m) {
+    return {
+      ok: false,
+      reason: `Remote origin "${remoteUrl}" is not a valid GitHub repository URL. Promotion is restricted to canonical ${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}.`,
+    };
+  }
+
+  const owner = m[1];
+  const repo = m[2];
+  if (owner !== CANONICAL_REPO_OWNER || repo !== CANONICAL_REPO_NAME) {
+    return {
+      ok: false,
+      reason: `Remote origin points to "${owner}/${repo}", expected canonical "${CANONICAL_REPO_OWNER}/${CANONICAL_REPO_NAME}". Refusing promotion on non-canonical repository.`,
+    };
+  }
+
+  return { ok: true, owner, repo };
 }
 
 function checkCiStatus(headSha) {
+  const coords = getRepoCoordinates();
+  if (!coords.ok) {
+    return { ok: false, reason: coords.reason };
+  }
+  let data;
   try {
-    const coords = getRepoCoordinates();
     const out = execGh([
       'api',
       `repos/${coords.owner}/${coords.repo}/commits/${headSha}/check-runs`,
@@ -665,42 +702,7 @@ function checkCiStatus(headSha) {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const data = JSON.parse(out);
-    const checkRuns = (data && data.check_runs) || [];
-    const matches = checkRuns.filter(c => c.name === 'all-checks-passed');
-    if (matches.length === 0) {
-      return {
-        ok: false,
-        reason: `Required check "all-checks-passed" not found for commit ${headSha}.`,
-      };
-    }
-    matches.sort((a, b) => (b.id || 0) - (a.id || 0));
-    const check = matches[0];
-    if (check.head_sha !== headSha) {
-      return {
-        ok: false,
-        reason: `Check run head_sha (${check.head_sha}) does not match HEAD (${headSha}).`,
-      };
-    }
-    if (check.app?.slug !== 'github-actions') {
-      return {
-        ok: false,
-        reason: `Check run "all-checks-passed" was created by app "${check.app?.slug || 'unknown'}", expected authoritative "github-actions".`,
-      };
-    }
-    if (check.status !== 'completed') {
-      return {
-        ok: false,
-        reason: `Check run "all-checks-passed" is not completed (current status: "${check.status}").`,
-      };
-    }
-    if (check.conclusion !== 'success') {
-      return {
-        ok: false,
-        reason: `Check run "all-checks-passed" conclusion is "${check.conclusion}" (expected "success").`,
-      };
-    }
-    return { ok: true, check };
+    data = JSON.parse(out);
   } catch (err) {
     const stderr = err.stderr ? err.stderr.toString().trim() : '';
     return {
@@ -708,11 +710,51 @@ function checkCiStatus(headSha) {
       reason: `Could not query GitHub Actions check runs via "gh api": ${stderr || err.message}`,
     };
   }
+
+  const checkRuns = (data && Array.isArray(data.check_runs)) ? data.check_runs : [];
+  const matches = checkRuns.filter(c => c && c.name === 'all-checks-passed');
+  if (matches.length === 0) {
+    return {
+      ok: false,
+      reason: `Required check "all-checks-passed" not found for commit ${headSha} (evaluated ${checkRuns.length} check run(s) from GitHub API).`,
+    };
+  }
+  matches.sort((a, b) => (b.id || 0) - (a.id || 0));
+  const check = matches[0];
+  if (check.head_sha !== headSha) {
+    return {
+      ok: false,
+      reason: `Check run head_sha (${check.head_sha}) does not match HEAD (${headSha}).`,
+    };
+  }
+  if (check.app?.slug !== 'github-actions') {
+    return {
+      ok: false,
+      reason: `Check run "all-checks-passed" was created by app "${check.app?.slug || 'unknown'}", expected authoritative "github-actions".`,
+    };
+  }
+  if (check.status !== 'completed') {
+    return {
+      ok: false,
+      reason: `Check run "all-checks-passed" is not completed (current status: "${check.status}").`,
+    };
+  }
+  if (check.conclusion !== 'success') {
+    return {
+      ok: false,
+      reason: `Check run "all-checks-passed" conclusion is "${check.conclusion}" (expected "success").`,
+    };
+  }
+  return { ok: true, check };
 }
 
 function checkNpmPublishEnvironmentProtection() {
+  const coords = getRepoCoordinates();
+  if (!coords.ok) {
+    return { ok: false, reason: coords.reason };
+  }
+  let data;
   try {
-    const coords = getRepoCoordinates();
     const out = execGh([
       'api',
       `repos/${coords.owner}/${coords.repo}/environments/npm-publish`,
@@ -721,24 +763,7 @@ function checkNpmPublishEnvironmentProtection() {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const data = JSON.parse(out);
-    if (!data || typeof data !== 'object') {
-      return {
-        ok: false,
-        reason: 'Invalid response from GitHub environments API (not a valid JSON object).',
-      };
-    }
-    const rules = Array.isArray(data.protection_rules) ? data.protection_rules : [];
-    const reviewerRule = rules.find(r => r && (r.type === 'required_reviewers' || Array.isArray(r.reviewers)));
-    const reviewerCount = reviewerRule && Array.isArray(reviewerRule.reviewers) ? reviewerRule.reviewers.length : 0;
-
-    if (!reviewerRule || reviewerCount < 1) {
-      return {
-        ok: false,
-        reason: `Environment "npm-publish" has no required_reviewers protection rule configured (observed ${reviewerCount} reviewer(s)). Tagging npm@* triggers immediate OIDC publishing. Configure required reviewers in GitHub Repository Settings -> Environments -> npm-publish before live promotion.`,
-      };
-    }
-    return { ok: true, reviewerCount, rule: reviewerRule };
+    data = JSON.parse(out);
   } catch (err) {
     const stderr = err.stderr ? err.stderr.toString().trim() : '';
     return {
@@ -746,6 +771,24 @@ function checkNpmPublishEnvironmentProtection() {
       reason: `Could not query GitHub environment "npm-publish" protection rules via "gh api": ${stderr || err.message}`,
     };
   }
+  if (!data || typeof data !== 'object') {
+    return {
+      ok: false,
+      reason: 'Invalid response from GitHub environments API (not a valid JSON object).',
+    };
+  }
+  const rules = Array.isArray(data.protection_rules) ? data.protection_rules : [];
+  const reviewerRule = rules.find(r => r && r.type === 'required_reviewers' && Array.isArray(r.reviewers) && r.reviewers.length > 0);
+  const reviewerCount = reviewerRule ? reviewerRule.reviewers.length : 0;
+
+  if (!reviewerRule || reviewerCount < 1) {
+    const ruleTypes = rules.map(r => r?.type || 'unknown').join(', ') || 'none';
+    return {
+      ok: false,
+      reason: `Environment "npm-publish" has no required_reviewers protection rule configured (rules evaluated: ${ruleTypes}; observed ${reviewerCount} reviewer(s)). Tagging npm@* triggers immediate OIDC publishing. Configure required reviewers in GitHub Repository Settings -> Environments -> npm-publish before live promotion.`,
+    };
+  }
+  return { ok: true, reviewerCount, rule: reviewerRule };
 }
 
 function checkSyncNonDrift(skill_v, npm_v) {
@@ -918,6 +961,18 @@ To execute release promotion live, re-run with --yes:
     }
   }
   console.log(`✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.`);
+
+  const coords = getRepoCoordinates();
+  if (!coords.ok) {
+    if (!isDryRun) {
+      console.error(`\nFAIL: Remote origin repository validation failed: ${coords.reason}`);
+      process.exit(1);
+    } else {
+      console.log(`[WARN] Remote origin repository validation: ${coords.reason}`);
+    }
+  } else {
+    console.log(`✓ Remote origin verified canonical (${coords.owner}/${coords.repo}).`);
+  }
 
   const localHead = getLocalHeadSha();
   if (!localHead) {
