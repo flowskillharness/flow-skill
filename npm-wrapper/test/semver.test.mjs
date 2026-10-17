@@ -71,6 +71,13 @@ test('parseSemver strictly rejects invalid SemVer 2.0.0 strings', () => {
   assert.equal(parseSemver('1.2'), null);
   assert.equal(parseSemver('1.2.3.4'), null);
 
+  // Surrounding whitespace strictly rejected (no trimming)
+  assert.equal(parseSemver(' 0.7.8'), null);
+  assert.equal(parseSemver('0.7.8 '), null);
+  assert.equal(parseSemver(' 0.7.8 '), null);
+  assert.equal(parseSemver('\t0.7.8'), null);
+  assert.equal(parseSemver('0.7.8\n'), null);
+  assert.equal(parseSemver('\r\n0.7.8\r\n'), null);
   // Leading zeroes in core numeric identifiers (major, minor, patch)
   assert.equal(parseSemver('01.2.3'), null);
   assert.equal(parseSemver('1.02.3'), null);
@@ -118,6 +125,70 @@ test('compareSemver compares prerelease identifiers per SemVer 2.0.0', () => {
   assert.equal(compareSemver('0.7.8-1', '0.7.8-alpha'), -1); // numeric < non-numeric
   assert.equal(compareSemver('0.7.8-alpha', '0.7.8-alpha.1'), -1); // shorter set < longer set
   assert.equal(compareSemver('0.7.8-rc.1', '0.7.8-rc.1'), 0);
+});
+
+test('parseSemver handles large numeric identifiers exceeding MAX_SAFE_INTEGER without precision loss', () => {
+  assert.deepEqual(parseSemver('9007199254740993.0.0'), {
+    major: 9007199254740993n,
+    minor: 0,
+    patch: 0,
+    prerelease: null,
+    build: null,
+  });
+  assert.deepEqual(parseSemver('0.9007199254740993.0'), {
+    major: 0,
+    minor: 9007199254740993n,
+    patch: 0,
+    prerelease: null,
+    build: null,
+  });
+  assert.deepEqual(parseSemver('0.0.9007199254740993'), {
+    major: 0,
+    minor: 0,
+    patch: 9007199254740993n,
+    prerelease: null,
+    build: null,
+  });
+});
+
+test('compareSemver preserves ordering for core numeric identifiers exceeding MAX_SAFE_INTEGER', () => {
+  // Adjacent values above MAX_SAFE_INTEGER (9007199254740991)
+  assert.equal(compareSemver('9007199254740992.0.0', '9007199254740993.0.0'), -1);
+  assert.equal(compareSemver('9007199254740993.0.0', '9007199254740992.0.0'), 1);
+  assert.equal(compareSemver('9007199254740993.0.0', '9007199254740993.0.0'), 0);
+  assert.equal(compareSemver('0.9007199254740992.0', '0.9007199254740993.0'), -1);
+  assert.equal(compareSemver('0.9007199254740993.0', '0.9007199254740992.0'), 1);
+  assert.equal(compareSemver('0.0.9007199254740992', '0.0.9007199254740993'), -1);
+  assert.equal(compareSemver('0.0.9007199254740993', '0.0.9007199254740992'), 1);
+
+  // Differing length arbitrary-precision numbers
+  assert.equal(
+    compareSemver('10000000000000000000.0.0', '9999999999999999999.0.0'),
+    1
+  );
+  assert.equal(
+    compareSemver('9999999999999999999.0.0', '10000000000000000000.0.0'),
+    -1
+  );
+});
+
+test('compareSemver preserves ordering for numeric prerelease identifiers exceeding MAX_SAFE_INTEGER', () => {
+  // Adjacent prerelease values above MAX_SAFE_INTEGER
+  assert.equal(compareSemver('0.7.8-9007199254740992', '0.7.8-9007199254740993'), -1);
+  assert.equal(compareSemver('0.7.8-9007199254740993', '0.7.8-9007199254740992'), 1);
+  assert.equal(compareSemver('0.7.8-9007199254740993', '0.7.8-9007199254740993'), 0);
+  assert.equal(compareSemver('0.7.8-alpha.9007199254740992', '0.7.8-alpha.9007199254740993'), -1);
+  assert.equal(compareSemver('0.7.8-alpha.9007199254740993', '0.7.8-alpha.9007199254740992'), 1);
+
+  // Differing length arbitrary-precision prerelease numbers
+  assert.equal(
+    compareSemver('0.7.8-10000000000000000000', '0.7.8-9999999999999999999'),
+    1
+  );
+  assert.equal(
+    compareSemver('0.7.8-9999999999999999999', '0.7.8-10000000000000000000'),
+    -1
+  );
 });
 
 test('compareSemver ignores build metadata for precedence', () => {
@@ -186,4 +257,7 @@ test('supportsReceiptAndOmp: invalid and non-semver inputs return false', () => 
   assert.equal(supportsReceiptAndOmp('0.7.8-01'), false);
   assert.equal(supportsReceiptAndOmp('0.7.8-'), false);
   assert.equal(supportsReceiptAndOmp('0.7.8+'), false);
+  assert.equal(supportsReceiptAndOmp(' 0.7.8'), false);
+  assert.equal(supportsReceiptAndOmp('0.7.8 '), false);
+  assert.equal(supportsReceiptAndOmp('\n0.7.8\n'), false);
 });

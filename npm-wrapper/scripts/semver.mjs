@@ -13,13 +13,19 @@ export const RECEIPT_OMP_MIN_VERSION = '0.7.8';
 const SEMVER_RE =
   /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
 
+function parseNumeric(str) {
+  const bi = BigInt(str);
+  return bi <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(bi) : bi;
+}
+
 export function parseSemver(v) {
   if (typeof v !== 'string') return null;
-  const match = v.trim().match(SEMVER_RE);
+  // Strict parser: reject surrounding whitespace without trimming.
+  const match = v.match(SEMVER_RE);
   if (!match) return null;
-  const major = parseInt(match[1], 10);
-  const minor = parseInt(match[2], 10);
-  const patch = parseInt(match[3], 10);
+  const major = parseNumeric(match[1]);
+  const minor = parseNumeric(match[2]);
+  const patch = parseNumeric(match[3]);
 
   let prerelease = null;
   if (match[4] !== undefined) {
@@ -37,6 +43,19 @@ export function parseSemver(v) {
 }
 
 /**
+ * Exact arbitrary-length decimal comparison for core and numeric prerelease IDs.
+ * Compares by string length first, then lexical ASCII order (no Number/parseInt precision loss).
+ * Valid numeric identifiers in SemVer 2.0.0 have no leading zeros, so length directly reflects magnitude.
+ */
+function compareNumeric(a, b) {
+  const sa = typeof a === 'bigint' ? a.toString() : String(a);
+  const sb = typeof b === 'bigint' ? b.toString() : String(b);
+  if (sa === sb) return 0;
+  if (sa.length !== sb.length) return sa.length > sb.length ? 1 : -1;
+  return sa > sb ? 1 : -1;
+}
+
+/**
  * Compare two SemVer strings or parsed descriptors per SemVer 2.0.0 precedence rules.
  * Returns -1 if a < b, 0 if a == b, 1 if a > b.
  * Note: build metadata is ignored for precedence.
@@ -50,9 +69,14 @@ export function compareSemver(a, b) {
   const pb = typeof b === 'string' ? parseSemver(b) : b;
   if (!pa || !pb) throw new Error(`Invalid semver: ${!pa ? a : b}`);
 
-  if (pa.major !== pb.major) return pa.major > pb.major ? 1 : -1;
-  if (pa.minor !== pb.minor) return pa.minor > pb.minor ? 1 : -1;
-  if (pa.patch !== pb.patch) return pa.patch > pb.patch ? 1 : -1;
+  const diffMajor = compareNumeric(pa.major, pb.major);
+  if (diffMajor !== 0) return diffMajor;
+
+  const diffMinor = compareNumeric(pa.minor, pb.minor);
+  if (diffMinor !== 0) return diffMinor;
+
+  const diffPatch = compareNumeric(pa.patch, pb.patch);
+  if (diffPatch !== 0) return diffPatch;
 
   // When major, minor, patch are equal:
   // A normal version has greater precedence than a pre-release version.
@@ -69,15 +93,17 @@ export function compareSemver(a, b) {
     if (idB === undefined) return 1;
     if (idA === idB) continue;
 
-    const numA = /^\d+$/.test(idA) ? parseInt(idA, 10) : null;
-    const numB = /^\d+$/.test(idB) ? parseInt(idB, 10) : null;
+    const isNumA = /^\d+$/.test(idA);
+    const isNumB = /^\d+$/.test(idB);
 
-    if (numA !== null && numB !== null) {
-      return numA > numB ? 1 : -1;
+    if (isNumA && isNumB) {
+      const diff = compareNumeric(idA, idB);
+      if (diff !== 0) return diff;
+      continue;
     }
     // Numeric identifiers always have lower precedence than non-numeric identifiers.
-    if (numA !== null && numB === null) return -1;
-    if (numA === null && numB !== null) return 1;
+    if (isNumA && !isNumB) return -1;
+    if (!isNumA && isNumB) return 1;
 
     // Lexical ASCII comparison.
     return idA > idB ? 1 : -1;
