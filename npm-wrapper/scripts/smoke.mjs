@@ -21,6 +21,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { supportsReceiptAndOmp } from './semver.mjs';
 
 const PKG = '@manhquy/flow-skill';
 const BIN = 'flow-skill';
@@ -124,7 +125,9 @@ try {
 
   const dest = join(scratchHome, '.claude', 'skills', 'flow');
   if (!existsSync(join(dest, 'SKILL.md'))) fail('SKILL.md missing at ' + dest);
-  if (!existsSync(join(dest, RECEIPT_NAME_MIRROR))) fail('ownership receipt missing at ' + dest);
+  if (supportsReceiptAndOmp(version)) {
+    if (!existsSync(join(dest, RECEIPT_NAME_MIRROR))) fail('ownership receipt missing at ' + dest);
+  }
   // The shipped tree materializes these 6 asset subdirs plus adapter-hooks/eval as shipped;
   // upgrade freshness is governed by the ownership receipt (manifest-hashes.json), verified
   // below, not by directory deletion.
@@ -133,63 +136,69 @@ try {
   }
   console.log('  scratch install populated 6 owned subdirs + SKILL.md');
 
-  // 6. explicit OMP install into a fresh scratch HOME — materialization at the genuine
-  //    skills home `.omp/agent/skills/flow` (never the operator's real ~/.omp), plus a
-  //    stdlib self-check that the shipped receipt digests match the installed files.
-  const ompHome = mkdtempSync(join(tmpdir(), 'flow-smoke-omp-home-'));
-  try {
-    const ompInstall = run('npx', npxArgs(['--yes', '-t', 'omp']), {
-      env: { ...process.env, HOME: ompHome, USERPROFILE: ompHome, CI: 'true' },
-    });
-    if (ompInstall.status !== 0) fail('explicit --target omp install exited non-zero');
-    const ompDest = join(ompHome, '.omp', 'agent', 'skills', 'flow');
-    if (!existsSync(join(ompDest, 'SKILL.md'))) fail('SKILL.md missing at ' + ompDest);
-    if (!existsSync(join(ompDest, 'manifest-hashes.json'))) {
-      fail('manifest-hashes.json missing at ' + ompDest);
+  if (!supportsReceiptAndOmp(version)) {
+    console.log(
+      `  skipping ownership receipt and OMP assertions (unsupported on legacy ${version} < 0.7.8)`
+    );
+  } else {
+    // 6. explicit OMP install into a fresh scratch HOME — materialization at the genuine
+    //    skills home `.omp/agent/skills/flow` (never the operator's real ~/.omp), plus a
+    //    stdlib self-check that the shipped receipt digests match the installed files.
+    const ompHome = mkdtempSync(join(tmpdir(), 'flow-smoke-omp-home-'));
+    try {
+      const ompInstall = run('npx', npxArgs(['--yes', '-t', 'omp']), {
+        env: { ...process.env, HOME: ompHome, USERPROFILE: ompHome, CI: 'true' },
+      });
+      if (ompInstall.status !== 0) fail('explicit --target omp install exited non-zero');
+      const ompDest = join(ompHome, '.omp', 'agent', 'skills', 'flow');
+      if (!existsSync(join(ompDest, 'SKILL.md'))) fail('SKILL.md missing at ' + ompDest);
+      if (!existsSync(join(ompDest, 'manifest-hashes.json'))) {
+        fail('manifest-hashes.json missing at ' + ompDest);
+      }
+      for (const sub of ['runner', '_templates', 'law', 'references', 'harness', 'playbooks']) {
+        if (!existsSync(join(ompDest, sub))) fail(`omp install: expected subdir missing: ${sub}`);
+      }
+      const receipt = JSON.parse(readFileSync(join(ompDest, RECEIPT_NAME_MIRROR), 'utf8'));
+      if (receipt.schema_version !== 1 || !receipt.files) fail('omp receipt malformed');
+      for (const [rel, digest] of Object.entries(receipt.files)) {
+        const actual = createHash('sha256').update(readFileSync(join(ompDest, rel))).digest('hex');
+        if (actual !== digest) fail(`omp installed file drifted from receipt: ${rel}`);
+      }
+      console.log('  omp scratch install materialized; receipt digests verified');
+    } finally {
+      rmSync(ompHome, { recursive: true, force: true });
     }
-    for (const sub of ['runner', '_templates', 'law', 'references', 'harness', 'playbooks']) {
-      if (!existsSync(join(ompDest, sub))) fail(`omp install: expected subdir missing: ${sub}`);
-    }
-    const receipt = JSON.parse(readFileSync(join(ompDest, RECEIPT_NAME_MIRROR), 'utf8'));
-    if (receipt.schema_version !== 1 || !receipt.files) fail('omp receipt malformed');
-    for (const [rel, digest] of Object.entries(receipt.files)) {
-      const actual = createHash('sha256').update(readFileSync(join(ompDest, rel))).digest('hex');
-      if (actual !== digest) fail(`omp installed file drifted from receipt: ${rel}`);
-    }
-    console.log('  omp scratch install materialized; receipt digests verified');
-  } finally {
-    rmSync(ompHome, { recursive: true, force: true });
-  }
 
-  // 7. OMP detection boundary in a scratch HOME: bare `~/.omp` (runtime state only) must not
-  //    auto-select omp; creating the genuine skills dir must.
-  const bareEnv = { ...process.env, HOME: scratchHome, USERPROFILE: scratchHome, CI: 'true' };
-  mkdirSync(join(scratchHome, '.omp', 'logs'), { recursive: true });
-  const bareRun = run('npx', npxArgs(['--yes', '--dry-run', '--json']), { env: bareEnv });
-  if (bareRun.status !== 0) fail('bare-.omp dry-run exited non-zero');
-  const barePlan = bareRun.stdout
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => JSON.parse(l))
-    .find((e) => e.event === 'plan');
-  if (!barePlan) fail('bare-.omp run emitted no plan event');
-  if (barePlan.targets.includes('omp')) {
-    fail('bare ~/.omp must NOT auto-detect the omp target');
+    // 7. OMP detection boundary in a scratch HOME: bare `~/.omp` (runtime state only) must not
+    //    auto-select omp; creating the genuine skills dir must.
+    const bareEnv = { ...process.env, HOME: scratchHome, USERPROFILE: scratchHome, CI: 'true' };
+    mkdirSync(join(scratchHome, '.omp', 'logs'), { recursive: true });
+    const bareRun = run('npx', npxArgs(['--yes', '--dry-run', '--json']), { env: bareEnv });
+    if (bareRun.status !== 0) fail('bare-.omp dry-run exited non-zero');
+    const barePlan = bareRun.stdout
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .find((e) => e.event === 'plan');
+    if (!barePlan) fail('bare-.omp run emitted no plan event');
+    if (barePlan.targets.includes('omp')) {
+      fail('bare ~/.omp must NOT auto-detect the omp target');
+    }
+    mkdirSync(join(scratchHome, '.omp', 'agent', 'skills'), { recursive: true });
+    const genuineRun = run('npx', npxArgs(['--yes', '--dry-run', '--json']), { env: bareEnv });
+    if (genuineRun.status !== 0) fail('genuine-skills dry-run exited non-zero');
+    const genuinePlan = genuineRun.stdout
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .find((e) => e.event === 'plan');
+    if (!genuinePlan || !genuinePlan.targets.includes('omp')) {
+      fail('genuine ~/.omp/agent/skills must auto-detect the omp target');
+    }
+    console.log('  omp detection boundary OK (bare .omp no / genuine skills dir yes)');
   }
-  mkdirSync(join(scratchHome, '.omp', 'agent', 'skills'), { recursive: true });
-  const genuineRun = run('npx', npxArgs(['--yes', '--dry-run', '--json']), { env: bareEnv });
-  if (genuineRun.status !== 0) fail('genuine-skills dry-run exited non-zero');
-  const genuinePlan = genuineRun.stdout
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => JSON.parse(l))
-    .find((e) => e.event === 'plan');
-  if (!genuinePlan || !genuinePlan.targets.includes('omp')) {
-    fail('genuine ~/.omp/agent/skills must auto-detect the omp target');
-  }
-  console.log('  omp detection boundary OK (bare .omp no / genuine skills dir yes)');
 
   rmSync(scratchHome, { recursive: true, force: true });
 } catch (err) {
