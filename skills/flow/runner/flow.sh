@@ -32,7 +32,7 @@ if [ -n "${FLOW_PROJECT_ROOT:-}" ]; then
   ROOT="$FLOW_PROJECT_ROOT"
 else
   ROOT="$PWD"
-  if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ]; then
+  if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ] && [ ! -d "$PWD/.flow" ]; then
     _rd="$PWD"; _rn=0
     while [ "$_rn" -lt 24 ]; do
       _rp="$(dirname "$_rd")"; [ "$_rp" = "$_rd" ] && break    # reached filesystem root
