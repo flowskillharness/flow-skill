@@ -131,6 +131,30 @@ no  "$out" "SKIP" "did not silently take the skip path"
 has "$out" "matches expected PASS" "verdict parsed correctly despite preamble reasoning text"
 clean
 
+# ---------- C2) module dependency seam: mock judge reads the actual ledger facts ----------
+echo "C2) module dependency seam fixtures: acyclic ledger passes; missing ledger flags"
+newsb
+mkmock '
+nonce_line="$(printf "%s" "$prompt" | grep -oE "GATE-EVAL-[A-Za-z0-9-]+: FLAG" | head -1)"
+marker="${nonce_line% FLAG}"
+printf "%s" "$prompt" > "$FLOW_PROJECT_ROOT/.received_prompt.txt"
+if printf "%s" "$prompt" | grep -q "| order_workflow | \`orders_api.submit_order\` | orders_api | \`order_workflow -> orders_api\` | No" \
+  && printf "%s" "$prompt" | grep -q "| order_workflow | \`pricing_core.quote\` | pricing_core | \`order_workflow -> pricing_core\` | No"; then
+  printf "%s PASS\n" "$marker"
+else
+  printf "%s FLAG\n" "$marker"
+fi
+'
+out="$(PATH="$MOCKBIN:$PATH" bash "$RUN" eval --fixture f07_acyclic --n 1 --timeout 20 2>&1)"; rc=$?
+ck 0 "$rc" "acyclic module fixture's ledger facts produce PASS"
+has "$out" "matches expected PASS" "acyclic module fixture is evaluated, not skipped"
+out="$(PATH="$MOCKBIN:$PATH" bash "$RUN" eval --fixture f07_missing_ledger --n 1 --timeout 20 2>&1)"; rc=$?
+ck 0 "$rc" "missing-ledger module fixture produces FLAG"
+has "$out" "matches expected FLAG" "missing ownership/direction is judged as a contract defect"
+received="$(cat "$SB/.received_prompt.txt" 2>/dev/null)"
+has "$received" "pricing_core.quote" "missing-ledger prompt actually received the fixture's cross-module reference"
+clean
+
 # ---------- D) mock engine: garbage output -> INVALID -> UNRELIABLE floor + v0.21 breaker ----------
 echo "D) mock engine: no sentinel anywhere -> INVALID every run -> UNRELIABLE + first-fixture breaker trips (exit 2)"
 newsb
@@ -375,14 +399,14 @@ batch_out="$(TMPDIR="$priv_tmp" PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 3 --t
 # this mock always returns PASS regardless of fixture, so FLAG-expected fixtures
 # correctly mismatch - assert all heading-mapped fixtures were genuinely evaluated
 # (not silently skipped), not that they all matched.
-has "$batch_out" "of 13 evaluated" "the full 13-fixture batch actually completed (not a silent skip)"
+has "$batch_out" "of 15 evaluated" "the full 15-fixture batch actually completed (not a silent skip)"
 if ! after_count="$(_eval_count_dirs "$priv_tmp")"; then
   echo "  FAIL [could not count directories in private TMPDIR after batch]"
   fail=$((fail+1))
   exit 1
 fi
 delta=$((after_count - before_count)); [ "$delta" -lt 0 ] && delta=$((-delta))
-if [ "$delta" -eq 0 ]; then echo "  ok   [TMPDIR delta=0 after a full 13-fixture batch (zero rundir residue in private TMPDIR)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 13-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
+if [ "$delta" -eq 0 ]; then echo "  ok   [TMPDIR delta=0 after a full 15-fixture batch (zero rundir residue in private TMPDIR)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 15-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
 rm -rf "$priv_tmp"
 priv_tmp=""
 unset -f _eval_count_dirs 2>/dev/null || true
@@ -476,14 +500,14 @@ unset FLOW_EVAL_RETRY_BACKOFF
 clean
 
 # ---------- P) v0.21: --keep-going overrides the first-fixture breaker ----------
-echo "P) v0.21 --keep-going: all-invalid mock runs the full 13-fixture batch instead of aborting"
+echo "P) v0.21 --keep-going: all-invalid mock runs the full 15-fixture batch instead of aborting"
 newsb
 export FLOW_EVAL_RETRY_BACKOFF=0
 mkmock '
 echo "nothing parseable"
 '
 out="$(PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 1 --timeout 20 --keep-going 2>&1)"; rc=$?
-has "$out" "of 13 evaluated" "--keep-going ran the full 13-fixture batch"
+has "$out" "of 15 evaluated" "--keep-going ran the full 15-fixture batch"
 no  "$out" "ABORT after first fixture" "--keep-going suppresses the breaker abort line"
 ck 1 "$rc" "--keep-going full batch UNRELIABLE -> exit 1 (FAIL path), not 2 (abort path)"
 unset FLOW_EVAL_RETRY_BACKOFF

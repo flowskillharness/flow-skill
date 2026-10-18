@@ -12,3 +12,5 @@ f05a	05-contract	flow/05-contract.md	PASS
 f05b	05-contract	flow/05-contract.md	FLAG
 f06_sound	05-contract	flow/05-contract.md	PASS
 f06_injected	05-contract	flow/05-contract.md	FLAG
+f07_acyclic	05-contract	flow/05-contract.md	PASS
+f07_missing_ledger	05-contract	flow/05-contract.md	FLAG
