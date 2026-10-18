@@ -20,6 +20,7 @@ another, both look green. This file is the cheap fix.
 - [ ] Every interface that can return empty names the empty shape (empty list / 404 / exit 2), or an explicit `none`
 - [ ] If this project declares a module/package system, the dependency-seam ledger below covers every cross-module/package reference; each required directed edge has a declared-graph cycle result
 - [ ] If this project declares no module/package system, the dependency-seam ledger explicitly says `N/A`; do not invent owner facts
+- [ ] Access/effects is a concrete token (web: public/token/admin · non-web: writes/side-effects or "none") — not a vibe word (secure, authenticated, restricted)
 
 ## OpenAPI / Swagger rule  (web only — N/A for cli/library/skill)
 
