@@ -19,6 +19,7 @@
 |---|---|---|---|---|
 | order_workflow | `orders_api.submit_order` | orders_api | `order_workflow -> orders_api` | No — no declared path from orders_api to order_workflow |
 | order_workflow | `pricing_core.quote` | pricing_core | `order_workflow -> pricing_core` | No — no declared path from pricing_core to order_workflow |
+| orders_api | `pricing_core.quote` | pricing_core | `orders_api -> pricing_core` | No — no declared path from pricing_core to orders_api |
 
 ## Error model
 

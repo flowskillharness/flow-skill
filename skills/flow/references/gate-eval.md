@@ -77,12 +77,16 @@ default batch judges all 15 heading-mapped fixtures (01 / 02 / 05 / card) × N=3
 + the 1 probe = 46 calls. Unfiltered batches are `--report`-complete (`n_written` == `n_expected`
 == 15). Old 9-eval jsonl (05 FAIL-empty before increment) is not comparable.
 
-**Measured real cost** (this machine, 2026-07-10, default/unforced model, no `--bare` available
+**Measured real cost — historical** (this machine, 2026-07-10, 22-call baseline batch era,
+default/unforced model, no `--bare` available
 under an OAuth/subscription session — see the build's spike notes): roughly **$0.30–0.37 per
 call**, driven almost entirely by this repo's large global `CLAUDE.md` + skill/agent/MCP
 declarations loading as system-prompt context on every call (~50–60K cache-creation tokens),
-not by the judging prompt itself. A full 22-call baseline batch is real money, order **$6–7**
+not by the judging prompt itself. A full 22-call baseline batch was real money, order **$6–7**
 on this setup — not the trivial "a token or two" a casual reader might assume from "opt-in".
+The current default batch is larger: 46 calls (15 × 3 + 1). At the same measured per-call
+rate that is roughly **$14–17** per full batch (derived from the 2026-07-10 per-call range,
+not a new measurement).
 Forcing a cheaper model (`--model haiku` on the underlying CLI, not currently plumbed as a flow
 flag) cuts this roughly 5x, but changes what the eval measures (a cheaper, possibly weaker judge)
 and was deliberately left as an operator choice rather than a default, since the point of a

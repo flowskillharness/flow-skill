@@ -57,11 +57,13 @@ Use this section only when the project declares a module/package system (for exa
 Odoo add-ons, workspace packages, plugins, or deployable modules). First record the declared
 dependency graph that this contract relies on. Then ledger every cross-module/package symbol
 reference before build. The ledger makes the host, symbol owner, and required direction reviewable
-without guessing from names or code that does not exist yet.
+without guessing from names or code that does not exist yet. If the project declares no
+module/package system, do not fill the table: write the explicit
+`N/A — no module/package system declared` entry below instead.
 
 | Host module/package | Referenced symbol/interface | Owning module/package | Required directed dependency | Creates a directed cycle in the declared graph? |
 |---|---|---|---|---|
-| [FILL] | [FILL] | [FILL] | `host -> owner` | [FILL: yes/no and the graph path, or `unresolved`] |
+| [FILL] | [FILL] | [FILL] | `host -> owner` | [FILL: yes/no and the graph path] |
 
 - Declared dependency graph: [FILL: module/package names and their direct dependencies]
 - If a reference is local, write its owner as the host and its dependency as `same-module (N/A edge)`.
