@@ -59,8 +59,8 @@ Flag: [npm-wrapper/README_VN.md](./npm-wrapper/README_VN.md).
 
 ## Lần chạy đầu
 
-Mở session agent mới trong thư mục gốc dự án của bạn — thư mục chứa (hoặc, với dự án
-mới hoàn toàn, sẽ chứa sau khi Flow khởi chạy) `flow/` và `cards/` (nếu đang ở trong
+Mở session agent mới trong thư mục gốc dự án của bạn — thư mục chứa (hoặc, khi Flow
+chạy dần sẽ chứa) `flow/` và `cards/` (nếu đang ở trong
 thư mục con, chuyển về thư mục gốc repository trước) — nói bạn muốn build gì, rồi gõ
 `/flow`
 (Codex: `$flow`). Chi tiết:
