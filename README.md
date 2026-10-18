@@ -60,8 +60,8 @@ Flags: [npm-wrapper/README.md](./npm-wrapper/README.md).
 
 ## First run
 
-Open a fresh agent session in the top-level project folder where Flow creates
-`flow/` and `cards/` on first run (if you are
+Open a fresh agent session in the top-level folder where Flow creates
+`flow/` and `cards/` as you start using it (if you are
 inside a subdirectory, move to the repository root first) — say what you want to build,
 then type `/flow`
 (Codex: `$flow`). Details:
