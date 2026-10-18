@@ -59,7 +59,9 @@ Flag: [npm-wrapper/README_VN.md](./npm-wrapper/README_VN.md).
 
 ## Lần chạy đầu
 
-Mở session agent mới, nói bạn muốn build gì, rồi gõ `/flow`
+Mở session agent mới trong thư mục gốc dự án của bạn — thư mục chứa
+`flow/` và `cards/` (nếu đang ở trong thư mục con, chuyển về thư mục gốc
+repository trước) — nói bạn muốn build gì, rồi gõ `/flow`
 (Codex: `$flow`). Chi tiết:
 [hướng dẫn](https://flowskill.io.vn/vi/docs/tutorials/install-and-first-run/).
 
