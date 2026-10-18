@@ -60,7 +60,10 @@ Flags: [npm-wrapper/README.md](./npm-wrapper/README.md).
 
 ## First run
 
-Open a fresh agent session, say what you want to build, then type `/flow`
+Open a fresh agent session in the top-level folder where Flow creates
+`flow/` and `cards/` as you start using it (if you are
+inside a subdirectory, move to the repository root first) — say what you want to build,
+then type `/flow`
 (Codex: `$flow`). Details:
 [tutorial](https://flowskill.io.vn/docs/tutorials/install-and-first-run/).
 
