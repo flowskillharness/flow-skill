@@ -37,10 +37,12 @@ no  "$out" "note: using flow root" "override suppresses the adoption walk"
 has "$out" "project: $SB/frontend" "override root respected"
 rm -rf "$SB"
 
-echo "D) a standalone dir NOT under any flow project -> stays itself (no false adoption)"
+echo "D) a standalone dir NOT under any flow project -> stays itself + new-root note (no false adoption)"
 SB="$(mktemp -d)"; mkdir -p "$SB/plain"
 out="$( cd "$SB/plain" && unset FLOW_PROJECT_ROOT; bash "$RUN" status 2>&1 )"
 no  "$out" "note: using flow root" "no adoption when no ancestor is a flow project"
+has "$out" "note: no Flow project found here or in ancestors" "announces that a NEW flow root starts at this CWD"
+has "$out" "project: $SB/plain" "standalone dir still resolves to itself"
 rm -rf "$SB"
 
 echo "E) DECOY: ancestor has a bare flow/ dir but NO stage artifact -> must NOT adopt (real-signature guard)"
