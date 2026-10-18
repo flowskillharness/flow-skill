@@ -32,15 +32,22 @@ has "$(py tool register --name ck-missing --command 'skill:nope' --description x
 has "$(py tool register --name mcp-foo --command 'mcp:foo' --description x --responsibility 'Context selection' --kind mcp)" "status=unknown" "mcp without scan-target is unknown"
 has "$(py tool register --name web-svc --command 'http' --description x --responsibility 'Verification' --kind http --scan-target 'http://127.0.0.1:65500')" "status=missing" "http unreachable is missing"
 py tool register --name badresp --command "$GIT" --description x --responsibility 'Nope Not Real' --kind cli >/dev/null 2>&1; ck 1 $? "invalid responsibility rejected (fixed vocab enforced)"
-# non-http scheme must NOT trigger a slow DNS/TCP probe: bounded + missing, never a multi-second stall
-# (the 10s wall-clock bound tolerates cold-runner interpreter/import latency — the register itself is
-# DNS-free by construction: _http_reachable refuses non-http schemes on a string check — while still
-# deterministically catching DNS-fanout and multi-address connect stalls that a probe regression would
-# introduce; a single-address NXDOMAIN failure can stay fast, so this bound is heuristic hardening,
-# and the status=missing assertion below is the direct contract check)
-out="$(py tool register --name ftp-svc --command 'x' --description x --responsibility 'Verification' --kind http --scan-target 'ftp://example.invalid' 2>&1)"; rc=$?
-has "$out" "status=missing" "non-http scan-target is missing, never probed"
+# non-http scheme must NOT trigger a slow DNS/TCP probe. Layered checks:
+# 1. DETERMINISTIC: a sitecustomize stub patches socket.getaddrinfo/create_connection to raise,
+#    so any network attempt during registration fails loudly (canary text + non-zero rc);
+# 2. CONTRACT: registration still succeeds and records status=missing;
+# 3. HEURISTIC: the 10s wall-clock bound tolerates cold-runner interpreter/import latency while
+#    still catching DNS-fanout / multi-address connect stalls if the guard above is ever removed.
+STUB="$SB/stubsock"; mkdir -p "$STUB"
+printf '%s\n' 'import socket' \
+  'def _no_net(*a, **k):' \
+  '    raise AssertionError("network probe attempted during non-http registration")' \
+  'socket.getaddrinfo = _no_net' \
+  'socket.create_connection = _no_net' > "$STUB/sitecustomize.py"
+out="$(PYTHONPATH="$STUB" py tool register --name ftp-svc --command 'x' --description x --responsibility 'Verification' --kind http --scan-target 'ftp://example.invalid' 2>&1)"; rc=$?
 ck 0 "$rc" "non-http registration always succeeds"
+has "$out" "status=missing" "non-http scan-target is missing, never probed"
+no "$out" "network probe attempted" "probe guard never fired (no DNS/TCP attempted)"
 t0=$(date +%s); py tool register --name ftp-svc2 --command 'x' --description x --responsibility 'Verification' --kind http --scan-target 'ftp://example.invalid' >/dev/null 2>&1; t1=$(date +%s)
 ck 0 $(( (t1-t0) > 10 ? 1 : 0 )) "non-http scan-target probe is fast (no foreign-scheme TCP stall)"
 
