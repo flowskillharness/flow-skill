@@ -130,15 +130,20 @@ _register_td()  { _CLEANUP_TDS+=("$1"); }
 _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${_CLEANUP_TDS[@]}"; do rm -rf "$d" 2>/dev/null; done; fi; _CLEANUP_TDS=(); }
 
 # Keep pure run-state (MODE / PROJECT_TYPE / .flow/ telemetry, flow/.lock* machine state,
-# cards/.inflight) out of the host repo's git status. Idempotent; only acts in a real git repo OR
-# where a .gitignore already exists (so test sandboxes and non-git dirs are untouched — no surprise
-# file creation). Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
+# cards/.inflight) out of the host repo's git status. Design (gate-safe): patterns go to the
+# clone-local .git/info/exclude via `git rev-parse --git-path` — a tracked .gitignore is never
+# touched (no dirty-tracked-file bypass surface, no attest tolerance needed), the write is
+# upgrade-safe per pattern, and linked worktrees resolve their own exclude path. Non-git dirs
+# are untouched. Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
 # previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
 _ignore_run_state() {
-  { [ -d "$ROOT/.git" ] || [ -f "$ROOT/.gitignore" ]; } || return 0
-  local gi="$ROOT/.gitignore"
-  grep -q 'flow run-state' "$gi" 2>/dev/null && return 0
-  printf '\n# /flow run-state (generated; safe to ignore)\nMODE\nPROJECT_TYPE\n.flow/\nflow/.lock*\ncards/.inflight\n' >> "$gi"
+  local ex pat
+  ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
+  [ -n "$ex" ] || return 0
+  mkdir -p "$(dirname "$ex")" 2>/dev/null || true
+  for pat in '.flow/' 'flow/.lock*' 'cards/.inflight'; do
+    grep -qxF "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >> "$ex"
+  done
 }
 
 # Concurrency lock: seconds a lock stays "fresh"; older locks are stale and auto-reclaimed.
