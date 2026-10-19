@@ -3,7 +3,7 @@
 //   node scripts/smoke.mjs 0.1.0-rc.2
 // Verifies:
 //   1. The version exists on the registry.
-//   2. Its dist.attestations.provenance is populated (SLSA L2).
+//   2. Its dist.attestations.provenance declares the SLSA v1 predicate (metadata only).
 //   3. `npx @manhquy/flow-skill@<version> --help` runs and exits 0.
 //   4. `--yes --all --dry-run --json` returns valid JSONL with the expected schema.
 //   5. Installing into a scratch $HOME materializes the expected 6 subdirs + SKILL.md.
@@ -17,11 +17,12 @@
 // `flow-skill: not found` even when the published package was healthy.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { realpathSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { supportsReceiptAndOmp } from './semver.mjs';
+import { assertProvenanceResult, canonicalSmokeTempBase } from './smoke-policy.mjs';
 
 const PKG = '@manhquy/flow-skill';
 const BIN = 'flow-skill';
@@ -42,7 +43,8 @@ if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
 }
 
 // Empty cwd so local monorepo package.json never shadows registry resolution.
-const npxCwd = mkdtempSync(join(tmpdir(), 'flow-smoke-npx-'));
+const tempBase = canonicalSmokeTempBase();
+const npxCwd = mkdtempSync(join(tempBase, 'flow-smoke-npx-'));
 
 function run(cmd, args, opts = {}) {
   console.log(`\n$ ${cmd} ${args.join(' ')}`);
@@ -80,17 +82,14 @@ if (view.status !== 0 || view.stdout.trim() !== version) {
   fail(`${PKG}@${version} not found on the registry`);
 }
 
-// 2. provenance — warn only, not fail. rc.1 was published manually to bootstrap
-// Trusted Publisher registration; it carries no attestation by design. rc.2+ (via CI)
-// must have provenance; the nightly workflow is the ongoing guard.
-const prov = run('npm', ['view', `${PKG}@${version}`, 'dist.attestations.provenance']);
-if (prov.status !== 0 || !prov.stdout.trim()) {
-  console.warn(
-    '  WARN: no provenance attestation on this version (expected for rc.1 bootstrap; rc.2+ must have)'
-  );
-} else {
-  console.log('  provenance: present');
+// 2. provenance — absence or query failure is fatal for policy-gated releases.
+const prov = run('npm', ['view', `${PKG}@${version}`, 'dist.attestations.provenance', '--json']);
+try {
+  assertProvenanceResult(prov.status, prov.stdout, PKG, version);
+} catch (error) {
+  fail(error.message);
 }
+console.log('  provenance: SLSA v1 metadata present (cryptographic verification is separate)');
 
 // 3. --help
 const help = run('npx', npxArgs(['--help']));
@@ -115,7 +114,7 @@ if (!Array.isArray(plan.targets) || !plan.targets.includes('claude')) {
 console.log('  --json plan event OK');
 
 // 5. install into scratch HOME
-const scratchHome = mkdtempSync(join(tmpdir(), 'flow-smoke-home-'));
+const scratchHome = mkdtempSync(join(tempBase, 'flow-smoke-home-'));
 console.log(`  scratch HOME: ${scratchHome}`);
 try {
   const install = run('npx', npxArgs(['--yes', '-t', 'claude']), {
@@ -144,7 +143,7 @@ try {
     // 6. explicit OMP install into a fresh scratch HOME — materialization at the genuine
     //    skills home `.omp/agent/skills/flow` (never the operator's real ~/.omp), plus a
     //    stdlib self-check that the shipped receipt digests match the installed files.
-    const ompHome = mkdtempSync(join(tmpdir(), 'flow-smoke-omp-home-'));
+    const ompHome = mkdtempSync(join(tempBase, 'flow-smoke-omp-home-'));
     try {
       const ompInstall = run('npx', npxArgs(['--yes', '-t', 'omp']), {
         env: { ...process.env, HOME: ompHome, USERPROFILE: ompHome, CI: 'true' },

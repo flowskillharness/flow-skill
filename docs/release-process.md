@@ -1,35 +1,24 @@
 # Release process — skill product + npm installer
 
-Canonical runbook for shipping future versions without re-learning CI/OIDC/dist-tag traps.
-Ops detail and token hygiene live in [`npm-wrapper/RELEASE_CHECKLIST.md`](../npm-wrapper/RELEASE_CHECKLIST.md).
+Canonical runbook for shipping future versions. Release policy: [`docs/adr/0002-unattended-release-policy.md`](adr/0002-unattended-release-policy.md).
 
-## Two version axes (do not merge them)
+## Two version axes
 
-| Axis | Where declared | Bump when | Install / pin |
+| Axis | Declared in | Bump when | Installed as |
 |---|---|---|---|
-| **Skill product** | `skills/flow/SKILL.md` → `metadata.version` | Behavior change in flow runner/harness/refs | Content inside agent homes after install |
-| **Skill mirrors** | `.claude-plugin/plugin.json`, `portable-manifest.json` | Same as skill product | `/flow coherence` enforces agreement |
-| **npm installer** | `npm-wrapper/package.json` | Installer CLI, targets, sync, publish pipeline | `npx @manhquy/flow-skill@latest` or `@X.Y.Z` (prerelease: `@next`) |
+| Skill product | `skills/flow/SKILL.md` metadata.version | Flow behavior/content changes | Installed skill tree |
+| Skill mirrors | `.claude-plugin/plugin.json`, `portable-manifest.json` | Same skill change | `/flow coherence` enforces parity |
+| npm installer | `npm-wrapper/package.json` | Installer CLI/targets/sync/release behavior changes | `npx @manhquy/flow-skill@latest` or exact version; prerelease `@next` |
 
-- CLI help prints both: `flow-skill v<pkg> (ships skill v<skill>)`.
-- JSONL `plan` event: `version` = npm package, `skillVersion` = skill product.
-- Git tags: **`npm@0.1.0-next.N`** triggers npm publish; **`v0.22.0`** is skill product history / GitHub Release — **does not** publish npm.
+`flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision.
 
-## Pipelines (automation map)
+## Automatic release path
 
-```
-skills/flow/**  ──sync──►  npm-wrapper/skills/flow  (prepack / CI Materialize)
-       │
-       ├── push master (paths) ──► CI: bash-suite 3-OS + npm-wrapper Node matrix
-                            Windows: 3 bash shards, 80m each; macOS 25m; Ubuntu 15m
-       │
-       └── git tag npm@X.Y.Z + push ──► publish-npm-wrapper.yml
-                                         environment: npm-publish (required reviewer)
-                                         OIDC + npm publish --provenance --tag next|latest
-                                         dist-tag ADD is NOT automated (manual token)
+A reviewed release-preparation PR merges to `master`; exact-master CI passes; OMP invokes `bash scripts/release.sh --yes`. The canonical script dispatches `.github/workflows/publish-npm-wrapper.yml` using `workflow_dispatch` with exact master SHA/version and unique dispatch UUID. The publisher independently verifies the caller correlation, current master, latest authoritative CI run and `all-checks-passed` job, merged PR base/repository, release intent and selected version axes, SemVer/channel monotonicity, and registry state; only explicit E404 proves absence. The live publish job remains default-off behind `FLOW_AUTOPUBLISH_ENABLED=true`, master-only `npm-publish`, eligibility success and publish-only OIDC. No tag-push trigger exists. The publisher packs once, retains the package artifact before publish and verified audit/SLSA receipts before smoke. The client re-downloads and re-verifies that exact run artifact, registry version/SRI/current dist-tag, npm signatures, Sigstore source identity and full installer smoke before creating/pushing selected tags; a skill tag/Release is created only when `skill_version` is non-null. Inactive release intent is a no-op. Same-owner dispatch is trusted as an accepted policy; actor ID/UUID are correlation, while server-side release gates are the enforcement boundary.
 
-Nightly (cron) ──► smoke.mjs vs dist-tags next + latest (clean cwd, no npm-wrapper shadow)
-```
+Publisher dispatch defaults to `dry-run`. Live mode requires `FLOW_AUTOPUBLISH_ENABLED=true`, passing eligibility, and master-only `npm-publish` environment. The eligibility job has no OIDC permission or environment; only the publish job has OIDC. There is no tag-push publish trigger. Tags are created after npm registry/provenance/install verification and never authorize publication.
+
+`npm-publish` currently has exactly one branch deployment rule, `master`, no tag rules. Controller verified historical `npm@0.7.11` dispatch rejection before job execution/OIDC: run `39210527539`, job `117922661201`, with zero steps and environment-protection denial annotation. Evidence: `.omp/flow-maintenance/backups/release-remote-20261019T055718Z/`. This historical probe does not prove a new publisher path is safe; implementation review, exact CI, default-off/dry-run proof and controller readback remain required before enabling live publishing.
 
 ### CI timing and coverage
 
@@ -40,219 +29,51 @@ Nightly (cron) ──► smoke.mjs vs dist-tags next + latest (clean cwd, no npm
 | bash-suite Windows | Serial baseline ~54–60 min; three-shard timings not yet measured | **80m / shard** |
 | npm-wrapper matrix | ~15–40s / cell | 10m |
 
-`tests/run_all.sh` prints `wall_s` per suite + `TOTAL wall_s` for timeout forensics.
-Windows runs three isolated matrix cells with `FLOW_SUITE_SHARD=1/3`, `2/3`, `3/3`.
-The runner cleans the current `tests/manifest.txt`, sorts with `LC_ALL=C`, then assigns
-suite positions round-robin; no suite names or counts are fixed in CI. Unset the variable
-for the unchanged full serial manifest-order run (Ubuntu, macOS and local default).
-Invalid specifications or shards selecting no suites fail closed. The manifest-runner
-fixture proves exact-once coverage and rejects omitted/duplicated partition inputs.
-`all-checks-passed` waits for the entire `bash-suite` matrix and rejects any non-success,
-including failed/cancelled shards; PowerShell installer tests run once on Windows shard 1.
-Parallelism is intended to reduce walltime, but no measured speedup is claimed.
+`tests/run_all.sh` prints `wall_s` per suite + `TOTAL wall_s` for timeout forensics. Windows runs three isolated matrix cells with `FLOW_SUITE_SHARD=1/3`, `2/3`, `3/3`. The runner sorts the current manifest with `LC_ALL=C` and assigns suites round-robin; no suite count or names are hardcoded. Unset the variable for the unchanged full serial manifest-order run (Ubuntu, macOS and local default). Invalid specifications and empty shards fail closed. The manifest-runner fixture proves exact-once coverage and rejects omissions/duplicates. `all-checks-passed` depends on every shard and rejects any non-success; PowerShell installer tests run once on Windows shard 1. Parallelism is intended to reduce walltime, but measured speedup is not yet claimed.
 
-### Publish facts
+## Phase 1: release preparation PR
 
-- Pre-release tag (`npm@0.1.0-next.N`) → workflow dist-tag **`next`** only.
-- Stable tag (`npm@0.1.0`) → dist-tag **`latest`**.
-- `promote_to` workflow input: **manual-only early exit** (prints `npm dist-tag add …`); OIDC cannot dist-tag (E401).
-- After every pre-release: decide whether `latest` should follow. If yes → manual promote (checklist).
-- **GitHub Release boundary:**
-  - GitHub Releases belong to the Skill Product axis (`v<skill_v>`). A GitHub Release with release notes is created for `v<skill_v>` (e.g. `gh release create v0.34.2 --notes-file CHANGELOG.md`).
-  - The npm installer axis (`npm@<version>`) triggers the OIDC npm publish pipeline to npmjs.com. It does NOT automatically generate a GitHub Release; any installer GitHub Release is optional and manual.
-  - This eliminates confusion between npm publishing and GitHub Releases.
+1. Bump only the versions required for a meaningful release. Skill version is declared in `skills/flow/SKILL.md`; keep `.claude-plugin/plugin.json` and `portable-manifest.json` coherent. npm installer version is `npm-wrapper/package.json`.
+2. Add exact release headings/notes in root `CHANGELOG.md` (when `skill_version` is selected) and `npm-wrapper/CHANGELOG.md` (npm axis). Ensure compatibility classification and no unapproved breaking/security-rights expansion.
+3. Synchronize docs and bundled tree; run `node scripts/sync-release.mjs --sync`, `node scripts/sync-release.mjs --check`, `bash scripts/release-preflight.sh`, i18n verification and relevant package tests.
+4. Merge through repository review/thread-resolution/required-CI gates. Do not tag, publish or change remote settings in the PR.
 
-## Harness preflight (every release — skill and/or npm)
-
-From **repo root** (uses dogfood `.flow/` if present; does not require a clean tree):
+## Phase 2: OMP promotion
 
 ```bash
-bash scripts/release-preflight.sh
-# Expect: PREFLIGHT PASS
-# Checks: flow coherence · doctor READY · dual-version help · optional harness.db · live dist-tags
-```
-
-| Surface | What preflight checks |
-|---|---|
-| **Docs versions** | SKILL.md ↔ plugin.json ↔ portable-manifest (must match) |
-| **Engine** | `flow.sh doctor` READY + harness path present |
-| **Memory** | Soft: `.flow/harness.db`, `.flow/events.jsonl` if dogfood exists |
-| **npm-wrapper** | `ships skill v…` on `--help` after sync |
-| **Registry** | Soft: compare local package.json vs dist-tag `next` / `latest` lag |
-
-`marketplace.json` → `metadata.version` is the **catalog** version, not skill product — do not force it equal to `0.22.x`.
-
-### Release synchronization & coherence tool (`scripts/sync-release.mjs`)
-
-From repo root:
-
-```bash
-# Validate release coherence across skill and npm channels with a diagnostic table:
-node scripts/sync-release.mjs --check
-
-# Synchronize documentation table rows, re-materialize npm-wrapper/skills, and re-verify:
-node scripts/sync-release.mjs --sync
-```
-
-`node scripts/sync-release.mjs --check` validates version alignment across `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, `portable-manifest.json`, `npm-wrapper/package.json`, root and wrapper READMEs (EN and VN), changelogs, runner hash, and dual-axis non-equality (`npm_v !== skill_v`).
-
-## Canonical Two-Phase Release Workflow
-
-Releases follow a strict two-phase lifecycle: **Phase 1 (Preparation in PR)** followed by **Phase 2 (Promotion of Pre-Verified Master HEAD)**.
-
-> **RELEASE BLOCKER NOTICE (Environment Protection Enforced):**
-> The release promotion executor (`scripts/sync-release.mjs`) strictly queries GitHub Actions environment `npm-publish` via `gh api` and fails closed before creating or pushing any git tag if `protection_rules` lacks a `required_reviewers` rule with at least one reviewer.
-> The repository currently reports `protection_rules: []`. A repository owner must configure required reviewers in GitHub Repository **Settings → Environments → npm-publish** before live promotion (`--ship --yes`) can succeed.
-> A passing CI check (`all-checks-passed` from `github-actions`) on `master` HEAD validates test and build correctness only; the release executor refuses live promotion without environment reviewer protection rules.
-
-### Phase 1: Release Preparation (PR Branch)
-
-All changes, documentation updates, version bumps, and synchronizations are performed in a pull request branch before merging to `master`:
-
-1. **Bump versions and update changelogs**:
-   - Skill product: `skills/flow/SKILL.md`, `.claude-plugin/plugin.json`, `portable-manifest.json`, and `CHANGELOG.md`.
-   - npm installer: `npm-wrapper/package.json` and `npm-wrapper/CHANGELOG.md`.
-2. **Synchronize release surfaces**:
-   ```bash
-   node scripts/sync-release.mjs --sync
-   ```
-3. **Record i18n pair hashes**:
-   ```bash
-   bash scripts/check-i18n-pairs.sh record npm-wrapper/README.md
-   bash scripts/check-i18n-pairs.sh record README.md
-   ```
-4. **Validate release coherence locally**:
-   ```bash
-   node scripts/sync-release.mjs --check
-   ```
-5. **Commit and open PR**: Commit all release preparation files and merge to `master` once CI passes.
-
-### Phase 2: Release Promotion (Master HEAD)
-
-Once the preparation PR is merged to `master` and the GitHub Actions CI suite (`all-checks-passed`) passes on `origin/master`, execute release promotion:
-
-```bash
-# Preview promotion readiness, simulate checks, and verify gates non-mutatingly:
 bash scripts/release.sh --dry-run
-
-# Execute live promotion (requires 100% clean master matching origin/master with green CI):
 bash scripts/release.sh --yes
 ```
 
-### Promotion Gates Automated by `scripts/release.sh`:
+`--yes` requires clean working tree, local `master == origin/master`, dual-axis coherence/changelog entries, zero sync drift, i18n integrity, unused tags, exact-HEAD authoritative CI, and read-only verification battery. It dispatches with a unique request UUID through the workflow-dispatch REST endpoint using `return_run_details=true`, then validates the returned repository-bound `workflow_run_id` and watches that exact run. A 204/missing/invalid response is an ambiguous dispatch: fail closed and do not redispatch blindly. After the run succeeds, re-read and verify its workflow path, ref, SHA, event, title, attempt and conclusion, then require successful eligibility and live publish jobs from that exact attempt (dry-run requires publish to be skipped). Finally verify registry integrity/provenance/install smoke; only then create/push the release tags — the npm tag always; the skill tag and its GitHub Release only when release intent selects a skill version (`skill_version` non-null; an npm-only release must not mint a skill tag or GitHub Release).
 
-1. **Cleanliness Gate**: The working tree and index must be 100% clean (zero uncommitted, staged, or untracked files).
-2. **Version & Changelog Gate**: Versions exist in manifests and changelog entries exist for both versions in `CHANGELOG.md` and `npm-wrapper/CHANGELOG.md`.
-3. **Branch & Remote Equality Gate**: Current branch must be `master`, and local `HEAD` commit SHA must match live remote `origin/master`.
-4. **Tag Preconditions Gate**: Release tags `npm@<npm_v>` and `v<skill_v>` must not already exist locally or remotely. Remote connectivity must be confirmed.
-5. **Coherence & Non-Drift Gate**: All release surfaces are coherent, synchronization produces zero drift (no file modifications), and committed i18n pair hashes match.
-6. **Exact-HEAD CI Status Gate**: Authoritative GitHub Actions check `all-checks-passed` (verified from app slug `github-actions`) on the exact `master` HEAD commit must be completed with `conclusion: success`.
-7. **Environment Protection Gate**: Queries GitHub Actions environment `npm-publish` via `gh api` and fails closed if `required_reviewers` rule is missing or empty.
-8. **Verification Battery (Read-Only)**: Runs read-only checks `check-release-coherence.sh`, `check-doc-budgets.sh`, `tests/test_doc_budgets.sh`, `tests/test_flow_rules.sh`, and `tests/test_release_coherence.sh` (strictly non-mutating; preflight and full test suite already executed in Phase 1 PR and verified by CI on exact master HEAD).
-9. **Tagging, Pushing & GitHub Release**: Creates git tags `npm@<npm_v>` and `v<skill_v>`, pushes `master` and tags to origin, creates the official GitHub Release for `v<skill_v>`, and displays next steps. Zero file modifications occur on `master`.
-## Skill product release (e.g. v0.24.0)
+Stable releases publish to `latest`; prereleases to `next`. Stable versions are never downgraded. A prerelease does not automatically move `latest` backward or promote itself to `latest`.
 
-1. **Implement + tests**
-   - `bash tests/run_all.sh` green locally (or rely on CI).
-   - Touch only needed suites under `tests/test_flow_*.sh`.
-2. **Version coherence (harness gate)**
-   - Bump **together**:
-     - `skills/flow/SKILL.md` → `metadata.version`
-     - `.claude-plugin/plugin.json` → `version`
-     - `portable-manifest.json` → `version`
-   - `bash scripts/release-preflight.sh` (preferred) or
-     `bash skills/flow/runner/flow.sh coherence` from repo root.
-   - Expect: single agreed version, no drift warning.
-3. **Docs**
-   - Root `CHANGELOG.md` skill entry.
-   - `docs/quality-metrics.md` status line.
-   - Optional: `docs/journals/YYMMDD-…-vi.md`.
-4. **Ship skill homes**
-   - Dev: `bash install.sh global` / `pwsh install.ps1 global`, or
-   - Users: next npm-wrapper release that re-syncs and publishes (below).
-5. **Tagging and GitHub Release (Retired manual path)**
-   - Direct manual `git tag v... && git push origin v...` is strictly retired because it bypasses required CI and environment protection gates.
-   - All release tags (`v<skill_v>` and `npm@<npm_v>`) and official GitHub Releases are created and pushed solely by the canonical promotion workflow: `bash scripts/release.sh --yes`.
+## Artifact and post-publish verification
 
-### Bundled tree integrity receipt (Full-tree manifest-hashes.json)
-
-`npm-wrapper/scripts/sync.mjs` generates a deterministic tree-wide receipt (`skills/flow/manifest-hashes.json`, `schema_version: 1`) covering all shipped assets across `runner`, `harness`, `templates`, `references`, `law`, and `eval`.
-`portable-manifest.json` also carries the runner reference hash in its `hashes` map for checkout coherence; `scripts/pack-rehearsal.sh` and `scripts/check-release-coherence.sh` verify both before packing.
-At runtime, `flow doctor` validates every file in the installed tree against `manifest-hashes.json` (failing loudly with exit 1 on drift, missing files, symlinks, duplicate keys, or path traversal; un-receipted local development checkouts print an advisory skip instead). No legacy runner-only fallback path remains.
-
-## npm installer release (e.g. 0.1.0-next.N or 0.1.0)
-
-### A. Pre-flight (local)
+The publisher packs exactly once because `npm-wrapper/scripts/sync.mjs` writes nondeterministic `skills-manifest.json.syncedAt`. It publishes that exact `.tgz`; retries must verify the same artifact identity. After publish, require exact public-registry version, SHA-512 integrity, provenance binding repository/workflow/ref/commit, and expected dist-tag. The client pins registry reads to `https://registry.npmjs.org/` and rechecks version, integrity and channel after Sigstore verification and installed-package smoke, immediately before creating tags. Then run:
 
 ```bash
-# From repo root — synchronize release docs and verify coherence
-node scripts/sync-release.mjs --sync
-node scripts/sync-release.mjs --check
-
-# From repo root — harness + coherence + dual-version
-bash scripts/release-preflight.sh
-
-cd npm-wrapper
-npm run sync          # skills/flow → npm-wrapper/skills/flow
-npm test              # 41+ tests; pretest re-syncs
-# Dual-version sanity
-node bin/cli.mjs --help | head -3
-# expect: flow-skill vX.Y.Z (ships skill vA.B.C)
-
-# Bump installer only (use --no-git-tag-version to prevent npm from creating a conflicting v* tag)
-npm version prerelease --preid=next --no-git-tag-version   # or patch|minor|major for stable
-# Create the npm trigger tag explicitly (npm@* triggers publish-npm-wrapper.yml; v* is skill-only):
-git tag npm@$(node -p "require('./package.json').version")
-
-Also:
-
-- Align `npm-wrapper/CHANGELOG.md` Unreleased → versioned section.
-- Root README status table: npm package version line.
-- `npm-wrapper/README.md` and `npm-wrapper/README_VN.md`: verified by `check-release-coherence.sh` (and `node scripts/sync-release.mjs --check`) and must always match `npm_v` and `skill_v` (run `node scripts/sync-release.mjs --sync` to synchronize automatically).
-- Secret grep empty (see RELEASE_CHECKLIST).
-- Confirm `bin/cli.mjs` stays mode `100755` in git.
-
-### B. Push code then tag
-
-```bash
-git push origin master
-git push origin npm@0.1.0-next.N    # example
-```
-
-### C. Approve environment
-
-GitHub Actions → **Publish npm-wrapper to npm** → run for the tag → approve **`npm-publish`**.
-
-### D. Post-publish verify (mandatory)
-
-```bash
-npm view @manhquy/flow-skill versions --json
+node npm-wrapper/scripts/smoke.mjs <exact-version>
 npm view @manhquy/flow-skill dist-tags --json
-# Pre-release: expect next → new version; latest may lag
-
-npx --yes @manhquy/flow-skill@next --help
-# expect: flow-skill v<new> (ships skill v<product>)
-
-npx --yes @manhquy/flow-skill@<exact> --yes --all --dry-run --json
-# expect skillVersion field
-
-npm view @manhquy/flow-skill@<exact> dist.attestations.provenance
+npm view @manhquy/flow-skill@<exact-version> dist.integrity dist.attestations.provenance
 ```
 
-Optional smoke (from **empty temp cwd**, not inside `npm-wrapper/`):
+The smoke runs against the public registry from a clean temporary working directory. Missing/mismatched provenance or failed install/CLI/skill checks is a failed release verification; never republish the immutable version to hide partial state.
 
-```bash
-cd /tmp   # or $env:TEMP empty dir
-node /path/to/flow-skill/npm-wrapper/scripts/smoke.mjs <exact-version>
-```
+## Failure and rollback
 
-### E. Dist-tag policy
+- Any non-E404 registry error, incomplete GitHub API/pagination, stale master, failed/newer CI attempt, missing/wrong-base merged PR, version/channel mismatch, integrity/provenance mismatch, or failed smoke stops the release.
+- Existing npm version is verify-only. Reconcile only exact artifact integrity, provenance, channel and expected tag/Release target. Missing/mismatched tags/releases require owner action; no automatic repair.
+- Verify-only recovery invocation (after `gh run download <run-id> -n npm-package-<run-id>-<attempt> -D <pkg-dir>` and `-n npm-verification-<run-id>-<attempt> -D <ev-dir>`):
 
-| Situation | Action |
-|---|---|
-| Ship RC for testers | Keep `next` only; document `@next` in README |
-| Want bare `npm i` / untagged `npm view` on new RC | Manual: `npm dist-tag add @manhquy/flow-skill@VER latest` (token flow in RELEASE_CHECKLIST) |
-| Ship stable `0.1.0` | Tag without preid; workflow sets `latest` |
+  ```bash
+  node scripts/sync-release.mjs --reconcile <pkg-dir> <ev-dir> <full-sha> <publisher-run-id> <publisher-run-attempt>
+  ```
+
+  It re-verifies the retained tarball digest, npm signatures, Sigstore attestation, registry integrity/channel and existing tag targets; it never publishes, retags or repairs. Partial state stops with an owner-action report. The publisher runtime must provide `gh >= 2.68.0` with `attestation verify`; the release client checks this capability BEFORE dispatching and refuses with instructions to provision a project-local portable `gh` (host tooling is never upgraded in place).
+- To pause automation, controller disables `FLOW_AUTOPUBLISH_ENABLED` or disables the publisher dispatch path. Never unpublish or move existing versions/tags.
+- Same-owner credentials can change workflow/variable/environment; OIDC/SLSA provides traceability, not an independent identity boundary.
 
 ## Harness / durable layer notes
 
@@ -260,41 +81,28 @@ node /path/to/flow-skill/npm-wrapper/scripts/smoke.mjs <exact-version>
 - Schema migrations live under `skills/flow/harness/schema/` — bump skill product version when schema/behavior changes; do not bump npm-only for pure skill content unless you also want a new tarball on npm.
 - `flow_harness.py` / schema numbers (009–012, …) are independent of npm semver.
 
-## Anti-patterns (learned 2026-07)
+## Historical anti-patterns
 
 | Don't | Why |
 |---|---|
 | Run nightly smoke / `npx @manhquy/flow-skill@…` with cwd = `npm-wrapper/` | Same package name → local workspace shadows registry |
-| Expect `npm dist-tag add` in GHA OIDC | E401; use manual bootstrap token |
+| Expect `npm dist-tag add` in GHA OIDC | E401; stable releases publish directly to latest; no separate dist-tag mutation |
 | Publish skill version as npm version (`@0.22.0`) | Does not exist; confuses users |
 | `npm i` alone for end users | No postinstall; must **run** the CLI |
 | Assume Windows bash shard < 15m | Serial baseline ~54–64m; shard timings unmeasured, budget remains 80m each |
-| Re-add `NODE_AUTH_TOKEN must be empty` CI guard | Breaks setup-node OIDC (0% pass) |
-| Tag `v*` expecting npm publish | Wrong tag shape; need `npm@*` |
+| Re-add `NODE_AUTH_TOKEN must be empty` CI guard | Breaks setup-node OIDC |
+| Tag `v*` expecting npm publish | Tags never authorize npm publication |
 
-## Quick reference — next prerelease
-
-```bash
-# 1) skill content already on master, coherent
-# 2) installer
-cd npm-wrapper && npm run sync && npm test
-npm version prerelease --preid=next
-# fix tag to npm@X.Y.Z-rc.N if needed
-# 3) docs bump CHANGELOG + README status
-git push origin master
-git push origin npm@$(node -p "require('./package.json').version")
-# 4) Approve npm-publish environment
-# 5) Post-publish verify @next dual-version + provenance
-# 6) Optional: promote latest via manual dist-tag
-```
 
 ## Related files
 
 | File | Role |
 |---|---|
-| `npm-wrapper/RELEASE_CHECKLIST.md` | Auth, token, step-by-step publish |
-| `.github/workflows/publish-npm-wrapper.yml` | OIDC publish |
-| `.github/workflows/ci.yml` | Cross-OS gates |
-| `.github/workflows/nightly-registry-health.yml` | Live registry smoke |
-| `npm-wrapper/scripts/smoke.mjs` | Post-publish / nightly verifier |
-| `CONTRIBUTING.md` | Version sync rule for contributors |
+| `scripts/release.sh` | Canonical OMP-invoked promotion gate and publisher-run verifier |
+| `scripts/sync-release.mjs` | Release coherence and promotion implementation |
+| `scripts/release-eligibility.mjs` | Pure fail-closed eligibility evaluator |
+| `scripts/release-workflow.mjs` | GitHub/npm adapter and artifact verification |
+| `.github/workflows/publish-npm-wrapper.yml` | Master-only OIDC publisher; no tag trigger |
+| `.github/workflows/ci.yml` | Cross-OS authoritative CI (`all-checks-passed` job) |
+| `npm-wrapper/scripts/smoke.mjs` | Public-registry installed-artifact smoke |
+| `docs/adr/0002-unattended-release-policy.md` | Accepted unattended-release decision and gates |

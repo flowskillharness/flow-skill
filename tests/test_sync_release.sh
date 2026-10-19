@@ -15,6 +15,9 @@ portable_hash() {
 winpath() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
 }
+nodepath() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
+}
 
 echo "A) sync-release --check exits 0 on current repository"
 node "$(winpath "$ROOT/scripts/sync-release.mjs")" --check >/tmp/sync_check.out 2>&1
@@ -31,6 +34,11 @@ echo "C) deliberate table row drift fails --check with exit 1"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -55,6 +63,11 @@ echo "D) missing README file fails --check with exit 1"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -76,6 +89,11 @@ echo "E) --sync with prerelease version in package.json preserves Current GA row
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper/scripts" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -130,6 +148,11 @@ echo "F) existing tags suppress tag creation instructions and report metadata re
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -170,6 +193,11 @@ echo "G) unconfirmed remote tag lookup suppresses git tag commands"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -205,8 +233,13 @@ git clone -q "$ROOT" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
-cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+git -C "$tmp/r" add scripts/ docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -252,8 +285,23 @@ git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
 git -C "$tmp/r" checkout -B master >/dev/null 2>&1 || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
-cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=false;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
+before_noop_head="$(git -C "$tmp/r" rev-parse HEAD)"
+before_noop_status="$(git -C "$tmp/r" status --porcelain)"
+bash "$tmp/r/scripts/release.sh" --yes > "$tmp/noop.out" 2>&1
+ck 0 $? 'release.sh --yes exits successfully for intent:false'
+grep -q 'NO-OP: release intent is false' "$tmp/noop.out" && ck 0 0 'disabled intent reported as no-op' || ck 0 1 'disabled intent reported as no-op'
+[ "$before_noop_head" = "$(git -C "$tmp/r" rev-parse HEAD)" ] && ck 0 0 'no-op leaves HEAD unchanged' || ck 0 1 'no-op leaves HEAD unchanged'
+[ "$before_noop_status" = "$(git -C "$tmp/r" status --porcelain)" ] && ck 0 0 'no-op leaves worktree unchanged' || ck 0 1 'no-op leaves worktree unchanged'
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck 0 0 'no-op creates no tags' || ck 0 1 'no-op creates no tags'
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=true;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
+git -C "$tmp/r" add scripts/ docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -294,8 +342,20 @@ checkout_err=$(git -C "$tmp/r" checkout -B master 2>&1) || {
   exit 1
 }
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+cp "$ROOT/.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/scripts/release-eligibility.mjs" "$ROOT/scripts/release-workflow.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=true;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
+cp "$ROOT/scripts/check-release-coherence.sh" "$tmp/r/scripts/"
+git -C "$tmp/r" add scripts/ .github/workflows/publish-npm-wrapper.yml npm-wrapper/scripts/semver.mjs docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -305,6 +365,7 @@ commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
 git -C "$tmp/r" push -q origin master
 git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/manhquydev/flow-skill.git"
 git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
+git -C "$tmp/r" remote set-url --push origin "https://github.com/manhquydev/flow-skill.git"
 if [ -d "$ROOT/npm-wrapper/node_modules" ]; then
   ln -s "$ROOT/npm-wrapper/node_modules" "$tmp/r/npm-wrapper/node_modules" || {
     echo "FAIL: failed to symlink $ROOT/npm-wrapper/node_modules to $tmp/r/npm-wrapper/node_modules" >&2
@@ -364,9 +425,33 @@ cat > "$mock_bin/gh" << "EOF"
 mode="${GH_MOCK_MODE:-exists}"
 ci_app="${GH_MOCK_CI_APP:-github-actions}"
 env_protection="${GH_MOCK_ENV_PROTECTION:-approved}"
+actor_mode="${GH_MOCK_ACTOR_MODE:-valid}"
+if [ "$1" = "--version" ]; then
+  printf 'gh version %s\n' "${GH_MOCK_VERSION:-2.68.0}"
+  exit 0
+fi
+if [ "$1" = "attestation" ] && [ "$2" = "verify" ] && [ "$3" = "--help" ]; then
+  printf '%s\n' '--bundle --digest-alg --repo --signer-workflow --source-ref --source-digest'
+  exit 0
+fi
 
 if [ "$1" = "api" ]; then
+  if { [ "${GH_MOCK_DISPATCH_MODE:-}" = "skip-publish" ] || [ "${GH_MOCK_DISPATCH_MODE:-}" = "publish-success" ]; } && [ "$2" = "-X" ] && [ "$3" = "POST" ]; then
+    request_body="$(cat)"
+    node -e 'const fs=require("fs");fs.writeFileSync(process.argv[1],process.argv[2]);' "$GH_MOCK_STATE_FILE" "$request_body"
+    printf '{"workflow_run_id":777,"run_url":"https://api.github.com/repos/manhquydev/flow-skill/actions/runs/777"}\n'
+    exit 0
+  fi
   case "$2" in
+    user) if [ "$actor_mode" = "invalid" ]; then printf 'not-numeric\n'; else printf '12345\n'; fi; exit 0 ;;
+    */actions/runs/777/jobs*)
+      node -e 'console.log(JSON.stringify({total_count:2,jobs:[{run_id:777,run_attempt:1,name:"eligibility",status:"completed",conclusion:"success"},{run_id:777,run_attempt:1,name:"publish",status:"completed",conclusion:process.env.GH_MOCK_PUBLISH_CONCLUSION||"success"}]}));'
+      exit 0
+      ;;
+    */actions/runs/777)
+      node -e 'const i=JSON.parse(require("fs").readFileSync(process.env.GH_MOCK_STATE_FILE,"utf8")).inputs;console.log(JSON.stringify({id:777,actor:{id:12345},head_sha:i.expected_sha,path:".github/workflows/publish-npm-wrapper.yml",event:"workflow_dispatch",display_title:`Publisher ${i.expected_sha} ${i.expected_version} ${i.dispatch_id}`,status:"completed",conclusion:"success",run_attempt:1}));'
+      exit 0
+      ;;
     *commits/*/check-runs*)
       head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
       cat << JSON
@@ -374,28 +459,24 @@ if [ "$1" = "api" ]; then
 JSON
       exit 0
       ;;
-    *environments/npm-publish*)
-      if [ "$env_protection" = "empty" ]; then
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[]}
-JSON
-        exit 0
-      elif [ "$env_protection" = "wait_timer" ]; then
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[{"type":"wait_timer","wait_timer":10,"reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
-JSON
-        exit 0
-      elif [ "$env_protection" = "error" ]; then
-        echo "gh: Not Found (HTTP 404)" >&2
-        exit 1
+    *environments/npm-publish/deployment-branch-policies*)
+      if [ "$env_protection" = "wrong" ]; then
+        printf '{"branch_policies":[{"type":"tag","name":"npm@*"}]}\n'
       else
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[{"type":"required_reviewers","reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
-JSON
-        exit 0
+        printf '{"branch_policies":[{"type":"branch","name":"master"}]}\n'
       fi
+      exit 0
+      ;;
+    *environments/npm-publish*)
+      if [ "$env_protection" = "error" ]; then echo "gh: Not Found (HTTP 404)" >&2; exit 1; fi
+      printf '{"name":"npm-publish","deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true},"protection_rules":[]}\n'
+      exit 0
       ;;
   esac
+
+if [ "$1" = "run" ] && [ "$2" = "watch" ]; then
+  exit 0
+fi
 fi
 
 if [ "$1" = "release" ] && [ "$2" = "view" ]; then
@@ -426,51 +507,46 @@ cat > "$mock_bin/gh.cmd" << "EOF"
 @bash "%~dp0gh" %*
 EOF
 
-# Test K1: Mock gh release view returns 0 (existing release):
-# Assert output contains "GitHub Release for v" and "already exists. Skipping release creation."
+# Incapable host tooling must be rejected before either live or dry-run dispatch.
+for capability_mode in --yes --dry-run; do
+  capability_state="$tmp/capability-state.json"
+  GH_MOCK_VERSION="2.46.0" GH_MOCK_DISPATCH_MODE="publish-success" GH_MOCK_STATE_FILE="$capability_state" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship "$capability_mode" > "$tmp/capability.out" 2>&1
+  capability_rc=$?
+  ck_k 1 "$capability_rc" "old gh refuses $capability_mode before dispatch" "$tmp/capability.out" "$capability_rc"
+  grep -q 'controller must provision a project-local portable gh' "$tmp/capability.out" && ck_k 0 0 'actionable portable gh requirement' || ck_k 0 1 'actionable portable gh requirement'
+  [ ! -e "$capability_state" ] && ck_k 0 0 'zero dispatches with old gh' || ck_k 0 1 'zero dispatches with old gh'
+done
+
+# K1: missing dispatch receipt fails closed; the workflow's own eligibility fixtures cover the disabled latch.
 GH_MOCK_MODE="exists" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k1.out" 2>&1
 k1_rc=$?
-ck_k 0 $k1_rc "K1: sync-release exits 0 when release already exists" "$tmp/k1.out" $k1_rc
-grep -q "GitHub Release for v" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc
-grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc
+ck_k 1 $k1_rc "K1: live release refuses dispatch without exact workflow run receipt" "$tmp/k1.out" $k1_rc
+grep -q "workflow dispatch returned no run details" "$tmp/k1.out" && ck_k 0 0 "K1: missing run receipt is the refusal reason" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: missing run receipt is the refusal reason" "$tmp/k1.out" $k1_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K1: no local tags without verified publisher run" || ck_k 0 1 "K1: no local tags without verified publisher run"
 
 clean_k_tags
-# Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
-# Assert exit code is 1.
-# Assert output contains "FAIL: Could not create GitHub Release for v"
-# Assert output does NOT contain "RELEASE SHIP SUCCESSFUL"
-GH_MOCK_MODE="create_fail" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k2.out" 2>&1
+# K2: overall success cannot authorize tags when the live publish job was skipped.
+GH_MOCK_DISPATCH_MODE="skip-publish" GH_MOCK_PUBLISH_CONCLUSION="skipped" GH_MOCK_STATE_FILE="$tmp/k2-state.json" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k2.out" 2>&1
 k2_rc=$?
-ck_k 1 $k2_rc "K2: sync-release exits 1 when gh release create fails" "$tmp/k2.out" $k2_rc
-grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck_k 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
-ck_k 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k2.out" $k2_rc
-grep -qE "Git tag .* already exists" "$tmp/k2.out"
-ck_k 1 $? "K2: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k2.out" $k2_rc
+ck_k 1 $k2_rc "K2: skipped live publish job blocks release tagging" "$tmp/k2.out" $k2_rc
+grep -q "publisher publish job conclusion must be success" "$tmp/k2.out" && ck_k 0 0 "K2: skipped publish outcome is the refusal reason" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: skipped publish outcome is the refusal reason" "$tmp/k2.out" $k2_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K2: no tags created when publish was skipped" || ck_k 0 1 "K2: no tags created when publish was skipped"
 
 clean_k_tags
-# Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
-# Assert output contains "GitHub Release created for v"
-GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
+# K3: successful publish outcome without retained verification receipts must fail closed before tags.
+GH_MOCK_DISPATCH_MODE="publish-success" GH_MOCK_PUBLISH_CONCLUSION="success" GH_MOCK_STATE_FILE="$tmp/k3-state.json" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
 k3_rc=$?
-ck_k 0 $k3_rc "K3: sync-release exits 0 when gh release create succeeds" "$tmp/k3.out" $k3_rc
-grep -q "GitHub Release created for v" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc
-grep -qE "Git tag .* already exists" "$tmp/k3.out"
-ck_k 1 $? "K3: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k3.out" $k3_rc
+ck_k 1 $k3_rc "K3: publish run without retained artifact cannot be finalized" "$tmp/k3.out" $k3_rc
+grep -q "release-artifact.json" "$tmp/k3.out" && ck_k 0 0 "K3: missing artifact receipt blocks promotion" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: missing artifact receipt blocks promotion" "$tmp/k3.out" $k3_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K3: no tags created without retained verification artifact" || ck_k 0 1 "K3: no tags created without retained verification artifact"
 
 clean_k_tags
-# Test K4: Mock gh release view fails with auth/network error:
-# Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
-GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1
+# K4: malformed authenticated actor identity refuses before dispatch.
+GH_MOCK_ACTOR_MODE="invalid" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1
 k4_rc=$?
-ck_k 1 $k4_rc "K4: sync-release exits 1 when gh release view has auth/network error" "$tmp/k4.out" $k4_rc
-grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck_k 0 0 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
-ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
-grep -qE "Git tag .* already exists" "$tmp/k4.out"
-ck_k 1 $? "K4: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k4.out" $k4_rc
+ck_k 1 $k4_rc "K4: sync-release refuses malformed authenticated actor ID" "$tmp/k4.out" $k4_rc
+grep -q "did not return a valid authenticated actor ID" "$tmp/k4.out" && ck_k 0 0 "K4: actor validation is the refusal reason" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: actor validation is the refusal reason" "$tmp/k4.out" $k4_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K4: no local tags without valid actor identity" || ck_k 0 1 "K4: no local tags without valid actor identity"
 
 clean_k_tags
 # Test K5: Spoofed CI check app (e.g. app slug "malicious-bot" instead of "github-actions") fails closed:
@@ -485,29 +561,13 @@ ck_k 1 $? "K5: output does NOT contain 'Git tag already exists'" "$tmp/k5.out" $
 [ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K5: zero tags created on CI app spoof" || ck_k 0 1 "K5: zero tags created on CI app spoof"
 
 clean_k_tags
-# Test K6: Environment npm-publish with protection_rules=[] fails closed before any git tag/push:
-GH_MOCK_ENV_PROTECTION="empty" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
+# Test K6: master-only deployment policy permits exactly branch master; tag rules fail closed.
+GH_MOCK_ENV_PROTECTION="wrong" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
 k6_rc=$?
-ck_k 1 $k6_rc "K6: sync-release exits 1 when npm-publish environment lacks required_reviewers" "$tmp/k6.out" $k6_rc
-grep -q "has no required_reviewers protection rule configured" "$tmp/k6.out" && ck_k 0 0 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k6.out"
-ck_k 1 $? "K6: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k6.out" $k6_rc
-grep -qE "Git tag .* already exists" "$tmp/k6.out"
-ck_k 1 $? "K6: output does NOT contain 'Git tag already exists'" "$tmp/k6.out" $k6_rc
-[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when protection rules empty" || ck_k 0 1 "K6: zero tags created when protection rules empty"
-[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero remote tags pushed when protection rules empty" || ck_k 0 1 "K6: zero remote tags pushed when protection rules empty"
+ck_k 1 $k6_rc "K6: rejects tag deployment policy before tags" "$tmp/k6.out" $k6_rc
+grep -q "allow exactly branch master" "$tmp/k6.out" && ck_k 0 0 "K6: reports exact master-only requirement" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: reports exact master-only requirement" "$tmp/k6.out" $k6_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when deployment policy is wrong" || ck_k 0 1 "K6: zero tags created when deployment policy is wrong"
 
-clean_k_tags
-# Test K7: Environment npm-publish with wait_timer rule having reviewers fails closed (type must be required_reviewers):
-GH_MOCK_ENV_PROTECTION="wait_timer" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k7.out" 2>&1
-k7_rc=$?
-ck_k 1 $k7_rc "K7: sync-release exits 1 when protection rule type is not required_reviewers" "$tmp/k7.out" $k7_rc
-grep -q "has no required_reviewers protection rule configured" "$tmp/k7.out" && ck_k 0 0 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc || ck_k 0 1 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k7.out"
-ck_k 1 $? "K7: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k7.out" $k7_rc
-grep -qE "Git tag .* already exists" "$tmp/k7.out"
-ck_k 1 $? "K7: output does NOT contain 'Git tag already exists'" "$tmp/k7.out" $k7_rc
-[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K7: zero tags created on invalid rule type" || ck_k 0 1 "K7: zero tags created on invalid rule type"
 
 clean_k_tags
 # Test K8: Non-canonical repository remote URL refuses promotion fail-closed before any commit/tag/push:
@@ -550,6 +610,224 @@ ck_k 1 $? "K10: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k10.out
 [ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K10: zero remote tags pushed on lookalike remote" || ck_k 0 1 "K10: zero remote tags pushed on lookalike remote"
 git -C "$tmp/r" remote set-url origin "https://github.com/manhquydev/flow-skill.git"
 git -C "$tmp/r" config --unset url."file://$tmp/origin.git".insteadOf "https://github.com/other-org/malicious-repo.git" || true
+git -C "$tmp/r" config url."file://$tmp/origin.git".insteadOf "https://github.com/manhquydev/flow-skill.git"
+test "$(git -C "$tmp/r" remote get-url --push origin)" = "file://$tmp/origin.git" || { echo "FAIL: Case K push URL is not the local bare origin" >&2; exit 1; }
+
+# K11/K12: real workflow CLI and installed-package smoke; only process/transport
+# boundaries are fixtures. Never launch npm publish, live gh, or a network push.
+# A preload keeps this boundary identical on Windows (including direct gh spawns).
+node --input-type=module - "$(winpath "$tmp/r")" "$k_npm_v" "$k_skill_v" << 'EOF'
+import fs from 'node:fs';
+import path from 'node:path';
+const [repo, version, skillVersion] = process.argv.slice(2);
+fs.writeFileSync(path.join(repo, 'docs/release-intent.json'), JSON.stringify({ schema_version: 1, intent: true, npm_version: version, skill_version: skillVersion, channel: version.includes('-') ? 'next' : 'latest', compatibility: 'backwards-compatible', security_rights_expanded: false }, null, 2) + '\n');
+EOF
+git -C "$tmp/r" add docs/release-intent.json
+git -C "$tmp/r" commit -qm 'test: activate exact consumer release intent' || exit 1
+git -C "$tmp/r" push -q origin master || exit 1
+cat > "$tmp/consumer-boundary.cjs" << 'EOF'
+const cp = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
+const { syncBuiltinESMExports } = require('node:module');
+const root = fs.realpathSync(process.env.K_CONSUMER_ROOT);
+// Unrelated Node programs in the real preflight battery retain their own boundaries.
+if (!['sync-release.mjs', 'release-workflow.mjs', 'verify-attestation-with-gh.mjs', 'smoke.mjs'].includes(path.basename(process.argv[1] || ''))) return;
+const repo = path.join(root, 'r');
+const store = path.join(root, 'retained');
+const trace = path.join(root, 'consumer-trace.jsonl');
+const stateFile = path.join(root, 'consumer-state.json');
+const exec = cp.execFileSync;
+const spawn = cp.spawnSync;
+const log = (event, data = {}) => fs.appendFileSync(trace, JSON.stringify({ event, ...data }) + '\n');
+const state = () => JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+const result = (stdout, status = 0, stderr = '') => ({ stdout, stderr, status, signal: null });
+const json = value => JSON.stringify(value);
+const sha = () => exec('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim();
+const workflow = (command, args, env) => {
+  log(command);
+  return exec(process.execPath, [path.join(repo, 'scripts/release-workflow.mjs'), command, ...args], {
+    cwd: repo, encoding: 'utf8', env: { ...process.env, ...env },
+  });
+};
+function registry(args, options) {
+  const s = state();
+  assert.equal(args[0], 'view');
+  const spec = args[1], field = args[2];
+  assert.ok(spec === '@manhquy/flow-skill' || spec === `@manhquy/flow-skill@${s.version}`);
+  const explicit = args.find(a => a.startsWith('--registry='));
+  if (args.includes('--json') && field !== 'dist.attestations.provenance') assert.equal(explicit, '--registry=https://registry.npmjs.org/');
+  else assert.equal(options.env?.npm_config_registry, 'https://registry.npmjs.org/');
+  log('registry', { spec, field, registry: 'https://registry.npmjs.org/', published: s.published, afterSmoke: !!s.afterSmoke });
+  if (!s.published && field === 'version') return result('', 1, 'npm ERR! E404 Not Found');
+  let value;
+  if (field === 'version') value = s.version;
+  else if (field === 'dist.integrity') value = s.integrity;
+  else if (field === 'dist-tags') value = { [s.channel]: s.published && !(s.afterSmoke && process.env.K_CONSUMER_HOLLOW === 'channel-drift') ? s.version : '0.0.1' };
+  else if (field === 'dist.attestations.provenance') value = { predicateType: 'https://slsa.dev/provenance/v1' };
+  else throw new Error(`Unexpected npm view field: ${field}`);
+  return result(args.includes('--json') ? json(value) : `${value}\n`);
+}
+function gh(args, options) {
+  const s = state();
+  if (args[0] === '--version') return 'gh version 2.68.0\n';
+  if (args[0] === 'attestation') {
+    if (args[2] === '--help') return '--bundle --digest-alg --repo --signer-workflow --source-ref --source-digest';
+    assert.equal(args[1], 'verify');
+    assert.equal(crypto.createHash('sha512').update(fs.readFileSync(args[2])).digest('base64'), s.integrity.slice(7));
+    for (const [flag, value] of Object.entries({ '--digest-alg': 'sha512', '--repo': 'manhquydev/flow-skill', '--signer-workflow': 'manhquydev/flow-skill/.github/workflows/publish-npm-wrapper.yml', '--source-ref': 'refs/heads/master', '--source-digest': s.sha, '--format': 'json' })) assert.equal(args[args.indexOf(flag) + 1], value);
+    assert.deepEqual(JSON.parse(fs.readFileSync(args[args.indexOf('--bundle') + 1], 'utf8')), s.statement);
+    log('attestation', { sha: s.sha, integrity: s.integrity });
+    return json([{ verificationResult: { statement: s.statement } }]);
+  }
+  if (args[0] === 'run' && args[1] === 'watch') { assert.equal(args[2], '777'); return ''; }
+  if (args[0] === 'run' && args[1] === 'download') {
+    assert.equal(args[2], '777');
+    const name = args[args.indexOf('--name') + 1];
+    const dest = args[args.indexOf('--dir') + 1];
+    assert.ok(['npm-package-777-1', 'npm-verification-777-1'].includes(name));
+    for (const file of name.startsWith('npm-package') ? [s.name, 'release-artifact.json'] : ['npm-audit-verified.json', 'slsa-bundle.json']) fs.copyFileSync(path.join(store, file), path.join(dest, file));
+    log('download', { name }); return '';
+  }
+  if (args[0] === 'release') {
+    assert.equal(args[2], `v${s.skillVersion}`);
+    if (args[1] === 'view') { const e = new Error('release not found'); e.stderr = Buffer.from('release not found'); throw e; }
+    assert.equal(args[1], 'create'); log('release'); return '';
+  }
+  assert.equal(args[0], 'api');
+  const endpoint = args[1];
+  const ci = { id: 888, workflow_id: 295237428, path: '.github/workflows/ci.yml', head_sha: s.sha, head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', run_attempt: 1 };
+  if (args.includes('POST')) {
+    const request = JSON.parse(options.input);
+    assert.equal(request.ref, 'master');
+    const i = request.inputs;
+    assert.equal(i.mode, 'publish'); assert.equal(i.expected_sha, sha());
+    assert.equal(i.expected_version, s.version); assert.equal(i.expected_actor_id, '12345');
+    assert.match(i.dispatch_id, /^[0-9a-f-]{36}$/);
+    s.request = request; fs.writeFileSync(stateFile, json(s)); log('dispatch', request);
+    const env = { MODE: 'publish', EXPECTED_SHA: s.sha, GITHUB_SHA: s.sha, EXPECTED_VERSION: s.version, GITHUB_REF: 'refs/heads/master', GITHUB_REPOSITORY: 'manhquydev/flow-skill', ACTOR_ID: '12345', EXPECTED_ACTOR_ID: i.expected_actor_id, DISPATCH_ID: i.dispatch_id, FLOW_AUTOPUBLISH_ENABLED: 'true', GITHUB_RUN_ID: '777', GITHUB_RUN_ATTEMPT: '1', ARTIFACT_DIR: store };
+    workflow('eligibility', [], env);
+    exec(process.execPath, [path.join(repo, 'npm-wrapper/scripts/sync.mjs')], { cwd: path.join(repo, 'npm-wrapper'), env: process.env });
+    const packed = spawn('npm', ['pack', '--offline', '--ignore-scripts', '--json', '--pack-destination', store], { cwd: path.join(repo, 'npm-wrapper'), encoding: 'utf8', shell: process.platform === 'win32', env: { ...process.env, NODE_OPTIONS: '' }, timeout: 120000 });
+    assert.equal(packed.status, 0, packed.stderr);
+    assert.equal(JSON.parse(packed.stdout)[0].filename, s.name);
+    workflow('record-artifact', [store, s.version], env);
+    workflow('prepublish', [], env);
+    const metadata = JSON.parse(fs.readFileSync(path.join(store, 'release-artifact.json'), 'utf8'));
+    assert.deepEqual(metadata, { name: s.name, version: s.version, sha: s.sha, integrity: metadata.integrity, workflowRunId: '777', workflowRunAttempt: '1' });
+    s.integrity = metadata.integrity;
+    const slsa = 'https://slsa.dev/provenance/v1';
+    const publish = 'https://github.com/npm/attestation/tree/main/specs/publish/v0.1';
+    s.statement = { predicateType: slsa, subject: [{ name: `@manhquy/flow-skill@${s.version}`, digest: { sha512: Buffer.from(s.integrity.slice(7), 'base64').toString('hex') } }], predicate: { buildDefinition: { externalParameters: { workflow: { repository: 'https://github.com/manhquydev/flow-skill', path: '.github/workflows/publish-npm-wrapper.yml', ref: 'refs/heads/master' } }, resolvedDependencies: [{ digest: { gitCommit: s.sha } }] } } };
+    const bundle = statement => ({ predicateType: statement.predicateType, bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from(json(statement)).toString('base64'), signatures: [{ sig: 'fixture-transport-not-a-live-signature' }] } } });
+    fs.writeFileSync(path.join(store, 'npm-audit-verified.json'), json({ verified: [{ name: '@manhquy/flow-skill', version: s.version, registry: 'https://registry.npmjs.org/', attestationBundles: [bundle(s.statement), bundle({ predicateType: publish })] }], invalid: [], missing: [] }));
+    fs.writeFileSync(path.join(store, 'slsa-bundle.json'), json(s.statement));
+    s.published = true; fs.writeFileSync(stateFile, json(s));
+    return json({ workflow_run_id: 777, run_url: 'https://api.github.com/repos/manhquydev/flow-skill/actions/runs/777' });
+  }
+  if (endpoint.endsWith('/deployment-branch-policies')) return json({ branch_policies: [{ type: 'branch', name: 'master' }] });
+  if (endpoint.endsWith('/environments/npm-publish')) return json({ deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } });
+  if (endpoint === 'user') return '12345\n';
+  if (endpoint.endsWith('/git/ref/heads/master')) return json({ object: { sha: s.sha } });
+  if (endpoint.includes('/pulls?')) return json([{ merged_at: '2026-10-19T00:00:00Z', merge_commit_sha: s.sha, base: { ref: 'master', repo: { full_name: 'manhquydev/flow-skill' } } }]);
+  if (endpoint.includes('/actions/workflows/295237428/runs?')) return json({ total_count: 1, workflow_runs: [ci] });
+  if (endpoint.endsWith('/actions/runs/888')) return json(ci);
+  if (endpoint.includes('/actions/runs/888/jobs?')) return json({ total_count: 1, jobs: [{ name: 'all-checks-passed', run_id: 888, run_attempt: 1, status: 'completed', conclusion: 'success' }] });
+  if (endpoint.includes('/check-runs?')) return json({ check_runs: [{ id: 1, name: 'all-checks-passed', head_sha: s.sha, status: 'completed', conclusion: 'success', app: { slug: 'github-actions' } }] });
+  if (endpoint.endsWith('/actions/runs/777')) return json({ id: 777, actor: { id: 12345 }, head_sha: s.sha, path: '.github/workflows/publish-npm-wrapper.yml', event: 'workflow_dispatch', display_title: `Publisher ${s.sha} ${s.version} ${s.request.inputs.dispatch_id}`, status: 'completed', conclusion: 'success', run_attempt: 1 });
+  if (endpoint.includes('/actions/runs/777/jobs?')) return json({ total_count: 2, jobs: ['eligibility', 'publish'].map(name => ({ name, run_id: 777, run_attempt: 1, status: 'completed', conclusion: 'success' })) });
+  throw new Error(`Unrecognized gh boundary: ${json(args)}`);
+}
+cp.spawnSync = function(command, args, options = {}) {
+  if (command === 'npm') return registry(args, options);
+  if (command === 'npx') {
+    const s = state();
+    assert.deepEqual(args.slice(0, 3), ['--yes', `--package=@manhquy/flow-skill@${s.version}`, 'flow-skill']);
+    assert.equal(options.env.npm_config_registry, 'https://registry.npmjs.org/');
+    const installed = path.join(root, 'consumer-package');
+    if (!fs.existsSync(path.join(installed, 'package/package.json'))) {
+      fs.mkdirSync(installed, { recursive: true });
+      exec('tar', ['-xzf', s.name, '-C', '../consumer-package'], { cwd: store });
+      const pkg = JSON.parse(fs.readFileSync(path.join(installed, 'package/package.json'), 'utf8'));
+      assert.equal(pkg.name, '@manhquy/flow-skill'); assert.equal(pkg.version, s.version);
+    }
+    log('consumer', { args: args.slice(3), integrity: s.integrity });
+    // Replace only npx retrieval, not the CLI, installation, receipts, or smoke assertions.
+    return spawn(process.execPath, [path.join(installed, 'package/bin/cli.mjs'), ...args.slice(3)], { ...options, shell: false, timeout: 30000 });
+  }
+  throw new Error(`Unexpected spawn boundary: ${command}`);
+};
+cp.execFileSync = function(command, args, options = {}) {
+  if (command === 'gh') return gh(args, options);
+  if (command === 'cmd.exe' && args[2]?.startsWith('gh ')) return gh((args[2].match(/"[^"]*"|[^ ]+/g) || []).slice(1).map(a => a.replace(/^"|"$/g, '')), options);
+  if (command === 'git' && ['push', 'tag'].includes(args[0]) && !(args[0] === 'tag' && args[1] === '-l')) {
+    const s = state(); assert.equal(s.afterSmoke, true);
+    const events = fs.readFileSync(trace, 'utf8').trim().split('\n').map(JSON.parse);
+    assert.deepEqual(events.filter(e => e.event === 'registry' && e.afterSmoke).map(e => e.field), ['version', 'dist.integrity', 'dist-tags']);
+    assert.notEqual(process.env.K_CONSUMER_HOLLOW, 'channel-drift');
+    if (args[0] === 'push') {
+      assert.deepEqual(args.slice(0, 4), ['push', '--atomic', 'origin', 'master']);
+      assert.equal(exec('git', ['remote', 'get-url', '--push', 'origin'], { cwd: repo, encoding: 'utf8' }).trim(), process.env.K_LOCAL_ORIGIN);
+    }
+    log(args[0], { args });
+  }
+  const smoke = command === process.execPath && args[0] === path.join(repo, 'npm-wrapper/scripts/smoke.mjs');
+  if (smoke) log('smoke-start');
+  const output = exec(command, args, options);
+  if (smoke) { const s = state(); s.afterSmoke = true; fs.writeFileSync(stateFile, json(s)); log('smoke-end'); }
+  return output;
+};
+syncBuiltinESMExports();
+EOF
+
+for consumer_case in sound channel-drift; do
+  clean_k_tags
+  rm -rf "$tmp/retained" "$tmp/consumer-package"
+  mkdir -p "$tmp/retained" "$tmp/smoke-tmp"
+  : > "$tmp/consumer-trace.jsonl"
+  K_CONSUMER_ROOT="$(winpath "$tmp")" node --input-type=module - "$k_npm_v" "$k_skill_v" << 'EOF'
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+const root = process.env.K_CONSUMER_ROOT;
+const version = process.argv[2];
+fs.writeFileSync(path.join(root, 'consumer-state.json'), JSON.stringify({ version, skillVersion: process.argv[3], channel: version.includes('-') ? 'next' : 'latest', sha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path.join(root, 'r'), encoding: 'utf8' }).trim(), name: `manhquy-flow-skill-${version}.tgz`, published: false }));
+EOF
+  K_CONSUMER_ROOT="$(winpath "$tmp")" K_LOCAL_ORIGIN="file://$tmp/origin.git" K_CONSUMER_HOLLOW="$consumer_case" NODE_OPTIONS="--require=\"$(nodepath "$tmp/consumer-boundary.cjs")\"" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/consumer-$consumer_case.out" 2>&1
+  consumer_rc=$?
+  expected_rc=0
+  [ "$consumer_case" = sound ] || expected_rc=1
+  ck_k "$expected_rc" "$consumer_rc" "K consumer $consumer_case: actual release CLI outcome" "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  K_CONSUMER_ROOT="$(winpath "$tmp")" node --input-type=module - "$consumer_case" << 'EOF'
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+const root = process.env.K_CONSUMER_ROOT;
+const s = JSON.parse(fs.readFileSync(path.join(root, 'consumer-state.json'), 'utf8'));
+const events = fs.readFileSync(path.join(root, 'consumer-trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
+const flow = events.filter(e => ['dispatch', 'eligibility', 'record-artifact', 'prepublish', 'download', 'attestation', 'smoke-start', 'smoke-end', 'tag', 'push', 'release'].includes(e.event)).map(e => e.event);
+const prefix = ['dispatch', 'eligibility', 'record-artifact', 'prepublish', 'download', 'download', 'attestation', 'smoke-start', 'smoke-end'];
+assert.deepEqual(flow, process.argv[2] === 'sound' ? [...prefix, 'tag', 'tag', 'push', 'release'] : prefix);
+assert.equal(events.filter(e => e.event === 'consumer').length, 6);
+assert.deepEqual(events.filter(e => e.event === 'registry' && e.afterSmoke).map(e => e.field), ['version', 'dist.integrity', 'dist-tags']);
+for (const e of events.filter(e => e.event === 'registry')) assert.equal(e.registry, 'https://registry.npmjs.org/');
+for (const directory of [path.join(root, 'r'), path.join(root, 'origin.git')]) {
+  const git = args => execFileSync('git', args, { cwd: directory, encoding: 'utf8' }).trim();
+  const tags = git(['tag', '-l']).split(/\r?\n/).filter(Boolean).sort();
+  assert.deepEqual(tags, process.argv[2] === 'sound' ? [`npm@${s.version}`, `v${s.skillVersion}`].sort() : []);
+  for (const tag of tags) assert.equal(git(['rev-parse', `${tag}^{commit}`]), s.sha);
+}
+EOF
+  ck_k 0 "$?" "K consumer $consumer_case: exact identity, consumer count, finalization order and local refs" "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  if [ "$consumer_case" = channel-drift ]; then
+    grep -q 'channel no longer points to the retained release version' "$tmp/consumer-$consumer_case.out"
+    ck_k 0 "$?" 'K consumer hollow: channel changes only after real smoke; no tags' "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  fi
+done
+clean_k_tags
 rm -rf "$tmp"
 
 echo "L) npm spawn helper regression: battery must invoke node, never npm.cmd"
@@ -569,6 +847,7 @@ const all = JSON.stringify([mod.npmSpawnHelper(), mod.npmTestHelper()]);
 assert.ok(!all.includes('npm.cmd'), 'no helper may reference npm.cmd');
 assert.ok(all.includes('scripts/sync.mjs'), 'sync step must run node scripts/sync.mjs');
 assert.ok(all.includes('--test'), 'test step must run node --test');
+assert.ok(mod.npmTestHelper().args.includes('test/smoke-policy.test.mjs'), 'test helper must include the smoke-policy test registered by npm test');
 assert.equal(typeof mod.buildWin32GhCommandLine, 'function', 'buildWin32GhCommandLine must be exported');
 const plainCmd = mod.buildWin32GhCommandLine(['release', 'view', 'v0.34.4', '--json', 'tagName']);
 assert.equal(plainCmd, 'gh release view v0.34.4 --json tagName', 'plain args must stay unquoted');
