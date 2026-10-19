@@ -21,6 +21,18 @@ has "$out" "project: $SB" "status resolves to the ANCESTOR project, not the subd
 no  "$out" "project: $SB/frontend" "does NOT mint a child root at the subdir"
 # and no second .flow was created under frontend/
 ck 1 "$([ -d "$SB/frontend/.flow" ] && echo 0 || echo 1)" "no second .flow root created under frontend/"
+# stdout-only capture: the adoption marker is visible to host parsers on STDOUT too (C2)
+sout="$( cd "$SB/frontend" && unset FLOW_PROJECT_ROOT; bash "$RUN" status 2>/dev/null )"
+has "$sout" "adopting flow root $SB from an ancestor" "adoption marker also on stdout for host parsers"
+
+echo "A2) /flow next from the adopted subdir -> PASS names the ROOT-qualified path"
+SB="$(mktemp -d)"; mkdir -p "$SB/.flow" "$SB/frontend/src"   # SB was used as a root (.flow run-state); frontend adopts it
+sout2="$( cd "$SB/frontend" && unset FLOW_PROJECT_ROOT; bash "$RUN" status 2>/dev/null )"
+has "$sout2" "adopting flow root $SB from an ancestor" "status adopts the ancestor before first next"
+nout="$( cd "$SB/frontend" && unset FLOW_PROJECT_ROOT; bash "$RUN" next 2>&1 )"
+has "$nout" "unlocked stage 00" "stage-00 unlock literal preserved (parity contract)"
+has "$nout" "PASS: unlocked stage 00 -> $SB/flow/00-idea.md" "PASS names the ROOT-qualified artifact path"
+ck 0 "$([ -f "$SB/flow/00-idea.md" ] && echo 0 || echo 1)" "the qualified path actually exists at the ancestor"
 rm -rf "$SB"
 
 echo "B) subdir WITH its own flow/ (deliberate sub-project) -> NOT adopted"

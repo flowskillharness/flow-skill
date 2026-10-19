@@ -921,6 +921,7 @@ cmd_status() {
   local idx; idx="$(current_stage_idx)"
   echo "flow status"
   echo "  project: $ROOT"
+  [ -n "${FLOW_ROOT_ADOPTED:-}" ] && echo "  note: adopting flow root $FLOW_ROOT_ADOPTED from an ancestor (CWD is inside it)"
   echo "  mode:    $(cat "$MODE_FILE" 2>/dev/null | tr -d '\r' || echo teach) (default teach)"
   echo "  type:    $(get_project_type) (done = $(done_def_for_type "$(get_project_type)"))"
   local _ast; _ast="$(_att_auto_state_read 2>/dev/null || echo INACTIVE)"
@@ -1278,7 +1279,11 @@ cmd_next() {
     # Cycle id (idempotent): reuse one already stamped by a prior assess so assess->plan is ONE cycle.
     _ensure_cycle
     FLOW_LOG_STAGE_TO="00-idea"
-    echo "PASS: unlocked stage 00 -> flow/00-idea.md"
+    if [ -n "${FLOW_ROOT_ADOPTED:-}" ]; then
+      echo "PASS: unlocked stage 00 -> $FLOW_DIR/00-idea.md"
+    else
+      echo "PASS: unlocked stage 00 -> flow/00-idea.md"
+    fi
     echo "Fill it in, check its gate boxes, then run '/flow next'."
     return 0
   fi
