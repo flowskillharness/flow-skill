@@ -22,10 +22,11 @@ LAW_DIR="$SCRIPT_DIR/../law"
 PLAYBOOKS_DIR="$SCRIPT_DIR/../playbooks"
 GLOBAL_KB_DIR="${FLOW_GLOBAL_KB:-${HOME:-}/.claude/flow/playbooks}"   # cross-project knowledge tier (set -u safe if HOME unset)
 # Root resolution (monorepo dual-root guard). An explicit FLOW_PROJECT_ROOT always wins. Otherwise,
-# if the CWD is NOT itself a flow project (no flow/ planning dir and no cards/) but an ANCESTOR is,
-# adopt that ancestor — so running flow from a monorepo subdir (e.g. frontend/) does NOT silently
-# mint a SECOND, fragmented .flow root with its own cycle_id (the real C2-App-001 failure mode).
-# A subdir that has its own flow/ or cards/ is a deliberate sub-project and is left untouched.
+# if the CWD is NOT itself a flow project (no flow/ planning dir, no cards/, no .flow/ run-state) but
+# an ANCESTOR is, adopt that ancestor — so running flow from a monorepo subdir (e.g. frontend/) does
+# NOT silently mint a SECOND, fragmented .flow root with its own cycle_id (the real C2-App-001 failure
+# mode). A subdir that has its own flow/ or cards/ is a deliberate sub-project and is left untouched;
+# a dir holding only .flow/ run-state was itself used as a root and is likewise left alone.
 FLOW_ROOT_ADOPTED=""
 FLOW_ROOT_NEW=""
 if [ -n "${FLOW_PROJECT_ROOT:-}" ]; then
