@@ -2,7 +2,7 @@
 
 ## [0.34.5] - 2026-10-19
 - **Telemetry run-state hygiene:** Write pure run-state (`.flow/events.jsonl`, `flow/.lock*`, `cards/.inflight`, `MODE`, `PROJECT_TYPE`) to clone-local `.git/info/exclude` via `git rev-parse --git-path`, keeping `.flow/` telemetry and locks uncommitted during `git add -A` without modifying tracked `.gitignore` files or opening tolerance bypasses.
-- **Root discovery and ancestor adoption:** `flow` announces new flow root initialization when no signature is found; automatically adopts ancestor flow projects from subdirectories, displaying adoption notices to stderr and stdout markers (`note: using flow root ...`) while qualifying stage-00 PASS artifacts.
+- **Root discovery and ancestor adoption:** `flow` announces new flow root initialization only when no Flow signature exists in the current directory or its ancestors; automatically adopts ancestor flow projects from subdirectories, displaying the adoption notice to stderr and the stdout marker (`note: adopting flow root ...`) while qualifying stage-00 PASS artifacts.
 - **Dependency-seam ledger for Stage 05:** Contract gate validates dependency seam integrity before stage advancement.
 - **Machine-readable debt list envelope:** `flow debt --json` provides structured debt reporting for host orchestrators.
 - **Unattended release policy & verification:** Automated GitHub Actions publishing workflow (`publish-npm-wrapper.yml`) with fail-closed eligibility evaluation, master-only environment boundary, pack-once tarball integrity verification, and verify-only recovery mode (`docs/adr/0002-unattended-release-policy.md`).
