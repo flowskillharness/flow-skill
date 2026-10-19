@@ -2,6 +2,11 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.12] - 2026-10-19 — ships skill v0.34.5 (stable / latest)
+- **Skill Product v0.34.5 Parity:** Ships skill product v0.34.5 with closed `gate.report` JSON envelopes, `debt --json` reporting, Stage 05 dependency-seam ledger, root discovery / ancestor adoption UX, and clone-local `.git/info/exclude` telemetry hygiene.
+- **Telemetry Hygiene & Path Handling:** Scoped ignore prefix escaping for nested roots and MSYS2 path handling on Windows.
+- **Unattended Release Pipeline:** Automated `workflow_dispatch` release publisher with fail-closed eligibility gates, exact SHA and CI run verification, single-pack artifact provenance verification, and clean-environment smoke validation.
+
 ## [0.7.11] - 2026-10-16 — ships skill v0.34.4 (stable / latest)
 - **Skill Product v0.34.4 Parity:** Ships skill v0.34.4 with `flow ready --json` machine envelope for host orchestrators and `flow auto --parallel` advisory wave policy.
 
