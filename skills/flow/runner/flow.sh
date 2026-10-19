@@ -150,30 +150,62 @@ _escape_gitignore_prefix() {
   printf '%s' "$escaped"
 }
 
+_git_path_to_posix() {
+  local value="$1"
+  case "$value" in
+    [A-Za-z]:[\\/]*)
+      if ! command -v cygpath >/dev/null 2>&1; then
+        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cannot normalize native Windows path without cygpath: %s\n' "$value" >&2
+        return 1
+      fi
+      cygpath -u "$value" 2>/dev/null || {
+        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath failed for: %s\n' "$value" >&2
+        return 1
+      }
+      ;;
+    *) printf '%s\n' "$value" ;;
+  esac
+}
 _ignore_run_state() {
-  local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top
-  ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
-  [ -n "$ex" ] || return 0
+  local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
+  raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
+  [ -n "$raw_ex" ] || return 0
+  ex="$(_git_path_to_posix "$raw_ex")" || return 0
   root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
+  if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
+    printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
+  fi
   case "$ex" in /*) ;; *) ex="$root_abs/$ex" ;; esac
   ex_dir="$(dirname "$ex")"
   ex_base="$(basename "$ex")"
   mkdir -p "$ex_dir" 2>/dev/null || return 0
   ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
   ex="$ex_dir/$ex_base"
-  git_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  raw_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  git_top="$(_git_path_to_posix "$raw_top")" || return 0
   git_top="$(cd "$git_top" 2>/dev/null && pwd -P)" || return 0
   if [ "$root_abs" = "$git_top" ]; then
     root_prefix=''
   else
-    case "$root_abs/" in "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;; *) return 0 ;; esac
+    case "$root_abs/" in
+      "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;;
+      *) [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] root escapes git_top: ROOT=%s root_abs=%s git_top=%s raw_top=%s\n' "$ROOT" "$root_abs" "$git_top" "$raw_top" >&2; return 0 ;;
+    esac
   fi
   escaped_prefix="$(_escape_gitignore_prefix "$root_prefix")"
+  if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
+    printf '[flow ignore] normalized ROOT=%s root_abs=%s raw_top=%s git_top=%s root_prefix=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_top" "$git_top" "$root_prefix" "$ex" >&2
+  fi
   if [ -s "$ex" ] && [ -n "$(tail -c 1 "$ex" 2>/dev/null)" ]; then
     printf '\n' >> "$ex" || return 0
   fi
   for pat in "/${escaped_prefix}.flow/" "/${escaped_prefix}flow/.lock*" "/${escaped_prefix}cards/.inflight" "/${escaped_prefix}MODE" "/${escaped_prefix}PROJECT_TYPE"; do
-    grep -qxF "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >> "$ex"
+    if grep -qxF "$pat" "$ex" 2>/dev/null; then
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] existing=%s\n' "$pat" >&2
+      continue
+    fi
+    printf '%s\n' "$pat" >> "$ex" || return 0
+    [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] appended=%s\n' "$pat" >&2
   done
 }
 

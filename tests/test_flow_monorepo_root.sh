@@ -76,7 +76,7 @@ printf '# existing local excludes without final newline' > "$EX_PATH"
 ( cd "$SB" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
 EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
 case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
-[ "$(grep -cF '/.flow/' "$EX")" -eq 1 ] && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" || { echo "  FAIL [info/exclude missing or concatenated patterns]"; fail=$((fail+1)); }
+[ "$(grep -cxF '/.flow/' "$EX")" -eq 1 ] && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" || { echo "  FAIL [info/exclude missing or concatenated patterns]"; fail=$((fail+1)); }
 git -C "$SB" config user.name ci
 git -C "$SB" config user.email ci@localhost
 git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"
@@ -146,14 +146,18 @@ mkdir -p "$SB/frontend[1]/flow" "$SB/frontend1/.flow"
 printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend[1]/flow/00-idea.md"
 git -C "$SB" add 'frontend[1]/flow/00-idea.md'
 git -C "$SB" commit -qm base
-(cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
+(cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" next >/dev/null 2>"$SB/ignore-debug.log")
 EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
 case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
-grep -qxF '/frontend\[1\]/.flow/' "$EX" || { echo "  FAIL [literal metachar prefix not escaped]"; fail=$((fail+1)); }
+if ! grep -qxF '/frontend\[1\]/.flow/' "$EX"; then
+  echo "  FAIL [literal metachar prefix not escaped]"
+  cat "$SB/ignore-debug.log"
+  fail=$((fail+1))
+fi
 mkdir -p "$SB/frontend[1]/.flow" "$SB/frontend1/.flow"
 touch "$SB/frontend[1]/.flow/events.jsonl" "$SB/frontend1/.flow/keep"
-git -C "$SB" check-ignore -q 'frontend[1]/.flow/events.jsonl' || { echo "  FAIL [literal root state not ignored]"; fail=$((fail+1)); }
-git -C "$SB" check-ignore -q 'frontend1/.flow/keep' && { echo "  FAIL [metachar lookalike unexpectedly ignored]"; fail=$((fail+1)); } || echo "  ok   [metachar lookalike remains trackable]"
+(cd "$SB/frontend[1]" && git check-ignore -q -- .flow/events.jsonl) || { echo "  FAIL [literal root state not ignored]"; cat "$SB/ignore-debug.log"; fail=$((fail+1)); }
+(cd "$SB/frontend1" && git check-ignore -q -- .flow/keep) && { echo "  FAIL [metachar lookalike unexpectedly ignored]"; fail=$((fail+1)); } || echo "  ok   [metachar lookalike remains trackable]"
 rm -rf "$SB"
 echo
 echo "RESULT: $pass passed, $fail failed"
