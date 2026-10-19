@@ -288,6 +288,16 @@ cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with
 cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 mkdir -p "$tmp/r/docs"
 cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=false;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
+before_noop_head="$(git -C "$tmp/r" rev-parse HEAD)"
+before_noop_status="$(git -C "$tmp/r" status --porcelain)"
+bash "$tmp/r/scripts/release.sh" --yes > "$tmp/noop.out" 2>&1
+ck 0 $? 'release.sh --yes exits successfully for intent:false'
+grep -q 'NO-OP: release intent is false' "$tmp/noop.out" && ck 0 0 'disabled intent reported as no-op' || ck 0 1 'disabled intent reported as no-op'
+[ "$before_noop_head" = "$(git -C "$tmp/r" rev-parse HEAD)" ] && ck 0 0 'no-op leaves HEAD unchanged' || ck 0 1 'no-op leaves HEAD unchanged'
+[ "$before_noop_status" = "$(git -C "$tmp/r" status --porcelain)" ] && ck 0 0 'no-op leaves worktree unchanged' || ck 0 1 'no-op leaves worktree unchanged'
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck 0 0 'no-op creates no tags' || ck 0 1 'no-op creates no tags'
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=true;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
 git -C "$tmp/r" add scripts/ docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
@@ -340,6 +350,7 @@ cp "$ROOT/scripts/release-eligibility.mjs" "$ROOT/scripts/release-workflow.mjs" 
 cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 mkdir -p "$tmp/r/docs"
 cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+node -e 'const fs=require("node:fs");const p=process.argv[1];const intent=JSON.parse(fs.readFileSync(p));intent.intent=true;fs.writeFileSync(p,JSON.stringify(intent));' "$(winpath "$tmp/r/docs/release-intent.json")"
 cp "$ROOT/scripts/check-release-coherence.sh" "$tmp/r/scripts/"
 git -C "$tmp/r" add scripts/ .github/workflows/publish-npm-wrapper.yml npm-wrapper/scripts/semver.mjs docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
@@ -411,6 +422,14 @@ mode="${GH_MOCK_MODE:-exists}"
 ci_app="${GH_MOCK_CI_APP:-github-actions}"
 env_protection="${GH_MOCK_ENV_PROTECTION:-approved}"
 actor_mode="${GH_MOCK_ACTOR_MODE:-valid}"
+if [ "$1" = "--version" ]; then
+  printf 'gh version %s\n' "${GH_MOCK_VERSION:-2.68.0}"
+  exit 0
+fi
+if [ "$1" = "attestation" ] && [ "$2" = "verify" ] && [ "$3" = "--help" ]; then
+  printf '%s\n' '--bundle --digest-alg --repo --signer-workflow --source-ref --source-digest'
+  exit 0
+fi
 
 if [ "$1" = "api" ]; then
   if { [ "${GH_MOCK_DISPATCH_MODE:-}" = "skip-publish" ] || [ "${GH_MOCK_DISPATCH_MODE:-}" = "publish-success" ]; } && [ "$2" = "-X" ] && [ "$3" = "POST" ]; then
@@ -483,6 +502,16 @@ chmod +x "$mock_bin/gh"
 cat > "$mock_bin/gh.cmd" << "EOF"
 @bash "%~dp0gh" %*
 EOF
+
+# Incapable host tooling must be rejected before either live or dry-run dispatch.
+for capability_mode in --yes --dry-run; do
+  capability_state="$tmp/capability-state.json"
+  GH_MOCK_VERSION="2.46.0" GH_MOCK_DISPATCH_MODE="publish-success" GH_MOCK_STATE_FILE="$capability_state" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship "$capability_mode" > "$tmp/capability.out" 2>&1
+  capability_rc=$?
+  ck_k 1 "$capability_rc" "old gh refuses $capability_mode before dispatch" "$tmp/capability.out" "$capability_rc"
+  grep -q 'controller must provision a project-local portable gh' "$tmp/capability.out" && ck_k 0 0 'actionable portable gh requirement' || ck_k 0 1 'actionable portable gh requirement'
+  [ ! -e "$capability_state" ] && ck_k 0 0 'zero dispatches with old gh' || ck_k 0 1 'zero dispatches with old gh'
+done
 
 # K1: missing dispatch receipt fails closed; the workflow's own eligibility fixtures cover the disabled latch.
 GH_MOCK_MODE="exists" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k1.out" 2>&1

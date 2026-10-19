@@ -1,6 +1,12 @@
 export function assertProvenanceResult(status, stdout, packageName, version) {
-  if (status !== 0 || typeof stdout !== 'string' || !stdout.trim()) {
-    throw new Error(`${packageName}@${version} has no verified registry provenance metadata`);
+  let metadata;
+  try {
+    metadata = status === 0 && typeof stdout === 'string' ? JSON.parse(stdout) : null;
+  } catch {
+    metadata = null;
+  }
+  if (metadata?.predicateType !== 'https://slsa.dev/provenance/v1') {
+    throw new Error(`${packageName}@${version} has no SLSA v1 registry provenance metadata`);
   }
   return true;
 }

@@ -13,15 +13,16 @@
  *   node scripts/sync-release.mjs --sync
  */
 
-import { readFileSync, writeFileSync, existsSync, realpathSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, realpathSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
 import { publisherRunIdFromDispatch, publisherWatchArgs, publisherWatchTimeoutError, verifyPublisherJobs } from './release-dispatch-response.mjs';
 import { verifyRunArtifact } from './release-run-artifact.mjs';
+import { assertGhAttestationCapability } from './verify-attestation-with-gh.mjs';
 const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
 
@@ -516,7 +517,8 @@ function verifyPublishedRun(runId, runAttempt, npmVersion, expectedSha) {
   const packageDir = join(tempDir, 'package');
   const evidenceDir = join(tempDir, 'evidence');
   try {
-    execFileSync('mkdir', ['-p', packageDir, evidenceDir]);
+    mkdirSync(packageDir, { recursive: true });
+    mkdirSync(evidenceDir, { recursive: true });
     execGh(['run', 'download', String(runId), '--name', `npm-package-${runId}-${runAttempt}`, '--dir', packageDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
     execGh(['run', 'download', String(runId), '--name', `npm-verification-${runId}-${runAttempt}`, '--dir', evidenceDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
     const { tarball } = verifyRunArtifact(packageDir, evidenceDir, { runId, runAttempt, version: npmVersion, sha: expectedSha });
@@ -804,6 +806,11 @@ function checkNpmPublishEnvironmentPolicy() {
 function dispatchPublisher(headSha, npmVersion, isDryRun) {
   const coords = getRepoCoordinates();
   if (!coords.ok) throw new Error(coords.reason);
+  try {
+    assertGhAttestationCapability({ run: args => execGh(args, { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }) });
+  } catch (error) {
+    throw new Error(`Pre-publish gh capability check failed: ${error.message}. The controller must provision a project-local portable gh >=2.68.0 with the required attestation verify options on PATH before dispatch; do not upgrade global host tooling.`);
+  }
   const actorId = execGh(['api', 'user', '--jq', '.id'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   if (!/^\d+$/.test(actorId)) throw new Error('GitHub CLI did not return a valid authenticated actor ID.');
   const dispatchId = randomUUID();
@@ -861,6 +868,10 @@ function checkSyncNonDrift(skill_v, npm_v) {
 
 function shipRelease({ isDryRun = false, isYes = false } = {}) {
   const intent = JSON.parse(readFileSync(join(repoRoot, 'docs/release-intent.json'), 'utf8'));
+  if (isYes && !isDryRun && intent.intent === false) {
+    console.log('NO-OP: release intent is false; no dispatch, publish, tags, or ref changes.');
+    return;
+  }
   const hasSkillRelease = intent.intent === true && intent.skill_version !== null;
   // If neither --dry-run nor --yes is specified:
   // Print planned release actions and exit 0 immediately with ZERO file modifications, ZERO writes!
@@ -1279,7 +1290,8 @@ Options:
       console.error('Usage: node scripts/sync-release.mjs --reconcile <package-artifact-dir> <verification-artifact-dir> <full-sha> <publisher-run-id> <publisher-run-attempt>');
       process.exit(2);
     }
-    execFileSync(process.execPath, [join(repoRoot, 'scripts/release-workflow.mjs'), 'reconcile', packageDirectory, evidenceDirectory, expectedSha], { cwd: repoRoot, env: { ...process.env, EXPECTED_RUN_ID: expectedRunId, EXPECTED_RUN_ATTEMPT: expectedRunAttempt }, stdio: 'inherit', timeout: 120000 });
+    // The verifier owns its bounded registry retries; do not cut them short here.
+    execFileSync(process.execPath, [join(repoRoot, 'scripts/release-workflow.mjs'), 'reconcile', packageDirectory, evidenceDirectory, expectedSha], { cwd: repoRoot, env: { ...process.env, EXPECTED_RUN_ID: expectedRunId, EXPECTED_RUN_ATTEMPT: expectedRunAttempt }, stdio: 'inherit' });
     return;
   }
   if (isSync) {

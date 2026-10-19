@@ -5,12 +5,16 @@ import { readFileSync } from 'node:fs';
 import { parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 
 
-export function verifyWithGhAttestation({ artifact, bundle, owner, repository, workflow, sourceRef, sourceSha, digestAlgorithm = 'sha512', run = args => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }) }) {
+export function assertGhAttestationCapability({ run }) {
   const versionText = run(['--version']);
   const version = versionText.match(/gh version (\d+\.\d+\.\d+)/)?.[1];
   if (!version || !parseSemver(version) || parseSemver(version).major < 2 || parseSemver(version).major === 2 && parseSemver(version).minor < 68) throw new Error('gh >=2.68.0 with attestation verify is required to verify Sigstore trust roots and Rekor inclusion');
   const help = run(['attestation', 'verify', '--help']);
   for (const option of ['--bundle', '--digest-alg', '--repo', '--signer-workflow', '--source-ref', '--source-digest']) if (!help.includes(option)) throw new Error(`installed gh attestation verifier lacks required option ${option}`);
+}
+
+export function verifyWithGhAttestation({ artifact, bundle, owner, repository, workflow, sourceRef, sourceSha, digestAlgorithm = 'sha512', run = args => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }) }) {
+  assertGhAttestationCapability({ run });
   const output = run(['attestation', 'verify', artifact, '--bundle', bundle, '--digest-alg', digestAlgorithm, '--repo', `${owner}/${repository}`, '--signer-workflow', `${owner}/${repository}/${workflow}`, '--source-ref', sourceRef, '--source-digest', sourceSha, '--format', 'json']);
   const result = JSON.parse(output);
   if (!Array.isArray(result) || result.length === 0) throw new Error('gh attestation verify returned no verified provenance statements');

@@ -3,7 +3,7 @@
 //   node scripts/smoke.mjs 0.1.0-rc.2
 // Verifies:
 //   1. The version exists on the registry.
-//   2. Its dist.attestations.provenance is populated (SLSA L2).
+//   2. Its dist.attestations.provenance declares the SLSA v1 predicate (metadata only).
 //   3. `npx @manhquy/flow-skill@<version> --help` runs and exits 0.
 //   4. `--yes --all --dry-run --json` returns valid JSONL with the expected schema.
 //   5. Installing into a scratch $HOME materializes the expected 6 subdirs + SKILL.md.
@@ -82,13 +82,13 @@ if (view.status !== 0 || view.stdout.trim() !== version) {
 }
 
 // 2. provenance — absence or query failure is fatal for policy-gated releases.
-const prov = run('npm', ['view', `${PKG}@${version}`, 'dist.attestations.provenance']);
+const prov = run('npm', ['view', `${PKG}@${version}`, 'dist.attestations.provenance', '--json']);
 try {
   assertProvenanceResult(prov.status, prov.stdout, PKG, version);
 } catch (error) {
   fail(error.message);
 }
-console.log('  provenance: present');
+console.log('  provenance: SLSA v1 metadata present (cryptographic verification is separate)');
 
 // 3. --help
 const help = run('npx', npxArgs(['--help']));

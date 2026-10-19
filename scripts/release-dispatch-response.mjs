@@ -7,7 +7,7 @@ export function publisherRunIdFromDispatch(responseText, owner, repo) {
     throw new Error('GitHub workflow dispatch returned invalid JSON; refusing to redispatch or guess the run.');
   }
   const prefix = `https://api.github.com/repos/${owner}/${repo}/actions/runs/`;
-  if (!Number.isSafeInteger(dispatch?.workflow_run_id) || dispatch.workflow_run_id <= 0 || typeof dispatch.run_url !== 'string' || !dispatch.run_url.startsWith(prefix) || !dispatch.run_url.endsWith(String(dispatch.workflow_run_id))) {
+  if (!Number.isSafeInteger(dispatch?.workflow_run_id) || dispatch.workflow_run_id <= 0 || dispatch.run_url !== `${prefix}${dispatch.workflow_run_id}`) {
     throw new Error('GitHub workflow dispatch response lacks an exact repository-bound run ID; refusing to redispatch.');
   }
   return dispatch.workflow_run_id;
