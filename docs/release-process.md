@@ -21,7 +21,7 @@ Ops detail and token hygiene live in [`npm-wrapper/RELEASE_CHECKLIST.md`](../npm
 skills/flow/**  ──sync──►  npm-wrapper/skills/flow  (prepack / CI Materialize)
        │
        ├── push master (paths) ──► CI: bash-suite 3-OS + npm-wrapper Node matrix
-                            Windows bash-suite timeout = 80m; macOS 25m; others 15m
+                            Windows: 3 bash shards, 80m each; macOS 25m; Ubuntu 15m
        │
        └── git tag npm@X.Y.Z + push ──► publish-npm-wrapper.yml
                                          environment: npm-publish (required reviewer)
@@ -31,16 +31,25 @@ skills/flow/**  ──sync──►  npm-wrapper/skills/flow  (prepack / CI Mate
 Nightly (cron) ──► smoke.mjs vs dist-tags next + latest (clean cwd, no npm-wrapper shadow)
 ```
 
-### CI facts (measured)
+### CI timing and coverage
 
 | Job | Typical duration | Timeout budget |
 |---|---|---|
 | bash-suite ubuntu | ~8 min | 15m |
 | bash-suite macOS | ~11–15 min (measured 14m51s suite + post-job need, previous ~11–13m typical) | **25m** |
-| bash-suite Windows | ~54–60 min (measured 54m37s–59m53s across full registered suite) | **80m** |
+| bash-suite Windows | Serial baseline ~54–60 min; three-shard timings not yet measured | **80m / shard** |
 | npm-wrapper matrix | ~15–40s / cell | 10m |
 
 `tests/run_all.sh` prints `wall_s` per suite + `TOTAL wall_s` for timeout forensics.
+Windows runs three isolated matrix cells with `FLOW_SUITE_SHARD=1/3`, `2/3`, `3/3`.
+The runner cleans the current `tests/manifest.txt`, sorts with `LC_ALL=C`, then assigns
+suite positions round-robin; no suite names or counts are fixed in CI. Unset the variable
+for the unchanged full serial manifest-order run (Ubuntu, macOS and local default).
+Invalid specifications or shards selecting no suites fail closed. The manifest-runner
+fixture proves exact-once coverage and rejects omitted/duplicated partition inputs.
+`all-checks-passed` waits for the entire `bash-suite` matrix and rejects any non-success,
+including failed/cancelled shards; PowerShell installer tests run once on Windows shard 1.
+Parallelism is intended to reduce walltime, but no measured speedup is claimed.
 
 ### Publish facts
 
@@ -259,7 +268,7 @@ node /path/to/flow-skill/npm-wrapper/scripts/smoke.mjs <exact-version>
 | Expect `npm dist-tag add` in GHA OIDC | E401; use manual bootstrap token |
 | Publish skill version as npm version (`@0.22.0`) | Does not exist; confuses users |
 | `npm i` alone for end users | No postinstall; must **run** the CLI |
-| Assume Windows bash suite < 15m | Full suite measured ~54–64m; budget is 80m |
+| Assume Windows bash shard < 15m | Serial baseline ~54–64m; shard timings unmeasured, budget remains 80m each |
 | Re-add `NODE_AUTH_TOKEN must be empty` CI guard | Breaks setup-node OIDC (0% pass) |
 | Tag `v*` expecting npm publish | Wrong tag shape; need `npm@*` |
 
