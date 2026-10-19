@@ -10,6 +10,16 @@ ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
 no()  { if printf '%s' "$1" | grep -q "$2"; then echo "  FAIL [$3] (unexpected: $2)"; fail=$((fail+1)); else echo "  ok   [$3]"; pass=$((pass+1)); fi; }
 
+git_path_to_posix() {
+  case "$1" in
+    [A-Za-z]:[\\/]*)
+      command -v cygpath >/dev/null 2>&1 || return 1
+      cygpath -u "$1" 2>/dev/null
+      ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
 # Parent flow project with a flow/ planning dir; a frontend/ subdir with no flow state of its own.
 newsb() { SB="$(mktemp -d)"; mkdir -p "$SB/flow" "$SB/frontend/src"; printf '# 00\n## Gate\n- [x] ok\n\nx.\n' > "$SB/flow/00-idea.md"; }
 
@@ -70,11 +80,11 @@ SB="$(mktemp -d)"
  ( cd "$SB" \
   && export GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@localhost GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@localhost \
   && git init -q && git commit -qm base --allow-empty )
-EX_REL="$(git -C "$SB" rev-parse --git-path info/exclude)"
+EX_REL="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
 case "$EX_REL" in /*) EX_PATH="$EX_REL" ;; *) EX_PATH="$SB/$EX_REL" ;; esac
 printf '# existing local excludes without final newline' > "$EX_PATH"
 ( cd "$SB" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
-EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
+EX="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
 case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
 [ "$(grep -cxF '/.flow/' "$EX")" -eq 1 ] && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" || { echo "  FAIL [info/exclude missing or concatenated patterns]"; fail=$((fail+1)); }
 git -C "$SB" config user.name ci
@@ -102,7 +112,7 @@ printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend/flo
 git -C "$SB" add frontend/flow/00-idea.md
 git -C "$SB" commit -qm base
 (cd "$SB/frontend" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
-EX="$(git -C "$SB/frontend" rev-parse --git-path info/exclude)"
+EX="$(git_path_to_posix "$(git -C "$SB/frontend" rev-parse --git-path info/exclude)")"
 case "$EX" in /*) ;; *) EX="$SB/frontend/$EX" ;; esac
 for pat in '/frontend/.flow/' '/frontend/flow/.lock*' '/frontend/cards/.inflight' '/frontend/MODE' '/frontend/PROJECT_TYPE'; do
   grep -qxF "$pat" "$EX" || { echo "  FAIL [nested exclude missing $pat]"; fail=$((fail+1)); }
@@ -127,11 +137,11 @@ git -C "$SB" add base.txt
 git -C "$SB" commit -qm base
 git -C "$SB" worktree add --detach "$SB-linked" HEAD >/dev/null
 test -f "$SB-linked/.git" && test ! -d "$SB-linked/.git" && test ! -e "$SB-linked/.gitignore"
-(cd "$SB-linked" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
-EX="$(git -C "$SB-linked" rev-parse --git-path info/exclude)"
+(cd "$SB-linked" && unset FLOW_PROJECT_ROOT && FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" next >/dev/null 2>"$SB/linked-ignore-debug.log")
+EX="$(git_path_to_posix "$(git -C "$SB-linked" rev-parse --git-path info/exclude)")"
 case "$EX" in /*) ;; *) EX="$SB-linked/$EX" ;; esac
 for pat in '/.flow/' '/flow/.lock*' '/cards/.inflight' '/MODE' '/PROJECT_TYPE'; do
-  grep -qxF "$pat" "$EX" || { echo "  FAIL [linked exclude missing $pat]"; fail=$((fail+1)); }
+  grep -qxF "$pat" "$EX" || { echo "  FAIL [linked exclude missing $pat]"; cat "$SB/linked-ignore-debug.log"; fail=$((fail+1)); }
 done
 test ! -e "$SB-linked/.git/info/exclude" && echo "  ok   [no relative-path stray .git tree under worktree]" || { echo "  FAIL [relative-path stray .git tree]"; fail=$((fail+1)); }
 git -C "$SB-linked" worktree remove --force "$SB-linked"
@@ -147,7 +157,7 @@ printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend[1]/
 git -C "$SB" add 'frontend[1]/flow/00-idea.md'
 git -C "$SB" commit -qm base
 (cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" next >/dev/null 2>"$SB/ignore-debug.log")
-EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
+EX="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
 case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
 if ! grep -qxF '/frontend\[1\]/.flow/' "$EX"; then
   echo "  FAIL [literal metachar prefix not escaped]"

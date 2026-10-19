@@ -150,28 +150,28 @@ _escape_gitignore_prefix() {
   printf '%s' "$escaped"
 }
 
-_git_path_to_posix() {
-  local value="$1"
-  case "$value" in
-    [A-Za-z]:[\\/]*)
-      if ! command -v cygpath >/dev/null 2>&1; then
-        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cannot normalize native Windows path without cygpath: %s\n' "$value" >&2
-        return 1
-      fi
-      cygpath -u "$value" 2>/dev/null || {
-        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath failed for: %s\n' "$value" >&2
-        return 1
-      }
-      ;;
-    *) printf '%s\n' "$value" ;;
-  esac
+_canonical_git_path() {
+  local value="$1" native
+  if command -v cygpath >/dev/null 2>&1; then
+    native="$(cygpath -aw "$value" 2>/dev/null)" || {
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath -aw failed for: %s\n' "$value" >&2
+      return 1
+    }
+    cygpath -u "$native" 2>/dev/null || {
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath -u failed for: %s (native=%s)\n' "$value" "$native" >&2
+      return 1
+    }
+  else
+    printf '%s\n' "$value"
+  fi
 }
 _ignore_run_state() {
   local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
   raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$raw_ex" ] || return 0
-  ex="$(_git_path_to_posix "$raw_ex")" || return 0
+  ex="$(_canonical_git_path "$raw_ex")" || return 0
   root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
+  root_abs="$(_canonical_git_path "$root_abs")" || return 0
   if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
     printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
   fi
@@ -182,7 +182,7 @@ _ignore_run_state() {
   ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
   ex="$ex_dir/$ex_base"
   raw_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
-  git_top="$(_git_path_to_posix "$raw_top")" || return 0
+  git_top="$(_canonical_git_path "$raw_top")" || return 0
   git_top="$(cd "$git_top" 2>/dev/null && pwd -P)" || return 0
   if [ "$root_abs" = "$git_top" ]; then
     root_prefix=''
