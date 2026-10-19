@@ -39,11 +39,14 @@ test('scoped npm attestation URL keeps scope marker literal and encodes separato
 test('rejects relabelled or duplicated signed SLSA as npm publish attestation', () => {
   for (const duplicate of [false, true]) {
     const bad = structuredClone(report);
-    const relabelled = structuredClone(bad.verified[0].attestationBundles[1]);
-    relabelled.predicateType = bad.verified[0].attestationBundles[0].predicateType;
-    bad.verified[0].attestationBundles[0] = relabelled;
-    if (duplicate) bad.verified[0].attestationBundles.push(structuredClone(relabelled));
-    assert.throws(() => verifyNpmVerifiedOutput(bad, expected), /npm publish attestation/);
+    if (duplicate) {
+      bad.verified[0].attestationBundles.push(structuredClone(bad.verified[0].attestationBundles[1]));
+    } else {
+      const relabelled = structuredClone(bad.verified[0].attestationBundles[1]);
+      relabelled.predicateType = bad.verified[0].attestationBundles[0].predicateType;
+      bad.verified[0].attestationBundles[0] = relabelled;
+    }
+    assert.throws(() => verifyNpmVerifiedOutput(bad, expected), /expected exactly one verified npm publish attestation/);
   }
 });
 

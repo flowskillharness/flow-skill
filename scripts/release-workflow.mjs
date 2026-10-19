@@ -7,7 +7,7 @@ import { compareSemver, parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 import { evaluateRelease } from './release-eligibility.mjs';
 import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
 import { verifyWithGhAttestation } from './verify-attestation-with-gh.mjs';
-import { artifactTarballPath } from './release-run-artifact.mjs';
+import { artifactTarballPath, PUBLIC_NPM_REGISTRY } from './release-run-artifact.mjs';
 export const RELEASE_CONSTANTS = Object.freeze({ repository: 'manhquydev/flow-skill', ciWorkflowId: 295237428, ciWorkflowPath: '.github/workflows/ci.yml', publisherWorkflowPath: '.github/workflows/publish-npm-wrapper.yml', package: '@manhquy/flow-skill' });
 const { ciWorkflowId: CI_WORKFLOW_ID, ciWorkflowPath: CI_WORKFLOW_PATH, publisherWorkflowPath: PUBLISHER_PATH, package: PACKAGE } = RELEASE_CONSTANTS;
 const REPO = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
@@ -39,21 +39,12 @@ function apiArray(path, key, request = gh) {
   return values;
 }
 function npmView(spec, fields) {
-  const delays = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
-  let lastError;
-  for (const delay of delays) {
-    if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
-    try {
-      const raw = execFileSync('npm', ['view', spec, ...fields, '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-      return { present: true, value: JSON.parse(raw) };
-    } catch (error) {
-      const text = `${error.stderr || ''} ${error.message || ''}`;
-      if (/\bE404\b|404 Not Found|is not in this registry/i.test(text)) return { present: false, error: 'E404' };
-      if (!/\bE429\b|429 Too Many Requests|\bE5\d\d\b|HTTP 50[0-4]|timed out|ECONNRESET|ENOTFOUND/i.test(text)) throw new Error(`npm registry lookup failed closed: ${text.trim()}`);
-      lastError = error;
-    }
+  try {
+    return { present: true, value: readNpmRegistryJson(spec, fields) };
+  } catch (error) {
+    if (error.code === 'E404') return { present: false, error: 'E404' };
+    throw new Error(`npm registry lookup failed closed: ${error.message}`);
   }
-  throw new Error(`npm registry remains unavailable after bounded retries: ${lastError?.message || 'unknown error'}`);
 }
 function skillVersion() { return readFileSync(join(repoRoot, 'skills/flow/SKILL.md'), 'utf8').match(/^\s+version:\s*["']?([^"'\s]+)["']?\s*$/m)?.[1] || null; }
 function changelogHeading(path, version) {

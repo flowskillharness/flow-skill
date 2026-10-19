@@ -625,6 +625,7 @@ const all = JSON.stringify([mod.npmSpawnHelper(), mod.npmTestHelper()]);
 assert.ok(!all.includes('npm.cmd'), 'no helper may reference npm.cmd');
 assert.ok(all.includes('scripts/sync.mjs'), 'sync step must run node scripts/sync.mjs');
 assert.ok(all.includes('--test'), 'test step must run node --test');
+assert.ok(mod.npmTestHelper().args.includes('test/smoke-policy.test.mjs'), 'test helper must include the smoke-policy test registered by npm test');
 assert.equal(typeof mod.buildWin32GhCommandLine, 'function', 'buildWin32GhCommandLine must be exported');
 const plainCmd = mod.buildWin32GhCommandLine(['release', 'view', 'v0.34.4', '--json', 'tagName']);
 assert.equal(plainCmd, 'gh release view v0.34.4 --json tagName', 'plain args must stay unquoted');

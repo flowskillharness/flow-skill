@@ -198,9 +198,9 @@ while IFS= read -r suite || [ -n "$suite" ]; do
   : > "$tmp/r/tests/$suite"
 done < "$tmp/r/tests/manifest.txt"
 # sound half: current workflow passes the FULL coherence run, not just one grep
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7a.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7a.out" 2>&1
 ck 0 $? "sound: real workflow passes full coherence run"
-grep -q 'provenance receipts upload right after audit' /tmp/coh7a.out && ck 0 0 "sound: ordering gate asserts audit-then-upload-then-verifier" || ck 0 1 "sound: ordering gate asserts audit-then-upload-then-verifier"
+grep -q 'provenance receipts upload right after audit' "$tmp/coh7a.out" && ck 0 0 "sound: ordering gate asserts audit-then-upload-then-verifier" || ck 0 1 "sound: ordering gate asserts audit-then-upload-then-verifier"
 
 # Hollow package receipt: removing only release-artifact.json from npm-package upload must fail.
 cp "$tmp/r/.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml"
@@ -212,9 +212,9 @@ block=t[i:j].replace('            ${{ runner.temp }}/release-artifact.json\n',''
 assert block != t[i:j]
 open(p,'w').write(t[:i]+block+t[j:])
 PYEOF
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7meta.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7meta.out" 2>&1
 ck 1 $? "hollow: missing release-artifact.json upload fails"
-grep -q 'package upload path block must retain both' /tmp/coh7meta.out && ck 0 0 "names missing package receipt" || ck 0 1 "names missing package receipt"
+grep -q 'package upload path block must retain both' "$tmp/coh7meta.out" && ck 0 0 "names missing package receipt" || ck 0 1 "names missing package receipt"
 cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
 import re, sys
@@ -227,9 +227,9 @@ paths=paths.replace('            ${{ runner.temp }}/release-artifact.json\n', ' 
 t=t[:m.start(2)]+paths+t[m.end(2):]
 open(p,'w').write(t)
 PYEOF
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7comment.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7comment.out" 2>&1
 ck 1 $? "hollow: comment-only package metadata is not treated as uploaded"
-grep -q 'package upload path block must retain both' /tmp/coh7comment.out && ck 0 0 "rejects commented-out metadata path" || ck 0 1 "rejects commented-out metadata path"
+grep -q 'package upload path block must retain both' "$tmp/coh7comment.out" && ck 0 0 "rejects commented-out metadata path" || ck 0 1 "rejects commented-out metadata path"
 cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
 # hollow half: move the install-smoke step before the audit step; ONLY the ordering gate flips
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
@@ -244,9 +244,9 @@ text = text.replace(smoke.group(1), '', 1)
 text = text.replace(audit.group(1), smoke.group(1) + audit.group(1), 1)
 open(path, 'w').write(text)
 PYEOF
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7.out" 2>&1
 ck 1 $? "hollow: audit-after-smoke ordering fails coherence"
-grep -q 'publisher must run npm publish before the signature audit' /tmp/coh7.out && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
+grep -q 'publisher must run npm publish before the signature audit' "$tmp/coh7.out" && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
 rm -rf "$tmp"
 
 echo

@@ -25,7 +25,7 @@ test('CLI realpath fallback tolerates an absent caller path when imported', () =
 test('retained artifact directories use Node filesystem without an external mkdir', () => {
   const stop = new Error('stop before verification');
   let downloads = 0;
-  const verify = clientFunction('verifyPublishedRun', 'npmJsonValue', {
+  const verify = clientFunction('verifyPublishedRun', 'npmViewJson', {
     mkdtempSync, mkdirSync, rmSync, join, tmpdir, repoRoot: '/fixture',
     execFileSync() { assert.fail('no external command before downloads'); },
     execGh(args) {

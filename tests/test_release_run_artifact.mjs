@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { verifyRegistryChannel, verifyRunArtifact } from '../scripts/release-run-artifact.mjs';
+import { PUBLIC_NPM_REGISTRY, readNpmRegistryJson, verifyPostPublishFinalization, verifyRegistryChannel, verifyRunArtifact } from '../scripts/release-run-artifact.mjs';
 import { reconcile } from '../scripts/release-workflow.mjs';
 
 const sha = 'a'.repeat(40);
@@ -76,7 +76,7 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
   validReport.verified[0].attestationBundles[1].bundle.dsseEnvelope.payload = Buffer.from(JSON.stringify(validStatement)).toString('base64');
   writeFileSync(join(dir, 'npm-audit-verified.json'), JSON.stringify(validReport));
   let skillVersion = '0.25.0'; let releaseTag = 'v0.25.0'; let tagSha = sha;
-  const checkedTags = []; const releaseCalls = [];
+  const checkedTags = []; const releaseCalls = []; const npmCalls = []; const attestationCalls = [];
   const io = {
     readFileSync,
     git: args => {
@@ -90,10 +90,21 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
       return `${'b'.repeat(40)}\t${args[3]}\n${tagSha}\t${args[4]}`;
     },
     gh: path => { releaseCalls.push(path); return { tag_name: releaseTag, target_commitish: 'master' }; },
-    npmView: (_spec, fields) => ({ present: true, value: fields[0] === 'version' ? version : fields[0] === 'dist.integrity' ? metadata.integrity : { latest: version } }),
-    verifyWithGhAttestation: options => { assert.equal(options.sourceSha, sha); return []; },
+    npmView: (spec, fields) => { npmCalls.push({ spec, fields }); return { present: true, value: fields[0] === 'version' ? version : fields[0] === 'dist.integrity' ? metadata.integrity : { latest: version } }; },
+    verifyWithGhAttestation: options => { attestationCalls.push(options); assert.equal(options.sourceSha, sha); return []; },
   };
   reconcile(dir, dir, sha, 777, 2, io);
+  assert.deepEqual(npmCalls, [
+    { spec: `@manhquy/flow-skill@${version}`, fields: ['version'] },
+    { spec: `@manhquy/flow-skill@${version}`, fields: ['dist.integrity'] },
+    { spec: '@manhquy/flow-skill', fields: ['dist-tags'] },
+  ]);
+  assert.equal(attestationCalls.length, 1);
+  assert.deepEqual(attestationCalls[0], {
+    artifact: join(dir, metadata.name), bundle: join(dir, 'slsa-bundle.json'),
+    owner: 'manhquydev', repository: 'flow-skill', workflow: '.github/workflows/publish-npm-wrapper.yml',
+    sourceRef: 'refs/heads/master', sourceSha: sha,
+  });
   assert.deepEqual(checkedTags, [`npm@${version}^{commit}`, 'v0.25.0^{commit}']);
   assert.equal(releaseCalls.length, 1);
   releaseTag = 'v9.9.9';
@@ -112,4 +123,75 @@ test('client rejects registry version, integrity or channel changes after publis
   assert.throws(() => verifyRegistryChannel({ ...valid, distTags: { latest: '1.0.1' } }), /channel no longer points/);
   assert.throws(() => verifyRegistryChannel({ ...valid, versionValue: '1.0.1' }), /registry version differs/);
   assert.throws(() => verifyRegistryChannel({ ...valid, integrityValue: 'sha512-moved' }), /registry integrity differs/);
+  const prerelease = { ...valid, version: '1.2.3-rc.1', versionValue: '1.2.3-rc.1', distTags: { latest: '1.0.0', next: '1.2.3-rc.1' } };
+  assert.equal(verifyRegistryChannel(prerelease), 'next');
+  assert.throws(() => verifyRegistryChannel({ ...prerelease, distTags: { ...prerelease.distTags, next: '1.2.3-rc.2' } }), /channel no longer points/);
+});
+
+test('registry reads pin public npm, bound subprocesses and retry transient errors', () => {
+  let captured;
+  const result = readNpmRegistryJson('@manhquy/flow-skill@1.0.0', 'version', {
+    cwd: '/clean/repo',
+    platform: 'linux',
+    run: (command, args, options) => {
+      captured = { command, args, options };
+      return { status: 0, stdout: '"1.0.0"\n', stderr: '' };
+    },
+  });
+  assert.equal(result, '1.0.0');
+  assert.equal(captured.command, 'npm');
+  assert.ok(captured.args.includes(`--registry=${PUBLIC_NPM_REGISTRY}`));
+  assert.equal(captured.options.cwd, '/clean/repo');
+  assert.equal(captured.options.timeout, 30000);
+  assert.throws(() => readNpmRegistryJson('@manhquy/flow-skill', 'dist-tags', {
+    run: () => ({ status: 1, stdout: '', stderr: 'E403 Forbidden' }),
+  }), /public npm registry query failed/);
+  let attempts = 0; const waits = [];
+  const retried = readNpmRegistryJson('@manhquy/flow-skill@1.0.0', 'version', {
+    wait: delay => waits.push(delay),
+    run: () => ++attempts === 1
+      ? { status: 1, stdout: '', stderr: 'E503 Service Unavailable' }
+      : { status: 0, stdout: '"1.0.0"', stderr: '' },
+  });
+  assert.equal(retried, '1.0.0');
+  assert.equal(attempts, 2);
+  assert.deepEqual(waits, [0, 5000]);
+  assert.throws(() => readNpmRegistryJson('@manhquy/flow-skill@1.0.0', 'version', {
+    wait: () => {}, run: () => ({ status: 1, stderr: 'E404 Not Found' }),
+  }), error => error.code === 'E404');
+
+  let exhaustedAttempts = 0; const exhaustedWaits = [];
+  assert.throws(() => readNpmRegistryJson('@manhquy/flow-skill@1.0.0', 'version', {
+    wait: delay => exhaustedWaits.push(delay),
+    run: () => { exhaustedAttempts++; return { status: 1, stderr: 'E503 Service Unavailable' }; },
+  }), /remains unavailable after bounded retries/);
+  assert.equal(exhaustedAttempts, 3);
+  assert.deepEqual(exhaustedWaits, [0, 5000, 15000]);
+});
+
+test('post-publish finalization rechecks the registry after attestation and smoke', () => {
+  const calls = [];
+  const channel = verifyPostPublishFinalization({
+    version: '1.2.3-rc.1',
+    integrity: 'sha512-exact',
+    verifyAttestation: () => calls.push('attestation'),
+    smoke: () => calls.push('smoke'),
+    readRegistry: () => {
+      calls.push('registry');
+      return { versionValue: '1.2.3-rc.1', integrityValue: 'sha512-exact', distTags: { latest: '1.0.0', next: '1.2.3-rc.1' } };
+    },
+  });
+  assert.deepEqual(calls, ['attestation', 'smoke', 'registry']);
+  assert.equal(channel, 'next');
+  calls.length = 0;
+  assert.throws(() => verifyPostPublishFinalization({
+    version: '1.2.3-rc.1', integrity: 'sha512-exact',
+    verifyAttestation: () => calls.push('attestation'),
+    smoke: () => calls.push('smoke'),
+    readRegistry: () => {
+      calls.push('registry');
+      return { versionValue: '1.2.3-rc.1', integrityValue: 'sha512-exact', distTags: { latest: '1.0.0', next: '1.2.3-rc.2' } };
+    },
+  }), /channel no longer points/);
+  assert.deepEqual(calls, ['attestation', 'smoke', 'registry']);
 });

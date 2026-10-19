@@ -9,8 +9,11 @@ test('strict smoke policy accepts present provenance metadata', () => {
   assert.equal(assertProvenanceResult(0, '{"predicateType":"https://slsa.dev/provenance/v1"}', packageName, version), true);
 });
 
-test('strict smoke policy rejects missing provenance and failed registry queries', () => {
-  for (const [status, stdout] of [[0, ''], [0, '  '], [0, '{"attestations":[]}'], [0, 'not-json'], [1, ''], [1, 'not found']]) {
-    assert.throws(() => assertProvenanceResult(status, stdout, packageName, version), /has no SLSA v1 registry provenance metadata/);
+test('strict smoke policy rejects missing provenance, malformed metadata and failed queries', () => {
+  for (const stdout of ['', '  ', 'arbitrary output', '{broken', '{}', '{"attestations":[]}', 'null', '[]', 'true', '"https://slsa.dev/provenance/v1"', '{"predicateType":"https://slsa.dev/provenance/v0.2"}']) {
+    assert.throws(() => assertProvenanceResult(0, stdout, packageName, version), /has no SLSA v1 registry provenance metadata/);
+  }
+  for (const status of [1, null]) {
+    assert.throws(() => assertProvenanceResult(status, '{"predicateType":"https://slsa.dev/provenance/v1"}', packageName, version));
   }
 });
