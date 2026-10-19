@@ -7,7 +7,7 @@ import { compareSemver, parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 import { evaluateRelease } from './release-eligibility.mjs';
 import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
 import { verifyWithGhAttestation } from './verify-attestation-with-gh.mjs';
-import { artifactTarballPath, PUBLIC_NPM_REGISTRY } from './release-run-artifact.mjs';
+import { artifactTarballPath, PUBLIC_NPM_REGISTRY, readNpmRegistryJson } from './release-run-artifact.mjs';
 export const RELEASE_CONSTANTS = Object.freeze({ repository: 'manhquydev/flow-skill', ciWorkflowId: 295237428, ciWorkflowPath: '.github/workflows/ci.yml', publisherWorkflowPath: '.github/workflows/publish-npm-wrapper.yml', package: '@manhquy/flow-skill' });
 const { ciWorkflowId: CI_WORKFLOW_ID, ciWorkflowPath: CI_WORKFLOW_PATH, publisherWorkflowPath: PUBLISHER_PATH, package: PACKAGE } = RELEASE_CONSTANTS;
 const REPO = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
@@ -38,9 +38,9 @@ function apiArray(path, key, request = gh) {
   if (!Array.isArray(result) && Number.isInteger(result.total_count) && values.length < result.total_count) throw new Error(`API response is paginated/incomplete: ${path}`);
   return values;
 }
-function npmView(spec, fields) {
+export function npmView(spec, fields, run) {
   try {
-    return { present: true, value: readNpmRegistryJson(spec, fields) };
+    return { present: true, value: readNpmRegistryJson(spec, fields, { cwd: repoRoot, ...(run ? { run } : {}) }) };
   } catch (error) {
     if (error.code === 'E404') return { present: false, error: 'E404' };
     throw new Error(`npm registry lookup failed closed: ${error.message}`);

@@ -1,7 +1,9 @@
-import { checkRequest, verifyExistingTag, RELEASE_CONSTANTS, requireUnpublishedVersion, selectChannelBaseline, selectAuthoritativeJob, selectAuthoritativeRun, selectMergedMasterPr } from '../scripts/release-workflow.mjs';
+import { checkRequest, npmView, verifyExistingTag, RELEASE_CONSTANTS, requireUnpublishedVersion, selectChannelBaseline, selectAuthoritativeJob, selectAuthoritativeRun, selectMergedMasterPr } from '../scripts/release-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compareVersions, evaluateRelease } from '../scripts/release-eligibility.mjs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const base = () => ({
   mode: 'workflow_run', phase: 'eligibility',
@@ -204,6 +206,20 @@ test('workflow publish snapshot forwards the observed prepublish registry state'
   assert.equal(checkRequest(request, io).decision, 'publish');
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: null }, io), /prepublish-state-changed/);
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: { state: 'unknown' } }, io), /release refused/);
+});
+
+test('default registry adapter pins public npm and preserves exact E404 semantics', () => {
+  let captured;
+  assert.deepEqual(npmView('@manhquy/flow-skill', ['dist-tags'], (command, args, options) => {
+    captured = { command, args, options };
+    return { status: 0, stdout: '{"latest":"0.7.11"}', stderr: '' };
+  }), { present: true, value: { latest: '0.7.11' } });
+  assert.equal(captured.command, 'npm');
+  assert.deepEqual(captured.args, ['view', '@manhquy/flow-skill', 'dist-tags', '--json', '--registry=https://registry.npmjs.org/']);
+  assert.equal(captured.options.cwd, resolve(dirname(fileURLToPath(import.meta.url)), '..'));
+  assert.equal(captured.options.timeout, 30000);
+  assert.deepEqual(npmView('@manhquy/flow-skill@1.0.0', ['version'], () => ({ status: 1, stderr: 'E404 Not Found' })), { present: false, error: 'E404' });
+  assert.throws(() => npmView('@manhquy/flow-skill', ['dist-tags'], () => ({ status: 1, stderr: 'E403 Forbidden' })), /registry lookup failed closed/);
 });
 
 test('remote tag verification peels annotated tags and preserves lightweight tags', () => {
