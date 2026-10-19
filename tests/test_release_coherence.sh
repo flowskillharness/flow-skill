@@ -201,6 +201,21 @@ done < "$tmp/r/tests/manifest.txt"
 bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7a.out 2>&1
 ck 0 $? "sound: real workflow passes full coherence run"
 grep -q 'provenance receipts upload right after audit' /tmp/coh7a.out && ck 0 0 "sound: ordering gate asserts audit-then-upload-then-verifier" || ck 0 1 "sound: ordering gate asserts audit-then-upload-then-verifier"
+
+# Hollow package receipt: removing only release-artifact.json from npm-package upload must fail.
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml"
+python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
+import sys
+p=sys.argv[1]; t=open(p).read(); marker='          name: npm-package-${{ github.run_id }}-${{ github.run_attempt }}'
+i=t.index(marker); j=t.index('      - name:', i+len(marker))
+block=t[i:j].replace('            ${{ runner.temp }}/release-artifact.json\n','')
+assert block != t[i:j]
+open(p,'w').write(t[:i]+block+t[j:])
+PYEOF
+bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7meta.out 2>&1
+ck 1 $? "hollow: missing release-artifact.json upload fails"
+grep -q 'package upload path block must retain both' /tmp/coh7meta.out && ck 0 0 "names missing package receipt" || ck 0 1 "names missing package receipt"
+mv "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
 # hollow half: move the install-smoke step before the audit step; ONLY the ordering gate flips
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
 import re, sys

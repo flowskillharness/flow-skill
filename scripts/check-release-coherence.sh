@@ -108,14 +108,14 @@ else
   fail "publisher must run npm publish before the signature audit and the audit before the installer smoke"
 fi
 if [ -n "$pkg_upload_line" ] && [ -n "$pack_line" ] && [ -n "$publish_line" ] && [ "$pkg_upload_line" -gt "$pack_line" ] && [ "$pkg_upload_line" -lt "$publish_line" ]; then
-  pkg_block="$(sed -n "${pkg_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p' | grep -c '\*\.tgz')"
-  if [ "${pkg_block:-0}" -ge 1 ]; then
-    ok "exact packed archive retained before publish"
+  pkg_block="$(sed -n "${pkg_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p')"
+  if printf '%s\n' "$pkg_block" | grep -q '\*\.tgz' && printf '%s\n' "$pkg_block" | grep -q 'release-artifact.json'; then
+    ok "exact packed archive and metadata retained before publish"
   else
-    fail "package upload must retain the packed *.tgz itself"
+    fail "package upload path block must retain both *.tgz and release-artifact.json"
   fi
 else
-  fail "run artifact must retain the exact tarball and metadata before publishing"
+  fail "package artifact must upload after pack and before publish"
 fi
 gh_verify_line="$(grep -nE 'verify-attestation-with-gh\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
 if [ -n "$receipt_upload_line" ] && [ -n "$audit_line" ] && [ -n "$gh_verify_line" ] && [ "$receipt_upload_line" -gt "$audit_line" ] && [ "$receipt_upload_line" -lt "$gh_verify_line" ]; then
