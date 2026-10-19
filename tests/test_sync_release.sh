@@ -15,6 +15,9 @@ portable_hash() {
 winpath() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
 }
+nodepath() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
+}
 
 echo "A) sync-release --check exits 0 on current repository"
 node "$(winpath "$ROOT/scripts/sync-release.mjs")" --check >/tmp/sync_check.out 2>&1
@@ -792,7 +795,7 @@ const root = process.env.K_CONSUMER_ROOT;
 const version = process.argv[2];
 fs.writeFileSync(path.join(root, 'consumer-state.json'), JSON.stringify({ version, skillVersion: process.argv[3], channel: version.includes('-') ? 'next' : 'latest', sha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path.join(root, 'r'), encoding: 'utf8' }).trim(), name: `manhquy-flow-skill-${version}.tgz`, published: false }));
 EOF
-  K_CONSUMER_ROOT="$(winpath "$tmp")" K_LOCAL_ORIGIN="file://$tmp/origin.git" K_CONSUMER_HOLLOW="$consumer_case" NODE_OPTIONS="--require=\"$(winpath "$tmp/consumer-boundary.cjs")\"" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/consumer-$consumer_case.out" 2>&1
+  K_CONSUMER_ROOT="$(winpath "$tmp")" K_LOCAL_ORIGIN="file://$tmp/origin.git" K_CONSUMER_HOLLOW="$consumer_case" NODE_OPTIONS="--require=\"$(nodepath "$tmp/consumer-boundary.cjs")\"" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/consumer-$consumer_case.out" 2>&1
   consumer_rc=$?
   expected_rc=0
   [ "$consumer_case" = sound ] || expected_rc=1

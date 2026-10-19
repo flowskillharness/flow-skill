@@ -1,8 +1,8 @@
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { realpathSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { compareSemver, parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 import { evaluateRelease } from './release-eligibility.mjs';
 import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
@@ -194,7 +194,16 @@ export function verifyExistingTag(tagName, expectedSha, runGit = git) {
   if (local !== expectedSha || remote !== expectedSha) throw new Error(`existing tag ${tagName} does not resolve exactly to retained release SHA`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+function isCliEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href;
+  }
+}
+
+if (isCliEntry()) {
   const [command, arg1, arg2, arg3, arg4] = process.argv.slice(2);
   try {
     if (command === 'eligibility') checkRequest({ mode: process.env.MODE, sha: process.env.EXPECTED_SHA, version: process.env.EXPECTED_VERSION });

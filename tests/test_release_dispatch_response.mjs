@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { publisherRunIdFromDispatch, publisherWatchArgs, publisherWatchTimeoutError, verifyPublisherJobs } from '../scripts/release-dispatch-response.mjs';
-import { readFileSync, mkdtempSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, rmSync, existsSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,6 +20,17 @@ function clientFunction(name, nextName, globals) {
 test('CLI realpath fallback tolerates an absent caller path when imported', () => {
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', `process.argv[1] = '/nonexistent/flow-client-entry.mjs'; await import(${JSON.stringify(clientUrl.href)});`], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
+});
+
+test('release-workflow symlink entrypoint executes its CLI', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'flow-release-entry-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const source = new URL('../scripts/release-workflow.mjs', import.meta.url);
+  const alias = join(dir, 'release-workflow.mjs');
+  symlinkSync(source, alias);
+  const run = spawnSync(process.execPath, [alias, 'invalid-command'], { encoding: 'utf8' });
+  assert.equal(run.status, 1, run.stderr);
+  assert.match(run.stderr, /FAIL: unknown command: invalid-command/);
 });
 
 test('retained artifact directories use Node filesystem without an external mkdir', () => {
