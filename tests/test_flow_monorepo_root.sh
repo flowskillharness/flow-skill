@@ -162,6 +162,21 @@ grep -qxF '/.flow/' "$EX" && grep -qxF '/flow/.lock*' "$EX" || { echo "  FAIL [e
 test ! -e "$SB/frontend/subdir/.git/info/exclude" && echo "  ok   [nested CWD did not create a stray exclude file]" || { echo "  FAIL [exclude path was resolved against nested CWD]"; fail=$((fail+1)); }
 rm -rf "$SB"
 
+echo "K) relative FLOW_PROJECT_ROOT resolves git exclude from selected root, not CWD"
+SB="$(mktemp -d)"; mkdir -p "$SB/repo/flow" "$SB/repo/frontend"
+git -C "$SB/repo" init -q
+git -C "$SB/repo" config user.name ci
+git -C "$SB/repo" config user.email ci@localhost
+printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/repo/flow/00-idea.md"
+git -C "$SB/repo" add flow/00-idea.md && git -C "$SB/repo" commit -qm base
+(cd "$SB/repo/frontend" && FLOW_PROJECT_ROOT=.. FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" mode work >/dev/null 2>"$SB/relative-root-debug.log")
+EX="$(git_path_to_posix "$(git -C "$SB/repo" rev-parse --git-path info/exclude)")"
+case "$EX" in /*) ;; *) EX="$SB/repo/$EX" ;; esac
+grep -qxF '/.flow/' "$EX" || { echo "  FAIL [relative ROOT patterns missing from selected repository exclude]"; cat "$SB/relative-root-debug.log"; fail=$((fail+1)); }
+test ! -e "$SB/.git/info/exclude" && echo "  ok   [relative ROOT did not write above repository]" || { echo "  FAIL [relative ROOT wrote to joined-path escape]"; fail=$((fail+1)); }
+test ! -e "$SB/repo/frontend/.git/info/exclude" && echo "  ok   [relative ROOT did not write into CWD]" || { echo "  FAIL [relative ROOT was resolved against CWD]"; fail=$((fail+1)); }
+rm -rf "$SB"
+
 echo "J) nested Flow root with ignore metacharacters is matched literally"
 SB="$(mktemp -d)"
 git -C "$SB" init -q

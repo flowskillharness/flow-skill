@@ -167,16 +167,15 @@ _canonical_git_path() {
 }
 _ignore_run_state() {
   local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
-  raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
-  [ -n "$raw_ex" ] || return 0
-  case "$raw_ex" in /*|[A-Za-z]:[\\/]*) ;; *) raw_ex="$ROOT/$raw_ex" ;; esac
-  ex="$(_canonical_git_path "$raw_ex")" || return 0
   root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
   root_abs="$(_canonical_git_path "$root_abs")" || return 0
+  raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
+  [ -n "$raw_ex" ] || return 0
+  case "$raw_ex" in /*|[A-Za-z]:[\\/]*) ;; *) raw_ex="$root_abs/$raw_ex" ;; esac
+  ex="$(_canonical_git_path "$raw_ex")" || return 0
   if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
     printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
   fi
-  case "$ex" in /*) ;; *) ex="$root_abs/$ex" ;; esac
   ex_dir="$(dirname "$ex")"
   ex_base="$(basename "$ex")"
   mkdir -p "$ex_dir" 2>/dev/null || return 0
