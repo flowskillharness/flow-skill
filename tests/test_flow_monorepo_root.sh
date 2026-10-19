@@ -186,7 +186,7 @@ mkdir -p "$SB/frontend[1]/flow" "$SB/frontend1/.flow"
 printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend[1]/flow/00-idea.md"
 git -C "$SB" add 'frontend[1]/flow/00-idea.md'
 git -C "$SB" commit -qm base
-(cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" next >/dev/null 2>"$SB/ignore-debug.log")
+(cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && FLOW_DEBUG_IGNORE_RUN_STATE=1 bash "$RUN" mode work >/dev/null 2>"$SB/ignore-debug.log")
 EX="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
 case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
 if ! grep -qxF '/frontend\[1\]/.flow/' "$EX"; then
