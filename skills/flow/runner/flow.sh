@@ -169,6 +169,7 @@ _ignore_run_state() {
   local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
   raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$raw_ex" ] || return 0
+  case "$raw_ex" in /*|[A-Za-z]:[\\/]*) ;; *) raw_ex="$ROOT/$raw_ex" ;; esac
   ex="$(_canonical_git_path "$raw_ex")" || return 0
   root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
   root_abs="$(_canonical_git_path "$root_abs")" || return 0

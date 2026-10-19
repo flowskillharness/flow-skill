@@ -147,6 +147,21 @@ test ! -e "$SB-linked/.git/info/exclude" && echo "  ok   [no relative-path stray
 git -C "$SB-linked" worktree remove --force "$SB-linked"
 rm -rf "$SB"
 
+echo "J) explicit Flow root from a nested CWD writes the repository exclude"
+SB="$(mktemp -d)"
+git -C "$SB" init -q
+git -C "$SB" config user.name ci
+git -C "$SB" config user.email ci@localhost
+mkdir -p "$SB/flow" "$SB/frontend/subdir"
+printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/flow/00-idea.md"
+git -C "$SB" add flow/00-idea.md && git -C "$SB" commit -qm base
+(cd "$SB/frontend/subdir" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" mode work >/dev/null 2>&1)
+EX="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
+case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
+grep -qxF '/.flow/' "$EX" && grep -qxF '/flow/.lock*' "$EX" || { echo "  FAIL [explicit ROOT excludes missing from main git dir]"; fail=$((fail+1)); }
+test ! -e "$SB/frontend/subdir/.git/info/exclude" && echo "  ok   [nested CWD did not create a stray exclude file]" || { echo "  FAIL [exclude path was resolved against nested CWD]"; fail=$((fail+1)); }
+rm -rf "$SB"
+
 echo "J) nested Flow root with ignore metacharacters is matched literally"
 SB="$(mktemp -d)"
 git -C "$SB" init -q
