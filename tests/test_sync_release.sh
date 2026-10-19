@@ -632,7 +632,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { syncBuiltinESMExports } = require('node:module');
-const root = process.env.K_CONSUMER_ROOT;
+const root = fs.realpathSync(process.env.K_CONSUMER_ROOT);
 // Unrelated Node programs in the real preflight battery retain their own boundaries.
 if (!['sync-release.mjs', 'release-workflow.mjs', 'verify-attestation-with-gh.mjs', 'smoke.mjs'].includes(path.basename(process.argv[1] || ''))) return;
 const repo = path.join(root, 'r');
