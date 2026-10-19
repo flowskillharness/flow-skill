@@ -120,7 +120,13 @@ suffix" ;;
     trailing-lf) BAD_ROOT="$SB/frontend
 " ;;
   esac
-  mkdir -p "$BAD_ROOT/flow"
+  physical_root_available=1
+  if ! mkdir -p "$BAD_ROOT/flow" 2>/dev/null; then
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*) physical_root_available=0 ;;
+      *) echo 'FAIL: cannot create newline-root fixture'; exit 1 ;;
+    esac
+  fi
   cp "$HERE/../skills/flow/runner/flow.sh" "$SB/flow.sh"
   printf '# unrelated markdown\n' > "$SB/unrelated.md"
   before_ex="$(git -C "$SB" hash-object "$EX_PATH")"
@@ -134,8 +140,9 @@ suffix" ;;
   ck 1 "$([ -f "$BAD_ROOT/MODE" ] && echo 0 || echo 1)" "$newline_kind: mode refuses before writing state"
   out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$RUN" project-type library 2>&1 )"
   ck 1 "$([ -f "$BAD_ROOT/PROJECT_TYPE" ] && echo 0 || echo 1)" "$newline_kind: project type refuses before writing state"
+  if [ "$physical_root_available" = 1 ]; then
   ec=0
-  out="$( cd "$BAD_ROOT" && unset FLOW_PROJECT_ROOT; HOME="$TEST_HOME" bash "$RUN" next 2>&1 )" || ec=$?
+  out="$( cd "$BAD_ROOT" && unset FLOW_PROJECT_ROOT && HOME="$TEST_HOME" bash "$RUN" next 2>&1 )" || ec=$?
   ck 1 "$ec" "$newline_kind: raw CWD is rejected before terminal LF stripping"
   has "$out" 'root path contains CR/LF' "$newline_kind: CWD refusal is loud"
   for command in status assess; do
@@ -144,6 +151,9 @@ suffix" ;;
     ck 1 "$ec" "$newline_kind: $command rejects unsafe physical root behind relative alias"
     has "$out" 'root path contains CR/LF' "$newline_kind: $command physical alias refusal is loud"
   done
+  else
+    echo "  skip [$newline_kind: filesystem rejects CR/LF directory names; explicit-root and direct-writer checks still run]"
+  fi
   ck 1 "$([ -e "$BAD_ROOT/flow/00-idea.md" ] || [ -e "$BAD_ROOT/flow/.lock" ] || [ -e "$BAD_ROOT/flow/.lock.d" ] || [ -e "$BAD_ROOT/flow/.lock.claim" ]; echo $?)" "$newline_kind: no plan or lock writes"
   ck 1 "$([ -e "$BAD_ROOT/.flow" ]; echo $?)" "$newline_kind: no telemetry, workspace or eval directory"
   ck 1 "$([ -e "$TEST_HOME/.claude/flow/usage.jsonl" ]; echo $?)" "$newline_kind: no global telemetry"
