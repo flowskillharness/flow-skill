@@ -89,11 +89,49 @@ case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
 [ "$(grep -cxF '/.flow/' "$EX")" -eq 1 ] && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" || { echo "  FAIL [info/exclude missing or concatenated patterns]"; fail=$((fail+1)); }
 git -C "$SB" config user.name ci
 git -C "$SB" config user.email ci@localhost
-git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"
-ck 0 "$(git -C "$SB" ls-files | grep -cE '^\.flow/|^flow/\.lock|^\.gitignore$')" "committed tree has no .flow/, no flow/.lock*, no minted .gitignore"
-ck 0 "$([ -f "$SB/.flow/events.jsonl" ] && echo 0 || echo 1)" "telemetry still written to disk (ignored, not suppressed)"
+if git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"; then
+  echo "  ok   [novice add and commit succeeded]"
+else
+  echo "  FAIL [novice add and commit succeeded]"
+  fail=$((fail+1))
+fi
+COMMITTED_TREE="$(git -C "$SB" ls-tree -r --name-only HEAD 2>/dev/null || true)"
+ck 0 "$(printf '%s\n' "$COMMITTED_TREE" | grep -cE '^\.flow/|^flow/\.lock|^\.gitignore$' || true)" "committed tree has no .flow/, no flow/.lock*, no minted .gitignore"
+ck 1 "$(printf '%s\n' "$COMMITTED_TREE" | grep -cx 'flow/00-idea.md' || true)" "planned stage-00 artifact remains in committed tree"
+ck 0 "$([ -f "$SB/.flow/cycle_id" ] && echo 0 || echo 1)" "run-state still written to disk (telemetry policy remains intact)"
 ( cd "$SB" && test ! -f .gitignore ) && echo "  ok   [no .gitignore created in git repos]" || { echo "  FAIL [.gitignore should not be created]"; fail=$((fail+1)); }
-rm -rf "$SB"
+
+echo "G2) newline-bearing Flow root cannot inject or append git ignore patterns"
+for newline_kind in lf crlf trailing-lf; do
+  SB="$(mktemp -d)"
+  ( cd "$SB" && git init -q && git config user.name ci && git config user.email ci@localhost && git commit -qm base --allow-empty )
+  EX_REL="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
+  case "$EX_REL" in /*) EX_PATH="$EX_REL" ;; *) EX_PATH="$SB/$EX_REL" ;; esac
+  printf '# sentinel\n' > "$EX_PATH"
+  case "$newline_kind" in
+    lf) BAD_ROOT="$SB/frontend
+*.md
+suffix" ;;
+    crlf) BAD_ROOT="$(printf '%s/frontend\r\n*.md\r\nsuffix' "$SB")" ;;
+    trailing-lf) BAD_ROOT="$SB/frontend
+" ;;
+  esac
+  mkdir -p "$BAD_ROOT/flow"
+  cp "$HERE/../skills/flow/runner/flow.sh" "$SB/flow.sh"
+  printf '# unrelated markdown\n' > "$SB/unrelated.md"
+  before_ex="$(git -C "$SB" hash-object "$EX_PATH")"
+  out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$SB/flow.sh" next 2>&1 )"
+  after_ex="$(git -C "$SB" hash-object "$EX_PATH")"
+  has "$out" 'root path contains CR/LF' "$newline_kind: names unsafe root refusal"
+  ck "$before_ex" "$after_ex" "$newline_kind: exclude remains byte-identical"
+  out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$RUN" mode work 2>&1 )"
+  ck 1 "$([ -f "$BAD_ROOT/MODE" ] && echo 0 || echo 1)" "$newline_kind: mode refuses before writing state"
+  out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$RUN" project-type library 2>&1 )"
+  ck 1 "$([ -f "$BAD_ROOT/PROJECT_TYPE" ] && echo 0 || echo 1)" "$newline_kind: project type refuses before writing state"
+  ( cd "$SB" && git -c core.excludesFile=/dev/null check-ignore -q unrelated.md ); ck 1 "$?" "$newline_kind: unrelated markdown remains visible"
+  ck 0 "$(git -C "$SB" ls-files --others --exclude-standard | grep -cE '(^|/)\.flow/|(^|/)\.lock' || true)" "$newline_kind: no Flow run-state files were created"
+  rm -rf "$SB"
+done
 
 echo "E) DECOY: ancestor has a bare flow/ dir but NO stage artifact -> must NOT adopt (real-signature guard)"
 SB="$(mktemp -d)"; mkdir -p "$SB/flow" "$SB/deep/sub"   # flow/ exists but is EMPTY (no 00-idea.md, no .flow/, no cards)

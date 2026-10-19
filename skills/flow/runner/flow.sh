@@ -29,10 +29,19 @@ GLOBAL_KB_DIR="${FLOW_GLOBAL_KB:-${HOME:-}/.claude/flow/playbooks}"   # cross-pr
 # a dir holding only .flow/ run-state was itself used as a root and is likewise left alone.
 FLOW_ROOT_ADOPTED=""
 FLOW_ROOT_NEW=""
+_reject_unsafe_root_newlines() {
+  case "$1" in *$'\n'*|*$'\r'*)
+    printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+    return 1 ;;
+  esac
+  return 0
+}
 if [ -n "${FLOW_PROJECT_ROOT:-}" ]; then
   ROOT="$FLOW_PROJECT_ROOT"
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
 else
   ROOT="$PWD"
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
   if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ] && [ ! -d "$PWD/.flow" ]; then
     _rd="$PWD"; _rn=0
     while [ "$_rn" -lt 24 ]; do
@@ -138,6 +147,11 @@ _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${
 # previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
 _escape_gitignore_prefix() {
   local value="$1" escaped='' char
+  case "$value" in
+    *$'\n'*|*$'\r'*)
+      printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+      return 1 ;;
+  esac
   while [ -n "$value" ]; do
     char="${value:0:1}"
     value="${value:1}"
@@ -176,11 +190,6 @@ _ignore_run_state() {
   if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
     printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
   fi
-  ex_dir="$(dirname "$ex")"
-  ex_base="$(basename "$ex")"
-  mkdir -p "$ex_dir" 2>/dev/null || return 0
-  ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
-  ex="$ex_dir/$ex_base"
   raw_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
   git_top="$(_canonical_git_path "$raw_top")" || return 0
   git_top="$(cd "$git_top" 2>/dev/null && pwd -P)" || return 0
@@ -192,7 +201,17 @@ _ignore_run_state() {
       *) [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] root escapes git_top: ROOT=%s root_abs=%s git_top=%s raw_top=%s\n' "$ROOT" "$root_abs" "$git_top" "$raw_top" >&2; return 0 ;;
     esac
   fi
-  escaped_prefix="$(_escape_gitignore_prefix "$root_prefix")"
+  case "$root_prefix" in
+    *$'\n'*|*$'\r'*)
+      printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+      return 1 ;;
+  esac
+  escaped_prefix="$(_escape_gitignore_prefix "$root_prefix")" || return 1
+  ex_dir="$(dirname "$ex")"
+  ex_base="$(basename "$ex")"
+  mkdir -p "$ex_dir" 2>/dev/null || return 0
+  ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
+  ex="$ex_dir/$ex_base"
   if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
     printf '[flow ignore] normalized ROOT=%s root_abs=%s raw_top=%s git_top=%s root_prefix=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_top" "$git_top" "$root_prefix" "$ex" >&2
   fi
@@ -207,6 +226,7 @@ _ignore_run_state() {
     printf '%s\n' "$pat" >> "$ex" || return 0
     [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] appended=%s\n' "$pat" >&2
   done
+  return 0
 }
 
 # Concurrency lock: seconds a lock stays "fresh"; older locks are stale and auto-reclaimed.
@@ -716,8 +736,8 @@ _read_lock() {
   return 0
 }
 _write_lock() { # $1 = cmd label
+  _ignore_run_state || { echo "FAIL: cannot safely exclude Flow run-state for this root path; no lock change made." >&2; return 1; }
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
-  _ignore_run_state    # mutating verbs mint flow/.lock* machine state: cover it at the choke point
   printf '%s|%s|%s|%s|%s\n' "$(_now)" "$(flow_lock_owner)" "$$" "$(uname -n 2>/dev/null || echo host)" "${1:-?}" \
     > "$LOCK_FILE" 2>/dev/null || true
 }
@@ -740,6 +760,7 @@ _release_claim() {
 # Guard a MUTATING command. 0 = lock taken/refreshed (proceed); 1 = refused (caller aborts).
 lock_acquire() { # $1 = cmd label
   local me age; me="$(flow_lock_owner)"
+  _ignore_run_state || { echo "FAIL: cannot safely exclude Flow run-state for this root path; no lock or plan changes made." >&2; return 1; }
   # Ensure the lock's PARENT dir exists so the atomic claim test-and-set below can
   # succeed on a brand-new project (flow/ may not exist yet at stage-00 unlock / first run).
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
@@ -2024,7 +2045,7 @@ cmd_mode() {
     return 0
   fi
   case "$arg" in
-    teach|work) printf '%s\n' "$arg" > "$MODE_FILE"; _ignore_run_state; echo "PASS: mode set to '$arg'."; return 0 ;;
+    teach|work) _ignore_run_state || return 1; printf '%s\n' "$arg" > "$MODE_FILE"; _ignore_run_state; echo "PASS: mode set to '$arg'."; return 0 ;;
     *) echo "FAIL: mode must be 'teach' or 'work'."; return 1 ;;
   esac
 }
@@ -2052,6 +2073,7 @@ cmd_project_type() {
           return 1
         fi
       fi
+      _ignore_run_state || return 1
       printf '%s\n' "$arg" > "$PROJECT_TYPE_FILE"; _ignore_run_state
       echo "PASS: project type set to '$arg'."
       echo "  done-evidence now means: $(done_def_for_type "$arg")"
@@ -3944,8 +3966,8 @@ _ws_default_vendor() { # best-effort from the engine tier / harness session env;
 # One physical line per event. Fixed field order (extractors below rely on it). Returns 1 if the
 # append fails so add/remove can WARN (git stays truth) instead of pretending it persisted.
 _ws_record_append() { # path branch vendor sid card task owned port status
+  _ignore_run_state || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
-  _ignore_run_state
   printf '{"worktree_path":"%s","branch":"%s","vendor":"%s","agent_session_id":"%s","card_id":"%s","task_label":"%s","owned_files_glob":"%s","port_offset":%s,"created_at":%s,"status":"%s"}\n' \
     "$(_json_str "$1")" "$(_json_str "$2")" "$(_json_str "$3")" "$(_json_str "$4")" "$(_json_str "$5")" \
     "$(_json_str "$6")" "$(_json_str "$7")" "$8" "$(_now)" "$9" >> "$WS_FILE" 2>/dev/null || return 1
@@ -5598,7 +5620,7 @@ function cmd_eval_routing { # same arg shape as cmd_eval, called only when --sta
   batch_cliv="$(_eval_cli_version)"; batch_flowv="$(_flow_version)"; batch_rulessha="$(_eval_routing_rules_sha)"
   echo "routing-eval: batch $nonce (N=$n per fixture, timeout=${timeout}s)"
 
-  _ignore_run_state
+  _ignore_run_state || return 1
   _eval_routing_emit_batch_marker "$nonce" start "$n_matched"
   trap 'rm -rf "${rundir:-}" 2>/dev/null; exit 130' INT TERM
 
@@ -5899,7 +5921,7 @@ function cmd_eval_converge { # same arg shape as cmd_eval, called only when --st
   batch_cliv="$(_eval_cli_version)"; batch_flowv="$(_flow_version)"; batch_rulessha="$(_eval_converge_rules_sha)"
   echo "converge-eval: batch $nonce (N=$n per fixture, timeout=${timeout}s)"
 
-  _ignore_run_state
+  _ignore_run_state || return 1
   _eval_converge_emit_batch_marker "$nonce" start "$n_matched"
   trap 'rm -rf "${rundir:-}" 2>/dev/null; exit 130' INT TERM
 
@@ -6171,7 +6193,7 @@ function cmd_eval {
   # cwd paths, plugin paths from stripped-but-still-envelope-adjacent output) untracked but not
   # ignored -> one `git add .` away from a remote. Idempotent - the helper is a no-op after the
   # first write.
-  _ignore_run_state
+  _ignore_run_state || return 1
 
   # Pre-batch prune of the raw-capture dir - keeps disk bounded but respects concurrent runs
   # (see helper's TTL guard). Runs BEFORE the new batch's own raw dir is created, so this batch's
@@ -6740,8 +6762,8 @@ _is_ephemeral() {
 
 # Build + append one event. $1 = exit code. Wrapped by the caller in { } 2>/dev/null || true.
 _log_event() {
+  [ "${FLOW_IGNORE_UNSAFE:-0}" = 1 ] && return 0
   _log_disabled && return 0
-  _ensure_cycle
   local ec="${1:-0}" now ts dur gp ro ver proj host cyc args eph gfr
   now="$(_now)"; ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo '')"
   dur=$(( now - ${FLOW_LOG_START:-$now} )); [ "$dur" -lt 0 ] && dur=0
@@ -6750,10 +6772,10 @@ _log_event() {
   ver="$(_flow_version)"; proj="$(basename "$ROOT" 2>/dev/null || echo '?')"
   host="$(uname -n 2>/dev/null | cut -c1-16 || echo host)"
   cyc="$(cat "$CYCLE_FILE" 2>/dev/null | tr -d '\r\n' || echo '')"
-  args="$(_mask_secrets "$FLOW_LOG_ARGS")"
-  eph="$(_is_ephemeral)"
   # bound the reason so the compact global line stays small (atomic-append friendly) even when
   # a future gate emits a long reason string.
+  args="$(_mask_secrets "$FLOW_LOG_ARGS")"
+  eph="$(_is_ephemeral)"
   gfr="$(printf '%s' "${FLOW_LAST_GATE_FAIL:-}" | cut -c1-120)"
   # Card dwell fields for the compact GLOBAL row: gated on the verb literally being `card`
   # (not merely FLOW_LOG_CARD being set, which `check`/`loop-prep`/etc also do) - only
