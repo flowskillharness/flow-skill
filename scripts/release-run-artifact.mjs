@@ -3,9 +3,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
 
+export function artifactTarballPath(packageDirectory, name) {
+  if (typeof name !== 'string' || !name.trim() || name === '.' || name === '..' || /[/\\\0]/.test(name)) throw new Error('artifact name must be a non-empty basename');
+  return join(packageDirectory, name);
+}
+
 export function verifyRunArtifact(packageDirectory, evidenceDirectory, { runId, runAttempt, version, sha }) {
   const metadata = JSON.parse(readFileSync(join(packageDirectory, 'release-artifact.json'), 'utf8'));
-  const tarball = join(packageDirectory, metadata.name);
+  const tarball = artifactTarballPath(packageDirectory, metadata.name);
   const integrity = `sha512-${createHash('sha512').update(readFileSync(tarball)).digest('base64')}`;
   if (metadata.version !== version || metadata.sha !== sha || metadata.integrity !== integrity || String(metadata.workflowRunId) !== String(runId) || Number(metadata.workflowRunAttempt) !== runAttempt) {
     throw new Error('downloaded publisher artifact does not match exact release SHA/version/run attempt');

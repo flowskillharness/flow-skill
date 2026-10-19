@@ -51,9 +51,9 @@ function auditOnce({ packageName, version, integrity, repository, workflowPath, 
   }
 }
 
-function retryable(error) {
+export function retryable(error) {
   const text = `${error.code || ''} ${error.stderr || ''} ${error.message || ''}`;
-  return /E404|E429|HTTP 404|HTTP 429|HTTP 500|HTTP 502|HTTP 503|HTTP 504/.test(text);
+  return /\bE(?:404|429|5\d\d)\b|HTTP (?:404|429|5\d\d)\b|\b(?:ETIMEDOUT|ESOCKETTIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND)\b|timed? out|curl: \((?:5|6|7|18|28|35|52|55|56)\)/i.test(text);
 }
 
 export function npmAttestationUrl(packageName, version) {
@@ -62,13 +62,20 @@ export function npmAttestationUrl(packageName, version) {
     : encodeURIComponent(packageName);
   return `https://registry.npmjs.org/-/npm/v1/attestations/${packageRef}@${version}`;
 }
-export function waitForSlsaBundle({ packageName, version }) {
+const sleep = delay => { if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay); };
+export function waitForSlsaBundle({ packageName, version }, { run = execFileSync, wait = sleep } = {}) {
   const url = npmAttestationUrl(packageName, version);
   const waits = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
   let lastStatus = 0;
   for (const delay of waits) {
-    if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
-    const result = execFileSync('curl', ['-sS', '-L', '--max-time', '15', '-H', 'Accept: application/json', '-H', 'Cache-Control: no-cache', '-w', '\n%{http_code}', url], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    wait(delay);
+    let result;
+    try {
+      result = run('curl', ['-sS', '-L', '--max-time', '15', '-H', 'Accept: application/json', '-H', 'Cache-Control: no-cache', '-w', '\n%{http_code}', url], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      if (!retryable(error)) throw error;
+      continue;
+    }
     const match = result.match(/\n(\d{3})$/);
     if (!match) throw new Error('npm attestation endpoint returned no HTTP status');
     lastStatus = Number(match[1]);
@@ -77,19 +84,20 @@ export function waitForSlsaBundle({ packageName, version }) {
       let body;
       try { body = JSON.parse(bodyText); } catch { throw new Error('npm attestation endpoint returned invalid JSON'); }
       if (body.attestations?.some(item => item.predicateType === SLSA_V1 && item.bundle)) return;
-    } else if (![404, 429, 500, 502, 503, 504].includes(lastStatus)) throw new Error(`npm attestation endpoint failed non-retryably: HTTP ${lastStatus}`);
+    } else if (![404, 429].includes(lastStatus) && (lastStatus < 500 || lastStatus > 599)) throw new Error(`npm attestation endpoint failed non-retryably: HTTP ${lastStatus}`);
   }
   throw new Error(`npm SLSA attestation not available after bounded propagation retries (last HTTP ${lastStatus})`);
 }
 
-export function runTargetAudit(options) {
+export function runTargetAudit(options, { waitForBundle = waitForSlsaBundle, audit = auditOnce, wait = sleep } = {}) {
+  // Propagation has its own finite budget; never restart it after exhaustion.
+  waitForBundle({ packageName: options.packageName, version: options.version });
   const delays = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
   let lastError;
   for (let attempt = 0; attempt < delays.length; attempt += 1) {
-    if (delays[attempt]) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delays[attempt]);
+    wait(delays[attempt]);
     try {
-      waitForSlsaBundle({ packageName: options.packageName, version: options.version });
-      const result = auditOnce(options);
+      const result = audit(options);
       if (options.reportPath) writeFileSync(options.reportPath, JSON.stringify(result.report));
       return result;
     } catch (error) {

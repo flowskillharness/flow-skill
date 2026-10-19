@@ -29,7 +29,7 @@ export function verifyNpmVerifiedOutput(report, { packageName, version, integrit
   const digest = digestHex(integrity);
   const statements = matches[0].attestationBundles?.map(bundle => ({ predicateType: bundle.predicateType, statement: decodeStatement(bundle) })) || [];
   const slsa = statements.filter(item => item.predicateType === SLSA_V1 && item.statement?.predicateType === SLSA_V1);
-  const npm = statements.filter(item => item.predicateType === PUBLISH_V01);
+  const npm = statements.filter(item => item.predicateType === PUBLISH_V01 && item.statement?.predicateType === PUBLISH_V01);
   if (slsa.length !== 1 || npm.length !== 1) throw new Error('expected exactly one verified npm publish attestation and one SLSA v1 provenance statement');
   const slsaStatement = slsa[0].statement;
   const subject = slsaStatement.subject?.find(item => item.name === `pkg:npm/${encodeURIComponent(packageName).replace(/%2F/gi, '/') }@${version}` || item.name === `${packageName}@${version}`);

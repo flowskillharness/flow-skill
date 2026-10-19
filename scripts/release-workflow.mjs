@@ -7,6 +7,7 @@ import { compareSemver, parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 import { evaluateRelease } from './release-eligibility.mjs';
 import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
 import { verifyWithGhAttestation } from './verify-attestation-with-gh.mjs';
+import { artifactTarballPath } from './release-run-artifact.mjs';
 export const RELEASE_CONSTANTS = Object.freeze({ repository: 'manhquydev/flow-skill', ciWorkflowId: 295237428, ciWorkflowPath: '.github/workflows/ci.yml', publisherWorkflowPath: '.github/workflows/publish-npm-wrapper.yml', package: '@manhquy/flow-skill' });
 const { ciWorkflowId: CI_WORKFLOW_ID, ciWorkflowPath: CI_WORKFLOW_PATH, publisherWorkflowPath: PUBLISHER_PATH, package: PACKAGE } = RELEASE_CONSTANTS;
 const REPO = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
@@ -30,8 +31,8 @@ function gh(path) { return JSON.parse(execFileSync('gh', ['api', path], { encodi
 function git(args) { return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim(); }
 function pkg() { return JSON.parse(readFileSync(join(repoRoot, 'npm-wrapper/package.json'), 'utf8')); }
 function output(values) { if (process.env.GITHUB_OUTPUT) writeFileSync(process.env.GITHUB_OUTPUT, `${Object.entries(values).map(([k, v]) => `${k}=${v}`).join('\n')}\n`, { flag: 'a' }); }
-function apiArray(path, key) {
-  const result = gh(path);
+function apiArray(path, key, request = gh) {
+  const result = request(path);
   const values = Array.isArray(result) ? result : result?.[key];
   if (!Array.isArray(values)) throw new Error(`API response has no complete ${key || 'array'}: ${path}`);
   if (!Array.isArray(result) && Number.isInteger(result.total_count) && values.length < result.total_count) throw new Error(`API response is paginated/incomplete: ${path}`);
@@ -71,17 +72,18 @@ export function selectChannelBaseline(channel, distTags) {
   if (channel === 'next') return distTags.next || distTags.latest || null;
   return null;
 }
-function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 'eligibility' : 'dry-run', publisherRunId = null, publisherRunAttempt = null, artifact = null, prepublishMasterSha = null, prepublishRegistry = null }) {
+const workflowIO = { gh, git, pkg, skillVersion, changelogHeading, npmView, readFileSync, verifyWithGhAttestation };
+export function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 'eligibility' : 'dry-run', publisherRunId = null, publisherRunAttempt = null, artifact = null, prepublishMasterSha = null, prepublishRegistry = null }, { gh, git, pkg, skillVersion, changelogHeading, npmView, readFileSync } = workflowIO) {
   if (process.env.GITHUB_REF !== 'refs/heads/master') throw new Error('publisher dispatch ref must be master');
-  if (!/^\d+$/.test(process.env.ACTOR_ID || '') || !/^\d+$/.test(process.env.EXPECTED_ACTOR_ID || '') || process.env.ACTOR_ID !== process.env.EXPECTED_ACTOR_ID) throw new Error('workflow actor ID does not match the existing authenticated release.sh caller');
+  if (!/^\d+$/.test(process.env.ACTOR_ID || '') || !/^\d+$/.test(process.env.EXPECTED_ACTOR_ID || '') || process.env.ACTOR_ID !== process.env.EXPECTED_ACTOR_ID) throw new Error('workflow actor ID does not match the dispatch caller correlation ID');
   if (mode === 'publish' && process.env.FLOW_AUTOPUBLISH_ENABLED !== 'true') throw new Error('live publishing is disabled until controller activation');
   if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('expected SHA must be a full Git object ID');
-  if (!/^[0-9a-f-]{36}$/.test(process.env.DISPATCH_ID || '')) throw new Error('dispatch ID must be a UUID supplied by release.sh');
+  if (!/^[0-9a-f-]{36}$/.test(process.env.DISPATCH_ID || '')) throw new Error('dispatch correlation ID must be a UUID');
   const currentSha = gh(`repos/${REPO}/git/ref/heads/master`).object?.sha;
   if (currentSha !== sha || git(['rev-parse', 'HEAD']) !== sha) throw new Error('expected SHA is not current remote and checked-out master');
   const manifest = pkg();
   if (manifest.name !== PACKAGE || manifest.version !== version || !parseSemver(version)) throw new Error('expected package identity/version differs from checked-out manifest');
-  const prs = apiArray(`repos/${REPO}/commits/${sha}/pulls?per_page=100`, 'pulls');
+  const prs = apiArray(`repos/${REPO}/commits/${sha}/pulls?per_page=100`, 'pulls', gh);
   const pr = selectMergedMasterPr(prs, sha, REPO);
   if (!pr) throw new Error('exact SHA has no merged PR targeting this repository master');
   const skill = skillVersion();
@@ -111,7 +113,7 @@ function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 'eligib
   const channel = intent.channel;
   const tags = npmView(PACKAGE, ['dist-tags']);
   const latestVersion = selectChannelBaseline(channel, tags.value);
-  requireUnpublishedVersion(version);
+  requireUnpublishedVersion(version, npmView);
   const decision = evaluateRelease({
     mode: 'workflow_run', phase,
     expected: { workflowId: CI_WORKFLOW_ID, workflowPath: CI_WORKFLOW_PATH, publisherWorkflowPath: PUBLISHER_PATH, masterSha: sha, repository: REPO },
@@ -120,7 +122,7 @@ function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 'eligib
     release: { intent: true, npmVersion: version, skillVersion: intent.skill_version, channel, npmChangelog: true, skillChangelog: intent.skill_version === null ? false : true },
     registry: prepublishRegistry || { state: 'absent', error: 'E404', channelVersion: latestVersion },
     currentMasterSha: currentSha, autopublishEnabled: process.env.FLOW_AUTOPUBLISH_ENABLED === 'true',
-    publisherRunId, publisherRunAttempt, artifact, prepublishMasterSha,
+    publisherRunId, publisherRunAttempt, artifact, prepublishMasterSha, prepublishRegistryState: prepublishRegistry?.state,
   });
   if (decision.decision === 'dry-run') {
     console.log(JSON.stringify({ ...decision, sha, version, skillVersion: skill, ciRun: run.id, attempt: liveRun.run_attempt }, null, 2));
@@ -148,7 +150,7 @@ function recordArtifact(directory, version) {
 }
 function verify(version, expectedSha, metadataPath, bundlePath) {
   const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
-  const bytes = readFileSync(join(dirname(metadataPath), metadata.name));
+  const bytes = readFileSync(artifactTarballPath(dirname(metadataPath), metadata.name));
   const localIntegrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
   if (metadata.version !== version || metadata.sha !== expectedSha || metadata.integrity !== localIntegrity || metadata.workflowRunId !== process.env.GITHUB_RUN_ID || metadata.workflowRunAttempt !== process.env.GITHUB_RUN_ATTEMPT) throw new Error('retained artifact identity or SHA-512/run binding mismatch');
   const report = JSON.parse(readFileSync(bundlePath, 'utf8'));
@@ -161,39 +163,43 @@ function verify(version, expectedSha, metadataPath, bundlePath) {
   if (!tags.present || tags.value?.[channel] !== version) throw new Error(`published ${channel} dist-tag does not point to ${version}`);
   console.log(JSON.stringify({ decision: 'published-artifact-verified', ...verified }));
 }
-function reconcile(packageDirectory, evidenceDirectory, expectedSha, expectedRunId, expectedRunAttempt) {
+export function reconcile(packageDirectory, evidenceDirectory, expectedSha, expectedRunId, expectedRunAttempt, { gh, git, npmView, readFileSync, verifyWithGhAttestation } = workflowIO) {
   const metadataPath = join(packageDirectory, 'release-artifact.json');
   const metadata = JSON.parse(readFileSync(metadataPath, 'utf8'));
-  const bytes = readFileSync(join(packageDirectory, metadata.name));
+  const bytes = readFileSync(artifactTarballPath(packageDirectory, metadata.name));
   const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
   const version = metadata.version;
-  const manifest = JSON.parse(readFileSync('npm-wrapper/package.json', 'utf8'));
-  if (manifest.name !== PACKAGE || !parseSemver(version) || metadata.sha !== expectedSha || metadata.integrity !== integrity || String(metadata.workflowRunId) !== String(expectedRunId) || Number(metadata.workflowRunAttempt) !== Number(expectedRunAttempt)) throw new Error('retained artifact does not match exact package/version/SHA/publisher run attempt');
+  const manifest = JSON.parse(git(['show', `${expectedSha}:npm-wrapper/package.json`]));
+  if (manifest.name !== PACKAGE || manifest.version !== version || !parseSemver(version) || metadata.sha !== expectedSha || metadata.integrity !== integrity || String(metadata.workflowRunId) !== String(expectedRunId) || Number(metadata.workflowRunAttempt) !== Number(expectedRunAttempt)) throw new Error('retained artifact does not match exact package/version/SHA/publisher run attempt');
   const report = JSON.parse(readFileSync(join(evidenceDirectory, 'npm-audit-verified.json'), 'utf8'));
   const verified = verifyNpmVerifiedOutput(report, { packageName: PACKAGE, version, integrity, repository: `https://github.com/${REPO}`, workflowPath: PUBLISHER_PATH, ref: 'refs/heads/master', commit: expectedSha });
-  verifyWithGhAttestation({ artifact: join(packageDirectory, metadata.name), bundle: join(evidenceDirectory, 'slsa-bundle.json'), owner: 'manhquydev', repository: 'flow-skill', workflow: PUBLISHER_PATH, sourceRef: 'refs/heads/master', sourceSha: expectedSha });
+  verifyWithGhAttestation({ artifact: artifactTarballPath(packageDirectory, metadata.name), bundle: join(evidenceDirectory, 'slsa-bundle.json'), owner: 'manhquydev', repository: 'flow-skill', workflow: PUBLISHER_PATH, sourceRef: 'refs/heads/master', sourceSha: expectedSha });
   const channel = parseSemver(version).prerelease ? 'next' : 'latest';
   const registryVersion = npmView(`${PACKAGE}@${version}`, ['version']);
   const registryIntegrity = npmView(`${PACKAGE}@${version}`, ['dist.integrity']);
   const distTags = npmView(PACKAGE, ['dist-tags']);
   if (!registryVersion.present || registryVersion.value !== version || !registryIntegrity.present || registryIntegrity.value !== integrity || !distTags.present || distTags.value?.[channel] !== version) throw new Error('registry version, immutable integrity or channel does not match retained artifact');
-  const intent = JSON.parse(readFileSync(join(repoRoot, 'docs/release-intent.json'), 'utf8'));
+  const intent = JSON.parse(git(['show', `${expectedSha}:docs/release-intent.json`]));
+  if (intent.schema_version !== 1 || intent.intent !== true || intent.npm_version !== version || (intent.skill_version !== null && !parseSemver(intent.skill_version))) throw new Error('retained release intent does not match exact package/version');
   const npmTag = `npm@${version}`;
-  verifyExistingTag(npmTag, expectedSha);
+  verifyExistingTag(npmTag, expectedSha, git);
   let skillTag = null;
   if (intent.skill_version !== null) {
     skillTag = `v${intent.skill_version}`;
-    verifyExistingTag(skillTag, expectedSha);
-    const release = JSON.parse(execFileSync('gh', ['release', 'view', skillTag, '--json', 'tagName,targetCommitish'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 8 * 1024 * 1024 }));
-    if (release.tagName !== skillTag || release.targetCommitish !== expectedSha) throw new Error('GitHub Release target does not match retained release SHA');
+    verifyExistingTag(skillTag, expectedSha, git);
+    const release = gh(`repos/${REPO}/releases/tags/${skillTag}`);
+    // target_commitish may be a branch hint; the verified remote tag is authoritative.
+    if (release.tag_name !== skillTag) throw new Error('GitHub Release tag does not match retained release tag');
   }
   console.log(JSON.stringify({ decision: 'published-artifact-fully-reconciled', npmTag, skillTag, version, channel, sha: expectedSha, runId: Number(expectedRunId), runAttempt: Number(expectedRunAttempt), verified }, null, 2));
 }
 
-function verifyExistingTag(tagName, expectedSha) {
-  const local = execFileSync('git', ['rev-parse', `${tagName}^{commit}`], { cwd: repoRoot, encoding: 'utf8' }).trim();
-  const remoteOut = execFileSync('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tagName}`], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-  const remote = remoteOut.split(/\s+/)[0];
+export function verifyExistingTag(tagName, expectedSha, runGit = git) {
+  const local = runGit(['rev-parse', `${tagName}^{commit}`]);
+  const ref = `refs/tags/${tagName}`;
+  const remoteOut = runGit(['ls-remote', '--tags', 'origin', ref, `${ref}^{}`]);
+  const refs = remoteOut.split('\n').filter(Boolean).map(line => line.split(/\s+/));
+  const remote = refs.find(([, name]) => name === `${ref}^{}`)?.[0] || refs.find(([, name]) => name === ref)?.[0];
   if (local !== expectedSha || remote !== expectedSha) throw new Error(`existing tag ${tagName} does not resolve exactly to retained release SHA`);
 }
 
@@ -204,7 +210,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     else if (command === 'record-artifact') recordArtifact(arg1, arg2);
     else if (command === 'prepublish') {
       const metadata = JSON.parse(readFileSync(join(process.env.ARTIFACT_DIR, 'release-artifact.json'), 'utf8'));
-      const bytes = readFileSync(join(process.env.ARTIFACT_DIR, metadata.name));
+      const bytes = readFileSync(artifactTarballPath(process.env.ARTIFACT_DIR, metadata.name));
       const integrity = `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
       if (integrity !== metadata.integrity || metadata.sha !== process.env.EXPECTED_SHA || metadata.version !== process.env.EXPECTED_VERSION || metadata.workflowRunId !== process.env.GITHUB_RUN_ID || metadata.workflowRunAttempt !== process.env.GITHUB_RUN_ATTEMPT || process.env.FLOW_AUTOPUBLISH_ENABLED !== 'true') throw new Error('artifact identity, bytes, run or default-off gate mismatch');
       const existing = npmView(`${PACKAGE}@${process.env.EXPECTED_VERSION}`, ['version']);

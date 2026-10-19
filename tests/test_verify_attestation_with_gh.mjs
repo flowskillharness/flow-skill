@@ -23,6 +23,7 @@ test('verifies exact repo, workflow, ref and commit with supported gh', () => {
     calls.push(args);
     if (args[0] === '--version') return 'gh version 2.68.0 (2026-01-01)';
     if (args.at(-1) === '--help') return requiredHelp;
+    assert.deepEqual(args, ['attestation', 'verify', expected.artifact, '--bundle', expected.bundle, '--digest-alg', 'sha512', '--repo', 'manhquydev/flow-skill', '--signer-workflow', 'manhquydev/flow-skill/.github/workflows/publish-npm-wrapper.yml', '--source-ref', expected.sourceRef, '--source-digest', expected.sourceSha, '--format', 'json']);
     return JSON.stringify([statement]);
   };
   assert.deepEqual(verifyWithGhAttestation({ ...expected, run }), [statement]);
@@ -33,9 +34,14 @@ test('fails closed on old gh, missing options, empty or mismatched statements', 
   assert.throws(() => verifyWithGhAttestation({ ...expected, run: () => 'gh version 2.46.0' }), /gh >=2.68.0/);
   let step = 0;
   assert.throws(() => verifyWithGhAttestation({ ...expected, run: () => ++step === 1 ? 'gh version 2.68.0' : '--bundle' }), /lacks required option/);
-  const mismatch = structuredClone(statement);
-  mismatch.verificationResult.statement.predicate.buildDefinition.externalParameters.workflow.repository = 'https://github.com/other/repo';
-  for (const output of ['[]', JSON.stringify([mismatch])]) {
+  const mismatches = ['repository', 'path', 'ref', 'commit'].map(field => {
+    const mismatch = structuredClone(statement);
+    const build = mismatch.verificationResult.statement.predicate.buildDefinition;
+    if (field === 'commit') build.resolvedDependencies[0].digest.gitCommit = 'b'.repeat(40);
+    else build.externalParameters.workflow[field] = 'wrong';
+    return JSON.stringify([mismatch]);
+  });
+  for (const output of ['[]', ...mismatches]) {
     let call = 0;
     const run = args => {
       call += 1;

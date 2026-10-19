@@ -1,7 +1,6 @@
-import { RELEASE_CONSTANTS, requireUnpublishedVersion, selectChannelBaseline, selectAuthoritativeJob, selectAuthoritativeRun, selectMergedMasterPr } from '../scripts/release-workflow.mjs';
+import { checkRequest, verifyExistingTag, RELEASE_CONSTANTS, requireUnpublishedVersion, selectChannelBaseline, selectAuthoritativeJob, selectAuthoritativeRun, selectMergedMasterPr } from '../scripts/release-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compareSemver } from '../npm-wrapper/scripts/semver.mjs';
 import { compareVersions, evaluateRelease } from '../scripts/release-eligibility.mjs';
 
 const base = () => ({
@@ -116,7 +115,7 @@ test('refuses downgrade, master movement, registry race and disabled publishing'
 
 test('uses audited strict SemVer precedence, including numeric precision and hyphenated prerelease IDs', () => {
   for (const [left, right] of [['1.0.0', '1.0.0-rc.9'], ['1.0.0-rc.10', '1.0.0-rc.9'], ['1.0.0-alpha-beta.1', '1.0.0-alpha-beta'], ['9007199254740993.0.0', '9007199254740992.0.0']]) {
-    assert.equal(compareVersions(left, right), compareSemver(left, right));
+    assert.equal(compareVersions(left, right), 1);
   }
   assert.equal(compareVersions('1.0.0-01', '1.0.0-1'), null);
 });
@@ -177,4 +176,45 @@ test('npm-only release intent permits null skill version and requires only npm c
   assert.equal(evaluateRelease(snapshot).decision, 'eligible');
   snapshot.release.npmChangelog = false;
   assert.equal(evaluateRelease(snapshot).decision, 'refuse');
+});
+
+test('workflow publish snapshot forwards the observed prepublish registry state', t => {
+  const oldEnv = { ...process.env };
+  t.after(() => { process.env = oldEnv; });
+  Object.assign(process.env, { GITHUB_REF: 'refs/heads/master', ACTOR_ID: '7', EXPECTED_ACTOR_ID: '7', FLOW_AUTOPUBLISH_ENABLED: 'true', DISPATCH_ID: '12345678-1234-1234-1234-123456789abc' });
+  delete process.env.GITHUB_OUTPUT;
+  const sha = 'a'.repeat(40); const version = '0.8.0';
+  const repository = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
+  const run = { id: 88, workflow_id: RELEASE_CONSTANTS.ciWorkflowId, path: RELEASE_CONSTANTS.ciWorkflowPath, head_sha: sha, head_branch: 'master', event: 'push', run_attempt: 2, status: 'completed', conclusion: 'success' };
+  const io = {
+    gh: path => {
+      if (path.endsWith('/git/ref/heads/master')) return { object: { sha } };
+      if (path.includes('/pulls?')) return [{ merged_at: 'today', merge_commit_sha: sha, base: { ref: 'master', repo: { full_name: repository } } }];
+      if (path.includes('/runs?')) return { total_count: 1, workflow_runs: [run] };
+      if (path.includes('/jobs?')) return { total_count: 1, jobs: [{ name: 'all-checks-passed', run_id: 88, run_attempt: 2, status: 'completed', conclusion: 'success' }] };
+      if (path.endsWith('/runs/88')) return run;
+      assert.fail(`unexpected API ${path}`);
+    },
+    git: args => { assert.deepEqual(args, ['rev-parse', 'HEAD']); return sha; },
+    pkg: () => ({ name: RELEASE_CONSTANTS.package, version }), skillVersion: () => '0.25.0', changelogHeading: () => true,
+    readFileSync: () => JSON.stringify({ schema_version: 1, intent: true, npm_version: version, skill_version: null, channel: 'latest', compatibility: 'backwards-compatible', security_rights_expanded: false }),
+    npmView: (_spec, fields) => fields[0] === 'dist-tags' ? { present: true, value: { latest: '0.7.11' } } : { present: false, error: 'E404' },
+  };
+  const request = { mode: 'publish', phase: 'publish', sha, version, publisherRunId: 9001, publisherRunAttempt: 2, artifact: { integrity: 'sha512-test', commit: sha, workflowRunId: 9001, workflowRunAttempt: 2 }, prepublishMasterSha: sha, prepublishRegistry: { state: 'absent', error: 'E404', channelVersion: '0.7.11' } };
+  assert.equal(checkRequest(request, io).decision, 'publish');
+  assert.throws(() => checkRequest({ ...request, prepublishRegistry: null }, io), /prepublish-state-changed/);
+  assert.throws(() => checkRequest({ ...request, prepublishRegistry: { state: 'unknown' } }, io), /release refused/);
+});
+
+test('remote tag verification peels annotated tags and preserves lightweight tags', () => {
+  const sha = 'a'.repeat(40); const object = 'b'.repeat(40); const ref = 'refs/tags/npm@0.8.0';
+  for (const remote of [`${sha}\t${ref}`, `${object}\t${ref}\n${sha}\t${ref}^{}`]) {
+    verifyExistingTag('npm@0.8.0', sha, args => {
+      if (args[0] === 'rev-parse') return sha;
+      assert.deepEqual(args, ['ls-remote', '--tags', 'origin', ref, `${ref}^{}`]); return remote;
+    });
+  }
+  for (const remote of ['', `${sha}\t${ref}\n${object}\t${ref}^{}`, `${object}\t${ref}`]) {
+    assert.throws(() => verifyExistingTag('npm@0.8.0', sha, args => args[0] === 'rev-parse' ? sha : remote), /does not resolve exactly/);
+  }
 });
