@@ -90,11 +90,19 @@ else
   ok "publish workflow has no tag or dist-tag promotion bypass"
 fi
 
-checkout_refs="$(grep -E '^[[:space:]]*ref: \$\{\{ (github\.sha|inputs\.expected_sha) \}\}' .github/workflows/publish-npm-wrapper.yml)"
 trusted_sha_check="$(grep -Fc 'process.env.GITHUB_SHA !== sha' scripts/release-workflow.mjs)"
-if [ "$(printf '%s\n' "$checkout_refs" | grep -c 'github.sha' || true)" -eq 2 ] \
-  && [ "$(printf '%s\n' "$checkout_refs" | grep -c 'inputs.expected_sha' || true)" -eq 0 ] \
-  && [ "$trusted_sha_check" -eq 1 ]; then
+per_job_ok=1
+for job in eligibility publish; do
+  job_block="$(awk -v target="$job" '
+    $0 ~ "^  " target ":$" { in_job = 1; next }
+    in_job && /^  [A-Za-z][A-Za-z0-9_-]*:$/ { exit }
+    in_job { print }
+  ' .github/workflows/publish-npm-wrapper.yml)"
+  job_ref_count="$(printf '%s\n' "$job_block" | grep -Ec '^[[:space:]]+ref: \$\{\{ github\.sha \}\}$' || true)"
+  job_untrusted="$(printf '%s\n' "$job_block" | grep -Ec 'ref: \$\{\{ inputs\.expected_sha \}\}' || true)"
+  [ "$job_ref_count" -eq 1 ] && [ "$job_untrusted" -eq 0 ] || per_job_ok=0
+done
+if [ "$per_job_ok" -eq 1 ] && [ "$trusted_sha_check" -eq 1 ]; then
   ok "publisher gate and publish jobs use trusted workflow SHA, then compare requested SHA"
 else
   fail "publisher must checkout github.sha for both jobs and validate the request SHA in trusted gate code"
