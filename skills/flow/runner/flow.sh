@@ -29,10 +29,21 @@ GLOBAL_KB_DIR="${FLOW_GLOBAL_KB:-${HOME:-}/.claude/flow/playbooks}"   # cross-pr
 # a dir holding only .flow/ run-state was itself used as a root and is likewise left alone.
 FLOW_ROOT_ADOPTED=""
 FLOW_ROOT_NEW=""
+# Invocation-local refusal state; never change the user's telemetry opt-out variables.
+FLOW_IGNORE_UNSAFE=0
+_reject_unsafe_root_newlines() {
+  case "$1" in *$'\n'*|*$'\r'*)
+    printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+    return 1 ;;
+  esac
+  return 0
+}
 if [ -n "${FLOW_PROJECT_ROOT:-}" ]; then
   ROOT="$FLOW_PROJECT_ROOT"
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
 else
   ROOT="$PWD"
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
   if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ] && [ ! -d "$PWD/.flow" ]; then
     _rd="$PWD"; _rn=0
     while [ "$_rn" -lt 24 ]; do
@@ -52,6 +63,13 @@ else
     unset _rd _rp _rn
   fi
 fi
+# Validate physical aliases before any command/helper or EXIT logger can write.
+# Keep a sentinel until after substitution so a terminal LF is not silently removed.
+if _physical_root="$(cd "$ROOT" >/dev/null 2>&1 && pwd -P && printf '.')"; then
+  _physical_root="${_physical_root%$'\n'.}"
+  _reject_unsafe_root_newlines "$_physical_root" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
+fi
+unset _physical_root
 [ -n "$FLOW_ROOT_ADOPTED" ] && printf 'note: using flow root %s (CWD is inside it; no flow/ here). Set FLOW_PROJECT_ROOT to override.\n' "$FLOW_ROOT_ADOPTED" >&2
 [ -n "${FLOW_ROOT_NEW:-}" ] && printf 'note: no Flow project found here or in ancestors - starting a new Flow project at %s (run /flow from your project root if you meant an existing one).\n' "$ROOT" >&2
 unset FLOW_ROOT_NEW
@@ -129,14 +147,107 @@ _register_td()  { _CLEANUP_TDS+=("$1"); }
 # a real 3-OS CI run: ubuntu/windows ship bash >= 4.4, immune; macOS is not).
 _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${_CLEANUP_TDS[@]}"; do rm -rf "$d" 2>/dev/null; done; fi; _CLEANUP_TDS=(); }
 
-# Keep pure run-state (MODE / PROJECT_TYPE / .flow/) out of the host repo's git status.
-# Idempotent; only acts in a real git repo OR where a .gitignore already exists (so test
-# sandboxes and non-git dirs are untouched — no surprise file creation).
+# Keep pure run-state (MODE / PROJECT_TYPE / .flow/ telemetry, flow/.lock* machine state,
+# cards/.inflight) out of the host repo's git status. Design (gate-safe): patterns go to the
+# clone-local .git/info/exclude via `git rev-parse --git-path` — a tracked .gitignore is never
+# touched (no dirty-tracked-file bypass surface, no attest tolerance needed), the write is
+# upgrade-safe per pattern, and linked worktrees resolve their own exclude path. Non-git dirs
+# are untouched. Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
+# previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
+_escape_gitignore_prefix() {
+  local value="$1" escaped='' char
+  case "$value" in
+    *$'\n'*|*$'\r'*)
+      printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+      return 1 ;;
+  esac
+  while [ -n "$value" ]; do
+    char="${value:0:1}"
+    value="${value:1}"
+    if [ "$char" = '\' ] || [ "$char" = '*' ] || [ "$char" = '?' ] || [ "$char" = '[' ] || [ "$char" = ']' ]; then
+      escaped="${escaped}\\${char}"
+    else
+      escaped="${escaped}${char}"
+    fi
+  done
+  printf '%s' "$escaped"
+}
+
+_canonical_git_path() {
+  local value="$1" native
+  if command -v cygpath >/dev/null 2>&1; then
+    native="$(cygpath -aw "$value" 2>/dev/null)" || {
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath -aw failed for: %s\n' "$value" >&2
+      return 1
+    }
+    cygpath -u "$native" 2>/dev/null || {
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] cygpath -u failed for: %s (native=%s)\n' "$value" "$native" >&2
+      return 1
+    }
+  else
+    # Without cygpath, a Windows drive-letter path (C:/...) cannot be safely
+    # canonicalized: joining it would create a stray "<ROOT>/C:/..." directory.
+    case "$value" in
+      [A-Za-z]:[\\/]*)
+        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] drive-letter path without cygpath: %s\n' "$value" >&2
+        return 1 ;;
+    esac
+    printf '%s\n' "$value"
+  fi
+}
 _ignore_run_state() {
-  { [ -d "$ROOT/.git" ] || [ -f "$ROOT/.gitignore" ]; } || return 0
-  local gi="$ROOT/.gitignore"
-  grep -q 'flow run-state' "$gi" 2>/dev/null && return 0
-  printf '\n# /flow run-state (generated; safe to ignore)\nMODE\nPROJECT_TYPE\n.flow/\n' >> "$gi"
+  local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; return 1; }
+  # A sentinel keeps command substitution from stripping a terminal LF in the physical path.
+  root_abs="$(cd "$ROOT" >/dev/null 2>&1 && pwd -P && printf '.')" || return 0
+  root_abs="${root_abs%$'\n'.}"
+  _reject_unsafe_root_newlines "$root_abs" || { FLOW_IGNORE_UNSAFE=1; return 1; }
+  root_abs="$(_canonical_git_path "$root_abs")" || return 0
+  raw_ex="$(cd "$ROOT" 2>/dev/null && git rev-parse --git-path info/exclude 2>/dev/null)" || return 0
+  [ -n "$raw_ex" ] || return 0
+  case "$raw_ex" in /*|[A-Za-z]:[\\/]*) ;; *) raw_ex="$root_abs/$raw_ex" ;; esac
+  ex="$(_canonical_git_path "$raw_ex")" || return 0
+  if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
+    printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
+  fi
+  raw_top="$(cd "$ROOT" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)" || return 0
+  git_top="$(cd "$raw_top" >/dev/null 2>&1 && pwd -P && printf '.')" || return 0
+  git_top="${git_top%$'\n'.}"
+  git_top="$(_canonical_git_path "$git_top")" || return 0
+  if [ "$root_abs" = "$git_top" ]; then
+    root_prefix=''
+  else
+    case "$root_abs/" in
+      "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;;
+      *) [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] root escapes git_top: ROOT=%s root_abs=%s git_top=%s raw_top=%s\n' "$ROOT" "$root_abs" "$git_top" "$raw_top" >&2; return 0 ;;
+    esac
+  fi
+  case "$root_prefix" in
+    *$'\n'*|*$'\r'*)
+      printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
+      return 1 ;;
+  esac
+  escaped_prefix="$(_escape_gitignore_prefix "$root_prefix")" || return 1
+  ex_dir="$(dirname "$ex")"
+  ex_base="$(basename "$ex")"
+  mkdir -p "$ex_dir" 2>/dev/null || return 0
+  ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
+  ex="$ex_dir/$ex_base"
+  if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
+    printf '[flow ignore] normalized ROOT=%s root_abs=%s raw_top=%s git_top=%s root_prefix=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_top" "$git_top" "$root_prefix" "$ex" >&2
+  fi
+  if [ -s "$ex" ] && [ -n "$(tail -c 1 "$ex" 2>/dev/null)" ]; then
+    printf '\n' >> "$ex" || { printf '[flow ignore] FAIL: cannot write final newline to %s.\n' "$ex" >&2; return 1; }
+  fi
+  for pat in "/${escaped_prefix}.flow/" "/${escaped_prefix}flow/.lock*" "/${escaped_prefix}cards/.inflight" "/${escaped_prefix}MODE" "/${escaped_prefix}PROJECT_TYPE"; do
+    if grep -qxF "$pat" "$ex" 2>/dev/null; then
+      [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] existing=%s\n' "$pat" >&2
+      continue
+    fi
+    printf '%s\n' "$pat" >> "$ex" || { printf '[flow ignore] FAIL: cannot append %s to %s.\n' "$pat" "$ex" >&2; return 1; }
+    [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] appended=%s\n' "$pat" >&2
+  done
+  return 0
 }
 
 # Concurrency lock: seconds a lock stays "fresh"; older locks are stale and auto-reclaimed.
@@ -646,6 +757,7 @@ _read_lock() {
   return 0
 }
 _write_lock() { # $1 = cmd label
+  _ignore_run_state || { echo "FAIL: cannot safely exclude Flow run-state for this root path; no lock change made." >&2; return 1; }
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
   printf '%s|%s|%s|%s|%s\n' "$(_now)" "$(flow_lock_owner)" "$$" "$(uname -n 2>/dev/null || echo host)" "${1:-?}" \
     > "$LOCK_FILE" 2>/dev/null || true
@@ -656,6 +768,7 @@ _write_lock() { # $1 = cmd label
 # including systems where external mkdir binaries suffer from race bugs (uutils 0.10.0).
 # Winner also creates LOCK_DIR for backward compatibility with inspection/mtime tooling.
 _claim_lock() {
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   ( set -C; : > "$LOCK_CLAIM" ) 2>/dev/null || return 1
   mkdir "$LOCK_DIR" 2>/dev/null || true
   return 0
@@ -669,6 +782,7 @@ _release_claim() {
 # Guard a MUTATING command. 0 = lock taken/refreshed (proceed); 1 = refused (caller aborts).
 lock_acquire() { # $1 = cmd label
   local me age; me="$(flow_lock_owner)"
+  _ignore_run_state || { echo "FAIL: cannot safely exclude Flow run-state for this root path; no lock or plan changes made." >&2; return 1; }
   # Ensure the lock's PARENT dir exists so the atomic claim test-and-set below can
   # succeed on a brand-new project (flow/ may not exist yet at stage-00 unlock / first run).
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
@@ -1953,7 +2067,7 @@ cmd_mode() {
     return 0
   fi
   case "$arg" in
-    teach|work) printf '%s\n' "$arg" > "$MODE_FILE"; _ignore_run_state; echo "PASS: mode set to '$arg'."; return 0 ;;
+    teach|work) _ignore_run_state || return 1; printf '%s\n' "$arg" > "$MODE_FILE"; _ignore_run_state; echo "PASS: mode set to '$arg'."; return 0 ;;
     *) echo "FAIL: mode must be 'teach' or 'work'."; return 1 ;;
   esac
 }
@@ -1981,6 +2095,7 @@ cmd_project_type() {
           return 1
         fi
       fi
+      _ignore_run_state || return 1
       printf '%s\n' "$arg" > "$PROJECT_TYPE_FILE"; _ignore_run_state
       echo "PASS: project type set to '$arg'."
       echo "  done-evidence now means: $(done_def_for_type "$arg")"
@@ -3873,8 +3988,8 @@ _ws_default_vendor() { # best-effort from the engine tier / harness session env;
 # One physical line per event. Fixed field order (extractors below rely on it). Returns 1 if the
 # append fails so add/remove can WARN (git stays truth) instead of pretending it persisted.
 _ws_record_append() { # path branch vendor sid card task owned port status
+  _ignore_run_state || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
-  _ignore_run_state
   printf '{"worktree_path":"%s","branch":"%s","vendor":"%s","agent_session_id":"%s","card_id":"%s","task_label":"%s","owned_files_glob":"%s","port_offset":%s,"created_at":%s,"status":"%s"}\n' \
     "$(_json_str "$1")" "$(_json_str "$2")" "$(_json_str "$3")" "$(_json_str "$4")" "$(_json_str "$5")" \
     "$(_json_str "$6")" "$(_json_str "$7")" "$8" "$(_now)" "$9" >> "$WS_FILE" 2>/dev/null || return 1
@@ -4914,6 +5029,7 @@ _eval_replay_vote() { # $1=fid $2=vote-i -> transcript on stdout; return 1 if mi
 # markers vs fixture rows) are always safe to append-only-scan since both are single JSON
 # objects on their own line.
 _eval_emit_batch_marker() { # $1=run_id $2=start|done $3=n_expected-or-n_written
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -4928,6 +5044,7 @@ _eval_emit_batch_marker() { # $1=run_id $2=start|done $3=n_expected-or-n_written
 # not per fixture row) - they never change mid-batch, and recomputing per-row was both wasteful
 # (an extra subprocess per fixture) and the original vector for the stdin-consumption bug above.
 _eval_emit_result() { # $1..$14 as before + $15=retries $16=rate_limited $17=prompt_sha $18=timed_out
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" stage="$3" expected="$4" verdict="$5" match="$6" flag="$7" pass="$8" invalid="$9" n="${10}" model="${11}" cliv="${12}" flowv="${13}" grsha="${14}"
   local retries="${15:-0}" ratel="${16:-false}" psha="${17:-}" timedout="${18:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5379,6 +5496,7 @@ _eval_routing_parse_action() {
 }
 
 _eval_routing_emit_result() { # $1=run_id $2=fid $3=expected $4=verdict $5=match $6..$9=votes $10=model $11=cliv $12=flowv $13=rulessha $14=retries $15=rate_limited $16=prompt_sha $17=timed_out
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" expected="$3" verdict="$4" match="$5" hit="$6" miss="$7" invalid="$8" n="$9"
   local model="${10}" cliv="${11}" flowv="${12}" rulessha="${13}" retries="${14:-0}" ratel="${15:-false}" psha="${16:-}" timedout="${17:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5418,6 +5536,7 @@ _eval_routing_complete_run_ids() {
 }
 
 _eval_routing_emit_batch_marker() { # $1=run_id $2=start|done $3=n
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -5527,7 +5646,7 @@ function cmd_eval_routing { # same arg shape as cmd_eval, called only when --sta
   batch_cliv="$(_eval_cli_version)"; batch_flowv="$(_flow_version)"; batch_rulessha="$(_eval_routing_rules_sha)"
   echo "routing-eval: batch $nonce (N=$n per fixture, timeout=${timeout}s)"
 
-  _ignore_run_state
+  _ignore_run_state || return 1
   _eval_routing_emit_batch_marker "$nonce" start "$n_matched"
   trap 'rm -rf "${rundir:-}" 2>/dev/null; exit 130' INT TERM
 
@@ -5733,6 +5852,7 @@ _eval_converge_parse_verdict() { # $1=raw $2=nonce -> GAP|CONVERGED|INVALID
 }
 
 _eval_converge_emit_result() { # same field shape as _eval_routing_emit_result
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" expected="$3" verdict="$4" match="$5" hit="$6" miss="$7" invalid="$8" n="$9"
   local model="${10}" cliv="${11}" flowv="${12}" rulessha="${13}" retries="${14:-0}" ratel="${15:-false}" psha="${16:-}" timedout="${17:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5747,6 +5867,7 @@ _eval_converge_emit_result() { # same field shape as _eval_routing_emit_result
 }
 
 _eval_converge_emit_batch_marker() { # $1=run_id $2=start|done $3=n
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -5828,7 +5949,7 @@ function cmd_eval_converge { # same arg shape as cmd_eval, called only when --st
   batch_cliv="$(_eval_cli_version)"; batch_flowv="$(_flow_version)"; batch_rulessha="$(_eval_converge_rules_sha)"
   echo "converge-eval: batch $nonce (N=$n per fixture, timeout=${timeout}s)"
 
-  _ignore_run_state
+  _ignore_run_state || return 1
   _eval_converge_emit_batch_marker "$nonce" start "$n_matched"
   trap 'rm -rf "${rundir:-}" 2>/dev/null; exit 130' INT TERM
 
@@ -6100,7 +6221,7 @@ function cmd_eval {
   # cwd paths, plugin paths from stripped-but-still-envelope-adjacent output) untracked but not
   # ignored -> one `git add .` away from a remote. Idempotent - the helper is a no-op after the
   # first write.
-  _ignore_run_state
+  _ignore_run_state || return 1
 
   # Pre-batch prune of the raw-capture dir - keeps disk bounded but respects concurrent runs
   # (see helper's TTL guard). Runs BEFORE the new batch's own raw dir is created, so this batch's
@@ -6646,6 +6767,7 @@ _log_is_readonly() { # $1 = command -> true|false (does it mutate the flow plan?
 # Covers ALL entry points - assess, next, or any command on a pre-existing project - so cycle
 # analytics are no longer blind on brownfield. One cycle per project dir (ADR decision).
 _ensure_cycle() {
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   [ -f "$CYCLE_FILE" ] && return 0
   { mkdir -p "$LOG_DIR" && printf '%s-%s\n' "$(_now)" "$(uname -n 2>/dev/null | cut -c1-12 || echo host)" > "$CYCLE_FILE"; } 2>/dev/null || true
 }
@@ -6669,7 +6791,9 @@ _is_ephemeral() {
 
 # Build + append one event. $1 = exit code. Wrapped by the caller in { } 2>/dev/null || true.
 _log_event() {
+  [ "${FLOW_IGNORE_UNSAFE:-0}" = 1 ] && return 0
   _log_disabled && return 0
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   _ensure_cycle
   local ec="${1:-0}" now ts dur gp ro ver proj host cyc args eph gfr
   now="$(_now)"; ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo '')"
@@ -6679,10 +6803,10 @@ _log_event() {
   ver="$(_flow_version)"; proj="$(basename "$ROOT" 2>/dev/null || echo '?')"
   host="$(uname -n 2>/dev/null | cut -c1-16 || echo host)"
   cyc="$(cat "$CYCLE_FILE" 2>/dev/null | tr -d '\r\n' || echo '')"
-  args="$(_mask_secrets "$FLOW_LOG_ARGS")"
-  eph="$(_is_ephemeral)"
   # bound the reason so the compact global line stays small (atomic-append friendly) even when
   # a future gate emits a long reason string.
+  args="$(_mask_secrets "$FLOW_LOG_ARGS")"
+  eph="$(_is_ephemeral)"
   gfr="$(printf '%s' "${FLOW_LAST_GATE_FAIL:-}" | cut -c1-120)"
   # Card dwell fields for the compact GLOBAL row: gated on the verb literally being `card`
   # (not merely FLOW_LOG_CARD being set, which `check`/`loop-prep`/etc also do) - only

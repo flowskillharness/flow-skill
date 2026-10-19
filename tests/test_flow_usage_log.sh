@@ -53,10 +53,28 @@ echo "4) disable envs suppress logging (FLOW_LOG_DISABLE + DO_NOT_TRACK)"
 newsb
 bash "$RUN" status >/dev/null 2>&1
 before="$(wc -l < "$SB/.flow/events.jsonl" 2>/dev/null | tr -d ' ')"
-FLOW_LOG_DISABLE=1 bash "$RUN" status >/dev/null 2>&1
-DO_NOT_TRACK=1     bash "$RUN" status >/dev/null 2>&1
-after="$(wc -l < "$SB/.flow/events.jsonl" 2>/dev/null | tr -d ' ')"
-ck "$before" "$after" "no events appended while disabled"
+global_before="$(wc -l < "$SB/home/.claude/flow/usage.jsonl" | tr -d ' ')"
+for optout in FLOW_LOG_DISABLE DO_NOT_TRACK; do
+  env "$optout=1" bash "$RUN" status >/dev/null 2>&1
+  after="$(wc -l < "$SB/.flow/events.jsonl" | tr -d ' ')"
+  global_after="$(wc -l < "$SB/home/.claude/flow/usage.jsonl" | tr -d ' ')"
+  ck "$before" "$after" "$optout suppresses per-project telemetry"
+  ck "$global_before" "$global_after" "$optout suppresses global telemetry"
+done
+bash "$RUN" status >/dev/null 2>&1
+ck "$((before + 1))" "$(wc -l < "$SB/.flow/events.jsonl" | tr -d ' ')" "ephemeral project still logs after scoped opt-out"
+ck "$((global_before + 1))" "$(wc -l < "$SB/home/.claude/flow/usage.jsonl" | tr -d ' ')" "global logging resumes after scoped opt-out"
+rm -rf "$SB"
+
+echo "4b) rejected root does not poison telemetry opt-outs for later valid roots"
+newsb
+ec=0
+FLOW_PROJECT_ROOT="$SB"$'\n' bash "$RUN" next >/dev/null 2>&1 || ec=$?
+ck 1 "$ec" "trailing-LF root is rejected"
+ck 1 "$([ -e "$SB/home/.claude/flow/usage.jsonl" ]; echo $?)" "rejection writes no global telemetry"
+FLOW_IGNORE_UNSAFE=1 bash "$RUN" status >/dev/null 2>&1
+has "$(cat "$SB/.flow/events.jsonl" 2>/dev/null)" '"command":"status"' "unsafe refusal state is invocation-local, not inherited"
+has "$(cat "$SB/home/.claude/flow/usage.jsonl" 2>/dev/null)" '"command":"status"' "ordinary global logging remains enabled"
 rm -rf "$SB"
 
 echo "5) next (greenfield) stamps a cycle_id and carries stage_to"
