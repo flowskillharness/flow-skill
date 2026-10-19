@@ -203,14 +203,14 @@ _ignore_run_state() {
   root_abs="${root_abs%$'\n'.}"
   _reject_unsafe_root_newlines "$root_abs" || { FLOW_IGNORE_UNSAFE=1; return 1; }
   root_abs="$(_canonical_git_path "$root_abs")" || return 0
-  raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
+  raw_ex="$(cd "$ROOT" 2>/dev/null && git rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$raw_ex" ] || return 0
   case "$raw_ex" in /*|[A-Za-z]:[\\/]*) ;; *) raw_ex="$root_abs/$raw_ex" ;; esac
   ex="$(_canonical_git_path "$raw_ex")" || return 0
   if [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ]; then
     printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
   fi
-  raw_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  raw_top="$(cd "$ROOT" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)" || return 0
   git_top="$(cd "$raw_top" >/dev/null 2>&1 && pwd -P && printf '.')" || return 0
   git_top="${git_top%$'\n'.}"
   git_top="$(_canonical_git_path "$git_top")" || return 0

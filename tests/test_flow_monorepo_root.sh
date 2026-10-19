@@ -16,7 +16,7 @@ git_path_to_posix() {
       command -v cygpath >/dev/null 2>&1 || return 1
       cygpath -u "$1" 2>/dev/null
       ;;
-    *) printf '%s\n' "$1" ;;
+    *) printf '%s\n' "$1" | tr '\\' '/' ;;
   esac
 }
 
