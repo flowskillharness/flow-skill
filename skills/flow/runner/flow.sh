@@ -137,11 +137,24 @@ _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${
 # are untouched. Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
 # previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
 _ignore_run_state() {
-  local ex pat
+  local ex pat root_abs root_prefix ex_dir ex_base git_top
   ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$ex" ] || return 0
-  mkdir -p "$(dirname "$ex")" 2>/dev/null || true
-  for pat in '.flow/' 'flow/.lock*' 'cards/.inflight'; do
+  root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
+  case "$ex" in /*) ;; *) ex="$root_abs/$ex" ;; esac
+  ex_dir="$(dirname "$ex")"
+  ex_base="$(basename "$ex")"
+  mkdir -p "$ex_dir" 2>/dev/null || return 0
+  ex_dir="$(cd "$ex_dir" 2>/dev/null && pwd -P)" || return 0
+  ex="$ex_dir/$ex_base"
+  git_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  git_top="$(cd "$git_top" 2>/dev/null && pwd -P)" || return 0
+  if [ "$root_abs" = "$git_top" ]; then
+    root_prefix=''
+  else
+    case "$root_abs/" in "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;; *) return 0 ;; esac
+  fi
+  for pat in "${root_prefix}.flow/" "${root_prefix}flow/.lock*" "${root_prefix}cards/.inflight" "${root_prefix}MODE" "${root_prefix}PROJECT_TYPE"; do
     grep -qxF "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >> "$ex"
   done
 }

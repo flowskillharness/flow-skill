@@ -72,8 +72,9 @@ SB="$(mktemp -d)"
   && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
 ( cd "$SB" && EX="$(git rev-parse --git-path info/exclude)" \
   && grep -qxF '.flow/' "$EX" && grep -qxF 'flow/.lock*' "$EX" && grep -qxF 'cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
-git -C "$SB" add -A && git -C "$SB" commit -qm "novice: git add -A"
-ck 0 "$(git -C "$SB" ls-files | grep -cE '^\.flow/|^flow/\.lock|^\.gitignore$')" "committed tree has no .flow/, no flow/.lock*, no minted .gitignore"
+git -C "$SB" config user.name ci
+git -C "$SB" config user.email ci@localhost
+git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"
 ck 0 "$([ -f "$SB/.flow/events.jsonl" ] && echo 0 || echo 1)" "telemetry still written to disk (ignored, not suppressed)"
 ( cd "$SB" && test ! -f .gitignore ) && echo "  ok   [no .gitignore created in git repos]" || { echo "  FAIL [.gitignore should not be created]"; fail=$((fail+1)); }
 rm -rf "$SB"
@@ -84,6 +85,51 @@ out="$( cd "$SB/deep/sub" && unset FLOW_PROJECT_ROOT; bash "$RUN" status 2>&1 )"
 no  "$out" "note: using flow root" "a bare flow/ folder (e.g. ~/flow) is NOT a flow project — no adoption"
 rm -rf "$SB"
 
+
+echo "H) adopted Flow root inside a larger repo scopes ignore rules to its prefix"
+SB="$(mktemp -d)"
+git -C "$SB" init -q
+git -C "$SB" config user.name ci
+git -C "$SB" config user.email ci@localhost
+mkdir -p "$SB/frontend/flow" "$SB/frontend/cards" "$SB/frontend/src"
+printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend/flow/00-idea.md"
+git -C "$SB" add frontend/flow/00-idea.md
+git -C "$SB" commit -qm base
+(cd "$SB/frontend" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
+EX="$(git -C "$SB/frontend" rev-parse --git-path info/exclude)"
+case "$EX" in /*) ;; *) EX="$SB/frontend/$EX" ;; esac
+for pat in 'frontend/.flow/' 'frontend/flow/.lock*' 'frontend/cards/.inflight' 'frontend/MODE' 'frontend/PROJECT_TYPE'; do
+  grep -qxF "$pat" "$EX" || { echo "  FAIL [nested exclude missing $pat]"; fail=$((fail+1)); }
+done
+mkdir -p "$SB/frontend/.flow" "$SB/frontend/flow" "$SB/frontend/cards" "$SB/.flow" "$SB/flow"
+touch "$SB/frontend/.flow/events.jsonl" "$SB/frontend/flow/.lock" "$SB/frontend/cards/.inflight" "$SB/frontend/MODE" "$SB/frontend/PROJECT_TYPE" "$SB/.flow/keep" "$SB/flow/.lock"
+for path in frontend/.flow/events.jsonl frontend/flow/.lock frontend/cards/.inflight frontend/MODE frontend/PROJECT_TYPE; do
+  git -C "$SB" check-ignore -q "$path" || { echo "  FAIL [nested run-state not ignored: $path]"; fail=$((fail+1)); }
+done
+for path in .flow/keep flow/.lock; do
+  git -C "$SB" check-ignore -q "$path" && { echo "  FAIL [unrelated repo path ignored: $path]"; fail=$((fail+1)); } || echo "  ok   [unrelated repo path remains trackable: $path]"
+done
+rm -rf "$SB"
+
+echo "I) linked worktree without .gitignore writes absolute main-git-dir exclude"
+SB="$(mktemp -d)"
+git -C "$SB" init -q
+git -C "$SB" config user.name ci
+git -C "$SB" config user.email ci@localhost
+printf '# base\n' > "$SB/base.txt"
+git -C "$SB" add base.txt
+git -C "$SB" commit -qm base
+git -C "$SB" worktree add --detach "$SB-linked" HEAD >/dev/null
+test -f "$SB-linked/.git" && test ! -d "$SB-linked/.git" && test ! -e "$SB-linked/.gitignore"
+(cd "$SB-linked" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
+EX="$(git -C "$SB-linked" rev-parse --git-path info/exclude)"
+case "$EX" in /*) ;; *) EX="$SB-linked/$EX" ;; esac
+for pat in '.flow/' 'flow/.lock*' 'cards/.inflight' 'MODE' 'PROJECT_TYPE'; do
+  grep -qxF "$pat" "$EX" || { echo "  FAIL [linked exclude missing $pat]"; fail=$((fail+1)); }
+done
+test ! -e "$SB-linked/.git/info/exclude" && echo "  ok   [no relative-path stray .git tree under worktree]" || { echo "  FAIL [relative-path stray .git tree]"; fail=$((fail+1)); }
+git -C "$SB-linked" worktree remove --force "$SB-linked"
+rm -rf "$SB"
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
