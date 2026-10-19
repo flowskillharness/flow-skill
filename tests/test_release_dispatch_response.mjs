@@ -27,12 +27,23 @@ test('release-workflow symlink entrypoint executes its CLI', t => {
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const source = new URL('../scripts/release-workflow.mjs', import.meta.url);
   const alias = join(dir, 'release-workflow.mjs');
-  symlinkSync(source, alias);
+  try { symlinkSync(source, alias); }
+  catch (error) {
+    if (error.code === 'EPERM' || error.code === 'EACCES' || error.code === 'ENOSYS') return t.skip(`symlink creation unsupported: ${error.code}`);
+    throw error;
+  }
   const run = spawnSync(process.execPath, [alias, 'invalid-command'], { encoding: 'utf8' });
   assert.equal(run.status, 1, run.stderr);
   assert.match(run.stderr, /FAIL: unknown command: invalid-command/);
 });
 
+test('release-workflow import with an absent caller argv path is inert', () => {
+  const target = new URL('../scripts/release-workflow.mjs', import.meta.url);
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', `process.argv[1] = '/nonexistent/release-workflow-entry.mjs'; await import(${JSON.stringify(target.href)});`], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stdout, '');
+  assert.equal(run.stderr, '');
+});
 test('retained artifact directories use Node filesystem without an external mkdir', () => {
   const stop = new Error('stop before verification');
   let downloads = 0;

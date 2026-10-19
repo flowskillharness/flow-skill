@@ -90,6 +90,16 @@ else
   ok "publish workflow has no tag or dist-tag promotion bypass"
 fi
 
+checkout_refs="$(grep -E '^[[:space:]]*ref: \$\{\{ (github\.sha|inputs\.expected_sha) \}\}' .github/workflows/publish-npm-wrapper.yml)"
+trusted_sha_check="$(grep -Fc 'process.env.GITHUB_SHA !== sha' scripts/release-workflow.mjs)"
+if [ "$(printf '%s\n' "$checkout_refs" | grep -c 'github.sha' || true)" -eq 2 ] \
+  && [ "$(printf '%s\n' "$checkout_refs" | grep -c 'inputs.expected_sha' || true)" -eq 0 ] \
+  && [ "$trusted_sha_check" -eq 1 ]; then
+  ok "publisher gate and publish jobs use trusted workflow SHA, then compare requested SHA"
+else
+  fail "publisher must checkout github.sha for both jobs and validate the request SHA in trusted gate code"
+fi
+
 pack_workdir="$(grep -nE '^[[:space:]]*working-directory: npm-wrapper$' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
 pack_line="$(grep -nE '^[[:space:]]*npm pack --pack-destination' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
 audit_line="$(grep -nE 'npm-attestation-audit\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"

@@ -707,7 +707,7 @@ function gh(args, options) {
     assert.equal(i.expected_version, s.version); assert.equal(i.expected_actor_id, '12345');
     assert.match(i.dispatch_id, /^[0-9a-f-]{36}$/);
     s.request = request; fs.writeFileSync(stateFile, json(s)); log('dispatch', request);
-    const env = { MODE: 'publish', EXPECTED_SHA: s.sha, EXPECTED_VERSION: s.version, GITHUB_REF: 'refs/heads/master', GITHUB_REPOSITORY: 'manhquydev/flow-skill', ACTOR_ID: '12345', EXPECTED_ACTOR_ID: i.expected_actor_id, DISPATCH_ID: i.dispatch_id, FLOW_AUTOPUBLISH_ENABLED: 'true', GITHUB_RUN_ID: '777', GITHUB_RUN_ATTEMPT: '1', ARTIFACT_DIR: store };
+    const env = { MODE: 'publish', EXPECTED_SHA: s.sha, GITHUB_SHA: s.sha, EXPECTED_VERSION: s.version, GITHUB_REF: 'refs/heads/master', GITHUB_REPOSITORY: 'manhquydev/flow-skill', ACTOR_ID: '12345', EXPECTED_ACTOR_ID: i.expected_actor_id, DISPATCH_ID: i.dispatch_id, FLOW_AUTOPUBLISH_ENABLED: 'true', GITHUB_RUN_ID: '777', GITHUB_RUN_ATTEMPT: '1', ARTIFACT_DIR: store };
     workflow('eligibility', [], env);
     exec(process.execPath, [path.join(repo, 'npm-wrapper/scripts/sync.mjs')], { cwd: path.join(repo, 'npm-wrapper'), env: process.env });
     const packed = spawn('npm', ['pack', '--offline', '--ignore-scripts', '--json', '--pack-destination', store], { cwd: path.join(repo, 'npm-wrapper'), encoding: 'utf8', shell: process.platform === 'win32', env: { ...process.env, NODE_OPTIONS: '' }, timeout: 120000 });
@@ -749,7 +749,7 @@ cp.spawnSync = function(command, args, options = {}) {
     const installed = path.join(root, 'consumer-package');
     if (!fs.existsSync(path.join(installed, 'package/package.json'))) {
       fs.mkdirSync(installed, { recursive: true });
-      exec('tar', ['-xzf', path.join(store, s.name), '-C', installed]);
+      exec('tar', ['-xzf', s.name, '-C', installed], { cwd: store });
       const pkg = JSON.parse(fs.readFileSync(path.join(installed, 'package/package.json'), 'utf8'));
       assert.equal(pkg.name, '@manhquy/flow-skill'); assert.equal(pkg.version, s.version);
     }
@@ -785,7 +785,7 @@ EOF
 for consumer_case in sound channel-drift; do
   clean_k_tags
   rm -rf "$tmp/retained" "$tmp/consumer-package"
-  mkdir -p "$tmp/retained"
+  mkdir -p "$tmp/retained" "$tmp/smoke-tmp"
   : > "$tmp/consumer-trace.jsonl"
   K_CONSUMER_ROOT="$(winpath "$tmp")" node --input-type=module - "$k_npm_v" "$k_skill_v" << 'EOF'
 import fs from 'node:fs';

@@ -186,6 +186,7 @@ test('workflow publish snapshot forwards the observed prepublish registry state'
   Object.assign(process.env, { GITHUB_REF: 'refs/heads/master', ACTOR_ID: '7', EXPECTED_ACTOR_ID: '7', FLOW_AUTOPUBLISH_ENABLED: 'true', DISPATCH_ID: '12345678-1234-1234-1234-123456789abc' });
   delete process.env.GITHUB_OUTPUT;
   const sha = 'a'.repeat(40); const version = '0.8.0';
+  process.env.GITHUB_SHA = sha;
   const repository = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
   const run = { id: 88, workflow_id: RELEASE_CONSTANTS.ciWorkflowId, path: RELEASE_CONSTANTS.ciWorkflowPath, head_sha: sha, head_branch: 'master', event: 'push', run_attempt: 2, status: 'completed', conclusion: 'success' };
   const io = {
@@ -204,6 +205,12 @@ test('workflow publish snapshot forwards the observed prepublish registry state'
   };
   const request = { mode: 'publish', phase: 'publish', sha, version, publisherRunId: 9001, publisherRunAttempt: 2, artifact: { integrity: 'sha512-test', commit: sha, workflowRunId: 9001, workflowRunAttempt: 2 }, prepublishMasterSha: sha, prepublishRegistry: { state: 'absent', error: 'E404', channelVersion: '0.7.11' } };
   assert.equal(checkRequest(request, io).decision, 'publish');
+  let untrustedBoundaryCalls = 0;
+  process.env.GITHUB_SHA = 'b'.repeat(40);
+  const untrustedIo = Object.fromEntries(Object.entries(io).map(([key, value]) => [key, (...args) => { untrustedBoundaryCalls++; return value(...args); }]));
+  assert.throws(() => checkRequest(request, untrustedIo), /trusted workflow-selected commit/);
+  assert.equal(untrustedBoundaryCalls, 0);
+  process.env.GITHUB_SHA = sha;
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: null }, io), /prepublish-state-changed/);
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: { state: 'unknown' } }, io), /release refused/);
 });

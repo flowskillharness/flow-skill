@@ -1,6 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertProvenanceResult } from '../scripts/smoke-policy.mjs';
+import { realpathSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { canonicalSmokeTempBase, assertProvenanceResult } from '../scripts/smoke-policy.mjs';
+test('smoke temp base resolves symlinked system temp roots before creating installer homes', t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'flow-smoke-temp-policy-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const physical = join(root, 'private-temp');
+  const alias = join(root, 'var-alias');
+  mkdirSync(physical);
+  try { symlinkSync(physical, alias, 'dir'); }
+  catch (error) {
+    if (['EPERM', 'EACCES', 'ENOSYS'].includes(error.code)) return t.skip(`directory symlinks unsupported: ${error.code}`);
+    throw error;
+  }
+  assert.equal(canonicalSmokeTempBase(alias), physical);
+  assert.equal(canonicalSmokeTempBase(physical), physical);
+});
 
 const packageName = '@manhquy/flow-skill';
 const version = '0.8.0';

@@ -1,3 +1,9 @@
+import { realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+
+export function canonicalSmokeTempBase(base = tmpdir(), realpath = realpathSync) {
+  return realpath(base);
+}
 export function assertProvenanceResult(status, stdout, packageName, version) {
   let metadata;
   try {

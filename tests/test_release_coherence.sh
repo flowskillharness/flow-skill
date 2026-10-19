@@ -202,6 +202,7 @@ bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7a.out" 2>&1
 ck 0 $? "sound: real workflow passes full coherence run"
 grep -q 'provenance receipts upload right after audit' "$tmp/coh7a.out" && ck 0 0 "sound: ordering gate asserts audit-then-upload-then-verifier" || ck 0 1 "sound: ordering gate asserts audit-then-upload-then-verifier"
 
+
 # Hollow package receipt: removing only release-artifact.json from npm-package upload must fail.
 cp "$tmp/r/.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml"
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
@@ -247,7 +248,47 @@ PYEOF
 bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7.out" 2>&1
 ck 1 $? "hollow: audit-after-smoke ordering fails coherence"
 grep -q 'publisher must run npm publish before the signature audit' "$tmp/coh7.out" && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
-rm -rf "$tmp"
+
+# Hollow trust boundary: independently mutate each checkout and require the exact sound contract first.
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7restored.out" 2>&1
+ck 0 $? "sound: restored publisher workflow passes before checkout hollows"
+python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" eligibility <<'PYEOF'
+import re, sys
+p, job = sys.argv[1:]
+t = open(p).read()
+jobs = list(re.finditer(r'(?m)^  [A-Za-z][\w-]*:\s*$', t))
+idx = next(i for i, match in enumerate(jobs) if match.group().strip() == f'{job}:')
+start = jobs[idx].end()
+end = jobs[idx + 1].start() if idx + 1 < len(jobs) else len(t)
+section = t[start:end]
+old = '          ref: ${{ github.sha }}'
+assert section.count(old) == 1
+section = section.replace(old, '          ref: ${{ inputs.expected_sha }}', 1)
+open(p, 'w').write(t[:start] + section + t[end:])
+PYEOF
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7eligibility.out" 2>&1
+ck 1 $? "hollow: caller-selected eligibility checkout fails coherence"
+grep -q 'publisher must checkout github.sha for both jobs' "$tmp/coh7eligibility.out" && ck 0 0 "names untrusted eligibility checkout" || ck 0 1 "names untrusted eligibility checkout"
+
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" publish <<'PYEOF'
+import re, sys
+p, job = sys.argv[1:]
+t = open(p).read()
+jobs = list(re.finditer(r'(?m)^  [A-Za-z][\w-]*:\s*$', t))
+idx = next(i for i, match in enumerate(jobs) if match.group().strip() == f'{job}:')
+start = jobs[idx].end()
+end = jobs[idx + 1].start() if idx + 1 < len(jobs) else len(t)
+section = t[start:end]
+old = '          ref: ${{ github.sha }}'
+assert section.count(old) == 1
+section = section.replace(old, '          ref: ${{ inputs.expected_sha }}', 1)
+open(p, 'w').write(t[:start] + section + t[end:])
+PYEOF
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7publish.out" 2>&1
+ck 1 $? "hollow: caller-selected publish checkout fails coherence"
+grep -q 'publisher must checkout github.sha for both jobs' "$tmp/coh7publish.out" && ck 0 0 "names untrusted publish checkout" || ck 0 1 "names untrusted publish checkout"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

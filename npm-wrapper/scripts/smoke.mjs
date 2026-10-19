@@ -17,12 +17,12 @@
 // `flow-skill: not found` even when the published package was healthy.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { realpathSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { supportsReceiptAndOmp } from './semver.mjs';
-import { assertProvenanceResult } from './smoke-policy.mjs';
+import { assertProvenanceResult, canonicalSmokeTempBase } from './smoke-policy.mjs';
 
 const PKG = '@manhquy/flow-skill';
 const BIN = 'flow-skill';
@@ -43,7 +43,8 @@ if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
 }
 
 // Empty cwd so local monorepo package.json never shadows registry resolution.
-const npxCwd = mkdtempSync(join(tmpdir(), 'flow-smoke-npx-'));
+const tempBase = canonicalSmokeTempBase();
+const npxCwd = mkdtempSync(join(tempBase, 'flow-smoke-npx-'));
 
 function run(cmd, args, opts = {}) {
   console.log(`\n$ ${cmd} ${args.join(' ')}`);
@@ -113,7 +114,7 @@ if (!Array.isArray(plan.targets) || !plan.targets.includes('claude')) {
 console.log('  --json plan event OK');
 
 // 5. install into scratch HOME
-const scratchHome = mkdtempSync(join(tmpdir(), 'flow-smoke-home-'));
+const scratchHome = mkdtempSync(join(tempBase, 'flow-smoke-home-'));
 console.log(`  scratch HOME: ${scratchHome}`);
 try {
   const install = run('npx', npxArgs(['--yes', '-t', 'claude']), {
@@ -142,7 +143,7 @@ try {
     // 6. explicit OMP install into a fresh scratch HOME — materialization at the genuine
     //    skills home `.omp/agent/skills/flow` (never the operator's real ~/.omp), plus a
     //    stdlib self-check that the shipped receipt digests match the installed files.
-    const ompHome = mkdtempSync(join(tmpdir(), 'flow-smoke-omp-home-'));
+    const ompHome = mkdtempSync(join(tempBase, 'flow-smoke-omp-home-'));
     try {
       const ompInstall = run('npx', npxArgs(['--yes', '-t', 'omp']), {
         env: { ...process.env, HOME: ompHome, USERPROFILE: ompHome, CI: 'true' },

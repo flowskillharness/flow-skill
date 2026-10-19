@@ -69,6 +69,7 @@ export function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 
   if (!/^\d+$/.test(process.env.ACTOR_ID || '') || !/^\d+$/.test(process.env.EXPECTED_ACTOR_ID || '') || process.env.ACTOR_ID !== process.env.EXPECTED_ACTOR_ID) throw new Error('workflow actor ID does not match the dispatch caller correlation ID');
   if (mode === 'publish' && process.env.FLOW_AUTOPUBLISH_ENABLED !== 'true') throw new Error('live publishing is disabled until controller activation');
   if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('expected SHA must be a full Git object ID');
+  if (!/^[0-9a-f]{40}$/i.test(process.env.GITHUB_SHA || '') || process.env.GITHUB_SHA !== sha) throw new Error('expected SHA differs from the trusted workflow-selected commit');
   if (!/^[0-9a-f-]{36}$/.test(process.env.DISPATCH_ID || '')) throw new Error('dispatch correlation ID must be a UUID');
   const currentSha = gh(`repos/${REPO}/git/ref/heads/master`).object?.sha;
   if (currentSha !== sha || git(['rev-parse', 'HEAD']) !== sha) throw new Error('expected SHA is not current remote and checked-out master');
