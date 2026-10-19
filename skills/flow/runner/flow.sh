@@ -129,14 +129,16 @@ _register_td()  { _CLEANUP_TDS+=("$1"); }
 # a real 3-OS CI run: ubuntu/windows ship bash >= 4.4, immune; macOS is not).
 _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${_CLEANUP_TDS[@]}"; do rm -rf "$d" 2>/dev/null; done; fi; _CLEANUP_TDS=(); }
 
-# Keep pure run-state (MODE / PROJECT_TYPE / .flow/) out of the host repo's git status.
-# Idempotent; only acts in a real git repo OR where a .gitignore already exists (so test
-# sandboxes and non-git dirs are untouched — no surprise file creation).
+# Keep pure run-state (MODE / PROJECT_TYPE / .flow/ telemetry, flow/.lock* machine state,
+# cards/.inflight) out of the host repo's git status. Idempotent; only acts in a real git repo OR
+# where a .gitignore already exists (so test sandboxes and non-git dirs are untouched — no surprise
+# file creation). Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
+# previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
 _ignore_run_state() {
   { [ -d "$ROOT/.git" ] || [ -f "$ROOT/.gitignore" ]; } || return 0
   local gi="$ROOT/.gitignore"
   grep -q 'flow run-state' "$gi" 2>/dev/null && return 0
-  printf '\n# /flow run-state (generated; safe to ignore)\nMODE\nPROJECT_TYPE\n.flow/\n' >> "$gi"
+  printf '\n# /flow run-state (generated; safe to ignore)\nMODE\nPROJECT_TYPE\n.flow/\nflow/.lock*\ncards/.inflight\n' >> "$gi"
 }
 
 # Concurrency lock: seconds a lock stays "fresh"; older locks are stale and auto-reclaimed.
@@ -647,6 +649,7 @@ _read_lock() {
 }
 _write_lock() { # $1 = cmd label
   mkdir -p "$FLOW_DIR" 2>/dev/null || true
+  _ignore_run_state    # mutating verbs mint flow/.lock* machine state: cover it at the choke point
   printf '%s|%s|%s|%s|%s\n' "$(_now)" "$(flow_lock_owner)" "$$" "$(uname -n 2>/dev/null || echo host)" "${1:-?}" \
     > "$LOCK_FILE" 2>/dev/null || true
 }
