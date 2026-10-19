@@ -282,6 +282,19 @@ touch "$SB/frontend[1]/.flow/events.jsonl" "$SB/frontend1/.flow/keep"
 (cd "$SB/frontend[1]" && git check-ignore -q -- .flow/events.jsonl) || { echo "  FAIL [literal root state not ignored]"; cat "$SB/ignore-debug.log"; fail=$((fail+1)); }
 (cd "$SB/frontend1" && git check-ignore -q -- .flow/keep) && { echo "  FAIL [metachar lookalike unexpectedly ignored]"; fail=$((fail+1)); } || echo "  ok   [metachar lookalike remains trackable]"
 rm -rf "$SB"
+
+echo "L) CDPATH output does not contaminate a valid relative root"
+SB="$(mktemp -d)"; mkdir -p "$SB/repo" "$SB/caller"
+git -C "$SB/repo" init -q
+ec=0
+out="$(cd "$SB/caller" && CDPATH="$SB" HOME="$SB/home" FLOW_PROJECT_ROOT=repo bash "$RUN" status 2>&1)" || ec=$?
+ck 0 "$ec" "relative-root status works with exported CDPATH"
+no "$out" 'root path contains CR/LF' "CDPATH chatter is not mistaken for a newline root"
+# Exercise the exclude helper too: CDPATH may resolve a relative path not in CWD.
+ec=0
+out="$(cd "$SB/caller" && CDPATH="$SB" HOME="$SB/home" FLOW_PROJECT_ROOT=repo FLOW_LIB_ONLY=1 bash -c '. "$1"; _ignore_run_state' _ "$RUN" 2>&1)" || ec=$?
+ck 0 "$ec" "direct exclude helper accepts valid relative root with CDPATH"
+rm -rf "$SB"
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

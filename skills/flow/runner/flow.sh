@@ -65,7 +65,7 @@ else
 fi
 # Validate physical aliases before any command/helper or EXIT logger can write.
 # Keep a sentinel until after substitution so a terminal LF is not silently removed.
-if _physical_root="$(cd "$ROOT" 2>/dev/null && pwd -P && printf '.')"; then
+if _physical_root="$(cd "$ROOT" >/dev/null 2>&1 && pwd -P && printf '.')"; then
   _physical_root="${_physical_root%$'\n'.}"
   _reject_unsafe_root_newlines "$_physical_root" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
 fi
@@ -192,7 +192,7 @@ _ignore_run_state() {
   local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
   _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; return 1; }
   # A sentinel keeps command substitution from stripping a terminal LF in the physical path.
-  root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P && printf '.')" || return 0
+  root_abs="$(cd "$ROOT" >/dev/null 2>&1 && pwd -P && printf '.')" || return 0
   root_abs="${root_abs%$'\n'.}"
   _reject_unsafe_root_newlines "$root_abs" || { FLOW_IGNORE_UNSAFE=1; return 1; }
   root_abs="$(_canonical_git_path "$root_abs")" || return 0
