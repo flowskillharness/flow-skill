@@ -215,7 +215,22 @@ PYEOF
 bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7meta.out 2>&1
 ck 1 $? "hollow: missing release-artifact.json upload fails"
 grep -q 'package upload path block must retain both' /tmp/coh7meta.out && ck 0 0 "names missing package receipt" || ck 0 1 "names missing package receipt"
-mv "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
+import re, sys
+p=sys.argv[1]; t=open(p).read()
+m=re.search(r'(name: npm-package-.*?\n[ ]+path:\s*\|\n)(.*?)(?=^[ ]+if-no-files-found:)', t, re.S|re.M)
+assert m, 'package upload path block missing'
+paths=m.group(2)
+assert '${{ runner.temp }}/*.tgz' in paths and '${{ runner.temp }}/release-artifact.json' in paths
+paths=paths.replace('            ${{ runner.temp }}/release-artifact.json\n', '            # omitted release-artifact.json\n')
+t=t[:m.start(2)]+paths+t[m.end(2):]
+open(p,'w').write(t)
+PYEOF
+bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7comment.out 2>&1
+ck 1 $? "hollow: comment-only package metadata is not treated as uploaded"
+grep -q 'package upload path block must retain both' /tmp/coh7comment.out && ck 0 0 "rejects commented-out metadata path" || ck 0 1 "rejects commented-out metadata path"
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
 # hollow half: move the install-smoke step before the audit step; ONLY the ordering gate flips
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
 import re, sys

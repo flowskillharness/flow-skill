@@ -107,9 +107,22 @@ if [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ -n "$publish_line" ] && [ "
 else
   fail "publisher must run npm publish before the signature audit and the audit before the installer smoke"
 fi
+upload_path_values() {
+  awk -v start="$1" '
+    NR < start { next }
+    NR == start { in_step = 1 }
+    in_step && NR > start && /^      - / { exit }
+    in_step && /path:[[:space:]]*\|/ { in_path = 1; next }
+    in_path {
+      indent = match($0, /[^ ]/) - 1
+      if (indent < 12) exit
+      print substr($0, indent + 1)
+    }
+  ' .github/workflows/publish-npm-wrapper.yml
+}
 if [ -n "$pkg_upload_line" ] && [ -n "$pack_line" ] && [ -n "$publish_line" ] && [ "$pkg_upload_line" -gt "$pack_line" ] && [ "$pkg_upload_line" -lt "$publish_line" ]; then
-  pkg_block="$(sed -n "${pkg_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p')"
-  if printf '%s\n' "$pkg_block" | grep -q '\*\.tgz' && printf '%s\n' "$pkg_block" | grep -q 'release-artifact.json'; then
+  pkg_paths="$(upload_path_values "$pkg_upload_line")"
+  if printf '%s\n' "$pkg_paths" | grep -qx '\${{ runner.temp }}/\*\.tgz' && printf '%s\n' "$pkg_paths" | grep -qx '\${{ runner.temp }}/release-artifact\.json'; then
     ok "exact packed archive and metadata retained before publish"
   else
     fail "package upload path block must retain both *.tgz and release-artifact.json"
@@ -119,19 +132,14 @@ else
 fi
 gh_verify_line="$(grep -nE 'verify-attestation-with-gh\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
 if [ -n "$receipt_upload_line" ] && [ -n "$audit_line" ] && [ -n "$gh_verify_line" ] && [ "$receipt_upload_line" -gt "$audit_line" ] && [ "$receipt_upload_line" -lt "$gh_verify_line" ]; then
-  receipt_block="$(sed -n "${receipt_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p')"
-  if printf '%s\n' "$receipt_block" | grep -q 'npm-audit-verified.json' && printf '%s\n' "$receipt_block" | grep -q 'slsa-bundle.json'; then
+  receipt_paths="$(upload_path_values "$receipt_upload_line")"
+  if printf '%s\n' "$receipt_paths" | grep -qx '\${{ runner.temp }}/npm-audit-verified\.json' && printf '%s\n' "$receipt_paths" | grep -qx '\${{ runner.temp }}/slsa-bundle\.json'; then
     ok "provenance receipts upload right after audit, before Sigstore verify, so recovery survives later failures"
   else
-    fail "verification upload block must contain npm-audit-verified.json and slsa-bundle.json"
+    fail "verification upload path block must contain npm-audit-verified.json and slsa-bundle.json"
   fi
 else
   fail "audit/SLSA receipts must upload after audit and before the Sigstore verifier"
-fi
-if grep -q 'release-artifact.json' .github/workflows/publish-npm-wrapper.yml; then
-  ok "run artifact retains artifact metadata"
-else
-  fail "run artifact must retain release-artifact.json metadata"
 fi
 
 [ -f skills/flow/runner/attestations.sh ] && ok "attestations.sh present" || fail "missing attestations.sh"
