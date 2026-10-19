@@ -154,7 +154,7 @@ _ignore_run_state() {
   else
     case "$root_abs/" in "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;; *) return 0 ;; esac
   fi
-  for pat in "${root_prefix}.flow/" "${root_prefix}flow/.lock*" "${root_prefix}cards/.inflight" "${root_prefix}MODE" "${root_prefix}PROJECT_TYPE"; do
+  for pat in "/${root_prefix}.flow/" "/${root_prefix}flow/.lock*" "/${root_prefix}cards/.inflight" "/${root_prefix}MODE" "/${root_prefix}PROJECT_TYPE"; do
     grep -qxF "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >> "$ex"
   done
 }

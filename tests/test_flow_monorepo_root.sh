@@ -71,10 +71,11 @@ SB="$(mktemp -d)"
   && export GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@localhost GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@localhost \
   && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
 ( cd "$SB" && EX="$(git rev-parse --git-path info/exclude)" \
-  && grep -qxF '.flow/' "$EX" && grep -qxF 'flow/.lock*' "$EX" && grep -qxF 'cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
+  && grep -qxF '/.flow/' "$EX" && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
 git -C "$SB" config user.name ci
 git -C "$SB" config user.email ci@localhost
 git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"
+ck 0 "$(git -C "$SB" ls-files | grep -cE '^\.flow/|^flow/\.lock|^\.gitignore$')" "committed tree has no .flow/, no flow/.lock*, no minted .gitignore"
 ck 0 "$([ -f "$SB/.flow/events.jsonl" ] && echo 0 || echo 1)" "telemetry still written to disk (ignored, not suppressed)"
 ( cd "$SB" && test ! -f .gitignore ) && echo "  ok   [no .gitignore created in git repos]" || { echo "  FAIL [.gitignore should not be created]"; fail=$((fail+1)); }
 rm -rf "$SB"
@@ -98,7 +99,7 @@ git -C "$SB" commit -qm base
 (cd "$SB/frontend" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
 EX="$(git -C "$SB/frontend" rev-parse --git-path info/exclude)"
 case "$EX" in /*) ;; *) EX="$SB/frontend/$EX" ;; esac
-for pat in 'frontend/.flow/' 'frontend/flow/.lock*' 'frontend/cards/.inflight' 'frontend/MODE' 'frontend/PROJECT_TYPE'; do
+for pat in '/frontend/.flow/' '/frontend/flow/.lock*' '/frontend/cards/.inflight' '/frontend/MODE' '/frontend/PROJECT_TYPE'; do
   grep -qxF "$pat" "$EX" || { echo "  FAIL [nested exclude missing $pat]"; fail=$((fail+1)); }
 done
 mkdir -p "$SB/frontend/.flow" "$SB/frontend/flow" "$SB/frontend/cards" "$SB/.flow" "$SB/flow"
@@ -124,7 +125,7 @@ test -f "$SB-linked/.git" && test ! -d "$SB-linked/.git" && test ! -e "$SB-linke
 (cd "$SB-linked" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
 EX="$(git -C "$SB-linked" rev-parse --git-path info/exclude)"
 case "$EX" in /*) ;; *) EX="$SB-linked/$EX" ;; esac
-for pat in '.flow/' 'flow/.lock*' 'cards/.inflight' 'MODE' 'PROJECT_TYPE'; do
+for pat in '/.flow/' '/flow/.lock*' '/cards/.inflight' '/MODE' '/PROJECT_TYPE'; do
   grep -qxF "$pat" "$EX" || { echo "  FAIL [linked exclude missing $pat]"; fail=$((fail+1)); }
 done
 test ! -e "$SB-linked/.git/info/exclude" && echo "  ok   [no relative-path stray .git tree under worktree]" || { echo "  FAIL [relative-path stray .git tree]"; fail=$((fail+1)); }
