@@ -749,7 +749,7 @@ cp.spawnSync = function(command, args, options = {}) {
     const installed = path.join(root, 'consumer-package');
     if (!fs.existsSync(path.join(installed, 'package/package.json'))) {
       fs.mkdirSync(installed, { recursive: true });
-      exec('tar', ['-xzf', s.name, '-C', installed], { cwd: store });
+      exec('tar', ['-xzf', s.name, '-C', '../consumer-package'], { cwd: store });
       const pkg = JSON.parse(fs.readFileSync(path.join(installed, 'package/package.json'), 'utf8'));
       assert.equal(pkg.name, '@manhquy/flow-skill'); assert.equal(pkg.version, s.version);
     }
