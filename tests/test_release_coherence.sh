@@ -270,8 +270,11 @@ PYEOF
 bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7eligibility.out" 2>&1
 ck 1 $? "hollow: caller-selected eligibility checkout fails coherence"
 grep -q 'publisher must checkout github.sha for both jobs' "$tmp/coh7eligibility.out" && ck 0 0 "names untrusted eligibility checkout" || ck 0 1 "names untrusted eligibility checkout"
+ck 1 "$(grep '^FAIL:' "$tmp/coh7eligibility.out" | grep -vc '^FAIL: release coherence$')" "eligibility hollow fails only the trust check"
 
 cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7publish-restored.out" 2>&1
+ck 0 $? "sound: restored publisher workflow passes before publish hollow"
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" publish <<'PYEOF'
 import re, sys
 p, job = sys.argv[1:]
@@ -289,6 +292,10 @@ PYEOF
 bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7publish.out" 2>&1
 ck 1 $? "hollow: caller-selected publish checkout fails coherence"
 grep -q 'publisher must checkout github.sha for both jobs' "$tmp/coh7publish.out" && ck 0 0 "names untrusted publish checkout" || ck 0 1 "names untrusted publish checkout"
+ck 1 "$(grep '^FAIL:' "$tmp/coh7publish.out" | grep -vc '^FAIL: release coherence$')" "publish hollow fails only the trust check"
+cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/workflows/publish-npm-wrapper.yml"
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7final-restored.out" 2>&1
+ck 0 $? "sound: restored publisher workflow passes after checkout hollows"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

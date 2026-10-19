@@ -211,6 +211,16 @@ test('workflow publish snapshot forwards the observed prepublish registry state'
   assert.throws(() => checkRequest(request, untrustedIo), /trusted workflow-selected commit/);
   assert.equal(untrustedBoundaryCalls, 0);
   process.env.GITHUB_SHA = sha;
+  for (const dispatchId of ['', '-'.repeat(36), 'a'.repeat(36), 'not-a-uuid']) {
+    process.env.DISPATCH_ID = dispatchId;
+    assert.throws(() => checkRequest(request, untrustedIo), /dispatch correlation ID must be a UUID/);
+  }
+  assert.equal(untrustedBoundaryCalls, 0);
+  process.env.DISPATCH_ID = '12345678-1234-1234-1234-123456789abc';
+  process.env.EXPECTED_ACTOR_ID = '8';
+  assert.throws(() => checkRequest(request, untrustedIo), /actor ID/);
+  assert.equal(untrustedBoundaryCalls, 0);
+  process.env.EXPECTED_ACTOR_ID = '7';
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: null }, io), /prepublish-state-changed/);
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: { state: 'unknown' } }, io), /release refused/);
 });
