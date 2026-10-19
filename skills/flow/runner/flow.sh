@@ -211,8 +211,9 @@ _ignore_run_state() {
     printf '[flow ignore] ROOT=%s root_abs=%s raw_ex=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_ex" "$ex" >&2
   fi
   raw_top="$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" || return 0
-  git_top="$(_canonical_git_path "$raw_top")" || return 0
-  git_top="$(cd "$git_top" 2>/dev/null && pwd -P)" || return 0
+  git_top="$(cd "$raw_top" >/dev/null 2>&1 && pwd -P && printf '.')" || return 0
+  git_top="${git_top%$'\n'.}"
+  git_top="$(_canonical_git_path "$git_top")" || return 0
   if [ "$root_abs" = "$git_top" ]; then
     root_prefix=''
   else

@@ -121,12 +121,14 @@ suffix" ;;
 " ;;
   esac
   physical_root_available=1
-  if ! mkdir -p "$BAD_ROOT/flow" 2>/dev/null; then
-    case "$(uname -s)" in
-      MINGW*|MSYS*|CYGWIN*) physical_root_available=0 ;;
-      *) echo 'FAIL: cannot create newline-root fixture'; exit 1 ;;
-    esac
-  fi
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) physical_root_available=0 ;;
+    *)
+      if ! mkdir -p "$BAD_ROOT/flow" 2>/dev/null; then
+        echo 'FAIL: cannot create newline-root fixture'; exit 1
+      fi
+      ;;
+  esac
   cp "$HERE/../skills/flow/runner/flow.sh" "$SB/flow.sh"
   printf '# unrelated markdown\n' > "$SB/unrelated.md"
   before_ex="$(git -C "$SB" hash-object "$EX_PATH")"
