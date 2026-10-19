@@ -191,10 +191,17 @@ cp "$HERE/../README_VN.md" "$tmp/r/"
 cp "$HERE/../tests/manifest.txt" "$tmp/r/tests/"
 cp "$HERE/../.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/"
 cp "$HERE/../scripts/release-workflow.mjs" "$tmp/r/scripts/"
-# sound half: current workflow passes the new ordering checks inside the full green run
+# populate every manifest-listed suite so suite presence is not a second failure source
+while IFS= read -r suite || [ -n "$suite" ]; do
+  suite="${suite%$'\r'}"
+  case "$suite" in ''|\#*) continue ;; esac
+  : > "$tmp/r/tests/$suite"
+done < "$tmp/r/tests/manifest.txt"
+# sound half: current workflow passes the FULL coherence run, not just one grep
 bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7a.out 2>&1
-grep -q 'provenance receipts retained before install smoke' /tmp/coh7a.out && ck 0 0 "sound: real workflow satisfies ordering gate" || ck 0 1 "sound: real workflow satisfies ordering gate"
-# hollow half: move the install-smoke step before the audit step; checker must fail
+ck 0 $? "sound: real workflow passes full coherence run"
+grep -q 'provenance receipts upload right after audit' /tmp/coh7a.out && ck 0 0 "sound: ordering gate asserts audit-then-upload-then-verifier" || ck 0 1 "sound: ordering gate asserts audit-then-upload-then-verifier"
+# hollow half: move the install-smoke step before the audit step; ONLY the ordering gate flips
 python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
 import re, sys
 path = sys.argv[1]
@@ -207,10 +214,9 @@ text = text.replace(smoke.group(1), '', 1)
 text = text.replace(audit.group(1), smoke.group(1) + audit.group(1), 1)
 open(path, 'w').write(text)
 PYEOF
-mv "$tmp/r/scripts/release-workflow.mjs" "$tmp/r/scripts/release-workflow.mjs.bak" 2>/dev/null || true
 bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7.out 2>&1
 ck 1 $? "hollow: audit-after-smoke ordering fails coherence"
-grep -q 'publisher must audit npm signatures before the installer smoke' /tmp/coh7.out && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
+grep -q 'publisher must run npm publish before the signature audit' /tmp/coh7.out && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
 rm -rf "$tmp"
 
 echo

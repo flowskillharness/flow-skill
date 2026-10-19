@@ -102,27 +102,36 @@ if [ -n "$pack_workdir" ] && [ -n "$pack_line" ] && [ "$pack_workdir" -lt "$pack
 else
   fail "npm pack must run with npm-wrapper as working-directory"
 fi
-if [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ "$audit_line" -lt "$smoke_line" ]; then
-  ok "verified audit precedes install smoke"
+if [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ -n "$publish_line" ] && [ "$publish_line" -lt "$audit_line" ] && [ "$audit_line" -lt "$smoke_line" ]; then
+  ok "verified audit runs after publish and before install smoke"
 else
-  fail "publisher must audit npm signatures before the installer smoke"
+  fail "publisher must run npm publish before the signature audit and the audit before the installer smoke"
 fi
 if [ -n "$pkg_upload_line" ] && [ -n "$pack_line" ] && [ -n "$publish_line" ] && [ "$pkg_upload_line" -gt "$pack_line" ] && [ "$pkg_upload_line" -lt "$publish_line" ]; then
-  ok "exact packed archive retained before publish"
+  pkg_block="$(sed -n "${pkg_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p' | grep -c '\*\.tgz')"
+  if [ "${pkg_block:-0}" -ge 1 ]; then
+    ok "exact packed archive retained before publish"
+  else
+    fail "package upload must retain the packed *.tgz itself"
+  fi
 else
   fail "run artifact must retain the exact tarball and metadata before publishing"
 fi
-if [ -n "$receipt_upload_line" ] && [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ "$receipt_upload_line" -gt "$audit_line" ] && [ "$receipt_upload_line" -lt "$smoke_line" ]; then
-  ok "provenance receipts retained before install smoke so recovery survives smoke failure"
+gh_verify_line="$(grep -nE 'verify-attestation-with-gh\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+if [ -n "$receipt_upload_line" ] && [ -n "$audit_line" ] && [ -n "$gh_verify_line" ] && [ "$receipt_upload_line" -gt "$audit_line" ] && [ "$receipt_upload_line" -lt "$gh_verify_line" ]; then
+  receipt_block="$(sed -n "${receipt_upload_line},\$p" .github/workflows/publish-npm-wrapper.yml | sed -n '1,/^      - /p')"
+  if printf '%s\n' "$receipt_block" | grep -q 'npm-audit-verified.json' && printf '%s\n' "$receipt_block" | grep -q 'slsa-bundle.json'; then
+    ok "provenance receipts upload right after audit, before Sigstore verify, so recovery survives later failures"
+  else
+    fail "verification upload block must contain npm-audit-verified.json and slsa-bundle.json"
+  fi
 else
-  fail "audit/SLSA receipts must upload after audit and before smoke"
+  fail "audit/SLSA receipts must upload after audit and before the Sigstore verifier"
 fi
-if grep -q 'npm-audit-verified.json' .github/workflows/publish-npm-wrapper.yml \
-  && grep -q 'slsa-bundle.json' .github/workflows/publish-npm-wrapper.yml \
-  && grep -q 'release-artifact.json' .github/workflows/publish-npm-wrapper.yml; then
-  ok "run artifact retains tarball and provenance receipts"
+if grep -q 'release-artifact.json' .github/workflows/publish-npm-wrapper.yml; then
+  ok "run artifact retains artifact metadata"
 else
-  fail "run artifact must retain exact tarball, audit report, SLSA bundle and metadata"
+  fail "run artifact must retain release-artifact.json metadata"
 fi
 
 [ -f skills/flow/runner/attestations.sh ] && ok "attestations.sh present" || fail "missing attestations.sh"

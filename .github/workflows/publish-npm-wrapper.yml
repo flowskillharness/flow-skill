@@ -128,11 +128,6 @@ jobs:
           SOURCE_REF: refs/heads/master
           AUDIT_REPORT: ${{ runner.temp }}/npm-audit-verified.json
         run: node scripts/npm-attestation-audit.mjs "$VERSION" "$RUNNER_TEMP/release-artifact.json" "$EXPECTED_SHA" "$RUNNER_TEMP/slsa-bundle.json" "$SOURCE_REF" "$AUDIT_REPORT"
-      - name: Verify Sigstore trust root, Rekor inclusion, source and digest
-        env:
-          VERSION: ${{ needs.eligibility.outputs.version }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
-        run: node scripts/verify-attestation-with-gh.mjs "$RUNNER_TEMP/manhquy-flow-skill-$VERSION.tgz" "$RUNNER_TEMP/slsa-bundle.json" manhquydev flow-skill .github/workflows/publish-npm-wrapper.yml refs/heads/master "$EXPECTED_SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: npm-verification-${{ github.run_id }}-${{ github.run_attempt }}
@@ -141,6 +136,12 @@ jobs:
             ${{ runner.temp }}/slsa-bundle.json
           if-no-files-found: error
           retention-days: 90
+      - name: Verify Sigstore trust root, Rekor inclusion, source and digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.eligibility.outputs.version }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: node scripts/verify-attestation-with-gh.mjs "$RUNNER_TEMP/manhquy-flow-skill-$VERSION.tgz" "$RUNNER_TEMP/slsa-bundle.json" manhquydev flow-skill .github/workflows/publish-npm-wrapper.yml refs/heads/master "$EXPECTED_SHA"
       - name: Verify registry integrity and installed package
         env:
           VERSION: ${{ needs.eligibility.outputs.version }}

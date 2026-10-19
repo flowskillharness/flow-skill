@@ -34,7 +34,7 @@ bash scripts/release.sh --dry-run
 bash scripts/release.sh --yes
 ```
 
-`--yes` requires clean working tree, local `master == origin/master`, dual-axis coherence/changelog entries, zero sync drift, i18n integrity, unused tags, exact-HEAD authoritative CI, and read-only verification battery. It dispatches with a unique request UUID through the workflow-dispatch REST endpoint using `return_run_details=true`, then validates the returned repository-bound `workflow_run_id` and watches that exact run. A 204/missing/invalid response is an ambiguous dispatch: fail closed and do not redispatch blindly. After the run succeeds, re-read and verify its workflow path, ref, SHA, event, title, attempt and conclusion, then require successful eligibility and live publish jobs from that exact attempt (dry-run requires publish to be skipped). Finally verify registry integrity/provenance/install smoke; only then create/push tags and the GitHub Release.
+`--yes` requires clean working tree, local `master == origin/master`, dual-axis coherence/changelog entries, zero sync drift, i18n integrity, unused tags, exact-HEAD authoritative CI, and read-only verification battery. It dispatches with a unique request UUID through the workflow-dispatch REST endpoint using `return_run_details=true`, then validates the returned repository-bound `workflow_run_id` and watches that exact run. A 204/missing/invalid response is an ambiguous dispatch: fail closed and do not redispatch blindly. After the run succeeds, re-read and verify its workflow path, ref, SHA, event, title, attempt and conclusion, then require successful eligibility and live publish jobs from that exact attempt (dry-run requires publish to be skipped). Finally verify registry integrity/provenance/install smoke; only then create/push the release tags — the npm tag always; the skill tag and its GitHub Release only when release intent selects a skill version (`skill_version` non-null; an npm-only release must not mint a skill tag or GitHub Release).
 
 Stable releases publish to `latest`; prereleases to `next`. Stable versions are never downgraded. A prerelease does not automatically move `latest` backward or promote itself to `latest`.
 
@@ -54,6 +54,13 @@ The smoke runs against the public registry from a clean temporary working direct
 
 - Any non-E404 registry error, incomplete GitHub API/pagination, stale master, failed/newer CI attempt, missing/wrong-base merged PR, version/channel mismatch, integrity/provenance mismatch, or failed smoke stops the release.
 - Existing npm version is verify-only. Reconcile only exact artifact integrity, provenance, channel and expected tag/Release target. Missing/mismatched tags/releases require owner action; no automatic repair.
+- Verify-only recovery invocation (after `gh run download <run-id> -n npm-package-<run-id>-<attempt> -D <pkg-dir>` and `-n npm-verification-<run-id>-<attempt> -D <ev-dir>`):
+
+  ```bash
+  node scripts/sync-release.mjs --reconcile <pkg-dir> <ev-dir> <full-sha> <publisher-run-id> <publisher-run-attempt>
+  ```
+
+  It re-verifies the retained tarball digest, npm signatures, Sigstore attestation, registry integrity/channel and existing tag targets; it never publishes, retags or repairs. Partial state stops with an owner-action report. The publisher runtime must provide `gh >= 2.68.0` with `attestation verify`; the release client checks this capability BEFORE dispatching and refuses with instructions to provision a project-local portable `gh` (host tooling is never upgraded in place).
 - To pause automation, controller disables `FLOW_AUTOPUBLISH_ENABLED` or disables the publisher dispatch path. Never unpublish or move existing versions/tags.
 - Same-owner credentials can change workflow/variable/environment; OIDC/SLSA provides traceability, not an independent identity boundary.
 
