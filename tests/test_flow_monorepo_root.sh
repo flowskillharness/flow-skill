@@ -67,7 +67,9 @@ rm -rf "$SB"
 
 echo "G) git repo: run-state ignores land in .git/info/exclude, never committed"
 SB="$(mktemp -d)"
-( cd "$SB" && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
+( cd "$SB" \
+  && export GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@localhost GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@localhost \
+  && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
 ( cd "$SB" && EX="$(git rev-parse --git-path info/exclude)" \
   && grep -qxF '.flow/' "$EX" && grep -qxF 'flow/.lock*' "$EX" && grep -qxF 'cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
 git -C "$SB" add -A && git -C "$SB" commit -qm "novice: git add -A"
