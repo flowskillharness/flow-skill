@@ -108,6 +108,10 @@ for newline_kind in lf crlf trailing-lf; do
   EX_REL="$(git_path_to_posix "$(git -C "$SB" rev-parse --git-path info/exclude)")"
   case "$EX_REL" in /*) EX_PATH="$EX_REL" ;; *) EX_PATH="$SB/$EX_REL" ;; esac
   printf '# sentinel\n' > "$EX_PATH"
+  printf '# tracked ignore sentinel\n' > "$SB/.gitignore"
+  git -C "$SB" add .gitignore && git -C "$SB" commit -qm 'tracked ignore sentinel' || { echo 'FAIL: cannot commit ignore sentinel'; exit 1; }
+  ignore_before="$(git -C "$SB" hash-object "$SB/.gitignore")"
+  TEST_HOME="$SB/home"; mkdir -p "$TEST_HOME"
   case "$newline_kind" in
     lf) BAD_ROOT="$SB/frontend
 *.md
@@ -120,7 +124,9 @@ suffix" ;;
   cp "$HERE/../skills/flow/runner/flow.sh" "$SB/flow.sh"
   printf '# unrelated markdown\n' > "$SB/unrelated.md"
   before_ex="$(git -C "$SB" hash-object "$EX_PATH")"
-  out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$SB/flow.sh" next 2>&1 )"
+  ec=0
+  out="$( cd "$SB" && HOME="$TEST_HOME" FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$SB/flow.sh" next 2>&1 )" || ec=$?
+  ck 1 "$ec" "$newline_kind: unsafe root exits nonzero before library loading"
   after_ex="$(git -C "$SB" hash-object "$EX_PATH")"
   has "$out" 'root path contains CR/LF' "$newline_kind: names unsafe root refusal"
   ck "$before_ex" "$after_ex" "$newline_kind: exclude remains byte-identical"
@@ -128,6 +134,35 @@ suffix" ;;
   ck 1 "$([ -f "$BAD_ROOT/MODE" ] && echo 0 || echo 1)" "$newline_kind: mode refuses before writing state"
   out="$( cd "$SB" && FLOW_PROJECT_ROOT="$BAD_ROOT" bash "$RUN" project-type library 2>&1 )"
   ck 1 "$([ -f "$BAD_ROOT/PROJECT_TYPE" ] && echo 0 || echo 1)" "$newline_kind: project type refuses before writing state"
+  ec=0
+  out="$( cd "$BAD_ROOT" && unset FLOW_PROJECT_ROOT; HOME="$TEST_HOME" bash "$RUN" next 2>&1 )" || ec=$?
+  ck 1 "$ec" "$newline_kind: raw CWD is rejected before terminal LF stripping"
+  has "$out" 'root path contains CR/LF' "$newline_kind: CWD refusal is loud"
+  for command in status assess; do
+    ec=0
+    out="$( cd "$BAD_ROOT" && HOME="$TEST_HOME" FLOW_PROJECT_ROOT=. bash "$RUN" "$command" 2>&1 )" || ec=$?
+    ck 1 "$ec" "$newline_kind: $command rejects unsafe physical root behind relative alias"
+    has "$out" 'root path contains CR/LF' "$newline_kind: $command physical alias refusal is loud"
+  done
+  ck 1 "$([ -e "$BAD_ROOT/flow/00-idea.md" ] || [ -e "$BAD_ROOT/flow/.lock" ] || [ -e "$BAD_ROOT/flow/.lock.d" ] || [ -e "$BAD_ROOT/flow/.lock.claim" ]; echo $?)" "$newline_kind: no plan or lock writes"
+  ck 1 "$([ -e "$BAD_ROOT/.flow" ]; echo $?)" "$newline_kind: no telemetry, workspace or eval directory"
+  ck 1 "$([ -e "$TEST_HOME/.claude/flow/usage.jsonl" ]; echo $?)" "$newline_kind: no global telemetry"
+  ck "$ignore_before" "$(git -C "$SB" hash-object "$SB/.gitignore")" "$newline_kind: tracked ignore bytes unchanged"
+  ck "$before_ex" "$(git -C "$SB" hash-object "$EX_PATH")" "$newline_kind: exclude unchanged after all rejected commands"
+  # Source real helpers with a valid root, then exercise each writer against an unsafe root.
+  for helper in _claim_lock _write_lock lock_acquire _ws_record_append _ensure_cycle _eval_emit_batch_marker _eval_emit_result _eval_routing_emit_batch_marker _eval_routing_emit_result _eval_converge_emit_batch_marker _eval_converge_emit_result _log_event; do
+    ec=0
+    out="$(HOME="$TEST_HOME" FLOW_PROJECT_ROOT="$SB" FLOW_LIB_ONLY=1 bash -c '
+      . "$1"
+      ROOT="$2"; FLOW_DIR="$ROOT/flow"; LOG_DIR="$ROOT/.flow"
+      LOCK_FILE="$FLOW_DIR/.lock"; LOCK_DIR="$FLOW_DIR/.lock.d"; LOCK_CLAIM="$FLOW_DIR/.lock.claim"
+      CYCLE_FILE="$LOG_DIR/cycle_id"; EVENTS_FILE="$LOG_DIR/events.jsonl"
+      "$3"
+    ' _ "$RUN" "$BAD_ROOT" "$helper" 2>&1)" || ec=$?
+    ck 1 "$ec" "$newline_kind: direct $helper refuses unsafe root"
+    has "$out" 'root path contains CR/LF' "$newline_kind: direct $helper refusal is loud"
+  done
+  ck 1 "$([ -e "$BAD_ROOT/.flow" ] || [ -e "$BAD_ROOT/flow/.lock" ] || [ -e "$BAD_ROOT/flow/.lock.d" ] || [ -e "$BAD_ROOT/flow/.lock.claim" ]; echo $?)" "$newline_kind: direct helpers leave no state"
   ( cd "$SB" && git -c core.excludesFile=/dev/null check-ignore -q unrelated.md ); ck 1 "$?" "$newline_kind: unrelated markdown remains visible"
   ck 0 "$(git -C "$SB" ls-files --others --exclude-standard | grep -cE '(^|/)\.flow/|(^|/)\.lock' || true)" "$newline_kind: no Flow run-state files were created"
   rm -rf "$SB"

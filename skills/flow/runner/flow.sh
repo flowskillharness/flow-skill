@@ -29,6 +29,8 @@ GLOBAL_KB_DIR="${FLOW_GLOBAL_KB:-${HOME:-}/.claude/flow/playbooks}"   # cross-pr
 # a dir holding only .flow/ run-state was itself used as a root and is likewise left alone.
 FLOW_ROOT_ADOPTED=""
 FLOW_ROOT_NEW=""
+# Invocation-local refusal state; never change the user's telemetry opt-out variables.
+FLOW_IGNORE_UNSAFE=0
 _reject_unsafe_root_newlines() {
   case "$1" in *$'\n'*|*$'\r'*)
     printf '[flow ignore] FAIL: root path contains CR/LF and cannot be represented safely in git info/exclude.\n' >&2
@@ -61,6 +63,13 @@ else
     unset _rd _rp _rn
   fi
 fi
+# Validate physical aliases before any command/helper or EXIT logger can write.
+# Keep a sentinel until after substitution so a terminal LF is not silently removed.
+if _physical_root="$(cd "$ROOT" 2>/dev/null && pwd -P && printf '.')"; then
+  _physical_root="${_physical_root%$'\n'.}"
+  _reject_unsafe_root_newlines "$_physical_root" || { FLOW_IGNORE_UNSAFE=1; exit 1; }
+fi
+unset _physical_root
 [ -n "$FLOW_ROOT_ADOPTED" ] && printf 'note: using flow root %s (CWD is inside it; no flow/ here). Set FLOW_PROJECT_ROOT to override.\n' "$FLOW_ROOT_ADOPTED" >&2
 [ -n "${FLOW_ROOT_NEW:-}" ] && printf 'note: no Flow project found here or in ancestors - starting a new Flow project at %s (run /flow from your project root if you meant an existing one).\n' "$ROOT" >&2
 unset FLOW_ROOT_NEW
@@ -181,7 +190,11 @@ _canonical_git_path() {
 }
 _ignore_run_state() {
   local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top raw_ex raw_top
-  root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
+  _reject_unsafe_root_newlines "$ROOT" || { FLOW_IGNORE_UNSAFE=1; return 1; }
+  # A sentinel keeps command substitution from stripping a terminal LF in the physical path.
+  root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P && printf '.')" || return 0
+  root_abs="${root_abs%$'\n'.}"
+  _reject_unsafe_root_newlines "$root_abs" || { FLOW_IGNORE_UNSAFE=1; return 1; }
   root_abs="$(_canonical_git_path "$root_abs")" || return 0
   raw_ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$raw_ex" ] || return 0
@@ -747,6 +760,7 @@ _write_lock() { # $1 = cmd label
 # including systems where external mkdir binaries suffer from race bugs (uutils 0.10.0).
 # Winner also creates LOCK_DIR for backward compatibility with inspection/mtime tooling.
 _claim_lock() {
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   ( set -C; : > "$LOCK_CLAIM" ) 2>/dev/null || return 1
   mkdir "$LOCK_DIR" 2>/dev/null || true
   return 0
@@ -5007,6 +5021,7 @@ _eval_replay_vote() { # $1=fid $2=vote-i -> transcript on stdout; return 1 if mi
 # markers vs fixture rows) are always safe to append-only-scan since both are single JSON
 # objects on their own line.
 _eval_emit_batch_marker() { # $1=run_id $2=start|done $3=n_expected-or-n_written
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -5021,6 +5036,7 @@ _eval_emit_batch_marker() { # $1=run_id $2=start|done $3=n_expected-or-n_written
 # not per fixture row) - they never change mid-batch, and recomputing per-row was both wasteful
 # (an extra subprocess per fixture) and the original vector for the stdin-consumption bug above.
 _eval_emit_result() { # $1..$14 as before + $15=retries $16=rate_limited $17=prompt_sha $18=timed_out
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" stage="$3" expected="$4" verdict="$5" match="$6" flag="$7" pass="$8" invalid="$9" n="${10}" model="${11}" cliv="${12}" flowv="${13}" grsha="${14}"
   local retries="${15:-0}" ratel="${16:-false}" psha="${17:-}" timedout="${18:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5472,6 +5488,7 @@ _eval_routing_parse_action() {
 }
 
 _eval_routing_emit_result() { # $1=run_id $2=fid $3=expected $4=verdict $5=match $6..$9=votes $10=model $11=cliv $12=flowv $13=rulessha $14=retries $15=rate_limited $16=prompt_sha $17=timed_out
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" expected="$3" verdict="$4" match="$5" hit="$6" miss="$7" invalid="$8" n="$9"
   local model="${10}" cliv="${11}" flowv="${12}" rulessha="${13}" retries="${14:-0}" ratel="${15:-false}" psha="${16:-}" timedout="${17:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5511,6 +5528,7 @@ _eval_routing_complete_run_ids() {
 }
 
 _eval_routing_emit_batch_marker() { # $1=run_id $2=start|done $3=n
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -5826,6 +5844,7 @@ _eval_converge_parse_verdict() { # $1=raw $2=nonce -> GAP|CONVERGED|INVALID
 }
 
 _eval_converge_emit_result() { # same field shape as _eval_routing_emit_result
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   local run_id="$1" fid="$2" expected="$3" verdict="$4" match="$5" hit="$6" miss="$7" invalid="$8" n="$9"
   local model="${10}" cliv="${11}" flowv="${12}" rulessha="${13}" retries="${14:-0}" ratel="${15:-false}" psha="${16:-}" timedout="${17:-false}"
   case "$retries" in ''|*[!0-9]*) retries=0 ;; esac
@@ -5840,6 +5859,7 @@ _eval_converge_emit_result() { # same field shape as _eval_routing_emit_result
 }
 
 _eval_converge_emit_batch_marker() { # $1=run_id $2=start|done $3=n
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   mkdir -p "$LOG_DIR" 2>/dev/null || true
   printf '{"ts":"%s","epoch_s":%s,"run_id":"%s","batch":"%s","n":%s}\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)" "$(_now)" "$(_json_str "$1")" "$(_json_str "$2")" "$3" \
@@ -6739,6 +6759,7 @@ _log_is_readonly() { # $1 = command -> true|false (does it mutate the flow plan?
 # Covers ALL entry points - assess, next, or any command on a pre-existing project - so cycle
 # analytics are no longer blind on brownfield. One cycle per project dir (ADR decision).
 _ensure_cycle() {
+  _reject_unsafe_root_newlines "$ROOT" || return 1
   [ -f "$CYCLE_FILE" ] && return 0
   { mkdir -p "$LOG_DIR" && printf '%s-%s\n' "$(_now)" "$(uname -n 2>/dev/null | cut -c1-12 || echo host)" > "$CYCLE_FILE"; } 2>/dev/null || true
 }
@@ -6764,6 +6785,8 @@ _is_ephemeral() {
 _log_event() {
   [ "${FLOW_IGNORE_UNSAFE:-0}" = 1 ] && return 0
   _log_disabled && return 0
+  _reject_unsafe_root_newlines "$ROOT" || return 1
+  _ensure_cycle
   local ec="${1:-0}" now ts dur gp ro ver proj host cyc args eph gfr
   now="$(_now)"; ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo '')"
   dur=$(( now - ${FLOW_LOG_START:-$now} )); [ "$dur" -lt 0 ] && dur=0
