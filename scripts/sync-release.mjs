@@ -18,10 +18,10 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 
 import { publisherRunIdFromDispatch, publisherWatchArgs, publisherWatchTimeoutError, verifyPublisherJobs } from './release-dispatch-response.mjs';
-import { verifyRunArtifact } from './release-run-artifact.mjs';
+import { verifyRunArtifact, verifyRegistryChannel } from './release-run-artifact.mjs';
 import { assertGhAttestationCapability } from './verify-attestation-with-gh.mjs';
 const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
@@ -521,12 +521,23 @@ function verifyPublishedRun(runId, runAttempt, npmVersion, expectedSha) {
     mkdirSync(evidenceDir, { recursive: true });
     execGh(['run', 'download', String(runId), '--name', `npm-package-${runId}-${runAttempt}`, '--dir', packageDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
     execGh(['run', 'download', String(runId), '--name', `npm-verification-${runId}-${runAttempt}`, '--dir', evidenceDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
-    const { tarball } = verifyRunArtifact(packageDir, evidenceDir, { runId, runAttempt, version: npmVersion, sha: expectedSha });
+    const { tarball, integrity } = verifyRunArtifact(packageDir, evidenceDir, { runId, runAttempt, version: npmVersion, sha: expectedSha });
+    verifyRegistryChannel({ version: npmVersion, integrity, versionValue: npmViewJson(`@manhquy/flow-skill@${npmVersion}`, 'version'), integrityValue: npmViewJson(`@manhquy/flow-skill@${npmVersion}`, 'dist.integrity'), distTags: npmViewJson('@manhquy/flow-skill', 'dist-tags') });
     execFileSync(process.execPath, [join(repoRoot, 'scripts/verify-attestation-with-gh.mjs'), tarball, join(evidenceDir, 'slsa-bundle.json'), 'manhquydev', 'flow-skill', '.github/workflows/publish-npm-wrapper.yml', 'refs/heads/master', expectedSha], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
     execFileSync(process.execPath, [join(repoRoot, 'npm-wrapper/scripts/smoke.mjs'), npmVersion], { cwd: repoRoot, stdio: 'inherit', timeout: 15 * 60 * 1000 });
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
+}
+
+function npmJsonValue(stdout) {
+  return JSON.parse(stdout);
+}
+
+function npmViewJson(spec, field) {
+  const result = spawnSync('npm', ['view', spec, field, '--json'], { cwd: repoRoot, encoding: 'utf8', shell: process.platform === 'win32' });
+  if (result.error || result.status !== 0) throw new Error(`could not query current registry ${field}: ${result.stderr || result.error?.message || result.status}`);
+  return npmJsonValue(result.stdout);
 }
 
 function gitTagExists(tagName) {

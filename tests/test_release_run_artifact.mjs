@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { verifyRunArtifact } from '../scripts/release-run-artifact.mjs';
+import { verifyRegistryChannel, verifyRunArtifact } from '../scripts/release-run-artifact.mjs';
 import { reconcile } from '../scripts/release-workflow.mjs';
 
 const sha = 'a'.repeat(40);
@@ -104,4 +104,12 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
   reconcile(dir, dir, sha, 777, 2, io);
   assert.deepEqual(checkedTags, [`npm@${version}^{commit}`]);
   assert.equal(releaseCalls.length, 0);
+});
+
+test('client rejects registry version, integrity or channel changes after publisher run', () => {
+  const valid = { version: '1.0.0', integrity: 'sha512-exact', versionValue: '1.0.0', integrityValue: 'sha512-exact', distTags: { latest: '1.0.0' } };
+  assert.equal(verifyRegistryChannel(valid), 'latest');
+  assert.throws(() => verifyRegistryChannel({ ...valid, distTags: { latest: '1.0.1' } }), /channel no longer points/);
+  assert.throws(() => verifyRegistryChannel({ ...valid, versionValue: '1.0.1' }), /registry version differs/);
+  assert.throws(() => verifyRegistryChannel({ ...valid, integrityValue: 'sha512-moved' }), /registry integrity differs/);
 });

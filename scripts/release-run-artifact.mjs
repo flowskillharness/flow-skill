@@ -1,7 +1,8 @@
+import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { verifyNpmVerifiedOutput } from './release-provenance.mjs';
+import { parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 
 export function artifactTarballPath(packageDirectory, name) {
   if (typeof name !== 'string' || !name.trim() || name === '.' || name === '..' || /[/\\\0]/.test(name)) throw new Error('artifact name must be a non-empty basename');
@@ -23,4 +24,12 @@ export function verifyRunArtifact(packageDirectory, evidenceDirectory, { runId, 
     ref: 'refs/heads/master', commit: sha,
   });
   return { tarball, integrity, verified };
+}
+
+export function verifyRegistryChannel({ version, integrity, versionValue, integrityValue, distTags }) {
+  const channel = parseSemver(version)?.prerelease ? 'next' : 'latest';
+  if (versionValue !== version) throw new Error('current registry version differs from the retained release version');
+  if (integrityValue !== integrity) throw new Error('current registry integrity differs from the retained artifact');
+  if (!distTags || typeof distTags !== 'object' || distTags[channel] !== version) throw new Error(`current registry ${channel} channel no longer points to the retained release version`);
+  return channel;
 }
