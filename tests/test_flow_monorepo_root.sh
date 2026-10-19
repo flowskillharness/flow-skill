@@ -65,6 +65,17 @@ no  "$out" "note: no Flow project found here" ".flow run-state means this root i
 has "$out" "project: $SB/plain" ".flow-only dir still resolves to itself"
 rm -rf "$SB"
 
+echo "G) git repo: run-state ignores land in .git/info/exclude, never committed"
+SB="$(mktemp -d)"
+( cd "$SB" && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
+( cd "$SB" && EX="$(git rev-parse --git-path info/exclude)" \
+  && grep -qxF '.flow/' "$EX" && grep -qxF 'flow/.lock*' "$EX" && grep -qxF 'cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
+git -C "$SB" add -A && git -C "$SB" commit -qm "novice: git add -A"
+ck 0 "$(git -C "$SB" ls-files | grep -cE '^\.flow/|^flow/\.lock|^\.gitignore$')" "committed tree has no .flow/, no flow/.lock*, no minted .gitignore"
+ck 0 "$([ -f "$SB/.flow/events.jsonl" ] && echo 0 || echo 1)" "telemetry still written to disk (ignored, not suppressed)"
+( cd "$SB" && test ! -f .gitignore ) && echo "  ok   [no .gitignore created in git repos]" || { echo "  FAIL [.gitignore should not be created]"; fail=$((fail+1)); }
+rm -rf "$SB"
+
 echo "E) DECOY: ancestor has a bare flow/ dir but NO stage artifact -> must NOT adopt (real-signature guard)"
 SB="$(mktemp -d)"; mkdir -p "$SB/flow" "$SB/deep/sub"   # flow/ exists but is EMPTY (no 00-idea.md, no .flow/, no cards)
 out="$( cd "$SB/deep/sub" && unset FLOW_PROJECT_ROOT; bash "$RUN" status 2>&1 )"
