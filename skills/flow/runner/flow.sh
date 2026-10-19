@@ -136,8 +136,22 @@ _cleanup_tds()  { local d; if [ "${#_CLEANUP_TDS[@]}" -gt 0 ]; then for d in "${
 # upgrade-safe per pattern, and linked worktrees resolve their own exclude path. Non-git dirs
 # are untouched. Pre-validated: /tmp/aux-telemetry-analysis/experiment-1.md (novice `git add -A`
 # previously committed .flow/events.jsonl incl. session_id and flow/.lock/.lock.claim).
+_escape_gitignore_prefix() {
+  local value="$1" escaped='' char
+  while [ -n "$value" ]; do
+    char="${value:0:1}"
+    value="${value:1}"
+    if [ "$char" = '\' ] || [ "$char" = '*' ] || [ "$char" = '?' ] || [ "$char" = '[' ] || [ "$char" = ']' ]; then
+      escaped="${escaped}\\${char}"
+    else
+      escaped="${escaped}${char}"
+    fi
+  done
+  printf '%s' "$escaped"
+}
+
 _ignore_run_state() {
-  local ex pat root_abs root_prefix ex_dir ex_base git_top
+  local ex pat root_abs root_prefix escaped_prefix ex_dir ex_base git_top
   ex="$(git -C "$ROOT" rev-parse --git-path info/exclude 2>/dev/null)" || return 0
   [ -n "$ex" ] || return 0
   root_abs="$(cd "$ROOT" 2>/dev/null && pwd -P)" || return 0
@@ -154,7 +168,11 @@ _ignore_run_state() {
   else
     case "$root_abs/" in "$git_top/"*) root_prefix="${root_abs#"$git_top"/}/" ;; *) return 0 ;; esac
   fi
-  for pat in "/${root_prefix}.flow/" "/${root_prefix}flow/.lock*" "/${root_prefix}cards/.inflight" "/${root_prefix}MODE" "/${root_prefix}PROJECT_TYPE"; do
+  escaped_prefix="$(_escape_gitignore_prefix "$root_prefix")"
+  if [ -s "$ex" ] && [ -n "$(tail -c 1 "$ex" 2>/dev/null)" ]; then
+    printf '\n' >> "$ex" || return 0
+  fi
+  for pat in "/${escaped_prefix}.flow/" "/${escaped_prefix}flow/.lock*" "/${escaped_prefix}cards/.inflight" "/${escaped_prefix}MODE" "/${escaped_prefix}PROJECT_TYPE"; do
     grep -qxF "$pat" "$ex" 2>/dev/null || printf '%s\n' "$pat" >> "$ex"
   done
 }

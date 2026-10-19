@@ -67,11 +67,16 @@ rm -rf "$SB"
 
 echo "G) git repo: run-state ignores land in .git/info/exclude, never committed"
 SB="$(mktemp -d)"
-( cd "$SB" \
+ ( cd "$SB" \
   && export GIT_AUTHOR_NAME=ci GIT_AUTHOR_EMAIL=ci@localhost GIT_COMMITTER_NAME=ci GIT_COMMITTER_EMAIL=ci@localhost \
-  && git init -q && git commit -qm base --allow-empty && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
-( cd "$SB" && EX="$(git rev-parse --git-path info/exclude)" \
-  && grep -qxF '/.flow/' "$EX" && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" ) || { echo "  FAIL [info/exclude missing patterns]"; fail=$((fail+1)); }
+  && git init -q && git commit -qm base --allow-empty )
+EX_REL="$(git -C "$SB" rev-parse --git-path info/exclude)"
+case "$EX_REL" in /*) EX_PATH="$EX_REL" ;; *) EX_PATH="$SB/$EX_REL" ;; esac
+printf '# existing local excludes without final newline' > "$EX_PATH"
+( cd "$SB" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1 )
+EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
+case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
+[ "$(grep -cF '/.flow/' "$EX")" -eq 1 ] && grep -qxF '/flow/.lock*' "$EX" && grep -qxF '/cards/.inflight' "$EX" || { echo "  FAIL [info/exclude missing or concatenated patterns]"; fail=$((fail+1)); }
 git -C "$SB" config user.name ci
 git -C "$SB" config user.email ci@localhost
 git -C "$SB" -c user.name=ci -c user.email=ci@localhost add -A && git -C "$SB" -c user.name=ci -c user.email=ci@localhost commit -qm "novice: git add -A"
@@ -130,6 +135,25 @@ for pat in '/.flow/' '/flow/.lock*' '/cards/.inflight' '/MODE' '/PROJECT_TYPE'; 
 done
 test ! -e "$SB-linked/.git/info/exclude" && echo "  ok   [no relative-path stray .git tree under worktree]" || { echo "  FAIL [relative-path stray .git tree]"; fail=$((fail+1)); }
 git -C "$SB-linked" worktree remove --force "$SB-linked"
+rm -rf "$SB"
+
+echo "J) nested Flow root with ignore metacharacters is matched literally"
+SB="$(mktemp -d)"
+git -C "$SB" init -q
+git -C "$SB" config user.name ci
+git -C "$SB" config user.email ci@localhost
+mkdir -p "$SB/frontend[1]/flow" "$SB/frontend1/.flow"
+printf '# Stage 00\n## Goal\n- [x] goal recorded\n\nDone.\n' > "$SB/frontend[1]/flow/00-idea.md"
+git -C "$SB" add 'frontend[1]/flow/00-idea.md'
+git -C "$SB" commit -qm base
+(cd "$SB/frontend[1]" && unset FLOW_PROJECT_ROOT && bash "$RUN" next >/dev/null 2>&1)
+EX="$(git -C "$SB" rev-parse --git-path info/exclude)"
+case "$EX" in /*) ;; *) EX="$SB/$EX" ;; esac
+grep -qxF '/frontend\[1\]/.flow/' "$EX" || { echo "  FAIL [literal metachar prefix not escaped]"; fail=$((fail+1)); }
+mkdir -p "$SB/frontend[1]/.flow" "$SB/frontend1/.flow"
+touch "$SB/frontend[1]/.flow/events.jsonl" "$SB/frontend1/.flow/keep"
+git -C "$SB" check-ignore -q 'frontend[1]/.flow/events.jsonl' || { echo "  FAIL [literal root state not ignored]"; fail=$((fail+1)); }
+git -C "$SB" check-ignore -q 'frontend1/.flow/keep' && { echo "  FAIL [metachar lookalike unexpectedly ignored]"; fail=$((fail+1)); } || echo "  ok   [metachar lookalike remains trackable]"
 rm -rf "$SB"
 echo
 echo "RESULT: $pass passed, $fail failed"
