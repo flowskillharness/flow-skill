@@ -22,16 +22,18 @@ LAW_DIR="$SCRIPT_DIR/../law"
 PLAYBOOKS_DIR="$SCRIPT_DIR/../playbooks"
 GLOBAL_KB_DIR="${FLOW_GLOBAL_KB:-${HOME:-}/.claude/flow/playbooks}"   # cross-project knowledge tier (set -u safe if HOME unset)
 # Root resolution (monorepo dual-root guard). An explicit FLOW_PROJECT_ROOT always wins. Otherwise,
-# if the CWD is NOT itself a flow project (no flow/ planning dir and no cards/) but an ANCESTOR is,
-# adopt that ancestor — so running flow from a monorepo subdir (e.g. frontend/) does NOT silently
-# mint a SECOND, fragmented .flow root with its own cycle_id (the real C2-App-001 failure mode).
-# A subdir that has its own flow/ or cards/ is a deliberate sub-project and is left untouched.
+# if the CWD is NOT itself a flow project (no flow/ planning dir, no cards/, no .flow/ run-state) but
+# an ANCESTOR is, adopt that ancestor — so running flow from a monorepo subdir (e.g. frontend/) does
+# NOT silently mint a SECOND, fragmented .flow root with its own cycle_id (the real C2-App-001 failure
+# mode). A subdir that has its own flow/ or cards/ is a deliberate sub-project and is left untouched;
+# a dir holding only .flow/ run-state was itself used as a root and is likewise left alone.
 FLOW_ROOT_ADOPTED=""
+FLOW_ROOT_NEW=""
 if [ -n "${FLOW_PROJECT_ROOT:-}" ]; then
   ROOT="$FLOW_PROJECT_ROOT"
 else
   ROOT="$PWD"
-  if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ]; then
+  if [ ! -d "$PWD/flow" ] && [ ! -d "$PWD/cards" ] && [ ! -d "$PWD/.flow" ]; then
     _rd="$PWD"; _rn=0
     while [ "$_rn" -lt 24 ]; do
       _rp="$(dirname "$_rd")"; [ "$_rp" = "$_rd" ] && break    # reached filesystem root
@@ -44,10 +46,15 @@ else
         ROOT="$_rd"; FLOW_ROOT_ADOPTED="$_rd"; break
       fi
     done
+    if [ -z "$FLOW_ROOT_ADOPTED" ]; then
+      FLOW_ROOT_NEW=1    # no signature here or in ancestors: this CWD will become a NEW flow root
+    fi
     unset _rd _rp _rn
   fi
 fi
 [ -n "$FLOW_ROOT_ADOPTED" ] && printf 'note: using flow root %s (CWD is inside it; no flow/ here). Set FLOW_PROJECT_ROOT to override.\n' "$FLOW_ROOT_ADOPTED" >&2
+[ -n "${FLOW_ROOT_NEW:-}" ] && printf 'note: no Flow project found here or in ancestors - starting a new Flow project at %s (run /flow from your project root if you meant an existing one).\n' "$ROOT" >&2
+unset FLOW_ROOT_NEW
 FLOW_DIR="$ROOT/flow"
 CARDS_DIR="$ROOT/cards"
 MODE_FILE="$ROOT/MODE"
