@@ -234,11 +234,6 @@ _att_git_clean_for_attest() {
     case "$path" in
       .flow|.flow/*) continue ;;
       flow/.lock|flow/.lock.*|flow/.lock.d|flow/.lock.d/*) continue ;;
-      .gitignore)
-        # Tolerate ONLY the .gitignore that Flow itself minted (run-state marker inside);
-        # a foreign .gitignore stays a blocker.
-        [ -f "$ROOT/.gitignore" ] && grep -q 'flow run-state' "$ROOT/.gitignore" 2>/dev/null && continue
-        return 1 ;;
       cards/C-*.md)
         _att_card_projection_matches_head "$path" || return 1
         continue
