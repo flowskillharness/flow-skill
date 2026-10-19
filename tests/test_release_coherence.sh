@@ -3,12 +3,14 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 pass=0; fail=0
+OUT="$(mktemp -d)"
+trap 'rm -rf "$OUT"' EXIT
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected=$1 got=$2"; fail=$((fail+1)); fi; }
 
 echo "A) offline checker green on repo"
-bash "$HERE/../scripts/check-release-coherence.sh" >/tmp/coh.out 2>&1
+bash "$HERE/../scripts/check-release-coherence.sh" >"$OUT/coh.out" 2>&1
 ck 0 $? "coherence exit 0"
-grep -q 'PASS: release coherence' /tmp/coh.out && ck 0 0 "pass line" || ck 0 1 "pass line"
+grep -q 'PASS: release coherence' "$OUT/coh.out" && ck 0 0 "pass line" || ck 0 1 "pass line"
 
 echo "B) deliberate skill mirror drift fails"
 tmp=$(mktemp -d)
@@ -40,7 +42,7 @@ while IFS= read -r suite || [ -n "$suite" ]; do
   : > "$tmp/r/tests/$suite"
 done < "$tmp/r/tests/manifest.txt"
 [ "$n" -gt 0 ] || { echo "  FAIL [stub extract empty]"; fail=$((fail+1)); }
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh2.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$OUT/coh2.out" 2>&1
 ck 1 $? "drift fails"
 rm -rf "$tmp"
 
@@ -73,9 +75,9 @@ while IFS= read -r suite || [ -n "$suite" ]; do
   : > "$tmp/r/tests/$suite"
 done < "$tmp/r/tests/manifest.txt"
 rm -f "$tmp/r/tests/test_flow_runner.sh"
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh3.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$OUT/coh3.out" 2>&1
 ck 1 $? "missing listed suite fails"
-grep -q 'manifest suite missing: test_flow_runner.sh' /tmp/coh3.out && ck 0 0 "names the missing suite" || ck 0 1 "names the missing suite"
+grep -q 'manifest suite missing: test_flow_runner.sh' "$OUT/coh3.out" && ck 0 0 "names the missing suite" || ck 0 1 "names the missing suite"
 rm -rf "$tmp"
 
 echo "D) empty registry extract fails coherence"
@@ -97,9 +99,9 @@ cp "$HERE/../.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflow
 cp "$HERE/../skills/flow/runner/attestations.sh" "$tmp/r/skills/flow/runner/"
 cp "$HERE/../skills/flow/references/attestations.md" "$tmp/r/skills/flow/references/"
 printf '# comment only\n\n' > "$tmp/r/tests/manifest.txt"
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh4.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$OUT/coh4.out" 2>&1
 ck 1 $? "empty registry fails"
-grep -q 'empty suite registry' /tmp/coh4.out && ck 0 0 "empty-registry message" || ck 0 1 "empty-registry message"
+grep -q 'empty suite registry' "$OUT/coh4.out" && ck 0 0 "empty-registry message" || ck 0 1 "empty-registry message"
 rm -rf "$tmp"
 
 echo "E) deliberate npm-wrapper/README.md drift fails coherence"
@@ -132,9 +134,9 @@ while IFS= read -r suite || [ -n "$suite" ]; do
   n=$((n + 1))
   : > "$tmp/r/tests/$suite"
 done < "$tmp/r/tests/manifest.txt"
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh5.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$OUT/coh5.out" 2>&1
 ck 1 $? "npm-wrapper readme drift fails"
-grep -q 'npm-wrapper/README.md does not match current versions' /tmp/coh5.out && ck 0 0 "detects npm-wrapper readme drift" || ck 0 1 "detects npm-wrapper readme drift"
+grep -q 'npm-wrapper/README.md does not match current versions' "$OUT/coh5.out" && ck 0 0 "detects npm-wrapper readme drift" || ck 0 1 "detects npm-wrapper readme drift"
 rm -rf "$tmp"
 
 echo "F) deleting npm-wrapper/README_VN.md fails coherence"
@@ -165,9 +167,9 @@ while IFS= read -r suite || [ -n "$suite" ]; do
   n=$((n + 1))
   : > "$tmp/r/tests/$suite"
 done < "$tmp/r/tests/manifest.txt"
-bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh6.out 2>&1
+bash "$tmp/r/scripts/check-release-coherence.sh" >"$OUT/coh6.out" 2>&1
 ck 1 $? "missing npm-wrapper/README_VN.md fails"
-grep -q 'missing npm-wrapper/README_VN.md' /tmp/coh6.out && ck 0 0 "names the missing file" || ck 0 1 "names the missing file"
+grep -q 'missing npm-wrapper/README_VN.md' "$OUT/coh6.out" && ck 0 0 "names the missing file" || ck 0 1 "names the missing file"
 rm -rf "$tmp"
 
 echo "G) publisher workflow ordering gate: audit after smoke fails (hollow/sound pair)"
