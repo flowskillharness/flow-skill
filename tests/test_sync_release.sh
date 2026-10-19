@@ -694,6 +694,8 @@ function gh(args, options) {
     assert.equal(args[1], 'create'); log('release'); return '';
   }
   assert.equal(args[0], 'api');
+  const endpoint = args[1];
+  const ci = { id: 888, workflow_id: 295237428, path: '.github/workflows/ci.yml', head_sha: s.sha, head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', run_attempt: 1 };
   if (args.includes('POST')) {
     const request = JSON.parse(options.input);
     assert.equal(request.ref, 'master');
@@ -719,12 +721,11 @@ function gh(args, options) {
     const bundle = statement => ({ predicateType: statement.predicateType, bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from(json(statement)).toString('base64'), signatures: [{ sig: 'fixture-transport-not-a-live-signature' }] } } });
     fs.writeFileSync(path.join(store, 'npm-audit-verified.json'), json({ verified: [{ name: '@manhquy/flow-skill', version: s.version, registry: 'https://registry.npmjs.org/', attestationBundles: [bundle(s.statement), bundle({ predicateType: publish })] }], invalid: [], missing: [] }));
     fs.writeFileSync(path.join(store, 'slsa-bundle.json'), json(s.statement));
-    // Registry publication is simulated data only; no publish command is invoked.
     s.published = true; fs.writeFileSync(stateFile, json(s));
     return json({ workflow_run_id: 777, run_url: 'https://api.github.com/repos/manhquydev/flow-skill/actions/runs/777' });
   }
-  const endpoint = args[1];
-  const ci = { id: 888, workflow_id: 295237428, path: '.github/workflows/ci.yml', head_sha: s.sha, head_branch: 'master', event: 'push', status: 'completed', conclusion: 'success', run_attempt: 1 };
+  if (endpoint.endsWith('/deployment-branch-policies')) return json({ branch_policies: [{ type: 'branch', name: 'master' }] });
+  if (endpoint.endsWith('/environments/npm-publish')) return json({ deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } });
   if (endpoint === 'user') return '12345\n';
   if (endpoint.endsWith('/git/ref/heads/master')) return json({ object: { sha: s.sha } });
   if (endpoint.includes('/pulls?')) return json([{ merged_at: '2026-10-19T00:00:00Z', merge_commit_sha: s.sha, base: { ref: 'master', repo: { full_name: 'manhquydev/flow-skill' } } }]);
@@ -732,8 +733,6 @@ function gh(args, options) {
   if (endpoint.endsWith('/actions/runs/888')) return json(ci);
   if (endpoint.includes('/actions/runs/888/jobs?')) return json({ total_count: 1, jobs: [{ name: 'all-checks-passed', run_id: 888, run_attempt: 1, status: 'completed', conclusion: 'success' }] });
   if (endpoint.includes('/check-runs?')) return json({ check_runs: [{ id: 1, name: 'all-checks-passed', head_sha: s.sha, status: 'completed', conclusion: 'success', app: { slug: 'github-actions' } }] });
-  if (endpoint.endsWith('/deployment-branch-policies')) return json({ branch_policies: [{ type: 'branch', name: 'master' }] });
-  if (endpoint.endsWith('/environments/npm-publish')) return json({ deployment_branch_policy: { protected_branches: false, custom_branch_policies: true } });
   if (endpoint.endsWith('/actions/runs/777')) return json({ id: 777, actor: { id: 12345 }, head_sha: s.sha, path: '.github/workflows/publish-npm-wrapper.yml', event: 'workflow_dispatch', display_title: `Publisher ${s.sha} ${s.version} ${s.request.inputs.dispatch_id}`, status: 'completed', conclusion: 'success', run_attempt: 1 });
   if (endpoint.includes('/actions/runs/777/jobs?')) return json({ total_count: 2, jobs: ['eligibility', 'publish'].map(name => ({ name, run_id: 777, run_attempt: 1, status: 'completed', conclusion: 'success' })) });
   throw new Error(`Unrecognized gh boundary: ${json(args)}`);
