@@ -185,6 +185,13 @@ _canonical_git_path() {
       return 1
     }
   else
+    # Without cygpath, a Windows drive-letter path (C:/...) cannot be safely
+    # canonicalized: joining it would create a stray "<ROOT>/C:/..." directory.
+    case "$value" in
+      [A-Za-z]:[\\/]*)
+        [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] drive-letter path without cygpath: %s\n' "$value" >&2
+        return 1 ;;
+    esac
     printf '%s\n' "$value"
   fi
 }
@@ -229,14 +236,14 @@ _ignore_run_state() {
     printf '[flow ignore] normalized ROOT=%s root_abs=%s raw_top=%s git_top=%s root_prefix=%s ex=%s\n' "$ROOT" "$root_abs" "$raw_top" "$git_top" "$root_prefix" "$ex" >&2
   fi
   if [ -s "$ex" ] && [ -n "$(tail -c 1 "$ex" 2>/dev/null)" ]; then
-    printf '\n' >> "$ex" || return 0
+    printf '\n' >> "$ex" || { printf '[flow ignore] FAIL: cannot write final newline to %s.\n' "$ex" >&2; return 1; }
   fi
   for pat in "/${escaped_prefix}.flow/" "/${escaped_prefix}flow/.lock*" "/${escaped_prefix}cards/.inflight" "/${escaped_prefix}MODE" "/${escaped_prefix}PROJECT_TYPE"; do
     if grep -qxF "$pat" "$ex" 2>/dev/null; then
       [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] existing=%s\n' "$pat" >&2
       continue
     fi
-    printf '%s\n' "$pat" >> "$ex" || return 0
+    printf '%s\n' "$pat" >> "$ex" || { printf '[flow ignore] FAIL: cannot append %s to %s.\n' "$pat" "$ex" >&2; return 1; }
     [ "${FLOW_DEBUG_IGNORE_RUN_STATE:-0}" = 1 ] && printf '[flow ignore] appended=%s\n' "$pat" >&2
   done
   return 0
