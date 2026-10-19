@@ -78,15 +78,51 @@ else
   ok "manifest suite files checked ($n)"
 fi
 
-if grep -q "dist_tag=next\|default: 'next'\|options: \[next, latest\]" .github/workflows/publish-npm-wrapper.yml 2>/dev/null; then
-  ok "publish workflow uses next prerelease policy"
+if grep -q "parseSemver(version).prerelease ? 'next' : 'latest'" scripts/release-workflow.mjs \
+  && grep -q 'DIST_TAG:.*channel' .github/workflows/publish-npm-wrapper.yml; then
+  ok "publish workflow maps prereleases to next and stable to latest"
 else
-  fail "publish workflow missing next prerelease policy"
+  fail "publish workflow missing SemVer channel mapping"
 fi
-if grep -E "default: 'rc'|options: \[rc, latest\]" .github/workflows/publish-npm-wrapper.yml >/dev/null 2>&1; then
-  fail "publish workflow still operationally defaults to rc"
+if grep -Eq 'promote_to|dist-tag add|npm@\*' .github/workflows/publish-npm-wrapper.yml; then
+  fail "publish workflow contains a tag or dist-tag promotion bypass"
 else
-  ok "publish workflow not defaulting to rc"
+  ok "publish workflow has no tag or dist-tag promotion bypass"
+fi
+
+pack_workdir="$(grep -nE '^[[:space:]]*working-directory: npm-wrapper$' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+pack_line="$(grep -nE '^[[:space:]]*npm pack --pack-destination' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+audit_line="$(grep -nE 'npm-attestation-audit\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+smoke_line="$(grep -nE 'npm-wrapper/scripts/smoke\.mjs' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+pkg_upload_line="$(grep -nE 'name: npm-package-' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+receipt_upload_line="$(grep -nE 'name: npm-verification-' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+publish_line="$(grep -nE 'npm publish' .github/workflows/publish-npm-wrapper.yml | head -1 | cut -d: -f1)"
+if [ -n "$pack_workdir" ] && [ -n "$pack_line" ] && [ "$pack_workdir" -lt "$pack_line" ]; then
+  ok "package pack runs from npm-wrapper"
+else
+  fail "npm pack must run with npm-wrapper as working-directory"
+fi
+if [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ "$audit_line" -lt "$smoke_line" ]; then
+  ok "verified audit precedes install smoke"
+else
+  fail "publisher must audit npm signatures before the installer smoke"
+fi
+if [ -n "$pkg_upload_line" ] && [ -n "$pack_line" ] && [ -n "$publish_line" ] && [ "$pkg_upload_line" -gt "$pack_line" ] && [ "$pkg_upload_line" -lt "$publish_line" ]; then
+  ok "exact packed archive retained before publish"
+else
+  fail "run artifact must retain the exact tarball and metadata before publishing"
+fi
+if [ -n "$receipt_upload_line" ] && [ -n "$audit_line" ] && [ -n "$smoke_line" ] && [ "$receipt_upload_line" -gt "$audit_line" ] && [ "$receipt_upload_line" -lt "$smoke_line" ]; then
+  ok "provenance receipts retained before install smoke so recovery survives smoke failure"
+else
+  fail "audit/SLSA receipts must upload after audit and before smoke"
+fi
+if grep -q 'npm-audit-verified.json' .github/workflows/publish-npm-wrapper.yml \
+  && grep -q 'slsa-bundle.json' .github/workflows/publish-npm-wrapper.yml \
+  && grep -q 'release-artifact.json' .github/workflows/publish-npm-wrapper.yml; then
+  ok "run artifact retains tarball and provenance receipts"
+else
+  fail "run artifact must retain exact tarball, audit report, SLSA bundle and metadata"
 fi
 
 [ -f skills/flow/runner/attestations.sh ] && ok "attestations.sh present" || fail "missing attestations.sh"

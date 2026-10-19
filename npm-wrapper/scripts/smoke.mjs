@@ -22,6 +22,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { supportsReceiptAndOmp } from './semver.mjs';
+import { assertProvenanceResult } from './smoke-policy.mjs';
 
 const PKG = '@manhquy/flow-skill';
 const BIN = 'flow-skill';
@@ -80,17 +81,14 @@ if (view.status !== 0 || view.stdout.trim() !== version) {
   fail(`${PKG}@${version} not found on the registry`);
 }
 
-// 2. provenance — warn only, not fail. rc.1 was published manually to bootstrap
-// Trusted Publisher registration; it carries no attestation by design. rc.2+ (via CI)
-// must have provenance; the nightly workflow is the ongoing guard.
+// 2. provenance — absence or query failure is fatal for policy-gated releases.
 const prov = run('npm', ['view', `${PKG}@${version}`, 'dist.attestations.provenance']);
-if (prov.status !== 0 || !prov.stdout.trim()) {
-  console.warn(
-    '  WARN: no provenance attestation on this version (expected for rc.1 bootstrap; rc.2+ must have)'
-  );
-} else {
-  console.log('  provenance: present');
+try {
+  assertProvenanceResult(prov.status, prov.stdout, PKG, version);
+} catch (error) {
+  fail(error.message);
 }
+console.log('  provenance: present');
 
 // 3. --help
 const help = run('npx', npxArgs(['--help']));

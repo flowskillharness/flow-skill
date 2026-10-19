@@ -31,6 +31,11 @@ echo "C) deliberate table row drift fails --check with exit 1"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -55,6 +60,11 @@ echo "D) missing README file fails --check with exit 1"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -76,6 +86,11 @@ echo "E) --sync with prerelease version in package.json preserves Current GA row
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper/scripts" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -130,6 +145,11 @@ echo "F) existing tags suppress tag creation instructions and report metadata re
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -170,6 +190,11 @@ echo "G) unconfirmed remote tag lookup suppresses git tag commands"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
 cp "$ROOT/skills/flow/SKILL.md" "$tmp/r/skills/flow/"
 cp "$ROOT/skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
 cp "$ROOT/portable-manifest.json" "$tmp/r/"
@@ -205,8 +230,13 @@ git clone -q "$ROOT" "$tmp/r"
 git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
-cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+git -C "$tmp/r" add scripts/ docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -252,8 +282,13 @@ git -C "$tmp/r" config user.email "test@example.com"
 git -C "$tmp/r" config user.name "Test Runner"
 git -C "$tmp/r" checkout -B master >/dev/null 2>&1 || true
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
-cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+git -C "$tmp/r" add scripts/ docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -294,8 +329,19 @@ checkout_err=$(git -C "$tmp/r" checkout -B master 2>&1) || {
   exit 1
 }
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-dispatch-response.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-provenance.mjs" "$ROOT/scripts/verify-attestation-with-gh.mjs" "$tmp/r/scripts/"
+cp "$ROOT/scripts/release-run-artifact.mjs" "$tmp/r/scripts/"
 cp "$ROOT/scripts/release.sh" "$tmp/r/scripts/"
-git -C "$tmp/r" add scripts/
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+cp "$ROOT/.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/"
+mkdir -p "$tmp/r/npm-wrapper/scripts"
+cp "$ROOT/scripts/release-eligibility.mjs" "$ROOT/scripts/release-workflow.mjs" "$tmp/r/scripts/"
+cp "$ROOT/npm-wrapper/scripts/semver.mjs" "$tmp/r/npm-wrapper/scripts/"
+mkdir -p "$tmp/r/docs"
+cp "$ROOT/docs/release-intent.json" "$tmp/r/docs/"
+cp "$ROOT/scripts/check-release-coherence.sh" "$tmp/r/scripts/"
+git -C "$tmp/r" add scripts/ .github/workflows/publish-npm-wrapper.yml npm-wrapper/scripts/semver.mjs docs/release-intent.json
 commit_err=$(git -C "$tmp/r" commit -qm "sync scripts" 2>&1) || {
   if ! git -C "$tmp/r" diff --cached --quiet; then
     echo "FAIL: git commit failed for scripts/: $commit_err" >&2
@@ -364,9 +410,25 @@ cat > "$mock_bin/gh" << "EOF"
 mode="${GH_MOCK_MODE:-exists}"
 ci_app="${GH_MOCK_CI_APP:-github-actions}"
 env_protection="${GH_MOCK_ENV_PROTECTION:-approved}"
+actor_mode="${GH_MOCK_ACTOR_MODE:-valid}"
 
 if [ "$1" = "api" ]; then
+  if { [ "${GH_MOCK_DISPATCH_MODE:-}" = "skip-publish" ] || [ "${GH_MOCK_DISPATCH_MODE:-}" = "publish-success" ]; } && [ "$2" = "-X" ] && [ "$3" = "POST" ]; then
+    request_body="$(cat)"
+    node -e 'const fs=require("fs");fs.writeFileSync(process.argv[1],process.argv[2]);' "$GH_MOCK_STATE_FILE" "$request_body"
+    printf '{"workflow_run_id":777,"run_url":"https://api.github.com/repos/manhquydev/flow-skill/actions/runs/777"}\n'
+    exit 0
+  fi
   case "$2" in
+    user) if [ "$actor_mode" = "invalid" ]; then printf 'not-numeric\n'; else printf '12345\n'; fi; exit 0 ;;
+    */actions/runs/777/jobs*)
+      node -e 'console.log(JSON.stringify({total_count:2,jobs:[{run_id:777,run_attempt:1,name:"eligibility",status:"completed",conclusion:"success"},{run_id:777,run_attempt:1,name:"publish",status:"completed",conclusion:process.env.GH_MOCK_PUBLISH_CONCLUSION||"success"}]}));'
+      exit 0
+      ;;
+    */actions/runs/777)
+      node -e 'const i=JSON.parse(require("fs").readFileSync(process.env.GH_MOCK_STATE_FILE,"utf8")).inputs;console.log(JSON.stringify({id:777,actor:{id:12345},head_sha:i.expected_sha,path:".github/workflows/publish-npm-wrapper.yml",event:"workflow_dispatch",display_title:`Publisher ${i.expected_sha} ${i.expected_version} ${i.dispatch_id}`,status:"completed",conclusion:"success",run_attempt:1}));'
+      exit 0
+      ;;
     *commits/*/check-runs*)
       head_sha=$(echo "$2" | sed -n 's|.*/commits/\([^/]*\)/check-runs.*|\1|p')
       cat << JSON
@@ -374,28 +436,24 @@ if [ "$1" = "api" ]; then
 JSON
       exit 0
       ;;
-    *environments/npm-publish*)
-      if [ "$env_protection" = "empty" ]; then
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[]}
-JSON
-        exit 0
-      elif [ "$env_protection" = "wait_timer" ]; then
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[{"type":"wait_timer","wait_timer":10,"reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
-JSON
-        exit 0
-      elif [ "$env_protection" = "error" ]; then
-        echo "gh: Not Found (HTTP 404)" >&2
-        exit 1
+    *environments/npm-publish/deployment-branch-policies*)
+      if [ "$env_protection" = "wrong" ]; then
+        printf '{"branch_policies":[{"type":"tag","name":"npm@*"}]}\n'
       else
-        cat << 'JSON'
-{"name":"npm-publish","protection_rules":[{"type":"required_reviewers","reviewers":[{"type":"User","reviewer":{"login":"manhquydev"}}]}]}
-JSON
-        exit 0
+        printf '{"branch_policies":[{"type":"branch","name":"master"}]}\n'
       fi
+      exit 0
+      ;;
+    *environments/npm-publish*)
+      if [ "$env_protection" = "error" ]; then echo "gh: Not Found (HTTP 404)" >&2; exit 1; fi
+      printf '{"name":"npm-publish","deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true},"protection_rules":[]}\n'
+      exit 0
       ;;
   esac
+
+if [ "$1" = "run" ] && [ "$2" = "watch" ]; then
+  exit 0
+fi
 fi
 
 if [ "$1" = "release" ] && [ "$2" = "view" ]; then
@@ -426,51 +484,36 @@ cat > "$mock_bin/gh.cmd" << "EOF"
 @bash "%~dp0gh" %*
 EOF
 
-# Test K1: Mock gh release view returns 0 (existing release):
-# Assert output contains "GitHub Release for v" and "already exists. Skipping release creation."
+# K1: missing dispatch receipt fails closed; the workflow's own eligibility fixtures cover the disabled latch.
 GH_MOCK_MODE="exists" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k1.out" 2>&1
 k1_rc=$?
-ck_k 0 $k1_rc "K1: sync-release exits 0 when release already exists" "$tmp/k1.out" $k1_rc
-grep -q "GitHub Release for v" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'GitHub Release for v'" "$tmp/k1.out" $k1_rc
-grep -q "already exists. Skipping release creation." "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'already exists. Skipping release creation.'" "$tmp/k1.out" $k1_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k1.out" && ck_k 0 0 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k1.out" $k1_rc
+ck_k 1 $k1_rc "K1: live release refuses dispatch without exact workflow run receipt" "$tmp/k1.out" $k1_rc
+grep -q "workflow dispatch returned no run details" "$tmp/k1.out" && ck_k 0 0 "K1: missing run receipt is the refusal reason" "$tmp/k1.out" $k1_rc || ck_k 0 1 "K1: missing run receipt is the refusal reason" "$tmp/k1.out" $k1_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K1: no local tags without verified publisher run" || ck_k 0 1 "K1: no local tags without verified publisher run"
 
 clean_k_tags
-# Test K2: Mock gh release view returns 1 (not found) and gh release create fails with exit 1:
-# Assert exit code is 1.
-# Assert output contains "FAIL: Could not create GitHub Release for v"
-# Assert output does NOT contain "RELEASE SHIP SUCCESSFUL"
-GH_MOCK_MODE="create_fail" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k2.out" 2>&1
+# K2: overall success cannot authorize tags when the live publish job was skipped.
+GH_MOCK_DISPATCH_MODE="skip-publish" GH_MOCK_PUBLISH_CONCLUSION="skipped" GH_MOCK_STATE_FILE="$tmp/k2-state.json" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k2.out" 2>&1
 k2_rc=$?
-ck_k 1 $k2_rc "K2: sync-release exits 1 when gh release create fails" "$tmp/k2.out" $k2_rc
-grep -q "FAIL: Could not create GitHub Release for v" "$tmp/k2.out" && ck_k 0 0 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: output contains 'FAIL: Could not create GitHub Release for v'" "$tmp/k2.out" $k2_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k2.out"
-ck_k 1 $? "K2: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k2.out" $k2_rc
-grep -qE "Git tag .* already exists" "$tmp/k2.out"
-ck_k 1 $? "K2: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k2.out" $k2_rc
+ck_k 1 $k2_rc "K2: skipped live publish job blocks release tagging" "$tmp/k2.out" $k2_rc
+grep -q "publisher publish job conclusion must be success" "$tmp/k2.out" && ck_k 0 0 "K2: skipped publish outcome is the refusal reason" "$tmp/k2.out" $k2_rc || ck_k 0 1 "K2: skipped publish outcome is the refusal reason" "$tmp/k2.out" $k2_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K2: no tags created when publish was skipped" || ck_k 0 1 "K2: no tags created when publish was skipped"
 
 clean_k_tags
-# Test K3: Mock gh release view returns 1 and gh release create succeeds with exit 0:
-# Assert output contains "GitHub Release created for v"
-GH_MOCK_MODE="create_success" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
+# K3: successful publish outcome without retained verification receipts must fail closed before tags.
+GH_MOCK_DISPATCH_MODE="publish-success" GH_MOCK_PUBLISH_CONCLUSION="success" GH_MOCK_STATE_FILE="$tmp/k3-state.json" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k3.out" 2>&1
 k3_rc=$?
-ck_k 0 $k3_rc "K3: sync-release exits 0 when gh release create succeeds" "$tmp/k3.out" $k3_rc
-grep -q "GitHub Release created for v" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'GitHub Release created for v'" "$tmp/k3.out" $k3_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k3.out" && ck_k 0 0 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: output contains 'RELEASE SHIP SUCCESSFUL'" "$tmp/k3.out" $k3_rc
-grep -qE "Git tag .* already exists" "$tmp/k3.out"
-ck_k 1 $? "K3: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k3.out" $k3_rc
+ck_k 1 $k3_rc "K3: publish run without retained artifact cannot be finalized" "$tmp/k3.out" $k3_rc
+grep -q "release-artifact.json" "$tmp/k3.out" && ck_k 0 0 "K3: missing artifact receipt blocks promotion" "$tmp/k3.out" $k3_rc || ck_k 0 1 "K3: missing artifact receipt blocks promotion" "$tmp/k3.out" $k3_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K3: no tags created without retained verification artifact" || ck_k 0 1 "K3: no tags created without retained verification artifact"
 
 clean_k_tags
-# Test K4: Mock gh release view fails with auth/network error:
-# Assert exit code 1, output contains "Could not check GitHub Release status", and does NOT contain "RELEASE SHIP SUCCESSFUL"
-GH_MOCK_MODE="auth_error" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1
+# K4: malformed authenticated actor identity refuses before dispatch.
+GH_MOCK_ACTOR_MODE="invalid" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k4.out" 2>&1
 k4_rc=$?
-ck_k 1 $k4_rc "K4: sync-release exits 1 when gh release view has auth/network error" "$tmp/k4.out" $k4_rc
-grep -q "Could not check GitHub Release status" "$tmp/k4.out" && ck_k 0 0 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: output contains 'Could not check GitHub Release status'" "$tmp/k4.out" $k4_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k4.out"
-ck_k 1 $? "K4: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k4.out" $k4_rc
-grep -qE "Git tag .* already exists" "$tmp/k4.out"
-ck_k 1 $? "K4: no stale tag blocks release (output does NOT contain 'Git tag already exists')" "$tmp/k4.out" $k4_rc
+ck_k 1 $k4_rc "K4: sync-release refuses malformed authenticated actor ID" "$tmp/k4.out" $k4_rc
+grep -q "did not return a valid authenticated actor ID" "$tmp/k4.out" && ck_k 0 0 "K4: actor validation is the refusal reason" "$tmp/k4.out" $k4_rc || ck_k 0 1 "K4: actor validation is the refusal reason" "$tmp/k4.out" $k4_rc
+[ -z "$(git -C "$tmp/r" tag -l)" ] && ck_k 0 0 "K4: no local tags without valid actor identity" || ck_k 0 1 "K4: no local tags without valid actor identity"
 
 clean_k_tags
 # Test K5: Spoofed CI check app (e.g. app slug "malicious-bot" instead of "github-actions") fails closed:
@@ -485,29 +528,13 @@ ck_k 1 $? "K5: output does NOT contain 'Git tag already exists'" "$tmp/k5.out" $
 [ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K5: zero tags created on CI app spoof" || ck_k 0 1 "K5: zero tags created on CI app spoof"
 
 clean_k_tags
-# Test K6: Environment npm-publish with protection_rules=[] fails closed before any git tag/push:
-GH_MOCK_ENV_PROTECTION="empty" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
+# Test K6: master-only deployment policy permits exactly branch master; tag rules fail closed.
+GH_MOCK_ENV_PROTECTION="wrong" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k6.out" 2>&1
 k6_rc=$?
-ck_k 1 $k6_rc "K6: sync-release exits 1 when npm-publish environment lacks required_reviewers" "$tmp/k6.out" $k6_rc
-grep -q "has no required_reviewers protection rule configured" "$tmp/k6.out" && ck_k 0 0 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: output reports missing required_reviewers rule" "$tmp/k6.out" $k6_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k6.out"
-ck_k 1 $? "K6: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k6.out" $k6_rc
-grep -qE "Git tag .* already exists" "$tmp/k6.out"
-ck_k 1 $? "K6: output does NOT contain 'Git tag already exists'" "$tmp/k6.out" $k6_rc
-[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when protection rules empty" || ck_k 0 1 "K6: zero tags created when protection rules empty"
-[ -z "$(git -C "$tmp/origin.git" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero remote tags pushed when protection rules empty" || ck_k 0 1 "K6: zero remote tags pushed when protection rules empty"
+ck_k 1 $k6_rc "K6: rejects tag deployment policy before tags" "$tmp/k6.out" $k6_rc
+grep -q "allow exactly branch master" "$tmp/k6.out" && ck_k 0 0 "K6: reports exact master-only requirement" "$tmp/k6.out" $k6_rc || ck_k 0 1 "K6: reports exact master-only requirement" "$tmp/k6.out" $k6_rc
+[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K6: zero tags created when deployment policy is wrong" || ck_k 0 1 "K6: zero tags created when deployment policy is wrong"
 
-clean_k_tags
-# Test K7: Environment npm-publish with wait_timer rule having reviewers fails closed (type must be required_reviewers):
-GH_MOCK_ENV_PROTECTION="wait_timer" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/k7.out" 2>&1
-k7_rc=$?
-ck_k 1 $k7_rc "K7: sync-release exits 1 when protection rule type is not required_reviewers" "$tmp/k7.out" $k7_rc
-grep -q "has no required_reviewers protection rule configured" "$tmp/k7.out" && ck_k 0 0 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc || ck_k 0 1 "K7: output reports missing required_reviewers rule" "$tmp/k7.out" $k7_rc
-grep -q "RELEASE SHIP SUCCESSFUL" "$tmp/k7.out"
-ck_k 1 $? "K7: output does NOT contain 'RELEASE SHIP SUCCESSFUL'" "$tmp/k7.out" $k7_rc
-grep -qE "Git tag .* already exists" "$tmp/k7.out"
-ck_k 1 $? "K7: output does NOT contain 'Git tag already exists'" "$tmp/k7.out" $k7_rc
-[ -z "$(git -C "$tmp/r" tag -l "npm@$k_npm_v")" ] && ck_k 0 0 "K7: zero tags created on invalid rule type" || ck_k 0 1 "K7: zero tags created on invalid rule type"
 
 clean_k_tags
 # Test K8: Non-canonical repository remote URL refuses promotion fail-closed before any commit/tag/push:

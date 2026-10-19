@@ -13,12 +13,15 @@
  *   node scripts/sync-release.mjs --sync
  */
 
-import { readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, realpathSync, mkdtempSync, rmSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
+import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
+import { publisherRunIdFromDispatch, publisherWatchArgs, publisherWatchTimeoutError, verifyPublisherJobs } from './release-dispatch-response.mjs';
+import { verifyRunArtifact } from './release-run-artifact.mjs';
 const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
 
@@ -508,6 +511,21 @@ function execGh(args, options = {}) {
   }
   return execFileSync('gh', args, options);
 }
+function verifyPublishedRun(runId, runAttempt, npmVersion, expectedSha) {
+  const tempDir = mkdtempSync(join(tmpdir(), 'flow-release-run-'));
+  const packageDir = join(tempDir, 'package');
+  const evidenceDir = join(tempDir, 'evidence');
+  try {
+    execFileSync('mkdir', ['-p', packageDir, evidenceDir]);
+    execGh(['run', 'download', String(runId), '--name', `npm-package-${runId}-${runAttempt}`, '--dir', packageDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
+    execGh(['run', 'download', String(runId), '--name', `npm-verification-${runId}-${runAttempt}`, '--dir', evidenceDir], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
+    const { tarball } = verifyRunArtifact(packageDir, evidenceDir, { runId, runAttempt, version: npmVersion, sha: expectedSha });
+    execFileSync(process.execPath, [join(repoRoot, 'scripts/verify-attestation-with-gh.mjs'), tarball, join(evidenceDir, 'slsa-bundle.json'), 'manhquydev', 'flow-skill', '.github/workflows/publish-npm-wrapper.yml', 'refs/heads/master', expectedSha], { cwd: repoRoot, stdio: 'inherit', timeout: 120000 });
+    execFileSync(process.execPath, [join(repoRoot, 'npm-wrapper/scripts/smoke.mjs'), npmVersion], { cwd: repoRoot, stdio: 'inherit', timeout: 15 * 60 * 1000 });
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
 
 function gitTagExists(tagName) {
   try {
@@ -766,47 +784,47 @@ function checkCiStatus(headSha) {
   return { ok: true, check };
 }
 
-function checkNpmPublishEnvironmentProtection() {
+function checkNpmPublishEnvironmentPolicy() {
   const coords = getRepoCoordinates();
-  if (!coords.ok) {
-    return { ok: false, reason: coords.reason };
-  }
-  let data;
+  if (!coords.ok) return { ok: false, reason: coords.reason };
   try {
-    const out = execGh([
-      'api',
-      `repos/${coords.owner}/${coords.repo}/environments/npm-publish`,
-    ], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    data = JSON.parse(out);
+    const data = JSON.parse(execGh(['api', `repos/${coords.owner}/${coords.repo}/environments/npm-publish`], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+    const policy = data?.deployment_branch_policy;
+    if (!policy || policy.protected_branches !== false || policy.custom_branch_policies !== true) return { ok: false, reason: 'npm-publish must use selected custom branch policies, not protected-branches or unrestricted deployment.' };
+    const result = JSON.parse(execGh(['api', `repos/${coords.owner}/${coords.repo}/environments/npm-publish/deployment-branch-policies`], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+    if (!Array.isArray(result.branch_policies) || result.branch_policies.length !== 1 || result.branch_policies[0].type !== 'branch' || result.branch_policies[0].name !== 'master') return { ok: false, reason: 'npm-publish must allow exactly branch master and no tag/wildcard deployment rules.' };
+    return { ok: true, rule: result.branch_policies[0] };
   } catch (err) {
-    const stderr = err.stderr ? err.stderr.toString().trim() : '';
-    return {
-      ok: false,
-      reason: `Could not query GitHub environment "npm-publish" protection rules via "gh api": ${stderr || err.message}`,
-    };
+    return { ok: false, reason: `Could not verify npm-publish master-only deployment policy: ${err.stderr?.toString().trim() || err.message}` };
   }
-  if (!data || typeof data !== 'object') {
-    return {
-      ok: false,
-      reason: 'Invalid response from GitHub environments API (not a valid JSON object).',
-    };
-  }
-  const rules = Array.isArray(data.protection_rules) ? data.protection_rules : [];
-  const reviewerRule = rules.find(r => r && r.type === 'required_reviewers' && Array.isArray(r.reviewers) && r.reviewers.length > 0);
-  const reviewerCount = reviewerRule ? reviewerRule.reviewers.length : 0;
+}
 
-  if (!reviewerRule || reviewerCount < 1) {
-    const ruleTypes = rules.map(r => r?.type || 'unknown').join(', ') || 'none';
-    return {
-      ok: false,
-      reason: `Environment "npm-publish" has no required_reviewers protection rule configured (rules evaluated: ${ruleTypes}; observed ${reviewerCount} reviewer(s)). Tagging npm@* triggers immediate OIDC publishing. Configure required reviewers in GitHub Repository Settings -> Environments -> npm-publish before live promotion.`,
-    };
+
+
+function dispatchPublisher(headSha, npmVersion, isDryRun) {
+  const coords = getRepoCoordinates();
+  if (!coords.ok) throw new Error(coords.reason);
+  const actorId = execGh(['api', 'user', '--jq', '.id'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  if (!/^\d+$/.test(actorId)) throw new Error('GitHub CLI did not return a valid authenticated actor ID.');
+  const dispatchId = randomUUID();
+  const requestBody = JSON.stringify({ ref: 'master', inputs: { mode: isDryRun ? 'dry-run' : 'publish', expected_sha: headSha, expected_version: npmVersion, dispatch_id: dispatchId, expected_actor_id: actorId } });
+  const response = execGh(['api', '-X', 'POST', '-H', 'Accept: application/vnd.github+json', '-H', 'X-GitHub-Api-Version: 2022-11-28', `repos/${coords.owner}/${coords.repo}/actions/workflows/publish-npm-wrapper.yml/dispatches?return_run_details=true`, '--input', '-'], { cwd: repoRoot, input: requestBody, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+  const runId = String(publisherRunIdFromDispatch(response, coords.owner, coords.repo));
+  try {
+    execGh(publisherWatchArgs(runId), { cwd: repoRoot, stdio: 'inherit', timeout: 45 * 60 * 1000 });
+  } catch (error) {
+    let cancelRequested = false;
+    if (error.code === 'ETIMEDOUT') {
+      try { execGh(['run', 'cancel', runId], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }); cancelRequested = true; } catch {}
+    }
+    throw publisherWatchTimeoutError(error, runId, 45, cancelRequested);
   }
-  return { ok: true, reviewerCount, rule: reviewerRule };
+  const finalRun = JSON.parse(execGh(['api', `repos/${coords.owner}/${coords.repo}/actions/runs/${runId}`], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  const expectedTitle = `Publisher ${headSha} ${npmVersion} ${dispatchId}`;
+  if (finalRun.id !== Number(runId) || String(finalRun.actor?.id) !== actorId || finalRun.head_sha !== headSha || finalRun.path !== '.github/workflows/publish-npm-wrapper.yml' || finalRun.event !== 'workflow_dispatch' || finalRun.display_title !== expectedTitle || finalRun.status !== 'completed' || finalRun.conclusion !== 'success' || !Number.isInteger(finalRun.run_attempt)) throw new Error('Returned publisher run did not complete successfully for exact actor/SHA/version/dispatch UUID.');
+  const jobs = JSON.parse(execGh(['api', `repos/${coords.owner}/${coords.repo}/actions/runs/${runId}/jobs?filter=latest&per_page=100`], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  verifyPublisherJobs(jobs, Number(runId), finalRun.run_attempt, isDryRun);
+  return { id: Number(runId), runAttempt: finalRun.run_attempt };
 }
 
 function checkSyncNonDrift(skill_v, npm_v) {
@@ -842,26 +860,28 @@ function checkSyncNonDrift(skill_v, npm_v) {
 }
 
 function shipRelease({ isDryRun = false, isYes = false } = {}) {
+  const intent = JSON.parse(readFileSync(join(repoRoot, 'docs/release-intent.json'), 'utf8'));
+  const hasSkillRelease = intent.intent === true && intent.skill_version !== null;
   // If neither --dry-run nor --yes is specified:
   // Print planned release actions and exit 0 immediately with ZERO file modifications, ZERO writes!
   if (!isYes && !isDryRun) {
     const skill_v = getSkillVersion();
     const npm_v = getNpmVersion();
     const npmTag = npm_v ? `npm@${npm_v}` : 'npm@<unknown>';
-    const skillTag = skill_v ? `v${skill_v}` : 'v<unknown>';
+    const skillTag = hasSkillRelease ? `v${intent.skill_version}` : null;
     const npmTagStatus = npm_v ? gitTagExists(npmTag) : { exists: false, source: 'unknown' };
-    const skillTagStatus = skill_v ? gitTagExists(skillTag) : { exists: false, source: 'unknown' };
+    const skillTagStatus = hasSkillRelease ? gitTagExists(skillTag) : { exists: false, source: 'not-selected' };
 
     console.log(`
 ================================================================================
 RELEASE PROMOTION CONFIRMATION REQUIRED
 ================================================================================
 Planned promotion of pre-prepared, CI-verified master HEAD:
-  Skill version: ${skill_v ? `v${skill_v}` : 'MISSING'}
+  Skill version: ${hasSkillRelease ? `v${intent.skill_version}` : 'unchanged (no skill release)'}
   npm version:   ${npm_v ?? 'MISSING'}
   Tags:
     - ${npmTag} ${npmTagStatus.exists ? `(already exists: ${npmTagStatus.source})` : '(new tag to create)'}
-    - ${skillTag} ${skillTagStatus.exists ? `(already exists: ${skillTagStatus.source})` : '(new tag to create)'}
+    ${hasSkillRelease ? `- ${skillTag} ${skillTagStatus.exists ? `(already exists: ${skillTagStatus.source})` : '(new tag to create)'}` : '- no skill tag changes'}
   Branch:
     - master -> origin/master
 
@@ -905,32 +925,27 @@ To execute release promotion live, re-run with --yes:
   }
 
   // 2. Read versions and changelogs
-  console.log('\nStep 2/8: Reading skill and npm versions...');
+  console.log('\nStep 2/8: Reading release versions...');
   const skill_v = getSkillVersion();
   const npm_v = getNpmVersion();
-  if (!skill_v) {
-    console.error('FAIL: Missing skill version in skills/flow/SKILL.md');
-    process.exit(1);
-  }
-  if (!npm_v) {
-    console.error('FAIL: Missing npm version in npm-wrapper/package.json');
-    process.exit(1);
-  }
-  console.log(`✓ Skill product version: v${skill_v}`);
-  console.log(`✓ npm package version:   ${npm_v}`);
+  if (!skill_v || !npm_v) { console.error('FAIL: Skill/npm version metadata is missing.'); process.exit(1); }
+  console.log(`${hasSkillRelease ? `✓ Skill product release: v${intent.skill_version}` : '✓ Skill product axis unchanged.'}`);
+  console.log(`✓ npm package version: ${npm_v}`);
 
-  console.log('\nStep 3/8: Validating CHANGELOG entries...');
-  const changelogPath = join(repoRoot, 'CHANGELOG.md');
-  if (!existsSync(changelogPath) || !new RegExp(`^##\\s+\\[?${escapeRegExp(skill_v)}\\]?`, 'm').test(readFileSync(changelogPath, 'utf8'))) {
-    console.error(`FAIL: CHANGELOG.md is missing an entry for skill version v${skill_v}`);
-    process.exit(1);
-  }
+  console.log('\nStep 3/8: Validating selected-axis CHANGELOG entries...');
   const wrapperChangelogPath = join(repoRoot, 'npm-wrapper', 'CHANGELOG.md');
   if (!existsSync(wrapperChangelogPath) || !new RegExp(`^##\\s+\\[?${escapeRegExp(npm_v)}\\]?`, 'm').test(readFileSync(wrapperChangelogPath, 'utf8'))) {
     console.error(`FAIL: npm-wrapper/CHANGELOG.md is missing an entry for npm version ${npm_v}`);
     process.exit(1);
   }
-  console.log('✓ CHANGELOG entries exist for both versions.');
+  if (hasSkillRelease) {
+    const changelogPath = join(repoRoot, 'CHANGELOG.md');
+    if (!existsSync(changelogPath) || !new RegExp(`^##\\s+\\[?${escapeRegExp(intent.skill_version)}\\]?`, 'm').test(readFileSync(changelogPath, 'utf8'))) {
+      console.error(`FAIL: CHANGELOG.md is missing an entry for skill version v${intent.skill_version}`);
+      process.exit(1);
+    }
+  }
+  console.log('✓ CHANGELOG entries exist for selected release axes.');
 
   // 3. Branch gate
   console.log('\nStep 4/8: Verifying branch status and release tag preconditions...');
@@ -958,11 +973,11 @@ To execute release promotion live, re-run with --yes:
     console.log(`✓ Remote origin verified canonical (${coords.owner}/${coords.repo}).`);
   }
   const npmTag = `npm@${npm_v}`;
-  const skillTag = `v${skill_v}`;
+  const skillTag = hasSkillRelease ? `v${intent.skill_version}` : null;
   const npmTagStatus = gitTagExists(npmTag);
-  const skillTagStatus = gitTagExists(skillTag);
+  const skillTagStatus = hasSkillRelease ? gitTagExists(skillTag) : { exists: false, source: 'not-selected' };
 
-  if (npmTagStatus.source === 'unconfirmed' || skillTagStatus.source === 'unconfirmed') {
+  if (npmTagStatus.source === 'unconfirmed' || (hasSkillRelease && skillTagStatus.source === 'unconfirmed')) {
     if (!isDryRun) {
       console.error('\nFAIL: Remote tag status could not be confirmed with origin (network failure, authentication error, or remote inaccessible).');
       console.error('Aborting before any actions to ensure safety.');
@@ -981,7 +996,7 @@ To execute release promotion live, re-run with --yes:
     }
   }
 
-  if (skillTagStatus.exists) {
+  if (hasSkillRelease && skillTagStatus.exists) {
     if (!isDryRun) {
       console.error(`\nFAIL: Git tag ${skillTag} already exists (${skillTagStatus.source}). Refusing release promotion.`);
       process.exit(1);
@@ -989,9 +1004,8 @@ To execute release promotion live, re-run with --yes:
       console.log(`[WARN] Git tag ${skillTag} already exists (${skillTagStatus.source}).`);
     }
   }
-  if (!npmTagStatus.exists && !skillTagStatus.exists
-      && npmTagStatus.source !== 'unconfirmed' && skillTagStatus.source !== 'unconfirmed') {
-    console.log(`✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.`);
+  if (!npmTagStatus.exists && (!hasSkillRelease || !skillTagStatus.exists) && npmTagStatus.source !== 'unconfirmed' && (!hasSkillRelease || skillTagStatus.source !== 'unconfirmed')) {
+    console.log(hasSkillRelease ? `✓ Release tags ${npmTag} and ${skillTag} do not exist locally or remotely.` : `✓ Release tag ${npmTag} does not exist locally or remotely.`);
   }
 
   const localHead = getLocalHeadSha();
@@ -1119,18 +1133,14 @@ To execute release promotion live, re-run with --yes:
   }
 
   if (isDryRun) {
-    const envDryRun = checkNpmPublishEnvironmentProtection();
-    if (envDryRun.ok) {
-      console.log(`✓ Environment "npm-publish" protection verified (${envDryRun.reviewerCount} required reviewer(s)).`);
-    } else {
-      console.log(`[WARN] Environment "npm-publish" reviewer protection unverified: ${envDryRun.reason}`);
-    }
+    const envDryRun = checkNpmPublishEnvironmentPolicy();
+    if (envDryRun.ok) console.log('✓ Environment "npm-publish" is restricted to exactly master.');
+    else console.log(`[WARN] Environment master-only policy unverified: ${envDryRun.reason}`);
     if (ciVerifiedInDryRun && envDryRun.ok) {
-      console.log('\nDRY-RUN SUCCESS: Local battery, CI (all-checks-passed), and npm-publish environment protection verified.\n');
-    } else if (ciVerifiedInDryRun) {
-      console.log('\nDRY-RUN SUCCESS: Local battery and CI verified. (npm-publish environment protection unverified; promotion with --yes requires configured required reviewers).\n');
+      const publisherRun = dispatchPublisher(localHead, npm_v, true);
+      console.log(`✓ Publisher dry-run ${publisherRun.id} completed for ${localHead}; no tags or publish were performed.`);
     } else {
-      console.log('\nDRY-RUN SUCCESS: Local verification battery passed. (GitHub Actions CI status and environment protection unverified in this environment; promotion with --yes requires green all-checks-passed CI on origin/master and reviewer protection rules).\n');
+      console.log('\nDRY-RUN SUCCESS: local verification battery passed; publisher dry-run skipped because exact CI or environment policy is unavailable.\n');
     }
     process.exit(0);
   }
@@ -1146,127 +1156,74 @@ To execute release promotion live, re-run with --yes:
     process.exit(1);
   }
   const preTagNpmStatus = gitTagExists(npmTag);
-  const preTagSkillStatus = gitTagExists(skillTag);
-  if (preTagNpmStatus.exists) {
-    console.error(`\nFAIL: Git tag ${npmTag} already exists (${preTagNpmStatus.source}). Refusing promotion.`);
-    process.exit(1);
-  }
-  if (preTagSkillStatus.exists) {
-    console.error(`\nFAIL: Git tag ${skillTag} already exists (${preTagSkillStatus.source}). Refusing promotion.`);
+  const preTagSkillStatus = hasSkillRelease ? gitTagExists(skillTag) : { exists: false, source: 'not-selected' };
+  if (preTagNpmStatus.exists || (hasSkillRelease && preTagSkillStatus.exists)) {
+    console.error(`\nFAIL: A selected release tag already exists (${preTagNpmStatus.exists ? npmTag : skillTag}). Refusing promotion.`);
     process.exit(1);
   }
 
-  // Environment reviewer protection gate: fail-closed before any git tag/push
-  console.log('\nVerifying GitHub Actions environment "npm-publish" reviewer protection rules...');
-  const envResult = checkNpmPublishEnvironmentProtection();
-  if (!envResult.ok) {
-    console.error(`\nFAIL: Environment protection verification failed: ${envResult.reason}`);
-    console.error('Aborting promotion before creating tags or pushing to origin.');
-    process.exit(1);
+  console.log('\nVerifying exact master-only npm-publish environment policy...');
+  const envResult = checkNpmPublishEnvironmentPolicy();
+  if (!envResult.ok) { console.error(`\nFAIL: ${envResult.reason}`); process.exit(1); }
+  console.log('✓ npm-publish permits exactly branch master.');
+  const publisherWorkflow = readFileSync(join(repoRoot, '.github/workflows/publish-npm-wrapper.yml'), 'utf8');
+  if (publisherWorkflow.includes('push:\n    tags:') || !publisherWorkflow.includes("vars.FLOW_AUTOPUBLISH_ENABLED == 'true'") || !publisherWorkflow.includes('environment: npm-publish') || !publisherWorkflow.includes('id-token: write')) {
+    console.error('\nFAIL: Publisher workflow lacks the no-tag/default-off/environment/OIDC contract.'); process.exit(1);
   }
-  console.log(`✓ Environment "npm-publish" protection verified (${envResult.reviewerCount} required reviewer(s)).`);
+  console.log('✓ Publisher workflow contract is present (no tag trigger, default-off live latch).');
+
+  const publisherRun = dispatchPublisher(localHead, npm_v, false);
+  verifyPublishedRun(publisherRun.id, publisherRun.runAttempt, npm_v, localHead);
+  console.log(`✓ Publisher workflow run ${publisherRun.id} completed, registry/provenance verified, and installer smoke passed for ${localHead}.`);
 
   console.log('\n================================================================================');
   console.log('Tagging Release');
   console.log('================================================================================\n');
 
+  const releaseTags = [npmTag];
   console.log(`Creating git tag ${npmTag}...`);
   execFileSync('git', ['tag', npmTag], { cwd: repoRoot, stdio: 'inherit' });
-  console.log(`✓ Created tag ${npmTag}`);
-
-  console.log(`Creating git tag ${skillTag}...`);
-  execFileSync('git', ['tag', skillTag], { cwd: repoRoot, stdio: 'inherit' });
-  console.log(`✓ Created tag ${skillTag}`);
-
-  console.log('\n================================================================================');
-  console.log('Pushing to Remote');
-  console.log('================================================================================\n');
-
-  console.log(`Pushing master, tag ${npmTag}, and tag ${skillTag} to origin atomically...`);
+  if (hasSkillRelease) {
+    releaseTags.push(skillTag);
+    console.log(`Creating git tag ${skillTag}...`);
+    execFileSync('git', ['tag', skillTag], { cwd: repoRoot, stdio: 'inherit' });
+  }
   try {
-    execFileSync('git', ['push', '--atomic', 'origin', 'master', npmTag, skillTag], {
-      cwd: repoRoot,
-      stdio: 'inherit',
-    });
-    console.log('✓ Successfully pushed master and release tags to origin.');
+    execFileSync('git', ['push', '--atomic', 'origin', 'master', ...releaseTags], { cwd: repoRoot, stdio: 'inherit' });
   } catch (err) {
     console.error(`\nFAIL: Atomic push to origin failed (exit code ${err.status ?? 1}).`);
-    const remoteNpm = gitTagExists(npmTag);
-    const remoteSkill = gitTagExists(skillTag);
-    if (!remoteNpm.exists && !remoteSkill.exists && remoteNpm.source !== 'unconfirmed' && remoteSkill.source !== 'unconfirmed') {
-      console.log('Rolling back locally created tags to restore clean state for retry...');
-      try {
-        execFileSync('git', ['tag', '-d', npmTag], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
-        execFileSync('git', ['tag', '-d', skillTag], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
-        console.log('✓ Local tags rolled back.');
-      } catch {
-        console.warn('[WARN] Could not clean up local tags after push failure.');
-      }
+    const remoteStates = releaseTags.map(gitTagExists);
+    if (remoteStates.every(state => !state.exists && state.source !== 'unconfirmed')) {
+      for (const tag of releaseTags) execFileSync('git', ['tag', '-d', tag], { cwd: repoRoot, stdio: ['ignore', 'pipe', 'ignore'] });
     } else {
-      console.error('[WARN] Remote tag state cannot be confirmed as empty or tags reached remote. Keeping local tags intact to prevent state drift.');
+      console.error('[WARN] Remote tag state is partial or unconfirmed; preserve local refs and require owner reconciliation.');
     }
     process.exit(err.status ?? 1);
   }
-  // Handle GitHub Release for v<skill_v>
-  console.log(`\nChecking GitHub Release for ${skillTag}...`);
-  let releaseExists = false;
-  try {
-    const viewOut = execGh(['release', 'view', skillTag, '--json', 'tagName'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
-    if (viewOut) releaseExists = true;
-  } catch (err) {
-    const stderr = err.stderr ? err.stderr.toString() : '';
-    if (stderr.toLowerCase().includes('release not found') || stderr.toLowerCase().includes('not found') || stderr.toLowerCase().includes('could not find release')) {
-      releaseExists = false;
-    } else {
-      console.error(`\nFAIL: Could not check GitHub Release status for ${skillTag} (network, authentication, or API error): ${stderr.trim() || err.message}`);
-      console.error('Aborting release for safety to prevent inconsistent release state.');
-      process.exit(err.status ?? 1);
-    }
-  }
-
-  if (releaseExists) {
-    console.log(`[INFO] GitHub Release for ${skillTag} already exists. Skipping release creation.`);
-  } else {
-    console.log(`Creating official GitHub Release for ${skillTag}...`);
+  if (hasSkillRelease) {
+    let releaseExists = false;
     try {
-      execGh(['release', 'create', skillTag, '--title', `v${skill_v}`, '--notes-file', 'CHANGELOG.md'], {
-        cwd: repoRoot,
-        stdio: 'inherit',
-      });
-      console.log(`✓ GitHub Release created for ${skillTag}`);
+      const viewOut = execGh(['release', 'view', skillTag, '--json', 'tagName'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+      releaseExists = Boolean(viewOut);
     } catch (err) {
-      console.error(`\nFAIL: Could not create GitHub Release for ${skillTag} (exit code ${err.status ?? 1}).`);
-      console.error(`Command failed: gh release create ${skillTag} --title v${skill_v} --notes-file CHANGELOG.md`);
-      process.exit(err.status ?? 1);
+      const stderr = err.stderr ? err.stderr.toString() : '';
+      if (!/release not found|not found|could not find release/i.test(stderr)) throw err;
     }
+    if (releaseExists) throw new Error(`GitHub Release ${skillTag} already exists after new skill tag push; stop for owner reconciliation.`);
+    execGh(['release', 'create', skillTag, '--title', `v${intent.skill_version}`, '--notes-file', 'CHANGELOG.md'], { cwd: repoRoot, stdio: 'inherit' });
   }
 
+  const tagSummary = hasSkillRelease ? `${npmTag}, ${skillTag}` : npmTag;
   console.log(`
 ================================================================================
 RELEASE SHIP SUCCESSFUL
 ================================================================================
-Skill Product: v${skill_v}
-npm Package:   ${npm_v}
+${hasSkillRelease ? `Skill Product: v${intent.skill_version}\n` : ''}npm Package:   ${npm_v}
 
+Publisher run verified; registry integrity, provenance and installed smoke passed before ref creation.
 Pushed to origin:
-  Branch: master (verified identical to origin/master)
-  Tags:   ${npmTag}
-          ${skillTag}
-
-NEXT STEPS (GitHub Actions Approval):
-  1. Go to GitHub Actions:
-     https://github.com/manhquydev/flow-skill/actions
-  2. Locate the "Publish npm-wrapper to npm" workflow run triggered by tag ${npmTag}.
-  3. REVIEWER / OPERATOR NOTICE:
-     Verify environment "npm-publish" protection rules (required reviewers).
-     Review and approve the deployment prompt in GitHub Actions.
-  4. Once published, verify the published package:
-     npm view @manhquy/flow-skill dist-tags --json
-     npx --yes @manhquy/flow-skill@latest --help
+  Branch: master
+  Tags:   ${tagSummary}
 ================================================================================
 `);
 }
@@ -1289,6 +1246,7 @@ Options:
   --sync          Synchronize documentation tables across README files, trigger npm-wrapper sync, and verify
   --instructions  Print release instructions and tag status for current versions without modifying files
   --ship          Release promotion: verify clean master HEAD, CI status, run battery, tag, and push
+  --reconcile     Verify-only with retained package/receipt dirs and exact SHA/run identity; never publishes or repairs refs
   --dry-run       When used with --ship, run full validation checks without modifying files, tagging, or pushing
   --yes, -y       Confirm live tag creation and pushing when executing --ship
   --help          Show this help message
@@ -1315,19 +1273,20 @@ Options:
     printReleaseInstructions(skill_v, npm_v);
     process.exit(0);
   }
-
+  if (args.includes('--reconcile')) {
+    const [packageDirectory, evidenceDirectory, expectedSha, expectedRunId, expectedRunAttempt] = args.slice(args.indexOf('--reconcile') + 1);
+    if (!packageDirectory || !evidenceDirectory || !expectedSha || !/^\d+$/.test(expectedRunId || '') || !/^\d+$/.test(expectedRunAttempt || '')) {
+      console.error('Usage: node scripts/sync-release.mjs --reconcile <package-artifact-dir> <verification-artifact-dir> <full-sha> <publisher-run-id> <publisher-run-attempt>');
+      process.exit(2);
+    }
+    execFileSync(process.execPath, [join(repoRoot, 'scripts/release-workflow.mjs'), 'reconcile', packageDirectory, evidenceDirectory, expectedSha], { cwd: repoRoot, env: { ...process.env, EXPECTED_RUN_ID: expectedRunId, EXPECTED_RUN_ATTEMPT: expectedRunAttempt }, stdio: 'inherit', timeout: 120000 });
+    return;
+  }
   if (isSync) {
     const skill_v = getSkillVersion();
     const npm_v = getNpmVersion();
-    if (!skill_v) {
-      console.error('FAIL: Missing skill version in skills/flow/SKILL.md');
-      process.exit(1);
-    }
-    if (!npm_v) {
-      console.error('FAIL: Missing npm version in npm-wrapper/package.json');
-      process.exit(1);
-    }
-
+    if (!skill_v) { console.error('FAIL: Missing skill version in skills/flow/SKILL.md'); process.exit(1); }
+    if (!npm_v) { console.error('FAIL: Missing npm version in npm-wrapper/package.json'); process.exit(1); }
     syncRelease(skill_v, npm_v);
 
     console.log('\nRe-running verification check after synchronization:');

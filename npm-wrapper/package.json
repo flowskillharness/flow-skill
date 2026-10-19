@@ -24,7 +24,7 @@
     "sync": "node scripts/sync.mjs",
     "prepack": "node scripts/sync.mjs",
     "pretest": "node scripts/sync.mjs",
-    "test": "node --test --test-concurrency=1 test/installer.test.mjs test/detect.test.mjs test/cli.test.mjs test/lock-atomicity.test.mjs test/sync-manifest.test.mjs test/semver.test.mjs",
+    "test": "node --test --test-concurrency=1 test/installer.test.mjs test/detect.test.mjs test/cli.test.mjs test/lock-atomicity.test.mjs test/sync-manifest.test.mjs test/semver.test.mjs test/smoke-policy.test.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

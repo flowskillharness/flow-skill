@@ -170,6 +170,49 @@ ck 1 $? "missing npm-wrapper/README_VN.md fails"
 grep -q 'missing npm-wrapper/README_VN.md' /tmp/coh6.out && ck 0 0 "names the missing file" || ck 0 1 "names the missing file"
 rm -rf "$tmp"
 
+echo "G) publisher workflow ordering gate: audit after smoke fails (hollow/sound pair)"
+tmp=$(mktemp -d)
+mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/skills/flow/references" "$tmp/r/.claude-plugin" \
+  "$tmp/r/npm-wrapper" "$tmp/r/tests" "$tmp/r/scripts" "$tmp/r/.github/workflows"
+cp "$HERE/../scripts/check-release-coherence.sh" "$tmp/r/scripts/"
+cp "$HERE/../skills/flow/SKILL.md" "$tmp/r/skills/flow/"
+cp "$HERE/../skills/flow/runner/flow.sh" "$tmp/r/skills/flow/runner/"
+cp "$HERE/../skills/flow/runner/attestations.sh" "$tmp/r/skills/flow/runner/"
+cp "$HERE/../skills/flow/references/attestations.md" "$tmp/r/skills/flow/references/"
+cp "$HERE/../portable-manifest.json" "$tmp/r/"
+cp "$HERE/../.claude-plugin/plugin.json" "$tmp/r/.claude-plugin/"
+cp "$HERE/../npm-wrapper/package.json" "$tmp/r/npm-wrapper/"
+cp "$HERE/../npm-wrapper/README.md" "$tmp/r/npm-wrapper/"
+cp "$HERE/../npm-wrapper/README_VN.md" "$tmp/r/npm-wrapper/"
+cp "$HERE/../CHANGELOG.md" "$tmp/r/"
+cp "$HERE/../npm-wrapper/CHANGELOG.md" "$tmp/r/npm-wrapper/"
+cp "$HERE/../README.md" "$tmp/r/"
+cp "$HERE/../README_VN.md" "$tmp/r/"
+cp "$HERE/../tests/manifest.txt" "$tmp/r/tests/"
+cp "$HERE/../.github/workflows/publish-npm-wrapper.yml" "$tmp/r/.github/workflows/"
+cp "$HERE/../scripts/release-workflow.mjs" "$tmp/r/scripts/"
+# sound half: current workflow passes the new ordering checks inside the full green run
+bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7a.out 2>&1
+grep -q 'provenance receipts retained before install smoke' /tmp/coh7a.out && ck 0 0 "sound: real workflow satisfies ordering gate" || ck 0 1 "sound: real workflow satisfies ordering gate"
+# hollow half: move the install-smoke step before the audit step; checker must fail
+python3 - "$tmp/r/.github/workflows/publish-npm-wrapper.yml" <<'PYEOF'
+import re, sys
+path = sys.argv[1]
+text = open(path).read()
+smoke = re.search(r'(      - name: Verify registry integrity and installed package\n(?:        .*\n|\n)*?        run: .*\n)', text)
+audit = re.search(r'(      - name: Audit target-only npm signatures and export verified SLSA bundle\n)', text)
+if not smoke or not audit:
+    sys.exit(3)
+text = text.replace(smoke.group(1), '', 1)
+text = text.replace(audit.group(1), smoke.group(1) + audit.group(1), 1)
+open(path, 'w').write(text)
+PYEOF
+mv "$tmp/r/scripts/release-workflow.mjs" "$tmp/r/scripts/release-workflow.mjs.bak" 2>/dev/null || true
+bash "$tmp/r/scripts/check-release-coherence.sh" >/tmp/coh7.out 2>&1
+ck 1 $? "hollow: audit-after-smoke ordering fails coherence"
+grep -q 'publisher must audit npm signatures before the installer smoke' /tmp/coh7.out && ck 0 0 "names the ordering violation" || ck 0 1 "names the ordering violation"
+rm -rf "$tmp"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
