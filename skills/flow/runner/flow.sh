@@ -2994,23 +2994,47 @@ cmd_tokens() {
 
 assess_scan() {
   # best-effort stack/CI/context detection from real files (fast: no recursive find).
+  local k rmap py rout df has_docker=0 pyf has_py=0 odoo_count=0 mf mlist=""
   echo "stack:"
   [ -f "$ROOT/package.json" ] && echo "  - node (package.json)"
   [ -f "$ROOT/frontend/package.json" ] && echo "  - frontend (frontend/package.json)"
-  { [ -f "$ROOT/pyproject.toml" ] || [ -f "$ROOT/requirements.txt" ]; } && echo "  - python (pyproject/requirements)"
+  { [ -f "$ROOT/pnpm-workspace.yaml" ] || [ -f "$ROOT/nx.json" ] || [ -f "$ROOT/turbo.json" ]; } && echo "  - monorepo (workspaces)"
+  if [ -f "$ROOT/pyproject.toml" ] || [ -f "$ROOT/requirements.txt" ]; then
+    echo "  - python (pyproject/requirements)"
+  else
+    for pyf in "$ROOT"/src/*.py "$ROOT"/src/*/*.py "$ROOT"/*/*.py; do
+      if [ -f "$pyf" ]; then has_py=1; break; fi
+    done
+    [ "$has_py" -eq 1 ] && echo "  - python (subdirectories)"
+  fi
+  for mf in "$ROOT"/__manifest__.py \
+            "$ROOT"/*/__manifest__.py \
+            "$ROOT"/*/*/__manifest__.py \
+            "$ROOT"/*/*/*/__manifest__.py \
+            "$ROOT"/addons/*/__manifest__.py \
+            "$ROOT"/src/odoo/addons/*/__manifest__.py; do
+    [ -f "$mf" ] || continue
+    case "$mlist" in
+      *"|$mf|"*) ;;
+      *) mlist="$mlist|$mf|"; odoo_count=$((odoo_count + 1)) ;;
+    esac
+  done
+  [ "$odoo_count" -gt 0 ] && echo "  - odoo ($odoo_count addons)"
   [ -f "$ROOT/go.mod" ] && echo "  - go (go.mod)"
   [ -f "$ROOT/Cargo.toml" ] && echo "  - rust (Cargo.toml)"
   [ -d "$ROOT/.github/workflows" ] && echo "  - CI: github actions (.github/workflows)"
-  { [ -f "$ROOT/Dockerfile" ] || [ -f "$ROOT/docker-compose.yml" ]; } && echo "  - docker"
+  for df in "$ROOT"/Dockerfile* "$ROOT"/docker-compose*.yml "$ROOT"/docker-compose*.yaml; do
+    if [ -f "$df" ]; then has_docker=1; break; fi
+  done
+  [ "$has_docker" -eq 1 ] && echo "  - docker"
   echo "context files present:"
-  local k
   for k in README.md AGENTS.md CLAUDE.md ARCHITECTURE.md docs specs tests test; do
     [ -e "$ROOT/$k" ] && echo "  - $k"
   done
   # ranked surfaces: highest-leverage code first (symbols referenced most widely). Optional helper
   # (stdlib reference-count ranker); degrades to a note if python/helper absent - the flat scan stands.
   echo "ranked surfaces (most-referenced first - inspect these before planning):"
-  local rmap="${HARNESS_PY%/*}/repo_map.py" py rout
+  rmap="${HARNESS_PY%/*}/repo_map.py"
   py="$(_python)"
   if [ -n "$py" ] && [ -f "$rmap" ]; then
     rout="$("$py" "$rmap" "$ROOT" 10 2>/dev/null)"
