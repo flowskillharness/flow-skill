@@ -1,8 +1,7 @@
 # Changelog
 
 ## [0.34.6] - 2026-10-20
-- **Brownfield next-guard fix:** A dirty `flow/00-inspect.md` with a failing gate blocks `next` before `00-idea` creation, preserving `FLOW_LAST_GATE_FAIL` attribution. Regression coverage: A5 in `tests/test_flow_assess.sh`.
-- **Bilingual npm first-run docs:** Clarify the Codex `$flow` trigger versus slash `/flow` commands in English and Vietnamese.
+- **Brownfield next-guard fix:** A dirty `flow/00-inspect.md` with a failing gate blocks `next` before `00-idea` creation, with `FLOW_LAST_GATE_FAIL` attribution on the failure path. Regression coverage: A5 in `tests/test_flow_assess.sh` asserts the block/unblock transition and that no `00-idea` is minted while the assessment is dirty.
 
 ## [0.34.5] - 2026-10-19
 - **Telemetry run-state hygiene:** Write pure run-state (`.flow/events.jsonl`, `flow/.lock*`, `cards/.inflight`, `MODE`, `PROJECT_TYPE`) to clone-local `.git/info/exclude` via `git rev-parse --git-path`, keeping `.flow/` telemetry and locks uncommitted during `git add -A` without modifying tracked `.gitignore` files or opening tolerance bypasses.
