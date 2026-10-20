@@ -83,6 +83,15 @@ has "$insp" "python (subdirectories)" "auto-scan detected subdir pyproject/requi
 has "$insp" "docker" "auto-scan detected compose v2 default filename"
 rm -rf "$SB"
 
+echo "A4) composer.yml alone does not report docker (glob must not overmatch)"
+newsb
+touch "$SB/composer.yml"
+out="$(bash "$RUN" assess 2>&1)"; ck 0 $? "assess exit 0 with composer.yml"
+insp="$(cat "$SB/flow/00-inspect.md")"
+printf '%s' "$insp" | grep -q "  - docker"
+ck 1 $? "composer.yml alone does not produce docker line"
+rm -rf "$SB"
+
 
 echo "B) unfilled template -> gate NOT clean (exit 1)"
 newsb

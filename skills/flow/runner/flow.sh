@@ -3026,7 +3026,7 @@ assess_scan() {
   [ -f "$ROOT/Cargo.toml" ] && echo "  - rust (Cargo.toml)"
   [ -d "$ROOT/.github/workflows" ] && echo "  - CI: github actions (.github/workflows)"
   for df in "$ROOT"/Dockerfile* "$ROOT"/docker-compose*.yml "$ROOT"/docker-compose*.yaml \
-            "$ROOT"/compose*.yml "$ROOT"/compose*.yaml; do
+            "$ROOT"/compose.yml "$ROOT"/compose.yaml "$ROOT"/compose.*.yml "$ROOT"/compose.*.yaml; do
     if [ -f "$df" ]; then has_docker=1; break; fi
   done
   [ "$has_docker" -eq 1 ] && echo "  - docker"
