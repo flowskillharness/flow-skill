@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.34.6] - 2026-10-20
+- **Brownfield next-guard fix:** A dirty `flow/00-inspect.md` with a failing gate blocks `next` before `00-idea` creation, preserving `FLOW_LAST_GATE_FAIL` attribution. Regression coverage: A5 in `tests/test_flow_assess.sh`.
+- **Bilingual npm first-run docs:** Clarify the Codex `$flow` trigger versus slash `/flow` commands in English and Vietnamese.
+
 ## [0.34.5] - 2026-10-19
 - **Telemetry run-state hygiene:** Write pure run-state (`.flow/events.jsonl`, `flow/.lock*`, `cards/.inflight`, `MODE`, `PROJECT_TYPE`) to clone-local `.git/info/exclude` via `git rev-parse --git-path`, keeping `.flow/` telemetry and locks uncommitted during `git add -A` without modifying tracked `.gitignore` files or opening tolerance bypasses.
 - **Root discovery and ancestor adoption:** `flow` announces new flow root initialization only when no Flow signature exists in the current directory or its ancestors; automatically adopts ancestor flow projects from subdirectories, displaying the adoption notice to stderr and the stdout marker (`note: adopting flow root ...`) while qualifying stage-00 PASS artifacts.
