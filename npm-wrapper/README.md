@@ -78,11 +78,12 @@ npx @manhquy/flow-skill@latest --yes --all --dry-run
 
 ## First Run & Next Steps
 
-After installation completes, restart or reload your coding agent, then run:
+After installation completes, restart or reload your coding agent. Codex CLI uses
+`$flow`; slash-command agents (Claude Code, Antigravity, OMP) use `/flow`:
 
-- `/flow` — check current project stage and see what is blocking advancement
-- `/flow next` — evaluate gate criteria and advance to the next stage
-- `/flow doctor` — verify environment health and installed skill bundle integrity
+- Codex: `$flow`; slash-command agents: `/flow` — check current project stage and blockers
+- Codex: `$flow next`; slash-command agents: `/flow next` — evaluate gates and advance to the next stage
+- Codex: `$flow doctor`; slash-command agents: `/flow doctor` — verify environment health and installed skill bundle integrity
 
 ---
 
