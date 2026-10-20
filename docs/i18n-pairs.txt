@@ -7,4 +7,4 @@
 # Root pair re-recorded after the landing-card rewrite (same structure both sides).
 # npm-wrapper pair aligned at 0.7.1 / skill v0.31.0.
 README.md README_VN.md 950dad1d1087442a081abb0356edc3446c6e28e5 a462a167bc329fae7db6f90d790120a8d2c8461b
-npm-wrapper/README.md npm-wrapper/README_VN.md da905f103f6b12074a9fefd3c90b78ada5d4d270 f5ab589fbddd0981062bb62bed35fe845aebcbc6
+npm-wrapper/README.md npm-wrapper/README_VN.md 3a1c31a9a303404bd39c945ce852fbce1733903d faaaa1a73b961bb59c8d3b604d9407e2d6cd6c63
