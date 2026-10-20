@@ -92,19 +92,42 @@ printf '%s' "$insp" | grep -q "  - docker"
 ck 1 $? "composer.yml alone does not produce docker line"
 rm -rf "$SB"
 
-echo "A5) next blocks a dirty brownfield assessment, then unlocks idea once clean"
+echo "A5) status directs dirty assessments to assess; next unlocks idea only once clean"
 newsb
 printf '{"name":"x"}\n' > "$SB/package.json"; mkdir -p "$SB/.github/workflows"
 out="$(bash "$RUN" assess 2>&1)"; ck 0 $? "assess creates dirty assessment"
+out="$(bash "$RUN" status 2>&1)"; ck 0 $? "status exits 0 on dirty assessment"
+has "$out" "brownfield: assessment present but gate NOT clean" "status identifies dirty assessment gate"
+has "$out" "NEXT -> run '/flow assess'" "NEXT recommends assessment correction"
+has "$out" "NEXT_VERB=none" "assessment correction preserves the closed advisory enum"
+has "$out" "planning: not started" "planning has not started"
+has "$out" "  -> run '/flow assess'" "planning guidance recommends assessment correction"
+printf '%s' "$out" | grep -q "run '/flow next' to unlock stage 00"
+ck 1 $? "dirty status never recommends next to unlock stage 00"
 out="$(bash "$RUN" next 2>&1)"; rc=$?
 ck 1 "$rc" "next exits 1 on dirty assessment"
 has "$out" "FAIL" "next reports gate failure"
 has "$out" "brownfield.*00-inspect" "next identifies the brownfield assessment"
 ck 1 "$(exists "$SB/flow/00-idea.md")" "dirty assessment does not create 00-idea"
 clean_inspect
+out="$(bash "$RUN" status 2>&1)"; ck 0 $? "status exits 0 on clean assessment"
+has "$out" "NEXT -> run '/flow next' to unlock stage 00" "clean assessment NEXT recommends next"
+has "$out" "NEXT_VERB=next" "clean assessment next verb is next"
+has "$out" "  -> run '/flow next' to unlock stage 00 (idea)" "clean planning guidance recommends next"
 out="$(bash "$RUN" next 2>&1)"; rc=$?
 ck 0 "$rc" "next exits 0 on clean assessment"
 ck 0 "$(exists "$SB/flow/00-idea.md")" "clean assessment unlocks 00-idea"
+rm -rf "$SB"
+
+echo "A6) no-assessment status keeps greenfield next guidance"
+newsb
+out="$(bash "$RUN" status 2>&1)"; ck 0 $? "status exits 0 without an assessment"
+has "$out" "NEXT -> run '/flow next' to unlock stage 00" "greenfield NEXT recommends next"
+has "$out" "NEXT_VERB=next" "greenfield next verb is next"
+has "$out" "  -> run '/flow next' to unlock stage 00 (idea)" "greenfield planning guidance recommends next"
+ck 1 "$(exists "$SB/flow/00-inspect.md")" "status does not create an assessment"
+out="$(bash "$RUN" next 2>&1)"; ck 0 $? "next exits 0 without an assessment"
+ck 0 "$(exists "$SB/flow/00-idea.md")" "greenfield next unlocks 00-idea"
 rm -rf "$SB"
 
 
