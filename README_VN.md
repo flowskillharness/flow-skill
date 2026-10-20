@@ -75,6 +75,7 @@ trước) — nói bạn muốn build gì, rồi gõ `/flow`
 /flow check C-001  validate card (done = bằng chứng thế giới thật)
 /flow auto       build tự động (HALT nhóm bảo mật)
 /flow doctor     kiểm môi trường
+/flow resume    tiếp tục dự án Flow hiện có trong session mới (chỉ đọc)
 ```
 
 Bảng đầy đủ: [`skills/flow/SKILL.md`](skills/flow/SKILL.md) ·

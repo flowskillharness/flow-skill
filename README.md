@@ -77,6 +77,7 @@ then type `/flow`
 /flow check C-001  validate card (done = world-state proof)
 /flow auto       autonomous build (halts on security-class)
 /flow doctor     environment check
+/flow resume    continue an existing Flow project in a fresh session (read-only)
 ```
 
 Full table: [`skills/flow/SKILL.md`](skills/flow/SKILL.md) ·
