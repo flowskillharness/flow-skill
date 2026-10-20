@@ -3002,7 +3002,9 @@ assess_scan() {
   if [ -f "$ROOT/pyproject.toml" ] || [ -f "$ROOT/requirements.txt" ]; then
     echo "  - python (pyproject/requirements)"
   else
-    for pyf in "$ROOT"/src/*.py "$ROOT"/src/*/*.py "$ROOT"/*/*.py; do
+    for pyf in "$ROOT"/src/*.py "$ROOT"/src/*/*.py "$ROOT"/*/*.py \
+               "$ROOT"/*/pyproject.toml "$ROOT"/*/*/pyproject.toml \
+               "$ROOT"/*/requirements.txt "$ROOT"/*/*/requirements.txt; do
       if [ -f "$pyf" ]; then has_py=1; break; fi
     done
     [ "$has_py" -eq 1 ] && echo "  - python (subdirectories)"
@@ -3023,7 +3025,8 @@ assess_scan() {
   [ -f "$ROOT/go.mod" ] && echo "  - go (go.mod)"
   [ -f "$ROOT/Cargo.toml" ] && echo "  - rust (Cargo.toml)"
   [ -d "$ROOT/.github/workflows" ] && echo "  - CI: github actions (.github/workflows)"
-  for df in "$ROOT"/Dockerfile* "$ROOT"/docker-compose*.yml "$ROOT"/docker-compose*.yaml; do
+  for df in "$ROOT"/Dockerfile* "$ROOT"/docker-compose*.yml "$ROOT"/docker-compose*.yaml \
+            "$ROOT"/compose*.yml "$ROOT"/compose*.yaml; do
     if [ -f "$df" ]; then has_docker=1; break; fi
   done
   [ "$has_docker" -eq 1 ] && echo "  - docker"

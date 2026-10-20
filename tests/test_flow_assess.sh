@@ -72,6 +72,17 @@ has "$insp" "docker" "auto-scan detected docker via dev compose"
 has "$insp" "python (subdirectories)" "auto-scan detected subdir python"
 rm -rf "$SB"
 
+echo "A3) subdir pyproject and compose v2 defaults detected without root/other signals"
+newsb
+mkdir -p "$SB/apps/api"
+touch "$SB/apps/api/pyproject.toml"
+touch "$SB/compose.yaml"
+out="$(bash "$RUN" assess 2>&1)"; ck 0 $? "assess exit 0 on apps-only repo"
+insp="$(cat "$SB/flow/00-inspect.md")"
+has "$insp" "python (subdirectories)" "auto-scan detected subdir pyproject/requirements"
+has "$insp" "docker" "auto-scan detected compose v2 default filename"
+rm -rf "$SB"
+
 
 echo "B) unfilled template -> gate NOT clean (exit 1)"
 newsb
