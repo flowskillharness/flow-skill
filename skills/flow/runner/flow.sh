@@ -980,7 +980,11 @@ _gate_state_brief() { # $1 = current_stage_idx (caller already computed it), $2 
   local idx="$1" dwell="${2:-}"
   if [ "$idx" -lt 0 ]; then
     echo "planning: not started"
-    echo "  -> run '/flow next' to unlock stage 00 (idea)"
+    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+      echo "  -> run '/flow assess' to complete/recheck the brownfield assessment"
+    else
+      echo "  -> run '/flow next' to unlock stage 00 (idea)"
+    fi
   else
     local cur; cur="$(stage_name_at "$idx")"
     if [ -n "$dwell" ]; then
@@ -1534,7 +1538,11 @@ inflight_display() { # emit a line per todo card still marked in flight (stale i
 _next_action() {
   local idx; idx="$(current_stage_idx)"
   if [ "$idx" -lt 0 ]; then
-    echo "run '/flow next' to unlock stage 00"
+    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+      echo "run '/flow assess' to complete/recheck the brownfield assessment"
+    else
+      echo "run '/flow next' to unlock stage 00"
+    fi
     return 0
   fi
   # Scan every stage through the current one for the FIRST that is neither gate-clean nor
