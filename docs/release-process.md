@@ -47,6 +47,8 @@ bash scripts/release.sh --yes
 
 `--yes` requires clean working tree, local `master == origin/master`, dual-axis coherence/changelog entries, zero sync drift, i18n integrity, unused tags, exact-HEAD authoritative CI, and read-only verification battery. It dispatches with a unique request UUID through the workflow-dispatch REST endpoint using `return_run_details=true`, then validates the returned repository-bound `workflow_run_id` and watches that exact run. A 204/missing/invalid response is an ambiguous dispatch: fail closed and do not redispatch blindly. After the run succeeds, re-read and verify its workflow path, ref, SHA, event, title, attempt and conclusion, then require successful eligibility and live publish jobs from that exact attempt (dry-run requires publish to be skipped). Finally verify registry integrity/provenance/install smoke; only then create/push the release tags — the npm tag always; the skill tag and its GitHub Release only when release intent selects a skill version (`skill_version` non-null; an npm-only release must not mint a skill tag or GitHub Release).
 
+When checking whether the skill-axis GitHub Release is absent, `scripts/sync-release.mjs` recognizes only `gh release view`'s exact `release not found` diagnostic (with one optional terminal LF or CRLF); every other lookup error fails closed and must not trigger release creation. Never infer absence from a generic HTTP 404 or a broad `not found` substring.
+
 Stable releases publish to `latest`; prereleases to `next`. Stable versions are never downgraded. A prerelease does not automatically move `latest` backward or promote itself to `latest`.
 
 ## Artifact and post-publish verification

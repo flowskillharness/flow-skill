@@ -331,7 +331,7 @@ after_j_status="$(git -C "$tmp/r" status --porcelain)"
 [ "$before_j_status" = "$after_j_status" ] && ck 0 0 "working tree 100% clean, zero writes" || ck 0 1 "working tree 100% clean, zero writes"
 rm -rf "$tmp"
 
-echo "K) gh release integration branches with mocked gh (existing, create-failure, create-success)"
+echo "K) gh release integration branches with mocked gh and fail-closed release view errors"
 tmp=$(mktemp -d)
 git clone --bare --no-tags -q "$ROOT" "$tmp/origin.git"
 git clone --no-tags -q "$tmp/origin.git" "$tmp/r"
@@ -693,8 +693,28 @@ function gh(args, options) {
   }
   if (args[0] === 'release') {
     assert.equal(args[2], `v${s.skillVersion}`);
-    if (args[1] === 'view') { const e = new Error('release not found'); e.stderr = Buffer.from('release not found'); throw e; }
-    assert.equal(args[1], 'create'); log('release'); return '';
+    const releaseCase = process.env.K_CONSUMER_HOLLOW;
+    if (args[1] === 'view') {
+      log('release-view');
+      if (releaseCase === 'release-exists') return json({ tagName: args[2] });
+      const diagnostics = {
+        'release-auth': 'HTTP 401: Bad credentials (mock auth failure)',
+        'release-forbidden': 'HTTP 403: Forbidden (mock permission failure)',
+        'release-http404': 'HTTP 404: Not Found (mock API failure)',
+        'release-http500': 'HTTP 500: Internal Server Error (mock API failure)',
+        'release-network': 'error connecting to api.github.com: mock connection reset',
+        'release-empty': '',
+        'release-unexpected': 'could not find release (mock unexpected diagnostic)',
+      };
+      const stderr = diagnostics[releaseCase] ?? 'release not found\n';
+      const e = new Error(`mock gh release view failed: ${stderr}`);
+      e.status = 1; e.stderr = Buffer.from(stderr); throw e;
+    }
+    assert.equal(args[1], 'create');
+    // Record before refusing so even a caught fixture error exposes the side effect.
+    log('release');
+    assert.equal(releaseCase, 'sound', `Unexpected gh release create in ${releaseCase}`);
+    return '';
   }
   assert.equal(args[0], 'api');
   const endpoint = args[1];
@@ -782,7 +802,7 @@ cp.execFileSync = function(command, args, options = {}) {
 syncBuiltinESMExports();
 EOF
 
-for consumer_case in sound channel-drift; do
+for consumer_case in sound channel-drift release-exists release-auth release-forbidden release-http404 release-http500 release-network release-empty release-unexpected; do
   clean_k_tags
   rm -rf "$tmp/retained" "$tmp/consumer-package"
   mkdir -p "$tmp/retained" "$tmp/smoke-tmp"
@@ -810,14 +830,19 @@ const s = JSON.parse(fs.readFileSync(path.join(root, 'consumer-state.json'), 'ut
 const events = fs.readFileSync(path.join(root, 'consumer-trace.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
 const flow = events.filter(e => ['dispatch', 'eligibility', 'record-artifact', 'prepublish', 'download', 'attestation', 'smoke-start', 'smoke-end', 'tag', 'push', 'release'].includes(e.event)).map(e => e.event);
 const prefix = ['dispatch', 'eligibility', 'record-artifact', 'prepublish', 'download', 'download', 'attestation', 'smoke-start', 'smoke-end'];
-assert.deepEqual(flow, process.argv[2] === 'sound' ? [...prefix, 'tag', 'tag', 'push', 'release'] : prefix);
+const releaseCase = process.argv[2];
+const reachedRelease = releaseCase !== 'channel-drift';
+const finalized = [...prefix, 'tag', 'tag', 'push'];
+assert.deepEqual(flow, releaseCase === 'sound' ? [...finalized, 'release'] : reachedRelease ? finalized : prefix);
+assert.equal(events.filter(e => e.event === 'release-view').length, reachedRelease ? 1 : 0);
+assert.equal(events.filter(e => e.event === 'release').length, releaseCase === 'sound' ? 1 : 0, 'exact gh release create invocation count');
 assert.equal(events.filter(e => e.event === 'consumer').length, 6);
 assert.deepEqual(events.filter(e => e.event === 'registry' && e.afterSmoke).map(e => e.field), ['version', 'dist.integrity', 'dist-tags']);
 for (const e of events.filter(e => e.event === 'registry')) assert.equal(e.registry, 'https://registry.npmjs.org/');
 for (const directory of [path.join(root, 'r'), path.join(root, 'origin.git')]) {
   const git = args => execFileSync('git', args, { cwd: directory, encoding: 'utf8' }).trim();
   const tags = git(['tag', '-l']).split(/\r?\n/).filter(Boolean).sort();
-  assert.deepEqual(tags, process.argv[2] === 'sound' ? [`npm@${s.version}`, `v${s.skillVersion}`].sort() : []);
+  assert.deepEqual(tags, reachedRelease ? [`npm@${s.version}`, `v${s.skillVersion}`].sort() : []);
   for (const tag of tags) assert.equal(git(['rev-parse', `${tag}^{commit}`]), s.sha);
 }
 EOF
@@ -825,6 +850,24 @@ EOF
   if [ "$consumer_case" = channel-drift ]; then
     grep -q 'channel no longer points to the retained release version' "$tmp/consumer-$consumer_case.out"
     ck_k 0 "$?" 'K consumer hollow: channel changes only after real smoke; no tags' "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  elif [ "$consumer_case" = sound ]; then
+    grep -q 'RELEASE SHIP SUCCESSFUL' "$tmp/consumer-$consumer_case.out"
+    ck_k 0 "$?" 'K release absence: exact canonical diagnostic permits create and success' "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  else
+    case "$consumer_case" in
+      release-exists) release_diagnostic="GitHub Release v$k_skill_v already exists" ;;
+      release-auth) release_diagnostic='HTTP 401: Bad credentials (mock auth failure)' ;;
+      release-forbidden) release_diagnostic='HTTP 403: Forbidden (mock permission failure)' ;;
+      release-http404) release_diagnostic='HTTP 404: Not Found (mock API failure)' ;;
+      release-http500) release_diagnostic='HTTP 500: Internal Server Error (mock API failure)' ;;
+      release-network) release_diagnostic='error connecting to api.github.com: mock connection reset' ;;
+      release-empty) release_diagnostic='mock gh release view failed:' ;;
+      release-unexpected) release_diagnostic='could not find release (mock unexpected diagnostic)' ;;
+    esac
+    grep -Fq "$release_diagnostic" "$tmp/consumer-$consumer_case.out"
+    ck_k 0 "$?" "K $consumer_case: original refusal diagnostic retained" "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+    grep -q 'RELEASE SHIP SUCCESSFUL' "$tmp/consumer-$consumer_case.out"
+    ck_k 1 "$?" "K $consumer_case: no release success message" "$tmp/consumer-$consumer_case.out" "$consumer_rc"
   fi
 done
 clean_k_tags
