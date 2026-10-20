@@ -698,6 +698,7 @@ function gh(args, options) {
       log('release-view');
       if (releaseCase === 'release-exists') return json({ tagName: args[2] });
       const diagnostics = {
+        'release-crlf': 'release not found\r\n',
         'release-auth': 'HTTP 401: Bad credentials (mock auth failure)',
         'release-forbidden': 'HTTP 403: Forbidden (mock permission failure)',
         'release-http404': 'HTTP 404: Not Found (mock API failure)',
@@ -713,7 +714,7 @@ function gh(args, options) {
     assert.equal(args[1], 'create');
     // Record before refusing so even a caught fixture error exposes the side effect.
     log('release');
-    assert.equal(releaseCase, 'sound', `Unexpected gh release create in ${releaseCase}`);
+    assert.ok(['sound', 'release-crlf'].includes(releaseCase), `Unexpected gh release create in ${releaseCase}`);
     return '';
   }
   assert.equal(args[0], 'api');
@@ -802,7 +803,7 @@ cp.execFileSync = function(command, args, options = {}) {
 syncBuiltinESMExports();
 EOF
 
-for consumer_case in sound channel-drift release-exists release-auth release-forbidden release-http404 release-http500 release-network release-empty release-unexpected; do
+for consumer_case in sound release-crlf channel-drift release-exists release-auth release-forbidden release-http404 release-http500 release-network release-empty release-unexpected; do
   clean_k_tags
   rm -rf "$tmp/retained" "$tmp/consumer-package"
   mkdir -p "$tmp/retained" "$tmp/smoke-tmp"
@@ -817,8 +818,8 @@ fs.writeFileSync(path.join(root, 'consumer-state.json'), JSON.stringify({ versio
 EOF
   K_CONSUMER_ROOT="$(winpath "$tmp")" K_LOCAL_ORIGIN="file://$tmp/origin.git" K_CONSUMER_HOLLOW="$consumer_case" NODE_OPTIONS="--require=\"$(nodepath "$tmp/consumer-boundary.cjs")\"" PATH="$mock_bin:$PATH" node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --yes > "$tmp/consumer-$consumer_case.out" 2>&1
   consumer_rc=$?
-  expected_rc=0
-  [ "$consumer_case" = sound ] || expected_rc=1
+  expected_rc=1
+  case "$consumer_case" in sound|release-crlf) expected_rc=0 ;; esac
   ck_k "$expected_rc" "$consumer_rc" "K consumer $consumer_case: actual release CLI outcome" "$tmp/consumer-$consumer_case.out" "$consumer_rc"
   K_CONSUMER_ROOT="$(winpath "$tmp")" node --input-type=module - "$consumer_case" << 'EOF'
 import assert from 'node:assert/strict';
@@ -833,9 +834,9 @@ const prefix = ['dispatch', 'eligibility', 'record-artifact', 'prepublish', 'dow
 const releaseCase = process.argv[2];
 const reachedRelease = releaseCase !== 'channel-drift';
 const finalized = [...prefix, 'tag', 'tag', 'push'];
-assert.deepEqual(flow, releaseCase === 'sound' ? [...finalized, 'release'] : reachedRelease ? finalized : prefix);
+assert.deepEqual(flow, ['sound', 'release-crlf'].includes(releaseCase) ? [...finalized, 'release'] : reachedRelease ? finalized : prefix);
 assert.equal(events.filter(e => e.event === 'release-view').length, reachedRelease ? 1 : 0);
-assert.equal(events.filter(e => e.event === 'release').length, releaseCase === 'sound' ? 1 : 0, 'exact gh release create invocation count');
+assert.equal(events.filter(e => e.event === 'release').length, ['sound', 'release-crlf'].includes(releaseCase) ? 1 : 0, 'exact gh release create invocation count');
 assert.equal(events.filter(e => e.event === 'consumer').length, 6);
 assert.deepEqual(events.filter(e => e.event === 'registry' && e.afterSmoke).map(e => e.field), ['version', 'dist.integrity', 'dist-tags']);
 for (const e of events.filter(e => e.event === 'registry')) assert.equal(e.registry, 'https://registry.npmjs.org/');
@@ -853,6 +854,9 @@ EOF
   elif [ "$consumer_case" = sound ]; then
     grep -q 'RELEASE SHIP SUCCESSFUL' "$tmp/consumer-$consumer_case.out"
     ck_k 0 "$?" 'K release absence: exact canonical diagnostic permits create and success' "$tmp/consumer-$consumer_case.out" "$consumer_rc"
+  elif [ "$consumer_case" = release-crlf ]; then
+    grep -q 'RELEASE SHIP SUCCESSFUL' "$tmp/consumer-$consumer_case.out"
+    ck_k 0 "$?" 'K release absence accepts canonical CRLF diagnostic and creates release' "$tmp/consumer-$consumer_case.out" "$consumer_rc"
   else
     case "$consumer_case" in
       release-exists) release_diagnostic="GitHub Release v$k_skill_v already exists" ;;
