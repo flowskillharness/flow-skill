@@ -1387,6 +1387,13 @@ cmd_next() {
   fi
   local idx; idx="$(current_stage_idx)"
   if [ "$idx" -lt 0 ]; then
+    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+      echo "FAIL: brownfield assessment gate for flow/00-inspect.md is not clean."
+      scan_gate "$FLOW_DIR/00-inspect.md"
+      FLOW_LOG_STAGE_TO="00-inspect"
+      echo "Fix the above, then run '/flow next' again. (Kill at a gate is also valid.)"
+      return 1
+    fi
     mkdir -p "$FLOW_DIR"
     cp "$TEMPLATE_DIR/00-idea.md" "$FLOW_DIR/00-idea.md"
     seed_law_files
