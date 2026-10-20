@@ -1237,7 +1237,8 @@ To execute release promotion live, re-run with --yes:
       releaseExists = Boolean(viewOut);
     } catch (err) {
       const stderr = err.stderr ? err.stderr.toString() : '';
-      if (!/release not found|not found|could not find release/i.test(stderr)) throw err;
+      // gh's absent-release diagnostic is exact; API/transport errors must fail closed.
+      if (stderr.replace(/\r?\n$/, '') !== 'release not found') throw err;
     }
     if (releaseExists) throw new Error(`GitHub Release ${skillTag} already exists after new skill tag push; stop for owner reconciliation.`);
     execGh(['release', 'create', skillTag, '--title', `v${intent.skill_version}`, '--notes-file', 'CHANGELOG.md'], { cwd: repoRoot, stdio: 'inherit' });
