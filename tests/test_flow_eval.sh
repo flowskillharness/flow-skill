@@ -399,14 +399,14 @@ batch_out="$(TMPDIR="$priv_tmp" PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 3 --t
 # this mock always returns PASS regardless of fixture, so FLAG-expected fixtures
 # correctly mismatch - assert all heading-mapped fixtures were genuinely evaluated
 # (not silently skipped), not that they all matched.
-has "$batch_out" "of 15 evaluated" "the full 15-fixture batch actually completed (not a silent skip)"
+has "$batch_out" "of 17 evaluated" "the full 17-fixture batch actually completed (not a silent skip)"
 if ! after_count="$(_eval_count_dirs "$priv_tmp")"; then
   echo "  FAIL [could not count directories in private TMPDIR after batch]"
   fail=$((fail+1))
   exit 1
 fi
 delta=$((after_count - before_count)); [ "$delta" -lt 0 ] && delta=$((-delta))
-if [ "$delta" -eq 0 ]; then echo "  ok   [TMPDIR delta=0 after a full 15-fixture batch (zero rundir residue in private TMPDIR)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 15-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
+if [ "$delta" -eq 0 ]; then echo "  ok   [TMPDIR delta=0 after a full 17-fixture batch (zero rundir residue in private TMPDIR)]"; pass=$((pass+1)); else echo "  FAIL [TMPDIR delta=$delta after a full 17-fixture batch - rundir cleanup regression]"; fail=$((fail+1)); fi
 rm -rf "$priv_tmp"
 priv_tmp=""
 unset -f _eval_count_dirs 2>/dev/null || true
@@ -500,14 +500,14 @@ unset FLOW_EVAL_RETRY_BACKOFF
 clean
 
 # ---------- P) v0.21: --keep-going overrides the first-fixture breaker ----------
-echo "P) v0.21 --keep-going: all-invalid mock runs the full 15-fixture batch instead of aborting"
+echo "P) v0.21 --keep-going: all-invalid mock runs the full 17-fixture batch instead of aborting"
 newsb
 export FLOW_EVAL_RETRY_BACKOFF=0
 mkmock '
 echo "nothing parseable"
 '
 out="$(PATH="$MOCKBIN:$PATH" bash "$RUN" eval --n 1 --timeout 20 --keep-going 2>&1)"; rc=$?
-has "$out" "of 15 evaluated" "--keep-going ran the full 15-fixture batch"
+has "$out" "of 17 evaluated" "--keep-going ran the full 17-fixture batch"
 no  "$out" "ABORT after first fixture" "--keep-going suppresses the breaker abort line"
 ck 1 "$rc" "--keep-going full batch UNRELIABLE -> exit 1 (FAIL path), not 2 (abort path)"
 unset FLOW_EVAL_RETRY_BACKOFF
