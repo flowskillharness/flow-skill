@@ -212,7 +212,7 @@ def test_nonzero_runner_diagnostics_do_not_echo_child_output():
                               capture_output=True, env=env, timeout=10)
         check("nonzero runner diagnostic: handler fails open", proc.returncode == 0)
         check("nonzero runner diagnostic: runner exit and byte counts observed",
-              b"run_flow exit 7, stdout=28 bytes, stderr=28 bytes" in proc.stderr)
+              b"run_flow exit 7, captured stdout=28 bytes, captured stderr=28 bytes" in proc.stderr)
         check("nonzero runner diagnostic: stdout sentinel suppressed",
               b"FLOW_STDOUT_SENTINEL_6f283a" not in proc.stdout + proc.stderr)
         check("nonzero runner diagnostic: stderr sentinel suppressed",

@@ -641,7 +641,7 @@ def drain_capped(proc, cap, pgid, job_holder=None):
         res_out = bytes(out_buf)
         res_err = bytes(err_buf)
         if res_rc != 0:
-            note("DEBUG: run_flow exit %s, stdout=%d bytes, stderr=%d bytes" %
+            note("DEBUG: run_flow exit %s, captured stdout=%d bytes, captured stderr=%d bytes" %
                  (res_rc, len(res_out), len(res_err)))
         return res_rc, res_out, res_err
 WIN_GATE_SCRIPT = (
