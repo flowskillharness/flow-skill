@@ -299,6 +299,60 @@ cp "$tmp/r/.github/workflows/publish-npm-wrapper.original.yml" "$tmp/r/.github/w
 bash "$tmp/r/scripts/check-release-coherence.sh" >"$tmp/coh7final-restored.out" 2>&1
 ck 0 $? "sound: restored publisher workflow passes after checkout hollows"
 
+echo "H) preflight selects stable/latest and prerelease/next without registry writes"
+fixture="$OUT/preflight"
+mkdir -p "$fixture/scripts" "$fixture/bin" "$fixture/skills/flow/runner" \
+  "$fixture/skills/flow/harness" "$fixture/npm-wrapper/skills/flow" \
+  "$fixture/npm-wrapper/bin" "$fixture/.claude-plugin"
+cp "$HERE/../scripts/release-preflight.sh" "$fixture/scripts/"
+# Isolate unrelated gates; execute the real preflight with real JSON parsing.
+for check in check-release-coherence check-doc-budgets check-i18n-pairs; do
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$fixture/scripts/$check.sh"
+done
+printf '#!/usr/bin/env bash\necho READY\n' > "$fixture/skills/flow/runner/flow.sh"
+printf 'version: 1.0.0\n' > "$fixture/skills/flow/SKILL.md"
+cp "$fixture/skills/flow/SKILL.md" "$fixture/npm-wrapper/skills/flow/"
+printf '{"version":"1.0.0"}\n' > "$fixture/portable-manifest.json"
+cp "$fixture/portable-manifest.json" "$fixture/.claude-plugin/plugin.json"
+printf '{}\n' > "$fixture/.claude-plugin/marketplace.json"
+printf '# fixture module\n' > "$fixture/skills/flow/harness/flow_harness.py"
+cat > "$fixture/npm-wrapper/bin/cli.mjs" <<'JS'
+import fs from 'node:fs';
+const {version} = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url)));
+console.log(`flow-skill v${version} (ships skill v1.0.0)`);
+JS
+cat > "$fixture/bin/npm" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$NPM_CALLS"
+if [ "$*" != 'view @manhquy/flow-skill dist-tags --json' ]; then
+  echo 'unexpected npm operation' >&2
+  exit 99
+fi
+printf '%s\n' '{"latest":"2.0.0","next":"2.1.0-next.1","rc":"0.0.1-rc.1"}'
+SH
+chmod +x "$fixture/bin/npm"
+for version in 2.0.0 2.1.0-next.1; do
+  channel=latest
+  case "$version" in *-*) channel=next ;; esac
+  printf '{"version":"%s"}\n' "$version" > "$fixture/npm-wrapper/package.json"
+  log="$OUT/preflight-$channel.out"
+  PATH="$fixture/bin:$PATH" NPM_CALLS="$OUT/npm-$channel.calls" \
+    bash "$fixture/scripts/release-preflight.sh" > "$log" 2>&1
+  ck 0 $? "$channel preflight exits successfully"
+  grep -q "OK: local package.json matches dist-tag $channel" "$log" && ck 0 0 "$channel matches selected channel" || ck 0 1 "$channel matches selected channel"
+  grep -Eq 'WARN:.*(rc|latest|promot|tag push)|matches dist-tag rc' "$log" && ck 0 1 "$channel has no legacy channel warning" || ck 0 0 "$channel has no legacy channel warning"
+  grep -Fq 'PREFLIGHT PASS — next: bash scripts/release.sh --dry-run; then bash scripts/release.sh --yes only after owner-authorized gates' "$log" && ck 0 0 "$channel canonical next step" || ck 0 1 "$channel canonical next step"
+  ck 'view @manhquy/flow-skill dist-tags --json' "$(cat "$OUT/npm-$channel.calls")" "$channel only reads registry through fake npm"
+done
+
+echo "I) current operator docs prohibit obsolete authorization paths"
+for doc in docs/system-architecture.md npm-wrapper/RELEASE_CHECKLIST.md; do
+  source="$HERE/../$doc"
+  grep -q 'release-process.md' "$source" && ck 0 0 "$doc links canonical runbook" || ck 0 1 "$doc links canonical runbook"
+  grep -Ei 'tag.*triggers.*publish|git push.*npm@|npm dist-tag add|npm config set.*authToken|with required reviewer|must configure required reviewers|approve environment' "$source" > "$OUT/obsolete-doc.out" \
+    && ck 0 1 "$doc has no active legacy bypass instructions" || ck 0 0 "$doc has no active legacy bypass instructions"
+done
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
