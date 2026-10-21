@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
-- **Agent Skills rules pointer:** `flow rules agent-skills` previews a standard project Codex/Gemini `.agents/skills/flow/SKILL.md` pointer to the canonical installed Flow bundle; `--write` creates it without overwriting files or symlinks. Claude discovery and npm installer scope remain unchanged.
-- **Project skill discovery:** `doctor --check install_homes` recognizes project `.agents/skills/flow` (Codex/Gemini) alongside `.claude/skills/flow`; skill done-evidence accepts either project location plus a real run. npm installer project scope is unchanged.
+## [0.34.8] - 2026-10-22
+- **Terminal retro guidance:** Completed flows direct the host to the terminal retro step rather than implying another build stage.
+- **Project Agent Skills:** Additive Codex/Gemini project discovery recognizes `.agents/skills/flow`; `flow rules agent-skills` previews or safely writes a rules pointer only when the canonical project Flow bundle is installed. This does not claim live Codex/Gemini activation or expand npm installer project scope.
+- **Release guidance:** Align release preparation and preflight guidance with reviewed, dual-axis promotion. Backwards-compatible; no security or service-rights expansion.
 
 ## [0.34.7] - 2026-10-21
 - **Brownfield status guidance:** When `flow/00-inspect.md` exists but its assessment gate is dirty, `/flow status` directs the user to `/flow assess` instead of suggesting `/flow next`; the gate still blocks planning until clean. Merged after the v0.34.6 release and first ships in v0.34.7. Regression coverage: A5/A6 in `tests/test_flow_assess.sh` covers dirty, clean, and greenfield guidance.
