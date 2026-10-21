@@ -6577,16 +6577,20 @@ function cmd_eval {
 cmd_rules() {
   local target="${1:-list}"
   local opt_write=0
-  if [ "${2:-}" = "--write" ]; then
+  if [ "$#" -gt 2 ]; then
+    echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+    exit 2
+  elif [ "${2:-}" = "--write" ]; then
     opt_write=1
   elif [ -n "${2:-}" ]; then
-    echo "usage: flow rules [list|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+    echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
     exit 2
   fi
 
   case "$target" in
     list)
       echo "flow rules - available harness templates:"
+      echo "  agent-skills -> .agents/skills/flow/SKILL.md (Codex/Gemini)"
       echo "  cursor      -> .cursor/rules/flow.mdc"
       echo "  windsurf    -> .windsurf/rules/flow.md"
       echo "  roo         -> .roomodes"
@@ -6597,6 +6601,23 @@ cmd_rules() {
       echo
       echo "use 'flow rules <harness>' to view or 'flow rules <harness> --write' to materialize."
       return 0
+      ;;
+    agent-skills)
+      # Pointer generation must not create run-state beside the requested file.
+      FLOW_LOG_DISABLE=1
+      local tpl='---
+name: flow
+description: Use Flow to inspect project planning stages, execute scoped cards, and verify evidence-backed gates.
+---
+
+# Flow project skill pointer
+
+For project Codex/Gemini discovery, this pointer lives in `.agents/skills/flow/SKILL.md`.
+Read the canonical project-local installed Flow bundle at `skills/flow/SKILL.md` before acting; it remains the source of truth. Do not copy its instructions here or treat this pointer as an additional runtime.
+
+Set `<skill-dir>` to that canonical bundle directory (`skills/flow`). From the project root, invoke `bash <skill-dir>/runner/flow.sh <command>` using the hosting agent or operator; Flow does not own the runtime.
+Follow the canonical skill dispatch, active card allowed files, gates, and evidence requirements. Keep Claude discovery in its separate `.claude/skills` path.'
+      local dest=".agents/skills/flow/SKILL.md"
       ;;
     cursor)
       local tpl='---
@@ -6700,7 +6721,7 @@ This repository enforces Flow discipline:
       ;;
     *)
       echo "unknown harness: $target" >&2
-      echo "usage: flow rules [list|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+      echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
       exit 2
       ;;
   esac

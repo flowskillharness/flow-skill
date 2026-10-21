@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Agent Skills rules pointer:** `flow rules agent-skills` previews a standard project Codex/Gemini `.agents/skills/flow/SKILL.md` pointer to the canonical installed Flow bundle; `--write` creates it without overwriting files or symlinks. Claude discovery and npm installer scope remain unchanged.
 - **Project skill discovery:** `doctor --check install_homes` recognizes project `.agents/skills/flow` (Codex/Gemini) alongside `.claude/skills/flow`; skill done-evidence accepts either project location plus a real run. npm installer project scope is unchanged.
 
 ## [0.34.7] - 2026-10-21
