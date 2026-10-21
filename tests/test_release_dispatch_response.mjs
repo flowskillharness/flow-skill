@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
 import { assertGhAttestationCapability } from '../scripts/verify-attestation-with-gh.mjs';
+import { randomUUID } from 'node:crypto';
 
 const clientUrl = new URL('../scripts/sync-release.mjs', import.meta.url);
 const clientSource = readFileSync(clientUrl, 'utf8');
@@ -157,4 +158,56 @@ test('publisher watch is exact-run and timeout fails closed before tags', () => 
   assert.match(publisherWatchTimeoutError(sigterm, '777', 45, true).message, /45-minute watch limit/);
   const failed = Object.assign(new Error('bad credentials'), { code: 'E401' });
   assert.equal(publisherWatchTimeoutError(failed, '777'), failed);
+});
+
+test('dispatchPublisher constructs dispatch request with return_run_details in body and no query param', () => {
+  const stop = new Error('stop after dispatch request');
+  const headSha = 'c'.repeat(40);
+  const npmVersion = '1.2.3';
+  const expectedActorId = '12345678';
+  let recordedArgs;
+  let recordedOptions;
+  let generatedDispatchId;
+
+  const dispatch = clientFunction('dispatchPublisher', 'checkSyncNonDrift', {
+    getRepoCoordinates: () => ({ ok: true, owner, repo }),
+    repoRoot: '/fixture',
+    assertGhAttestationCapability: () => {},
+    randomUUID: () => {
+      generatedDispatchId = randomUUID();
+      return generatedDispatchId;
+    },
+    execGh(args, options) {
+      if (args[0] === 'api' && args[1] === 'user') {
+        return `${expectedActorId}\n`;
+      }
+      if (args[0] === 'api' && args[1] === '-X' && args[2] === 'POST') {
+        recordedArgs = args;
+        recordedOptions = options;
+        throw stop;
+      }
+      throw new Error(`unexpected execGh call: ${args.join(' ')}`);
+    },
+  });
+
+  assert.throws(() => dispatch(headSha, npmVersion, true), error => error === stop);
+
+  assert.ok(recordedArgs, 'dispatch API request was initiated');
+  const apiUrl = recordedArgs.find(arg => typeof arg === 'string' && arg.includes('workflows/publish-npm-wrapper.yml/dispatches'));
+  assert.ok(apiUrl, 'endpoint URL argument found');
+  assert.ok(apiUrl.endsWith('/actions/workflows/publish-npm-wrapper.yml/dispatches'), `expected URL to end with /actions/workflows/publish-npm-wrapper.yml/dispatches, got: ${apiUrl}`);
+  assert.equal(apiUrl.includes('return_run_details'), false, 'URL query must not contain return_run_details');
+  assert.equal(apiUrl.includes('?'), false, 'URL must not contain query parameters');
+
+  assert.ok(recordedOptions?.input, '--input option was provided with payload');
+  const body = JSON.parse(recordedOptions.input);
+  assert.equal(body.return_run_details, true);
+  assert.equal(body.ref, 'master');
+  assert.ok(body.inputs, 'request body must include inputs object');
+  assert.equal(body.inputs.mode, 'dry-run');
+  assert.equal(body.inputs.expected_sha, headSha);
+  assert.equal(body.inputs.expected_version, npmVersion);
+  assert.equal(body.inputs.expected_actor_id, expectedActorId);
+  assert.equal(body.inputs.dispatch_id, generatedDispatchId);
+  assert.match(body.inputs.dispatch_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
 });

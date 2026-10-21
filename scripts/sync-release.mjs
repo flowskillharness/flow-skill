@@ -833,8 +833,8 @@ function dispatchPublisher(headSha, npmVersion, isDryRun) {
   const actorId = execGh(['api', 'user', '--jq', '.id'], { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   if (!/^\d+$/.test(actorId)) throw new Error('GitHub CLI did not return a valid authenticated actor ID.');
   const dispatchId = randomUUID();
-  const requestBody = JSON.stringify({ ref: 'master', inputs: { mode: isDryRun ? 'dry-run' : 'publish', expected_sha: headSha, expected_version: npmVersion, dispatch_id: dispatchId, expected_actor_id: actorId } });
-  const response = execGh(['api', '-X', 'POST', '-H', 'Accept: application/vnd.github+json', '-H', 'X-GitHub-Api-Version: 2022-11-28', `repos/${coords.owner}/${coords.repo}/actions/workflows/publish-npm-wrapper.yml/dispatches?return_run_details=true`, '--input', '-'], { cwd: repoRoot, input: requestBody, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+  const requestBody = JSON.stringify({ ref: 'master', return_run_details: true, inputs: { mode: isDryRun ? 'dry-run' : 'publish', expected_sha: headSha, expected_version: npmVersion, dispatch_id: dispatchId, expected_actor_id: actorId } });
+  const response = execGh(['api', '-X', 'POST', '-H', 'Accept: application/vnd.github+json', '-H', 'X-GitHub-Api-Version: 2022-11-28', `repos/${coords.owner}/${coords.repo}/actions/workflows/publish-npm-wrapper.yml/dispatches`, '--input', '-'], { cwd: repoRoot, input: requestBody, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
   const runId = String(publisherRunIdFromDispatch(response, coords.owner, coords.repo));
   try {
     execGh(publisherWatchArgs(runId), { cwd: repoRoot, stdio: 'inherit', timeout: 45 * 60 * 1000 });
