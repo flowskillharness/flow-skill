@@ -78,3 +78,15 @@ not authorize publication.
 Existing versions are verify-only. Partial state or failed verification stops for
 owner action; do not republish, move dist-tags, or repair tags manually. Follow the
 canonical runbook's recovery section rather than historical token/tag procedures.
+
+## Historical publish log (historical only)
+
+These records describe past publications, not current release instructions or
+current registry channel state. Use the canonical process above for future releases.
+
+| Version | When | Notes |
+|---|---|---|
+| 0.1.0-rc.1 | 2026-07-12 | Manual bootstrap publish (no provenance) |
+| 0.1.0-rc.2 | 2026-07-17 | First OIDC + provenance; Cursor target; restart hints |
+| 0.1.0-rc.3 | 2026-07-18 | Dual-version UX; smoke cwd fix; `rc` tag points here |
+| 0.1.0 | 2026-07-19 | GA (first stable); ships skill v0.24.0; auto-routes to `latest` |
