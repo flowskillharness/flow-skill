@@ -176,6 +176,15 @@ out_agent="$(FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills)"; rc
 ck 0 "$rc_agent" "Agent Skills preview exits 0"
 [ ! -e "$AGENT_DIR/.agents" ]; ck 0 "$?" "preview creates no discovery directory"
 [ -z "$(find "$AGENT_DIR" -mindepth 1 -print)" ]; ck 0 "$?" "preview leaves project empty"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+ck 1 "$?" "empty project refuses broken pointer"
+[ -z "$(find "$AGENT_DIR" -mindepth 1 -print)" ]; ck 0 "$?" "missing bundle refusal creates no files"
+mkdir -p "$AGENT_DIR/skills/flow/runner"
+printf '%s\n' '# Canonical Flow fixture' > "$AGENT_DIR/skills/flow/SKILL.md"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+ck 1 "$?" "missing canonical runner refuses pointer"
+[ ! -e "$AGENT_DIR/.agents" ]; ck 0 "$?" "missing runner refusal creates no discovery directory"
+printf '%s\n' '#!/usr/bin/env bash' 'printf "canonical-runner-ok\\n"' > "$AGENT_DIR/skills/flow/runner/flow.sh"
 printf '%s\n' "$out_agent" | "$PY" -c '
 import sys
 text = sys.stdin.read()
@@ -206,12 +215,18 @@ AGENT_DEST="$AGENT_DIR/.agents/skills/flow/SKILL.md"
 [ -f "$AGENT_DEST" ]; ck 0 "$?" "exact discovery destination created"
 printf '%s\n' "$out_agent" | cmp - "$AGENT_DEST"
 ck 0 "$?" "written bytes match preview"
+[ -f "$AGENT_DIR/.agents/skills/flow/../../../skills/flow/SKILL.md" ]; ck 0 "$?" "relative canonical skill link resolves"
+runner_result="$(cd "$AGENT_DIR" && bash skills/flow/runner/flow.sh status)"
+ck 'canonical-runner-ok' "$runner_result" "project-root runner instruction reaches canonical runner"
 printf '%s\n' 'USER_SKILL_SENTINEL' > "$AGENT_DEST"
 FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
 ck 1 "$?" "existing Agent Skills file refused"
 ck 'USER_SKILL_SENTINEL' "$(cat "$AGENT_DEST")" "existing skill preserved exactly"
 AGENT_SYM="$SCRATCH/agent_sym"
 mkdir -p "$AGENT_SYM/.agents/skills/flow"
+mkdir -p "$AGENT_SYM/skills/flow/runner"
+cp "$AGENT_DIR/skills/flow/SKILL.md" "$AGENT_SYM/skills/flow/SKILL.md"
+cp "$AGENT_DIR/skills/flow/runner/flow.sh" "$AGENT_SYM/skills/flow/runner/flow.sh"
 ln -s "$SCRATCH/absent_agent_skill" "$AGENT_SYM/.agents/skills/flow/SKILL.md" 2>/dev/null || true
 if [ -L "$AGENT_SYM/.agents/skills/flow/SKILL.md" ]; then
   FLOW_PROJECT_ROOT="$AGENT_SYM" bash "$RUN" rules agent-skills --write >/dev/null 2>&1

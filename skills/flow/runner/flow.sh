@@ -6605,6 +6605,10 @@ cmd_rules() {
     agent-skills)
       # Pointer generation must not create run-state beside the requested file.
       FLOW_LOG_DISABLE=1
+      if [ "$opt_write" -eq 1 ] && { [ ! -f "$ROOT/skills/flow/SKILL.md" ] || [ ! -f "$ROOT/skills/flow/runner/flow.sh" ]; }; then
+        echo "FAIL: agent-skills requires project-local skills/flow/SKILL.md and skills/flow/runner/flow.sh; no pointer written" >&2
+        return 1
+      fi
       local tpl='---
 name: flow
 description: Use Flow to inspect project planning stages, execute scoped cards, and verify evidence-backed gates.
@@ -6613,7 +6617,8 @@ description: Use Flow to inspect project planning stages, execute scoped cards, 
 # Flow project skill pointer
 
 For project Codex/Gemini discovery, this pointer lives in `.agents/skills/flow/SKILL.md`.
-Read the canonical project-local installed Flow bundle at `skills/flow/SKILL.md` before acting; it remains the source of truth. Do not copy its instructions here or treat this pointer as an additional runtime.
+This target is only for repositories with the canonical Flow bundle checked into project-root `skills/flow`; global installs and `.claude/skills/flow` alone do not satisfy this prerequisite.
+Read [the canonical skill](../../../skills/flow/SKILL.md) (`skills/flow/SKILL.md` from project root) before acting; it remains the source of truth. Do not copy its instructions here or treat this pointer as an additional runtime.
 
 Set `<skill-dir>` to that canonical bundle directory (`skills/flow`). From the project root, invoke `bash <skill-dir>/runner/flow.sh <command>` using the hosting agent or operator; Flow does not own the runtime.
 Follow the canonical skill dispatch, active card allowed files, gates, and evidence requirements. Keep Claude discovery in its separate `.claude/skills` path.'
