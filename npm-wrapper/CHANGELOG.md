@@ -2,6 +2,9 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.14] - 2026-10-21 — ships skill v0.34.7 (stable / latest)
+- **Skill Product v0.34.7 Parity:** Ships the brownfield status guidance fix: `/flow status` now directs users to `/flow assess` (not `/flow next`) while a brownfield assessment gate is dirty; the mechanical gate still blocks planning until the assessment is clean.
+
 ## [0.7.13] - 2026-10-20 — ships skill v0.34.6 (stable / latest)
 - **Skill Product v0.34.6 Parity:** Ships the brownfield next-guard fix: a dirty `00-inspect` with a failing gate blocks `next` before `00-idea` creation and preserves `FLOW_LAST_GATE_FAIL` attribution.
 - **Docs:** Clarify the Codex first-run `$flow` trigger versus slash `/flow` commands in EN/VI.
