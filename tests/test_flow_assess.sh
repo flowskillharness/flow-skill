@@ -130,6 +130,33 @@ out="$(bash "$RUN" next 2>&1)"; ck 0 $? "next exits 0 without an assessment"
 ck 0 "$(exists "$SB/flow/00-idea.md")" "greenfield next unlocks 00-idea"
 rm -rf "$SB"
 
+echo "A7) hollow/sound fixtures govern planning completion and advancement"
+for kind in hollow sound; do
+  newsb
+  mkdir -p "$SB/flow"
+  cp "$HERE/../skills/flow/eval/fixtures/brownfield_$kind/flow/00-inspect.md" "$SB/flow/00-inspect.md"
+  for stage in 00-idea 01-research 02-scope 03-prd 04-adr 05-contract; do
+    printf '# Completed stage\n- [x] Reviewed\n' > "$SB/flow/$stage.md"
+  done
+  out="$(bash "$RUN" next 2>&1)"; rc=$?
+  if [ "$kind" = hollow ]; then
+    ck 1 "$rc" "hollow inspect blocks next after planning starts"
+    has "$out" "'/flow assess'" "next directs assessment repair"
+    out="$(bash "$RUN" status 2>&1)"
+    has "$out" "NEXT -> run '/flow assess'" "dirty inspect wins over completed stages"
+    out="$(bash "$RUN" card 2>&1)"; ck 1 $? "dirty inspect prevents planning completion"
+    printf '%s\n' '- [ ] DEBT: skip 01-research' > "$SB/DEBT.md"
+    out="$(bash "$RUN" skip 00-inspect --reason 'defer assessment' 2>&1)"; ck 1 $? "unrelated debt cannot skip assessment"
+    printf '%s\n' '- [ ] DEBT: skip 00-inspect' > "$SB/DEBT.md"
+    out="$(bash "$RUN" skip 00-inspect --reason 'defer assessment' 2>&1)"; ck 0 $? "stage-matched debt permits explicit assessment skip"
+    out="$(bash "$RUN" next 2>&1)"; ck 0 $? "explicit assessment skip permits completion"
+  else
+    ck 0 "$rc" "sound inspect permits completion"
+    has "$out" "COMPLETE" "sound fixture reaches planning completion"
+  fi
+  rm -rf "$SB"
+done
+
 
 echo "B) unfilled template -> gate NOT clean (exit 1)"
 newsb

@@ -666,8 +666,16 @@ stage_skipped() { # $1 = stage name; 0 = yes (operator debt-skipped it)
   [ -f "$SKIPPED_FILE" ] && grep -qxF "$1" "$SKIPPED_FILE" 2>/dev/null
 }
 
+# An existing brownfield assessment remains a prerequisite even after planning starts.
+# Absence preserves greenfield behavior; explicit skips use the normal DEBT path.
+inspect_gate_clean() {
+  [ ! -f "$FLOW_DIR/00-inspect.md" ] || stage_skipped "00-inspect" ||
+    scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1
+}
+
 planning_complete() { # 0 = yes: each stage is clean, OR debt-skipped (a skipped stage may have no file)
   local s
+  inspect_gate_clean || return 1
   for s in $STAGES; do
     if [ ! -f "$FLOW_DIR/$s.md" ]; then
       stage_skipped "$s" || return 1
@@ -980,7 +988,7 @@ _gate_state_brief() { # $1 = current_stage_idx (caller already computed it), $2 
   local idx="$1" dwell="${2:-}"
   if [ "$idx" -lt 0 ]; then
     echo "planning: not started"
-    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+    if ! inspect_gate_clean; then
       echo "  -> run '/flow assess' to complete/recheck the brownfield assessment"
     else
       echo "  -> run '/flow next' to unlock stage 00 (idea)"
@@ -992,7 +1000,9 @@ _gate_state_brief() { # $1 = current_stage_idx (caller already computed it), $2 
     else
       echo "planning: at stage $cur"
     fi
-    if scan_gate "$FLOW_DIR/$cur.md" >/dev/null 2>&1; then
+    if ! inspect_gate_clean; then
+      echo "  gate: BLOCKED - run '/flow assess' to complete/recheck the brownfield assessment"
+    elif scan_gate "$FLOW_DIR/$cur.md" >/dev/null 2>&1; then
       if [ "$idx" -ge "$LAST_STAGE_IDX" ]; then
         echo "  gate: PASS - planning complete. '/flow card' is unlocked."
         prd_declares_fr && echo "        tip: '/flow consistency' checks FR->card->contract coverage."
@@ -1390,15 +1400,15 @@ cmd_next() {
     fi
   fi
   local idx; idx="$(current_stage_idx)"
-  if [ "$idx" -lt 0 ]; then
-    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+  if ! inspect_gate_clean; then
       echo "FAIL: brownfield assessment gate for flow/00-inspect.md is not clean."
       scan_gate "$FLOW_DIR/00-inspect.md"
       FLOW_LOG_STAGE_TO="00-inspect"
       FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
-      echo "Fix the above, then run '/flow next' again. (Kill at a gate is also valid.)"
+      echo "Fix the above, then run '/flow assess' again. (Kill at a gate is also valid.)"
       return 1
-    fi
+  fi
+  if [ "$idx" -lt 0 ]; then
     mkdir -p "$FLOW_DIR"
     cp "$TEMPLATE_DIR/00-idea.md" "$FLOW_DIR/00-idea.md"
     seed_law_files
@@ -1537,12 +1547,12 @@ inflight_display() { # emit a line per todo card still marked in flight (stale i
 # of existing state helpers; no side effects. Decision ladder, first match wins.
 _next_action() {
   local idx; idx="$(current_stage_idx)"
+  if ! inspect_gate_clean; then
+    echo "run '/flow assess' to complete/recheck the brownfield assessment"
+    return 0
+  fi
   if [ "$idx" -lt 0 ]; then
-    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
-      echo "run '/flow assess' to complete/recheck the brownfield assessment"
-    else
-      echo "run '/flow next' to unlock stage 00"
-    fi
+    echo "run '/flow next' to unlock stage 00"
     return 0
   fi
   # Scan every stage through the current one for the FIRST that is neither gate-clean nor
@@ -2130,6 +2140,7 @@ cmd_skip() {
     return 1
   fi
   local known=0 s; for s in $STAGES; do [ "$s" = "$stage" ] && known=1; done
+  [ "$stage" = "00-inspect" ] && [ -f "$FLOW_DIR/00-inspect.md" ] && known=1
   if [ "$known" -eq 0 ]; then echo "FAIL: unknown stage '$stage' (one of: $STAGES)"; return 1; fi
   # PRIMARY guard (stage identity): the contract (05) is the seam - never skip it; adapt it
   # to the project type instead. This closes the worst case (skipping the auth-boundary stage).
