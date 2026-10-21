@@ -91,7 +91,7 @@ After installation completes, restart or reload your coding agent. Codex CLI use
 
 | | |
 |---|---|
-| **Current GA** | **0.7.15** — ships skill product **v0.34.8** |
+| **Release target** | npm **0.7.15** / skill **v0.34.8** — intended channel `latest`; not a publication receipt |
 | **Node.js** | `>= 22.14.0` |
 | **Documentation** | [flowskill.io.vn](https://flowskill.io.vn) |
 | **Repository** | [GitHub: manhquydev/flow-skill](https://github.com/manhquydev/flow-skill) |

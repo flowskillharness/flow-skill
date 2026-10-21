@@ -153,138 +153,19 @@ function runChecks() {
     pass: hashMatches,
   });
 
-  // 7. Root README.md table rows (Skill product and npm installer)
-  const rootReadmePath = join(repoRoot, 'README.md');
-  if (!existsSync(rootReadmePath)) {
+  // README versions describe repository release targets, never registry publication.
+  for (const item of getExpectedReadmeTransforms(skill_v, npm_v)) {
+    const fullPath = join(repoRoot, item.relPath);
+    const text = existsSync(fullPath) ? readFileSync(fullPath, 'utf8') : null;
+    const expected = item.transform(item.relPath.startsWith('npm-wrapper/')
+      ? (item.relPath.endsWith('_VN.md') ? '| **Mục tiêu phát hành** |\n' : '| **Release target** |\n')
+      : '| **Skill product** |\n| **npm installer** |\n');
+    const rowsPresent = text !== null && expected.trim().split('\n').every(row => text.split(/\r?\n/).includes(row));
     results.push({
-      surface: 'Root README.md (Skill product row)',
-      expected: `| **Skill product** | **v${skill_v || 'N/A'}** |`,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-    results.push({
-      surface: 'Root README.md (npm installer row)',
-      expected: `| **npm installer** | ... ${npm_v || 'N/A'} ships the skill above) |`,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-  } else {
-    const text = readFileSync(rootReadmePath, 'utf8');
-    const skillRegex = skill_v
-      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Skill product\\*\\*\\s*\\|\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
-      : null;
-    const npmRegex = npm_v
-      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*npm installer\\*\\*\\s*\\|.*${escapeRegExp(npm_v)}\\s+ships the skill above\\)\\s*\\|`, 'm')
-      : null;
-    const skillPass = Boolean(skillRegex && skillRegex.test(text));
-    const npmPass = Boolean(npmRegex && npmRegex.test(text));
-    results.push({
-      surface: 'Root README.md (Skill product row)',
-      expected: skill_v ? `| **Skill product** | **v${skill_v}** |` : 'N/A',
-      actual: skillPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: skillPass,
-    });
-    results.push({
-      surface: 'Root README.md (npm installer row)',
-      expected: npm_v ? `| **npm installer** | ... ${npm_v} ships the skill above) |` : 'N/A',
-      actual: npmPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: npmPass,
-    });
-  }
-
-  // 8. Root README_VN.md table rows (Skill product and npm installer)
-  const rootReadmeVnPath = join(repoRoot, 'README_VN.md');
-  if (!existsSync(rootReadmeVnPath)) {
-    results.push({
-      surface: 'Root README_VN.md (Skill product row)',
-      expected: `| **Skill product** | **v${skill_v || 'N/A'}** |`,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-    results.push({
-      surface: 'Root README_VN.md (npm installer row)',
-      expected: `| **npm installer** | ... ${npm_v || 'N/A'} ship skill ở trên) |`,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-  } else {
-    const text = readFileSync(rootReadmeVnPath, 'utf8');
-    const skillRegex = skill_v
-      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Skill product\\*\\*\\s*\\|\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
-      : null;
-    const npmRegex = npm_v
-      ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*npm installer\\*\\*\\s*\\|.*${escapeRegExp(npm_v)}\\s+ship skill ở trên\\)\\s*\\|`, 'm')
-      : null;
-    const skillPass = Boolean(skillRegex && skillRegex.test(text));
-    const npmPass = Boolean(npmRegex && npmRegex.test(text));
-    results.push({
-      surface: 'Root README_VN.md (Skill product row)',
-      expected: skill_v ? `| **Skill product** | **v${skill_v}** |` : 'N/A',
-      actual: skillPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: skillPass,
-    });
-    results.push({
-      surface: 'Root README_VN.md (npm installer row)',
-      expected: npm_v ? `| **npm installer** | ... ${npm_v} ship skill ở trên) |` : 'N/A',
-      actual: npmPass ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: npmPass,
-    });
-  }
-
-  // 9. npm-wrapper/README.md table row
-  const isPrerelease = Boolean(npm_v && npm_v.includes('-'));
-  const wrapperReadmePath = join(repoRoot, 'npm-wrapper', 'README.md');
-  const expectedWrapperRow = isPrerelease
-    ? `| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
-    : `| **Current GA** | **${npm_v}** — ships skill product **v${skill_v}** |`;
-  if (!existsSync(wrapperReadmePath)) {
-    results.push({
-      surface: 'npm-wrapper/README.md table row',
-      expected: expectedWrapperRow,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-  } else {
-    const text = readFileSync(wrapperReadmePath, 'utf8');
-    const expectedRegex = (npm_v && skill_v)
-      ? (isPrerelease
-        ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*Prerelease\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
-        : new RegExp(`^[ \\t]*\\|\\s*\\*\\*Current GA\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm'))
-      : null;
-    const matched = Boolean(expectedRegex && expectedRegex.test(text));
-    results.push({
-      surface: 'npm-wrapper/README.md table row',
-      expected: (npm_v && skill_v) ? expectedWrapperRow : 'N/A',
-      actual: matched ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: matched,
-    });
-  }
-
-  // 10. npm-wrapper/README_VN.md table row
-  const wrapperReadmeVnPath = join(repoRoot, 'npm-wrapper', 'README_VN.md');
-  const expectedWrapperVnRow = isPrerelease
-    ? `| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
-    : `| **GA hiện tại** | **${npm_v}** — ships skill product **v${skill_v}** |`;
-  if (!existsSync(wrapperReadmeVnPath)) {
-    results.push({
-      surface: 'npm-wrapper/README_VN.md table row',
-      expected: expectedWrapperVnRow,
-      actual: 'FILE MISSING',
-      pass: false,
-    });
-  } else {
-    const text = readFileSync(wrapperReadmeVnPath, 'utf8');
-    const expectedRegex = (npm_v && skill_v)
-      ? (isPrerelease
-        ? new RegExp(`^[ \\t]*\\|\\s*\\*\\*(?:Bản thử nghiệm|Prerelease)\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm')
-        : new RegExp(`^[ \\t]*\\|\\s*\\*\\*GA hiện tại\\*\\*\\s*\\|\\s*\\*\\*${escapeRegExp(npm_v)}\\*\\*\\s*—\\s*ships skill product\\s*\\*\\*v${escapeRegExp(skill_v)}\\*\\*\\s*\\|`, 'm'))
-      : null;
-    const matched = Boolean(expectedRegex && expectedRegex.test(text));
-    results.push({
-      surface: 'npm-wrapper/README_VN.md table row',
-      expected: (npm_v && skill_v) ? expectedWrapperVnRow : 'N/A',
-      actual: matched ? 'Found exact row' : 'MISSING / ROW MISMATCH',
-      pass: matched,
+      surface: `${item.relPath} release target rows`,
+      expected: `Release target: skill v${skill_v}, npm ${npm_v} (not a publication receipt)`,
+      actual: text === null ? 'FILE MISSING' : (item.transform(text) === text ? 'Checked canonical target rows' : 'ROW MISMATCH'),
+      pass: Boolean(rowsPresent && skill_v && npm_v && item.transform(text) === text),
     });
   }
 
@@ -358,88 +239,41 @@ function formatDiagnosticTable(results) {
 }
 
 export function getExpectedReadmeTransforms(skill_v, npm_v) {
-  const npmSeriesMatch = npm_v.match(/^(\d+\.\d+)/);
-  const npmSeries = npmSeriesMatch ? npmSeriesMatch[1] : npm_v;
-  const isPrerelease = npm_v.includes('-');
-
+  const channel = npm_v && npm_v.includes('-') ? 'next' : 'latest';
   return [
     {
       relPath: 'npm-wrapper/README.md',
-      transform: (content) => {
-        if (!isPrerelease) {
-          content = content.replace(
-            /^[ \t]*\|\s*\*\*Current GA\*\*\s*\|[^\r\n]*/m,
-            `| **Current GA** | **${npm_v}** — ships skill product **v${skill_v}** |`
-          );
-          return content.replace(/^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*\r?\n?/m, '');
-        } else {
-          if (/^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*/m.test(content)) {
-            return content.replace(
-              /^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*/m,
-              `| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
-            );
-          } else {
-            return content.replace(
-              /^([ \t]*\|\s*\*\*Current GA\*\*\s*\|[^\r\n]*)/m,
-              `$1\n| **Prerelease** | **${npm_v}** — ships skill product **v${skill_v}** |`
-            );
-          }
-        }
-      },
+      transform: (content) => content.replace(
+        /^[ \t]*\|\s*\*\*(?:Current GA|Release target)\*\*\s*\|[^\r\n]*/m,
+        `| **Release target** | npm **${npm_v}** / skill **v${skill_v}** — intended channel \`${channel}\`; not a publication receipt |`
+      ).replace(/^[ \t]*\|\s*\*\*Prerelease\*\*\s*\|[^\r\n]*\r?\n?/m, ''),
     },
     {
       relPath: 'npm-wrapper/README_VN.md',
-      transform: (content) => {
-        if (!isPrerelease) {
-          content = content.replace(
-            /^[ \t]*\|\s*\*\*GA hiện tại\*\*\s*\|[^\r\n]*/m,
-            `| **GA hiện tại** | **${npm_v}** — ships skill product **v${skill_v}** |`
-          );
-          return content.replace(/^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*\r?\n?/m, '');
-        } else {
-          if (/^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*/m.test(content)) {
-            return content.replace(
-              /^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*/m,
-              `| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
-            );
-          } else {
-            return content.replace(
-              /^([ \t]*\|\s*\*\*GA hiện tại\*\*\s*\|[^\r\n]*)/m,
-              `$1\n| **Bản thử nghiệm** | **${npm_v}** — ships skill product **v${skill_v}** |`
-            );
-          }
-        }
-      },
+      transform: (content) => content.replace(
+        /^[ \t]*\|\s*\*\*(?:GA hiện tại|Mục tiêu phát hành)\*\*\s*\|[^\r\n]*/m,
+        `| **Mục tiêu phát hành** | npm **${npm_v}** / skill **v${skill_v}** — kênh dự kiến \`${channel}\`; không phải biên nhận đã phát hành |`
+      ).replace(/^[ \t]*\|\s*\*\*(?:Bản thử nghiệm|Prerelease)\*\*\s*\|[^\r\n]*\r?\n?/m, ''),
     },
     {
       relPath: 'README.md',
-      transform: (content) => {
-        content = content.replace(
-          /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
-          `| **Skill product** | **v${skill_v}** |`
-        );
-        const tagRef = isPrerelease ? '`@next`' : '`@latest`';
-        return content.replace(
-          /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
-          `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (${tagRef} ${npm_v} ships the skill above) |`
-        );
-      },
+      transform: (content) => content.replace(
+        /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
+        `| **Skill product** | Release target **v${skill_v}** (not a publication receipt) |`
+      ).replace(
+        /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
+        `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) — release target **${npm_v}**, intended channel \`${channel}\` (not a publication receipt) |`
+      ),
     },
     {
       relPath: 'README_VN.md',
-      transform: (content) => {
-        content = content.replace(
-          /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
-          `| **Skill product** | **v${skill_v}** |`
-        );
-        const tagRef = isPrerelease ? '`@next`' : '`@latest`';
-        const isVnPhrase = content.includes('ship skill ở trên');
-        const tailPhrase = isVnPhrase ? 'ship skill ở trên' : 'ships the skill above';
-        return content.replace(
-          /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
-          `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) **${npmSeries}.x** (${tagRef} ${npm_v} ${tailPhrase}) |`
-        );
-      },
+      transform: (content) => content.replace(
+        /^[ \t]*\|\s*\*\*Skill product\*\*\s*\|[^\r\n]*/m,
+        `| **Skill product** | Mục tiêu phát hành **v${skill_v}** (không phải biên nhận đã phát hành) |`
+      ).replace(
+        /^[ \t]*\|\s*\*\*npm installer\*\*\s*\|[^\r\n]*/m,
+        `| **npm installer** | [\`@manhquy/flow-skill\`](https://www.npmjs.com/package/@manhquy/flow-skill) — mục tiêu phát hành **${npm_v}**, kênh dự kiến \`${channel}\` (không phải biên nhận đã phát hành) |`
+      ),
     },
   ];
 }
