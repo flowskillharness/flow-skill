@@ -63,15 +63,28 @@ export function npmAttestationUrl(packageName, version) {
   return `https://registry.npmjs.org/-/npm/v1/attestations/${packageRef}@${version}`;
 }
 const sleep = delay => { if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay); };
-export function waitForSlsaBundle({ packageName, version }, { run = execFileSync, wait = sleep } = {}) {
+
+export const DEFAULT_PROPAGATION_WAITS = [
+  0,
+  10000, 10000,
+  15000, 15000,
+  20000, 20000,
+  30000, 30000, 30000, 30000, 30000,
+  30000, 30000, 30000, 30000, 30000,
+  30000, 30000, 30000, 30000, 30000,
+];
+
+export const DEFAULT_AUDIT_DELAYS = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
+
+export function waitForSlsaBundle({ packageName, version }, { run = execFileSync, wait = sleep, waits = DEFAULT_PROPAGATION_WAITS } = {}) {
   const url = npmAttestationUrl(packageName, version);
-  const waits = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
   let lastStatus = 0;
   for (const delay of waits) {
     wait(delay);
     let result;
     try {
-      result = run('curl', ['-sS', '-L', '--max-time', '15', '-H', 'Accept: application/json', '-H', 'Cache-Control: no-cache', '-w', '\n%{http_code}', url], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      // 540s waits + 22 requests at 5s caps propagation I/O at 650s (<11m).
+      result = run('curl', ['-sS', '-L', '--max-time', '5', '-H', 'Accept: application/json', '-H', 'Cache-Control: no-cache', '-w', '\n%{http_code}', url], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (error) {
       if (!retryable(error)) throw error;
       continue;
@@ -89,10 +102,9 @@ export function waitForSlsaBundle({ packageName, version }, { run = execFileSync
   throw new Error(`npm SLSA attestation not available after bounded propagation retries (last HTTP ${lastStatus})`);
 }
 
-export function runTargetAudit(options, { waitForBundle = waitForSlsaBundle, audit = auditOnce, wait = sleep } = {}) {
+export function runTargetAudit(options, { waitForBundle = waitForSlsaBundle, audit = auditOnce, wait = sleep, delays = DEFAULT_AUDIT_DELAYS } = {}) {
   // Propagation has its own finite budget; never restart it after exhaustion.
   waitForBundle({ packageName: options.packageName, version: options.version });
-  const delays = [0, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000];
   let lastError;
   for (let attempt = 0; attempt < delays.length; attempt += 1) {
     wait(delays[attempt]);

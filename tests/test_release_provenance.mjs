@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyNpmVerifiedOutput } from '../scripts/release-provenance.mjs';
-import { verifyTargetAuditOutput, npmAttestationUrl, retryable, waitForSlsaBundle, runTargetAudit } from '../scripts/npm-attestation-audit.mjs';
+import { verifyTargetAuditOutput, npmAttestationUrl, retryable, waitForSlsaBundle, runTargetAudit, DEFAULT_PROPAGATION_WAITS, DEFAULT_AUDIT_DELAYS } from '../scripts/npm-attestation-audit.mjs';
 
 const expected = { packageName: '@manhquy/flow-skill', version: '0.7.11', integrity: 'sha512-fD3SNLE/ghyfA9SNbxiQfkIfpcTAcrDuPRdgNl942S2WcQfYmS7lbtz6Uj5HbVuzYEqIyhaK24xWvep2CVwS7g==', repository: 'https://github.com/manhquydev/flow-skill', workflowPath: '.github/workflows/publish-npm-wrapper.yml', ref: 'refs/tags/npm@0.7.11', commit: 'e69171c115a0cb120331e489a39c3298711f4204' };
 const digest = Buffer.from(expected.integrity.slice('sha512-'.length), 'base64').toString('hex');
@@ -50,37 +50,154 @@ test('rejects relabelled or duplicated signed SLSA as npm publish attestation', 
   }
 });
 
-test('propagation exhaustion uses nine requests and is never retried by audit', () => {
-  let requests = 0; let audits = 0; const waits = [];
+test('propagation exhaustion stays below eleven minutes including requests and is never retried by audit', () => {
+  let requests = 0; let audits = 0; const waits = []; const requestTimeouts = [];
   assert.throws(() => runTargetAudit(expected, {
     waitForBundle: options => waitForSlsaBundle(options, {
-      run: () => { requests++; return '{}\n404'; }, wait: delay => waits.push(delay),
+      run: (command, args) => {
+        requests++;
+        assert.equal(command, 'curl');
+        assert.equal(args.filter(arg => arg === '--max-time').length, 1);
+        const timeout = args[args.indexOf('--max-time') + 1];
+        assert.equal(timeout, '5', `request ${requests} must cap total HTTP time at 5s`);
+        requestTimeouts.push(Number(timeout) * 1000);
+        return '{}\n404';
+      }, wait: delay => waits.push(delay),
     }),
     audit: () => { audits++; }, wait: () => assert.fail('outer retry must not run'),
-  }), /bounded propagation retries/);
-  assert.equal(requests, 9); assert.equal(audits, 0);
-  assert.equal(waits.reduce((sum, delay) => sum + delay, 0), 120000);
+  }), /bounded propagation retries \(last HTTP 404\)/);
+  assert.equal(requests, 22);
+  assert.equal(audits, 0);
+  assert.equal(waits.reduce((sum, delay) => sum + delay, 0), 540000);
+  assert.deepEqual(waits, DEFAULT_PROPAGATION_WAITS);
+  assert.equal(requestTimeouts.length, 22);
+  const propagationBoundMs = waits.reduce((sum, delay) => sum + delay, 0)
+    + requestTimeouts.reduce((sum, timeout) => sum + timeout, 0);
+  assert.equal(propagationBoundMs, 650000);
+  assert.ok(propagationBoundMs <= 11 * 60000, 'waits plus HTTP time must fit within eleven minutes');
+  assert.ok(20 * 60000 - propagationBoundMs >= 9 * 60000, 'propagation must leave at least nine minutes of nominal headroom, excluding other steps sharing the job budget');
 });
 
-test('transient npm and curl failures retry while permanent failures fail closed', () => {
-  for (const text of ['E500', 'E501', 'E502', 'E503', 'E504', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', 'curl: (28) Operation timed out', 'curl: (56) Recv failure']) {
-    assert.equal(retryable(new Error(text)), true, text);
-    let attempts = 0;
-    assert.deepEqual(runTargetAudit(expected, { waitForBundle: () => {}, wait: () => {}, audit: () => {
-      if (++attempts === 1) throw new Error(text);
-      return { report: {} };
-    } }), { report: {} });
-    assert.equal(attempts, 2);
+test('simulates repeated HTTP 404 then valid SLSA response after >120s simulated time', () => {
+  let requests = 0; const waits = [];
+  waitForSlsaBundle(expected, {
+    run: () => {
+      requests++;
+      // First 8 attempts (cumulative wait reaches 120s): registry returns HTTP 404
+      if (requests <= 8) return '{}\n404';
+      // Attempt 9 (cumulative wait reaches 150s > 120s): returns 200 but WITHOUT SLSA bundle
+      if (requests === 9) {
+        return JSON.stringify({
+          attestations: [{ predicateType: 'https://github.com/npm/attestation/tree/main/specs/publish/v0.1', bundle: {} }],
+        }) + '\n200';
+      }
+      // Attempt 10 (cumulative wait reaches 180s > 120s): returns valid SLSA bundle
+      return JSON.stringify({
+        attestations: [{ predicateType: statement.predicateType, bundle: { dsseEnvelope: {} } }],
+      }) + '\n200';
+    },
+    wait: delay => waits.push(delay),
+  });
+  assert.equal(requests, 10);
+  const totalSimulatedMs = waits.reduce((sum, delay) => sum + delay, 0);
+  assert.equal(totalSimulatedMs, 180000);
+  assert.ok(totalSimulatedMs > 120000, 'simulated wait must exceed 120s before valid matching bundle');
+});
+
+test('permanent 4xx fails immediately without retrying in propagation and audit', () => {
+  for (const status of [400, 401, 403, 405, 410]) {
+    let requests = 0;
+    assert.throws(
+      () => waitForSlsaBundle(expected, { wait: () => {}, run: () => { requests++; return `{}\n${status}`; } }),
+      new RegExp(`npm attestation endpoint failed non-retryably: HTTP ${status}`)
+    );
+    assert.equal(requests, 1, `HTTP ${status} must fail on attempt 1 without retry`);
   }
   for (const text of ['E403', 'invalid signature', 'identity/integrity mismatch']) {
     let attempts = 0;
-    assert.throws(() => runTargetAudit(expected, { waitForBundle: () => {}, wait: () => {}, audit: () => { attempts++; throw new Error(text); } }), new RegExp(text));
-    assert.equal(attempts, 1);
+    assert.throws(
+      () => runTargetAudit(expected, { waitForBundle: () => {}, wait: () => {}, audit: () => { attempts++; throw new Error(text); } }),
+      new RegExp(text)
+    );
+    assert.equal(attempts, 1, `${text} must fail on attempt 1 without retry`);
   }
-  let requests = 0;
-  waitForSlsaBundle(expected, { wait: () => {}, run: () => {
-    if (++requests === 1) throw new Error('curl: (28) Operation timed out');
-    return JSON.stringify({ attestations: [{ predicateType: statement.predicateType, bundle: {} }] }) + '\n200';
-  } });
-  assert.equal(requests, 2);
+});
+
+test('transient network/429/5xx errors in propagation remain retryable until success', () => {
+  for (const status of [429, 500, 502, 503, 504]) {
+    let requests = 0;
+    waitForSlsaBundle(expected, {
+      wait: () => {},
+      run: () => {
+        if (++requests === 1) return `{}\n${status}`;
+        return JSON.stringify({ attestations: [{ predicateType: statement.predicateType, bundle: {} }] }) + '\n200';
+      },
+    });
+    assert.equal(requests, 2, `HTTP ${status} in propagation must retry and succeed`);
+  }
+  for (const text of ['curl: (28) Operation timed out', 'curl: (56) Recv failure', 'ETIMEDOUT', 'ECONNRESET']) {
+    let requests = 0;
+    waitForSlsaBundle(expected, {
+      wait: () => {},
+      run: () => {
+        if (++requests === 1) throw new Error(text);
+        return JSON.stringify({ attestations: [{ predicateType: statement.predicateType, bundle: {} }] }) + '\n200';
+      },
+    });
+    assert.equal(requests, 2, `${text} in propagation must retry and succeed`);
+  }
+});
+
+test('transient audit failures retry while permanent failures fail closed and outer audit is separately bounded', () => {
+  for (const text of ['E500', 'E501', 'E502', 'E503', 'E504', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNRESET', 'EAI_AGAIN']) {
+    assert.equal(retryable(new Error(text)), true, text);
+    let attempts = 0;
+    assert.deepEqual(runTargetAudit(expected, {
+      waitForBundle: () => {},
+      wait: () => {},
+      audit: () => {
+        if (++attempts === 1) throw new Error(text);
+        return { report: {} };
+      },
+    }), { report: {} });
+    assert.equal(attempts, 2);
+  }
+
+  // Outer audit retry exhaustion is bounded to 9 attempts (120s), and waitForBundle is called exactly once
+  let bundleCalls = 0;
+  let auditCalls = 0;
+  const auditWaits = [];
+  assert.throws(
+    () => runTargetAudit(expected, {
+      waitForBundle: () => { bundleCalls++; },
+      audit: () => { auditCalls++; throw new Error('E503 Service Unavailable'); },
+      wait: delay => auditWaits.push(delay),
+    }),
+    /E503 Service Unavailable/
+  );
+  assert.equal(bundleCalls, 1, 'waitForBundle must be called exactly once (no unbounded outer nesting)');
+  assert.equal(auditCalls, 9, 'outer audit retry must be bounded to 9 attempts');
+  assert.equal(auditWaits.reduce((sum, delay) => sum + delay, 0), 120000, 'outer audit wait must be bounded to 120s');
+  assert.deepEqual(auditWaits, DEFAULT_AUDIT_DELAYS);
+});
+
+test('custom waits and delays can be injected into propagation and audit', () => {
+  let requests = 0; const customWaits = [0, 50, 100]; const recordedWaits = [];
+  assert.throws(() => waitForSlsaBundle(expected, {
+    waits: customWaits,
+    run: () => { requests++; return '{}\n404'; },
+    wait: delay => recordedWaits.push(delay),
+  }), /bounded propagation retries/);
+  assert.equal(requests, 3);
+  assert.deepEqual(recordedWaits, customWaits);
+
+  let audits = 0; const customDelays = [0, 25]; const recordedDelays = [];
+  assert.throws(() => runTargetAudit(expected, {
+    waitForBundle: () => {},
+    delays: customDelays,
+    audit: () => { audits++; throw new Error('E500'); },
+    wait: delay => recordedDelays.push(delay),
+  }), /E500/);
+  assert.equal(audits, 2);
+  assert.deepEqual(recordedDelays, customDelays);
 });
