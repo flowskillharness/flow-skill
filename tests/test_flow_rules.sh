@@ -18,7 +18,7 @@ SCRATCH="$(mktemp -d)"
 cleanup() { rm -rf "$SCRATCH" 2>/dev/null; }
 trap cleanup EXIT
 
-echo "A) rules list outputs all 7 supported harnesses"
+echo "A) rules list outputs all 8 supported targets"
 out_list="$(bash "$RUN" rules list 2>&1)"; rc_list=$?
 ck 0 "$rc_list" "rules list exits 0"
 has "$out_list" "cursor" "cursor listed"
@@ -28,6 +28,7 @@ has "$out_list" "cline" "cline listed"
 has "$out_list" "aider" "aider listed"
 has "$out_list" "openhands" "openhands listed"
 has "$out_list" "copilot" "copilot listed"
+has "$out_list" 'agent-skills -> .agents/skills/flow/SKILL.md' "Agent Skills destination listed"
 
 echo "B) rules cursor emits valid frontmatter and directives"
 out_cur="$(bash "$RUN" rules cursor 2>&1)"; rc_cur=$?
@@ -167,6 +168,77 @@ echo "G) invalid extra arguments exits 2"
 out_bad="$(bash "$RUN" rules cursor --badflag 2>&1)"; rc_bad=$?
 ck 2 "$rc_bad" "invalid extra option exits 2"
 has "$out_bad" "usage: flow rules" "usage string printed on bad option"
+
+echo "H) Agent Skills preview, standard fields, and safe creation"
+AGENT_DIR="$SCRATCH/agent_test"
+mkdir -p "$AGENT_DIR"
+out_agent="$(FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills)"; rc_agent=$?
+ck 0 "$rc_agent" "Agent Skills preview exits 0"
+[ ! -e "$AGENT_DIR/.agents" ]; ck 0 "$?" "preview creates no discovery directory"
+[ -z "$(find "$AGENT_DIR" -mindepth 1 -print)" ]; ck 0 "$?" "preview leaves project empty"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+ck 1 "$?" "empty project refuses broken pointer"
+[ -z "$(find "$AGENT_DIR" -mindepth 1 -print)" ]; ck 0 "$?" "missing bundle refusal creates no files"
+mkdir -p "$AGENT_DIR/skills/flow/runner"
+printf '%s\n' '# Canonical Flow fixture' > "$AGENT_DIR/skills/flow/SKILL.md"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+ck 1 "$?" "missing canonical runner refuses pointer"
+[ ! -e "$AGENT_DIR/.agents" ]; ck 0 "$?" "missing runner refusal creates no discovery directory"
+printf '%s\n' '#!/usr/bin/env bash' 'printf "canonical-runner-ok\\n"' > "$AGENT_DIR/skills/flow/runner/flow.sh"
+printf '%s\n' "$out_agent" | "$PY" -c '
+import sys
+text = sys.stdin.read()
+lines = text.splitlines()
+assert lines[0] == "---" and lines[3] == "---"
+assert lines[1] == "name: flow"
+assert lines[2].startswith("description: ")
+assert 0 < len(lines[2][len("description: "):]) <= 1024
+assert len(text) < 2000
+try:
+    import yaml
+except ImportError:
+    pass
+else:
+    fields = yaml.safe_load("\n".join(lines[1:3]))
+    assert fields["name"] == "flow" and isinstance(fields["description"], str)
+'
+ck 0 "$?" "standard frontmatter and short pointer shape"
+has "$out_agent" 'Codex/Gemini' "scoped consumers named"
+has "$out_agent" 'skills/flow/SKILL.md' "canonical source referenced"
+has "$out_agent" 'source of truth' "canonical authority preserved"
+has "$out_agent" 'bash <skill-dir>/runner/flow.sh <command>' "host runner instruction present"
+has "$out_agent" 'From the project root' "runner working directory explicit"
+has "$out_agent" '.claude/skills' "Claude path kept separate"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write
+ck 0 "$?" "Agent Skills write exits 0"
+AGENT_DEST="$AGENT_DIR/.agents/skills/flow/SKILL.md"
+[ -f "$AGENT_DEST" ]; ck 0 "$?" "exact discovery destination created"
+printf '%s\n' "$out_agent" | cmp - "$AGENT_DEST"
+ck 0 "$?" "written bytes match preview"
+[ -f "$AGENT_DIR/.agents/skills/flow/../../../skills/flow/SKILL.md" ]; ck 0 "$?" "relative canonical skill link resolves"
+runner_result="$(cd "$AGENT_DIR" && bash skills/flow/runner/flow.sh status)"
+ck 'canonical-runner-ok' "$runner_result" "project-root runner instruction reaches canonical runner"
+printf '%s\n' 'USER_SKILL_SENTINEL' > "$AGENT_DEST"
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+ck 1 "$?" "existing Agent Skills file refused"
+ck 'USER_SKILL_SENTINEL' "$(cat "$AGENT_DEST")" "existing skill preserved exactly"
+AGENT_SYM="$SCRATCH/agent_sym"
+mkdir -p "$AGENT_SYM/.agents/skills/flow"
+mkdir -p "$AGENT_SYM/skills/flow/runner"
+cp "$AGENT_DIR/skills/flow/SKILL.md" "$AGENT_SYM/skills/flow/SKILL.md"
+cp "$AGENT_DIR/skills/flow/runner/flow.sh" "$AGENT_SYM/skills/flow/runner/flow.sh"
+ln -s "$SCRATCH/absent_agent_skill" "$AGENT_SYM/.agents/skills/flow/SKILL.md" 2>/dev/null || true
+if [ -L "$AGENT_SYM/.agents/skills/flow/SKILL.md" ]; then
+  FLOW_PROJECT_ROOT="$AGENT_SYM" bash "$RUN" rules agent-skills --write >/dev/null 2>&1
+  ck 1 "$?" "dangling Agent Skills symlink refused"
+  [ -L "$AGENT_SYM/.agents/skills/flow/SKILL.md" ]; ck 0 "$?" "symlink preserved"
+  ck "$SCRATCH/absent_agent_skill" "$(readlink "$AGENT_SYM/.agents/skills/flow/SKILL.md")" "symlink destination unchanged"
+  [ ! -e "$SCRATCH/absent_agent_skill" ]; ck 0 "$?" "symlink target not created"
+else
+  echo "  SKIP [platform cannot create symlinks]"
+fi
+FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write unexpected >/dev/null 2>&1
+ck 2 "$?" "extra trailing argument exits 2"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

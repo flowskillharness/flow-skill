@@ -47,7 +47,9 @@ is no fragment loader (ADR-0001).
 | `/flow recall` | `bash <skill>/runner/flow.sh recall` | Read back prior knowledge; apply at start of a stage/card. |
 | `/flow unlock` | `bash <skill>/runner/flow.sh unlock` | Clear lock after crashed session. Confirm the other session is gone first. |
 | `/flow retro` | `bash <skill>/runner/flow.sh retro` | Ask the 3 questions; operator writes RETRO.md (`law/RETRO.md`). |
-| `/flow rules [cursor\|windsurf\|roo\|cline\|aider\|openhands\|copilot\|list] [--write]` | `bash <skill>/runner/flow.sh rules [...]` | Emit or write workspace rule scaffolding for third-party harnesses. Advisory. |
+| `/flow rules [agent-skills\|cursor\|windsurf\|roo\|cline\|aider\|openhands\|copilot\|list] [--write]` | `bash <skill>/runner/flow.sh rules [...]` | Preview workspace rules; `--write` creates only absent targets, refusing existing files/symlinks. `agent-skills` emits a standard `.agents/skills/flow/SKILL.md` pointer for project Codex/Gemini discovery to canonical `skills/flow/SKILL.md`, not a runtime or full copy. Claude `.claude/skills` stays separate; npm install scope is unchanged. |
+
+`agent-skills` is only for repositories with the canonical bundle checked into project-root `skills/flow`. `--write` refuses without both `skills/flow/SKILL.md` and `skills/flow/runner/flow.sh`, before creating directories or files. Global installs or `.claude/skills/flow` alone are insufficient; preview remains available and states this prerequisite.
 
 ## verb-next
 
