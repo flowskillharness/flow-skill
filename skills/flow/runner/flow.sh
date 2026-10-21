@@ -1614,7 +1614,7 @@ _next_action() {
     echo "start next card: '/flow card start C-NNN'"
     return 0
   fi
-  echo "run '/flow check' then ship per stage 09"
+  echo "run '/flow retro' to capture lessons from the completed build cards"
 }
 
 # Closed advisory enum from _next_action prose only. Hosts must not auto-exec
