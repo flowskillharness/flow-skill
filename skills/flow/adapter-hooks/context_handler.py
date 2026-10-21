@@ -270,12 +270,14 @@ PROJECT = real
 
 base = _normalize_win_path(os.environ.get("FLOW_SKILL_DIR") or "")
 if not base:
-    home = _normalize_win_path(os.environ.get("HOME", ""))
+    home = _normalize_win_path(os.environ.get("HOME") or os.path.expanduser("~"))
     for cand in (os.path.join(home, ".claude", "skills", "flow"),
                  os.path.join(home, ".codex", "skills", "flow"),
                  os.path.join(home, ".agents", "skills", "flow"),
                  os.path.join(home, ".omp", "agent", "skills", "flow"),
-                 os.path.join(home, ".cursor", "skills", "flow")):
+                 os.path.join(home, ".cursor", "skills", "flow"),
+                 os.path.join(home, ".gemini", "antigravity-cli", "skills", "flow"),
+                 os.path.join(home, ".gemini", "config", "skills", "flow")):
         if os.path.isfile(os.path.join(cand, "runner", "flow.sh")):
             base = cand
             break
@@ -888,8 +890,19 @@ fresh_raw = out if rc == 0 else b""
 fresh = utf8_cut(fresh_raw, max(MAX_OUT - LABEL_BUDGET, 0)).decode("utf-8", "replace").strip()
 snap_body, snap_verdict = load_snapshot()
 if fresh:
+    source = payload.get("source")
+    # Only fixed labels reach stdout; unknown/malformed host data stays fail-open.
+    authority = "current session authoritative"
+    if isinstance(source, str):
+        authority = {
+            "compact": "post-compaction authoritative",
+            "startup": "session startup authoritative",
+            "resume": "resumed session authoritative",
+            "clear": "cleared session authoritative",
+            "fork": "forked session authoritative",
+        }.get(source, authority)
     lines = ["[flow context handoff - SessionStart - advisory, never a gate]",
-             '[source: fresh "flow.sh status" recomputed now - post-compaction authoritative]',
+             '[source: fresh "flow.sh status" recomputed now - %s]' % authority,
              fresh]
     if snap_verdict != "absent-or-untrusted" and snap_verdict != "absent":
         lines.append("[pre-compact snapshot: %s - reference only; the state above is current]"
