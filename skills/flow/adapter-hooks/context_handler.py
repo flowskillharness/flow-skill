@@ -20,6 +20,12 @@ Contract:
                   only as a staleness reference - or as an explicitly STALE-labeled
                   fallback when fresh computation fails. Labels + body together never
                   exceed the configured byte cap; truncation respects UTF-8 boundaries.
+  Project root -> preserve local marker acceptance (flow/, cards/, .flow/, or MODE).
+                  Otherwise inspect at most 24 physical ancestors, nearest first,
+                  for flow/00-idea.md, flow/00-inspect.md, .flow/, or cards/C-*.md
+                  files. Bare ancestor flow/ or cards/ directories never qualify.
+                  No match -> skip, never auto-init. Inherited FLOW_PROJECT_ROOT
+                  cannot redirect the validated project used by the runner.
 
 Hardening: strict JSON parse (duplicate keys rejected) of a 64 KiB-capped stdin with a
 total deadline; strict UTF-8 (invalid/oversize input fully rejected); numeric env bounds
@@ -251,6 +257,19 @@ if kind not in ("SessionStart", "PreCompact"):
     fail_open("unsupported or missing event class - handles SessionStart and PreCompact "
               "only; ignoring")
 
+def _has_flow_signature(root):
+    """Use the runner's ancestor signatures, not bare planning/card directories."""
+    if (os.path.isfile(os.path.join(root, "flow", "00-idea.md"))
+            or os.path.isfile(os.path.join(root, "flow", "00-inspect.md"))
+            or os.path.isdir(os.path.join(root, ".flow"))):
+        return True
+    cards = os.path.join(root, "cards")
+    if os.path.isdir(cards):
+        with os.scandir(cards) as entries:
+            return any(entry.name.startswith("C-") and entry.name.endswith(".md")
+                       and entry.is_file() for entry in entries)
+    return False
+
 proj = _normalize_win_path(payload.get("cwd"))
 try:
     real = os.path.realpath(proj) if isinstance(proj, str) and proj else ""
@@ -260,6 +279,17 @@ try:
         or os.path.isdir(os.path.join(real, ".flow"))
         or os.path.isfile(os.path.join(real, "MODE"))
     )
+    if real and os.path.isdir(real) and not has_marker:
+        # Walk only the resolved physical ancestry: a symlink alias cannot redirect
+        # discovery to its lexical parents. Check exactly 24 parents, root at most once.
+        for _ in range(24):
+            parent = os.path.dirname(real)
+            if parent == real:
+                break
+            real = parent
+            if _has_flow_signature(real):
+                has_marker = True
+                break
 except (OSError, ValueError):
     has_marker = False
 if not has_marker:
