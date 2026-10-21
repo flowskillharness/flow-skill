@@ -399,6 +399,37 @@ case "$out_g6" in
   *) ck 0 1 "install_homes output includes cursor target" ;;
 esac
 rm -rf "$FAKE_DOC_HOME"
+
+# G7: project install homes are independent, additive, and exact (isolated HOME).
+check_install_homes() {
+  local expected_status="$1" expected_evidence="$2" label="$3" report rc parsed
+  report="$(bash "$RUN" doctor --check install_homes --json 2>&1)"; rc=$?
+  ck 0 "$rc" "$label exits 0"
+  parsed="$("$PY" -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["kind"] == "doctor.report"
+assert d["checks"] == [{"name": "install_homes", "category": "install",
+                        "status": sys.argv[1], "evidence": sys.argv[2]}], d["checks"]
+assert d["summary"] == {"total": 1, "ok": int(sys.argv[1] == "ok"),
+                        "warn": 0, "fail": 0, "skip": int(sys.argv[1] == "skip")}
+print("VALID")
+' "$expected_status" "$expected_evidence" <<< "$report" 2>&1)"
+  ck "VALID" "$parsed" "$label exact JSON status and evidence"
+}
+check_install_homes skip "none detected (local project or custom path)" "no user or project install"
+mkdir -p "$SB_G/.agents/skills/not-flow" "$SB_G/.agents/flow" "$SB_G/.claude/skills/not-flow"
+check_install_homes skip "none detected (local project or custom path)" "near-miss project paths"
+mkdir -p "$SB_G/.agents/skills/flow"
+check_install_homes ok "project ($SB_G/.agents/skills/flow)" "project agents only"
+rm -rf "$SB_G/.agents/skills/flow"
+mkdir -p "$SB_G/.claude/skills/flow"
+check_install_homes ok "project ($SB_G/.claude/skills/flow)" "project claude only"
+mkdir -p "$SB_G/.agents/skills/flow"
+check_install_homes ok "project ($SB_G/.claude/skills/flow), project ($SB_G/.agents/skills/flow)" "both project homes without precedence masking"
+mkdir -p "$TEST_HOME/.agents/skills/flow"
+check_install_homes ok "agents ($TEST_HOME/.agents/skills/flow), project ($SB_G/.claude/skills/flow), project ($SB_G/.agents/skills/flow)" "user and project homes without precedence masking"
+rm -rf "$TEST_HOME/.agents/skills/flow"
 rm -rf "$SB_G"
 unset FLOW_PROJECT_ROOT
 

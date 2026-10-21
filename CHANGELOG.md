@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Project skill discovery:** `doctor --check install_homes` recognizes project `.agents/skills/flow` (Codex/Gemini) alongside `.claude/skills/flow`; skill done-evidence accepts either project location plus a real run. npm installer project scope is unchanged.
+
 ## [0.34.7] - 2026-10-21
 - **Brownfield status guidance:** When `flow/00-inspect.md` exists but its assessment gate is dirty, `/flow status` directs the user to `/flow assess` instead of suggesting `/flow next`; the gate still blocks planning until clean. Merged after the v0.34.6 release and first ships in v0.34.7. Regression coverage: A5/A6 in `tests/test_flow_assess.sh` covers dirty, clean, and greenfield guidance.
 
