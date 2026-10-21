@@ -85,6 +85,51 @@ else
   te "snapshot cited as reference only" "$out" 'pre-compact snapshot: valid'
 fi
 tne "no stale mislabel on fresh path" "$out" 'STALE SOURCE'
+tne "missing source does not claim compaction" "$out" 'post-compaction'
+for source in startup resume clear fork compact unknown; do
+  out=$("$HANDLER" <<EOF
+{"hook_event_name":"SessionStart","cwd":"$(to_json_path "$P1")","source":"$source"}
+EOF
+  ); check "source $source exit 0" "$?" "0"
+  if [ "$source" = compact ]; then
+    te "compact source retains authority" "$out" 'post-compaction authoritative'
+  else
+    tne "$source does not claim compaction" "$out" 'post-compaction'
+    te "$source fresh handoff" "$out" '\[source: fresh'
+  fi
+done
+
+# Discovery uses real temporary homes and runners, never a fake os.name. On POSIX,
+# select ntpath.expanduser explicitly to simulate USERPROFILE resolution only;
+# native Windows process/launcher coverage remains a CI responsibility.
+DISC_HOME="$TMP/discovery-home"
+for target in .claude/skills/flow .codex/skills/flow .agents/skills/flow .omp/agent/skills/flow .cursor/skills/flow .gemini/antigravity-cli/skills/flow .gemini/config/skills/flow; do
+  mkdir -p "$DISC_HOME/$target/runner"
+  printf '#!/bin/sh\nprintf "discovered-home-marker\\n"\n' > "$DISC_HOME/$target/runner/flow.sh"
+  chmod +x "$DISC_HOME/$target/runner/flow.sh"
+  out=$(HOME="$(to_json_path "$DISC_HOME")" FLOW_SKILL_DIR= "$HANDLER" <<EOF
+{"hook_event_name":"SessionStart","cwd":"$(to_json_path "$P1")"}
+EOF
+  ); check "discover $target exit 0" "$?" "0"
+  te "discover $target handoff" "$out" 'discovered-home-marker'
+  if [ "$target" = .claude/skills/flow ]; then
+    out=$(
+      unset HOME FLOW_SKILL_DIR
+      export USERPROFILE="$(to_json_path "$DISC_HOME")"
+      "$PY_BIN" -c 'import ntpath, os, runpy, sys; os.path.expanduser = ntpath.expanduser; runpy.run_path(sys.argv[1], run_name="__main__")' "$(to_native_path "$REAL_SKILL/adapter-hooks/context_handler.py")" <<EOF
+{"hook_event_name":"SessionStart","cwd":"$(to_json_path "$P1")"}
+EOF
+    ); check "HOME unset USERPROFILE simulation exit 0" "$?" "0"
+    te "HOME unset expanded home handoff" "$out" 'discovered-home-marker'
+    out=$(HOME="$(to_json_path "$DISC_HOME")" "$HANDLER" <<EOF
+{"hook_event_name":"SessionStart","cwd":"$(to_json_path "$P1")"}
+EOF
+    ); check "explicit skill directory exit 0" "$?" "0"
+    te "explicit skill directory fresh handoff" "$out" '\[source: fresh'
+    tne "explicit skill directory wins over home" "$out" 'discovered-home-marker'
+  fi
+  rm -rf "$DISC_HOME/$target"
+done
 
 # --- Strict payload parsing ----------------------------------------------------
 printf 'not-json{{{' | "$HANDLER" >/dev/null 2>&1; check "malformed JSON fail-open" "$?" "0"
