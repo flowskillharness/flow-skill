@@ -49,7 +49,7 @@ On-disk artifacts (in the project being built):
 
 - **Skill product version** (SKILL.md / plugin.json / portable-manifest) drives coherence and
   harness `flow_version` telemetry.
-- **npm package version** versions the installer CLI only; tag `npm@*` triggers OIDC publish.
+- **npm package version** versions the installer CLI only. Canonical `scripts/release.sh` dispatches the publisher via `workflow_dispatch`; no tag-push trigger exists. Tags are verified output, created only after registry/provenance/install verification.
 - Full procedure: [`docs/release-process.md`](release-process.md).
 
 ## Why this shape
