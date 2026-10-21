@@ -2,6 +2,10 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.15] - 2026-10-22 — ships skill v0.34.8 (stable / latest)
+- **Bundled skill:** Includes terminal retro guidance and additive Codex/Gemini project Agent Skills discovery/rules targeting, with the canonical project-bundle prerequisite; no claim of live Codex/Gemini activation or expanded npm installer project scope.
+- **Release guidance:** Includes aligned release preparation/preflight guidance and synchronized dual-axis metadata. Backwards-compatible; no security or service-rights expansion. Release preparation only, not a publication receipt.
+
 ## [0.7.14] - 2026-10-21 — ships skill v0.34.7 (stable / latest)
 - **Skill Product v0.34.7 Parity:** Ships the brownfield status guidance fix: `/flow status` now directs users to `/flow assess` (not `/flow next`) while a brownfield assessment gate is dirty; the mechanical gate still blocks planning until the assessment is clean.
 

@@ -12,6 +12,29 @@ bash "$HERE/../scripts/check-release-coherence.sh" >"$OUT/coh.out" 2>&1
 ck 0 $? "coherence exit 0"
 grep -q 'PASS: release coherence' "$OUT/coh.out" && ck 0 0 "pass line" || ck 0 1 "pass line"
 
+echo "A2) canonical README targets do not assert publication"
+node --input-type=module - "$HERE/.." <<'NODE' >"$OUT/readme-targets.out" 2>&1
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+const root = process.argv[2];
+const { getExpectedReadmeTransforms } = await import(pathToFileURL(resolve(root, 'scripts/sync-release.mjs')));
+for (const version of ['0.7.15', '0.7.16-next.0']) {
+  for (const item of getExpectedReadmeTransforms('0.34.8', version)) {
+    const source = readFileSync(resolve(root, item.relPath), 'utf8');
+    const result = item.transform(source);
+    assert.equal(item.transform(result), result, `${item.relPath}: idempotent`);
+    assert.ok(result.includes(`**${version}**`), item.relPath);
+    assert.ok(result.includes('not a publication receipt') || result.includes('không phải biên nhận đã phát hành'), item.relPath);
+    assert.ok(!/\*\*(?:Current GA|GA hiện tại)\*\*/.test(result), item.relPath);
+    assert.ok(!new RegExp('`@(?:latest|next)` ' + version.replaceAll('.', '\\.')).test(result), item.relPath);
+    assert.ok(result.includes(version.includes('-') ? '`next`' : '`latest`'), item.relPath);
+  }
+}
+NODE
+ck 0 $? "stable/prerelease targets are neutral and idempotent in all four READMEs"
+
 echo "B) deliberate skill mirror drift fails"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/skills/flow/references" "$tmp/r/.claude-plugin" \

@@ -85,7 +85,7 @@ ck 1 $? "missing README fails --check"
 grep -q "FILE MISSING" /tmp/sync_d.out && ck 0 0 "reports FILE MISSING" || ck 0 1 "reports FILE MISSING"
 rm -rf "$tmp"
 
-echo "E) --sync with prerelease version in package.json preserves Current GA row"
+echo "E) --sync describes prerelease target without publication claims"
 tmp=$(mktemp -d)
 mkdir -p "$tmp/r/skills/flow/runner" "$tmp/r/.claude-plugin" "$tmp/r/npm-wrapper/scripts" "$tmp/r/scripts"
 cp "$ROOT/scripts/sync-release.mjs" "$tmp/r/scripts/"
@@ -130,17 +130,13 @@ node -e '
 node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --sync >/tmp/sync_e.out 2>&1
 ck 0 $? "--sync exits 0 with prerelease"
 
-# Check npm-wrapper/README.md preserved Current GA and added Prerelease
-grep -q "| \*\*Current GA\*\* | \*\*${base_npm_v}\*\* — ships skill product \*\*v${base_skill_v}\*\* |" "$tmp/r/npm-wrapper/README.md"
-ck 0 $? "npm-wrapper/README.md preserves Current GA row"
-grep -q "| \*\*Prerelease\*\* | \*\*${prerelease_v}\*\* — ships skill product \*\*v${base_skill_v}\*\* |" "$tmp/r/npm-wrapper/README.md"
-ck 0 $? "npm-wrapper/README.md has Prerelease row"
-
-# Check npm-wrapper/README_VN.md preserved GA hiện tại and added Bản thử nghiệm
-grep -q "| \*\*GA hiện tại\*\* | \*\*${base_npm_v}\*\* — ships skill product \*\*v${base_skill_v}\*\* |" "$tmp/r/npm-wrapper/README_VN.md"
-ck 0 $? "npm-wrapper/README_VN.md preserves GA hiện tại row"
-grep -q "| \*\*Bản thử nghiệm\*\* | \*\*${prerelease_v}\*\* — ships skill product \*\*v${base_skill_v}\*\* |" "$tmp/r/npm-wrapper/README_VN.md"
-ck 0 $? "npm-wrapper/README_VN.md has Bản thử nghiệm row"
+# Both locales describe the target, not an inferred registry GA value.
+grep -q "Release target.*${prerelease_v}.*not a publication receipt" "$tmp/r/npm-wrapper/README.md"
+ck 0 $? "npm-wrapper/README.md has neutral prerelease target"
+grep -q "Mục tiêu phát hành.*${prerelease_v}.*không phải biên nhận đã phát hành" "$tmp/r/npm-wrapper/README_VN.md"
+ck 0 $? "npm-wrapper/README_VN.md has neutral prerelease target"
+grep -q 'Current GA\|GA hiện tại' "$tmp/r/npm-wrapper/README.md" "$tmp/r/npm-wrapper/README_VN.md"
+ck 1 $? "no inferred current GA rows"
 
 rm -rf "$tmp"
 
