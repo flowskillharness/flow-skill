@@ -4815,6 +4815,7 @@ _eval_nonce() {
 # a '## Stage NN' pattern - red-team finding #10).
 _eval_heading_pattern() {
   case "$1" in
+    00)   echo '^## Stage 00' ;;
     01)   echo '^## Stage 01' ;;
     02)   echo '^## Stage 02' ;;
     05)   echo '^## Stage 05' ;;
@@ -4823,15 +4824,16 @@ _eval_heading_pattern() {
   esac
 }
 
-# Extract one stage's ritual text from the mapped file (01→gate-01.md, 02→gate-02.md,
-# 05→gate-05.md, card→gate-card.md): from its heading line up to (not including) the next
+# Extract one stage's ritual text from the mapped file (00→gate-00.md, 01→gate-01.md,
+# 02→gate-02.md, 05→gate-05.md, card→gate-card.md): up to (not including) the next
 # '## ' heading, or EOF. Prints nothing on a bad stage/missing file - caller MUST assert
 # non-empty before any billable call (a silent empty extraction would judge against
 # no rule at all).
-_eval_extract_section() { # $1 = stage (01|02|05|card)
+_eval_extract_section() { # $1 = stage (00|01|02|05|card)
   local pat src
   pat="$(_eval_heading_pattern "$1")" || return 1
   case "$1" in
+    00)   src="$SCRIPT_DIR/../references/gate-00.md" ;;
     01)   src="$SCRIPT_DIR/../references/gate-01.md" ;;
     02)   src="$SCRIPT_DIR/../references/gate-02.md" ;;
     05)   src="$SCRIPT_DIR/../references/gate-05.md" ;;
@@ -4904,7 +4906,7 @@ _eval_build_prompt() { # $1=outfile $2=stage $3=artifact-file $4=nonce
   local outfile="$1" stage="$2" artifact="$3" nonce="$4" section shared
   section="$(_eval_extract_section "$stage")" || return 1
   [ -n "$section" ] || return 1
-  # Shared OD/authority lives in 02/03/05 challenges. Extract maps 01/02/05/card;
+  # Shared OD/authority lives in 02/03/05 challenges. Extract maps 00/01/02/05/card;
   # append shared onto 02 only. 05 extract may mention gate-shared.md; do not cat it
   # (shared OD on 05 false-FLAGs f05a — PASS fixture states bearer auth without an ADR).
   if [ "$stage" = "02" ]; then
@@ -6142,7 +6144,7 @@ function cmd_eval {
         shift
         diff_new="${1:-}"
         ;;
-      *) echo "usage: /flow eval [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay] [--diff <old> <new>]"; return 1 ;;
+      *) echo "usage: /flow eval [--stage 00|01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>] [--keep-going] [--report] [--record|--replay] [--diff <old> <new>]"; return 1 ;;
     esac
     shift 2>/dev/null || true
   done
@@ -6156,7 +6158,7 @@ function cmd_eval {
   fi
   case "$n" in ''|*[!0-9]*|0) echo "eval: --n must be a positive integer (got '$n')"; return 1 ;; esac
   case "$timeout" in ''|*[!0-9]*|0) echo "eval: --timeout must be a positive integer seconds value (got '$timeout')"; return 1 ;; esac
-  case "$stage_filter" in ""|01|02|05|card|routing|converge) : ;; *) echo "eval: --stage must be one of 01|02|05|card|routing|converge (got '$stage_filter')"; return 1 ;; esac
+  case "$stage_filter" in ""|00|01|02|05|card|routing|converge) : ;; *) echo "eval: --stage must be one of 00|01|02|05|card|routing|converge (got '$stage_filter')"; return 1 ;; esac
   # Backoff between the in-run retry attempts. Default 5s; tests set 0 so the mock-suite is not
   # slowed by 15s+ per degraded-path case across 3-OS CI. Bare-int validation only - a bogus
   # value (`abc`) silently falls back to the default rather than aborting the batch.
@@ -6321,7 +6323,7 @@ function cmd_eval {
     [ -z "$fid" ] && continue
     # manifest's stage column uses flow.sh's own full STAGES names ("01-research", "02-scope",
     # "card") for consistency with the rest of the codebase; --stage/heading-map use the terse
-    # 01|02|05|card form the plan's CLI spec documents - normalize by stripping to the leading
+    # 00|01|02|05|card form - normalize by stripping to the leading
     # token before the first '-' (a bare "card" has none, so it passes through unchanged).
     local fstage_short="${fstage%%-*}"
     [ -n "$stage_filter" ] && [ "$fstage_short" != "$stage_filter" ] && continue
@@ -6347,7 +6349,7 @@ function cmd_eval {
     local promptfile="$rundir/prompt.txt"
     if ! _eval_build_prompt "$promptfile" "$fstage_short" "$artifact_path" "$nonce"; then
       if [ "$replay_mode" -eq 1 ]; then
-        echo "  $fid: SKIP - no heading-mapped section (artifact-replay scope is 01|02|05|card)"
+        echo "  $fid: SKIP - no heading-mapped section (artifact-replay scope is 00|01|02|05|card)"
         rm -rf "$rundir" 2>/dev/null
         continue
       fi
@@ -6765,7 +6767,7 @@ usage: bash flow.sh <command> [args]
   eval [opts]       Behavioral eval: does the LLM semantic gate flag a hollow-but-mechanically-clean
                      fixture? Opt-in, BILLABLE (live mode skips cleanly with zero calls if 'claude'
                      CLI absent; --replay never inherits that SKIP).
-                     [--stage 01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>]
+                     [--stage 00|01|02|05|card|routing|converge] [--fixture <id>] [--n 3] [--timeout <seconds>]
                      [--report]  offline: last complete batch's scorecard + drift, zero calls
                      [--record]  live: write stripped transcripts under eval/replay/ (billable)
                      [--replay]  keyless: feed recorded transcripts through parse/vote/scorecard

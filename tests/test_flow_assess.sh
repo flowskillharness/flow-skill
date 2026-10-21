@@ -235,6 +235,47 @@ else
   echo "  SKIP: no python"
 fi
 
+echo "I) Stage 00 manifest pair enters the real evaluator through offline replay"
+newsb
+EVAL_DIR="$HERE/../skills/flow/eval"
+SCRIPT_DIR="$HERE/../skills/flow/runner"
+# Load only read-only prompt/hash helpers, not dispatch or either eval STOP body.
+for helper in _eval_heading_pattern _eval_extract_section _eval_build_prompt _eval_gate_rules_sha; do
+  eval "$(sed -n "/^${helper}()/,/^}/p" "$RUN")"
+done
+rows="$(awk -F '\t' '$2 == "00-inspect" { n++ } END { print n+0 }' "$EVAL_DIR/manifest.tsv")"
+ck 2 "$rows" "manifest census contains both Stage 00 fixtures"
+for entry in brownfield_hollow:FLAG brownfield_sound:PASS; do
+  fid="${entry%:*}"; expected="${entry#*:}"
+  row="$(awk -F '\t' -v id="$fid" '$1 == id { print $2 ":" $3 ":" $4 }' "$EVAL_DIR/manifest.tsv")"
+  ck "00-inspect:flow/00-inspect.md:$expected" "$row" "$fid registered with discriminating verdict"
+  _eval_build_prompt "$SB/$fid.prompt" 00 "$EVAL_DIR/fixtures/$fid/flow/00-inspect.md" offline00
+  ck 0 $? "$fid builds a nonempty Stage 00 prompt"
+  prompt="$(cat "$SB/$fid.prompt")"
+  has "$prompt" "Stage 00.*Idea" "idea challenge retained in Stage 00 route"
+  has "$prompt" "Brownfield inspection prerequisite" "$fid receives brownfield challenge"
+  has "$prompt" "An existing assessment must be clean" "$fid prompt enforces assessment prerequisite"
+  has "$prompt" "Existing behavior has been inspected" "$fid artifact is inlined"
+done
+# Synthetic verdicts exercise routing/parser/mismatch enforcement, not a live judge.
+replay="$SB/replay"
+mkdir -p "$replay/brownfield-hollow" "$replay/brownfield-sound"
+printf 'nonce=offline00\ngate_rules_sha=%s\nmodel=synthetic\nn=1\n' "$(_eval_gate_rules_sha)" > "$replay/meta"
+printf 'GATE-EVAL-offline00: FLAG\n' > "$replay/brownfield-hollow/1.txt"
+printf 'GATE-EVAL-offline00: PASS\n' > "$replay/brownfield-sound/1.txt"
+out="$(FLOW_EVAL_REPLAY_DIR="$replay" bash "$RUN" eval --stage 00 --replay --n 1 2>&1)"; ck 0 $? "Stage 00 replay accepts correct pair"
+has "$out" "brownfield_hollow (00-inspect): FLAG - matches expected FLAG" "hollow enters evaluator and is flagged"
+has "$out" "brownfield_sound (00-inspect): PASS - matches expected PASS" "sound enters evaluator and passes"
+has "$out" "all 2 evaluated fixture(s)" "both manifest rows actually evaluated"
+printf 'GATE-EVAL-offline00: PASS\n' > "$replay/brownfield-hollow/1.txt"
+out="$(FLOW_EVAL_REPLAY_DIR="$replay" bash "$RUN" eval --stage 00 --replay --n 1 2>&1)"; ck 1 $? "hollow false PASS fails replay"
+has "$out" "MISMATCH, expected FLAG" "hollow expected verdict enforced"
+printf 'GATE-EVAL-offline00: FLAG\n' > "$replay/brownfield-hollow/1.txt"
+printf 'GATE-EVAL-offline00: FLAG\n' > "$replay/brownfield-sound/1.txt"
+out="$(FLOW_EVAL_REPLAY_DIR="$replay" bash "$RUN" eval --stage 00 --replay --n 1 2>&1)"; ck 1 $? "sound false FLAG fails replay"
+has "$out" "MISMATCH, expected PASS" "sound expected verdict enforced"
+rm -rf "$SB"
+
 echo
 echo "RESULT: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
