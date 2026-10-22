@@ -3400,6 +3400,18 @@ cmd_promote() {
   esac
 }
 
+doctor_remedy_for() {
+  # Advice only: callers supply the observed platform; never run installers.
+  case "$1:$2" in
+    timeout:Darwin) printf '%s\n' 'brew install coreutils (provides gtimeout)' ;;
+    grep_p:Darwin) printf '%s\n' 'brew install grep' ;;
+    install_homes:*) printf '%s\n' 'install via npx @manhquy/flow-skill@latest --yes (or flow rules agent-skills for project scope)' ;;
+    python:*) printf '%s\n' 'install Python 3.8+ (python.org or brew install python)' ;;
+    sqlite3:Darwin) printf '%s\n' 'brew install sqlite' ;;
+    sqlite3:*) printf '%s\n' 'install sqlite3 via your package manager' ;;
+  esac
+}
+
 cmd_doctor() {
   # Cross-platform environment + quality check (macOS / Linux / Windows Git Bash).
   local opt_list=0
@@ -3559,11 +3571,21 @@ cmd_doctor() {
   fi
 
   local ok=1
+  local doctor_os; doctor_os="$(uname -s 2>/dev/null || echo unknown)"
   local rec_file; rec_file="$(mktemp 2>/dev/null || echo "$ROOT/.flow/.doc-rec.$$")"
   : > "$rec_file"
 
   _record() {
     printf '%s\0%s\0%s\0%s\0' "$1" "$2" "$3" "$4" >> "$rec_file"
+    local remedy=""
+    case "$3" in
+      warn|skip|fail) remedy="$(doctor_remedy_for "$1" "$doctor_os")" ;;
+    esac
+    if [ -n "$remedy" ]; then
+      printf 'remedy:%s\0' "$remedy" >> "$rec_file"
+      [ "$opt_json" -eq 0 ] && printf '  remedy: %s\n' "$remedy"
+    fi
+    return 0
   }
 
   _run_check() {
@@ -3609,10 +3631,7 @@ cmd_doctor() {
       [ "$opt_json" -eq 0 ] && echo "  python:    $py_v ($py)  -> durable layer ENABLED"
       _record "python" "runtime" "ok" "$py_v ($py) -> durable layer ENABLED"
     else
-      [ "$opt_json" -eq 0 ] && {
-        echo "  python:    not found  -> durable layer DISABLED (gate engine still works fully)"
-        echo "             install: macOS 'brew install python' | Ubuntu 'sudo apt install python3' | Windows python.org"
-      }
+      [ "$opt_json" -eq 0 ] && echo "  python:    not found  -> durable layer DISABLED (gate engine still works fully)"
       _record "python" "runtime" "warn" "not found -> durable layer DISABLED"
     fi
   fi
@@ -3629,6 +3648,7 @@ cmd_doctor() {
         ok=0
       fi
     else
+      [ "$opt_json" -eq 0 ] && echo "  sqlite3:   skip (python not found)"
       _record "sqlite3" "runtime" "skip" "python not found"
     fi
   fi
