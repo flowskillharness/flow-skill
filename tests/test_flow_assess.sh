@@ -235,32 +235,51 @@ else
   echo "  SKIP: no python"
 fi
 
-echo "I) flow next blocks when flow/00-inspect.md is dirty, succeeds when clean or absent"
-newsb
-out="$(bash "$RUN" assess 2>&1)"; ck 0 $? "I: assess creates dirty assessment"
-out="$(bash "$RUN" next 2>&1)"; rc=$?
-ck 1 "$rc" "I: dirty assessment blocks next"
-has "$out" "FAIL: brownfield assessment gate is not clean (flow/00-inspect.md)." "I: failure identifies assessment gate"
-has "$out" "re-run '/flow assess'" "I: failure directs assessment repair"
-ck 1 "$(exists "$SB/flow/00-idea.md")" "I: dirty assessment does not unlock idea"
-printf '%s\n' '- [ ] DEBT: skip 00-inspect' > "$SB/DEBT.md"
-out="$(bash "$RUN" skip 00-inspect --reason 'defer assessment' 2>&1)"; ck 0 $? "I: records explicit assessment skip"
-out="$(bash "$RUN" next 2>&1)"; ck 1 $? "I: skip cannot bypass initial dirty assessment gate"
-ck 1 "$(exists "$SB/flow/00-idea.md")" "I: skipped dirty assessment still does not unlock idea"
-rm -rf "$SB"
-newsb; clean_inspect
-out="$(bash "$RUN" next 2>&1)"; rc=$?
-ck 0 "$rc" "I: clean assessment permits next"
-has "$out" "PASS: unlocked stage 00" "I: clean assessment reports unlocked stage"
-ck 0 "$(exists "$SB/flow/00-idea.md")" "I: clean assessment unlocks idea"
-rm -rf "$SB"
-newsb
-out="$(bash "$RUN" next 2>&1)"; rc=$?
-ck 0 "$rc" "I: absent assessment permits greenfield next"
-has "$out" "PASS: unlocked stage 00" "I: greenfield reports unlocked stage"
-ck 0 "$(exists "$SB/flow/00-idea.md")" "I: absent assessment unlocks idea"
-ck 1 "$(exists "$SB/flow/00-inspect.md")" "I: greenfield next does not create assessment"
-rm -rf "$SB"
+echo "I) flow next blocks dirty assessments; clean, debt-skipped or absent assessments agree with status/resume"
+for assessment in dirty clean debt-skipped absent; do
+  newsb
+  case "$assessment" in
+    dirty|debt-skipped)
+      out="$(bash "$RUN" assess 2>&1)"; ck 0 $? "I: $assessment scaffolds assessment"
+      if [ "$assessment" = debt-skipped ]; then
+        printf '%s\n' '- [ ] DEBT: skip 00-inspect' > "$SB/DEBT.md"
+        out="$(bash "$RUN" skip 00-inspect --reason 'defer assessment' 2>&1)"; ck 0 $? "I: records explicit assessment skip"
+      fi
+      ;;
+    clean) clean_inspect ;;
+  esac
+  if [ "$assessment" = dirty ]; then
+    expected_next="run '/flow assess'"
+    expected_verb=none
+  else
+    expected_next="run '/flow next' to unlock stage 00"
+    expected_verb=next
+  fi
+  for surface in status resume; do
+    out="$(bash "$RUN" "$surface" 2>&1)"; ck 0 $? "I: $assessment $surface exits 0"
+    case "$surface" in
+      status) expected_prefix="NEXT ->" ;;
+      resume) expected_prefix="nothing to resume -" ;;
+    esac
+    has "$out" "$expected_prefix $expected_next" "I: $assessment $surface agrees with assessment gate"
+    has "$out" "NEXT_VERB=$expected_verb" "I: $assessment $surface advisory agrees"
+  done
+  out="$(bash "$RUN" next 2>&1)"; rc=$?
+  if [ "$assessment" = dirty ]; then
+    ck 1 "$rc" "I: dirty assessment blocks next"
+    has "$out" "FAIL: brownfield assessment gate for flow/00-inspect.md is not clean." "I: failure identifies assessment gate"
+    has "$out" "run '/flow assess' again" "I: failure directs assessment repair"
+    ck 1 "$(exists "$SB/flow/00-idea.md")" "I: dirty assessment does not unlock idea"
+  else
+    ck 0 "$rc" "I: $assessment assessment permits next"
+    has "$out" "PASS: unlocked stage 00" "I: $assessment assessment reports unlocked stage"
+    ck 0 "$(exists "$SB/flow/00-idea.md")" "I: $assessment assessment unlocks idea"
+    if [ "$assessment" = absent ]; then
+      ck 1 "$(exists "$SB/flow/00-inspect.md")" "I: greenfield next does not create assessment"
+    fi
+  fi
+  rm -rf "$SB"
+done
 
 echo "J) Stage 00 manifest pair enters the real evaluator through offline replay"
 newsb
