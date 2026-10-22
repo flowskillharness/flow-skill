@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- **Actionable doctor diagnostics:** Known missing environment dependencies and install homes include static platform-specific remedy advice in human output and an optional JSON `remedy` field, without changing check outcomes or executing installers.
 - **Cross-harness AGENTS.md rules target:** Additive `flow rules agents-md` previews or safely writes a root `AGENTS.md` instruction file establishing Flow build discipline, stage sequence, and honest evidence verification. Existing files and symlinks are strictly refused; no live harness activation claimed.
 
 ## [0.34.8] - 2026-10-22

@@ -409,8 +409,11 @@ check_install_homes() {
 import json, sys
 d = json.load(sys.stdin)
 assert d["kind"] == "doctor.report"
-assert d["checks"] == [{"name": "install_homes", "category": "install",
-                        "status": sys.argv[1], "evidence": sys.argv[2]}], d["checks"]
+expected = {"name": "install_homes", "category": "install",
+            "status": sys.argv[1], "evidence": sys.argv[2]}
+if sys.argv[1] == "skip":
+    expected["remedy"] = "install via npx @manhquy/flow-skill@latest --yes (or flow rules agent-skills for project scope)"
+assert d["checks"] == [expected], d["checks"]
 assert d["summary"] == {"total": 1, "ok": int(sys.argv[1] == "ok"),
                         "warn": 0, "fail": 0, "skip": int(sys.argv[1] == "skip")}
 print("VALID")
@@ -418,6 +421,11 @@ print("VALID")
   ck "VALID" "$parsed" "$label exact JSON status and evidence"
 }
 check_install_homes skip "none detected (local project or custom path)" "no user or project install"
+human="$(bash "$RUN" doctor --check install_homes 2>&1)"
+case "$human" in
+  *"  install homes: none detected (local project or custom path)"$'\n'"  remedy: install via npx @manhquy/flow-skill@latest --yes (or flow rules agent-skills for project scope)"*) ck 0 0 "human remedy follows check line" ;;
+  *) ck 0 1 "human remedy follows check line" ;;
+esac
 mkdir -p "$SB_G/.agents/skills/not-flow" "$SB_G/.agents/flow" "$SB_G/.claude/skills/not-flow"
 check_install_homes skip "none detected (local project or custom path)" "near-miss project paths"
 mkdir -p "$SB_G/.agents/skills/flow"
@@ -432,6 +440,35 @@ check_install_homes ok "agents ($TEST_HOME/.agents/skills/flow), project ($SB_G/
 rm -rf "$TEST_HOME/.agents/skills/flow"
 rm -rf "$SB_G"
 unset FLOW_PROJECT_ROOT
+
+# Extract only the pure lookup function; do not source the runner dispatch or mock uname.
+lookup_source="$("$PY" -c '
+import pathlib, sys
+s = pathlib.Path(sys.argv[1]).read_text()
+start = s.index("doctor_remedy_for() {")
+print(s[start:s.index("\n}\n", start) + 3])
+' "$RUN")"
+eval "$lookup_source"
+ck 'brew install coreutils (provides gtimeout)' "$(doctor_remedy_for timeout Darwin)" "Darwin timeout remedy"
+ck 'brew install grep' "$(doctor_remedy_for grep_p Darwin)" "Darwin grep remedy"
+ck 'install via npx @manhquy/flow-skill@latest --yes (or flow rules agent-skills for project scope)' "$(doctor_remedy_for install_homes Linux)" "install homes remedy"
+ck 'install Python 3.8+ (python.org or brew install python)' "$(doctor_remedy_for python Linux)" "missing Python remedy"
+ck 'brew install sqlite' "$(doctor_remedy_for sqlite3 Darwin)" "Darwin sqlite remedy"
+ck 'install sqlite3 via your package manager' "$(doctor_remedy_for sqlite3 Linux)" "other platform sqlite remedy"
+ck '' "$(doctor_remedy_for timeout Linux)" "Linux timeout has no remedy"
+ck '' "$(doctor_remedy_for os Darwin)" "unmapped check has no remedy"
+
+transport="$(printf 'os\0environment\0ok\0Linux\0install_homes\0install\0skip\0none\0remedy:install advice\0python\0runtime\0warn\0missing\0remedy:python advice\0sqlite3\0runtime\0fail\0missing\0remedy:sqlite advice\0' | "$PY" "$ROOT/skills/flow/runner/doctor_helper.py" format-report 0)"
+parsed="$("$PY" -c '
+import json, sys
+d = json.load(sys.stdin)
+assert d["checks"][0] == {"name":"os", "category":"environment", "status":"ok", "evidence":"Linux"}
+assert [c.get("remedy") for c in d["checks"]] == [None, "install advice", "python advice", "sqlite advice"]
+assert d["summary"] == {"total":4, "ok":1, "warn":1, "skip":1, "fail":1}
+assert d["healthy"] is False
+print("VALID")
+' <<< "$transport" 2>&1)"
+ck VALID "$parsed" "mixed legacy and remedy records preserve summaries"
 
 echo
 echo "RESULT: $pass passed, $fail failed"
