@@ -18,7 +18,7 @@ SCRATCH="$(mktemp -d)"
 cleanup() { rm -rf "$SCRATCH" 2>/dev/null; }
 trap cleanup EXIT
 
-echo "A) rules list outputs all 8 supported targets"
+echo "A) rules list outputs all 9 supported targets"
 out_list="$(bash "$RUN" rules list 2>&1)"; rc_list=$?
 ck 0 "$rc_list" "rules list exits 0"
 has "$out_list" "cursor" "cursor listed"
@@ -29,6 +29,7 @@ has "$out_list" "aider" "aider listed"
 has "$out_list" "openhands" "openhands listed"
 has "$out_list" "copilot" "copilot listed"
 has "$out_list" 'agent-skills -> .agents/skills/flow/SKILL.md' "Agent Skills destination listed"
+has "$out_list" 'agents-md    -> AGENTS.md' "agents-md destination listed"
 
 echo "B) rules cursor emits valid frontmatter and directives"
 out_cur="$(bash "$RUN" rules cursor 2>&1)"; rc_cur=$?
@@ -163,11 +164,13 @@ echo "F) unknown harness exits 2 with usage"
 out_unk="$(bash "$RUN" rules unknown_harness 2>&1)"; rc_unk=$?
 ck 2 "$rc_unk" "unknown harness exits 2"
 has "$out_unk" "unknown harness: unknown_harness" "error message reports unknown harness"
+has "$out_unk" "agents-md" "unknown harness usage includes agents-md"
 
 echo "G) invalid extra arguments exits 2"
 out_bad="$(bash "$RUN" rules cursor --badflag 2>&1)"; rc_bad=$?
 ck 2 "$rc_bad" "invalid extra option exits 2"
 has "$out_bad" "usage: flow rules" "usage string printed on bad option"
+has "$out_bad" "agents-md" "invalid option usage includes agents-md"
 
 echo "H) Agent Skills preview, standard fields, and safe creation"
 AGENT_DIR="$SCRATCH/agent_test"
@@ -238,6 +241,53 @@ else
   echo "  SKIP [platform cannot create symlinks]"
 fi
 FLOW_PROJECT_ROOT="$AGENT_DIR" bash "$RUN" rules agent-skills --write unexpected >/dev/null 2>&1
+ck 2 "$?" "extra trailing argument exits 2"
+
+echo "I) AGENTS.md preview, standard fields, and safe creation"
+AGENTS_DIR="$SCRATCH/agents_md_test"
+mkdir -p "$AGENTS_DIR"
+out_agents_md="$(FLOW_PROJECT_ROOT="$AGENTS_DIR" bash "$RUN" rules agents-md)"; rc_agents_md=$?
+ck 0 "$rc_agents_md" "AGENTS.md preview exits 0"
+[ ! -e "$AGENTS_DIR/AGENTS.md" ]; ck 0 "$?" "preview creates no AGENTS.md file"
+[ -z "$(find "$AGENTS_DIR" -mindepth 1 -print)" ]; ck 0 "$?" "preview leaves project empty"
+no "$out_agents_md" "^---" "no frontmatter in AGENTS.md template"
+has "$out_agents_md" "Flow gated build discipline" "flow discipline marker present"
+has "$out_agents_md" "Idea→Research→Scope→PRD→ADR→Contract→Cards→Build→Review→Verify→Retro" "stage flow progression present"
+has "$out_agents_md" "Kill at any gate is a valid, honored outcome" "kill gate marker present"
+has "$out_agents_md" "## Allowed files" "Allowed files marker present"
+has "$out_agents_md" "## Verify" "Verify marker present"
+has "$out_agents_md" "## Evidence" "Evidence marker present"
+has "$out_agents_md" "bash skills/flow/runner/flow.sh <command>" "bash runner command present"
+has "$out_agents_md" "runner/flow.cmd" "Windows runner mentioned"
+has "$out_agents_md" "status" "status command listed"
+has "$out_agents_md" "next" "next command listed"
+has "$out_agents_md" "check C-NNN" "check command listed"
+byte_len=$(printf '%s\n' "$out_agents_md" | wc -c)
+[ "$byte_len" -le 2048 ]; ck 0 "$?" "AGENTS.md size ($byte_len bytes) is <= 2048 bytes"
+FLOW_PROJECT_ROOT="$AGENTS_DIR" bash "$RUN" rules agents-md --write
+ck 0 "$?" "AGENTS.md write exits 0"
+AGENTS_DEST="$AGENTS_DIR/AGENTS.md"
+[ -f "$AGENTS_DEST" ]; ck 0 "$?" "exact AGENTS.md destination created"
+printf '%s\n' "$out_agents_md" | cmp - "$AGENTS_DEST"
+ck 0 "$?" "written bytes match preview"
+printf '%s\n' 'USER_AGENTS_MD_SENTINEL' > "$AGENTS_DEST"
+out_refuse="$(FLOW_PROJECT_ROOT="$AGENTS_DIR" bash "$RUN" rules agents-md --write 2>&1)"
+ck 1 "$?" "existing AGENTS.md file refused with exit 1"
+has "$out_refuse" "destination already exists: AGENTS.md" "refusal reports destination already exists"
+ck 'USER_AGENTS_MD_SENTINEL' "$(cat "$AGENTS_DEST")" "existing sentinel preserved exactly"
+AGENTS_SYM="$SCRATCH/agents_sym"
+mkdir -p "$AGENTS_SYM"
+ln -s "$SCRATCH/absent_agents_md_target" "$AGENTS_SYM/AGENTS.md" 2>/dev/null || true
+if [ -L "$AGENTS_SYM/AGENTS.md" ]; then
+  out_sym="$(FLOW_PROJECT_ROOT="$AGENTS_SYM" bash "$RUN" rules agents-md --write 2>&1)"
+  ck 1 "$?" "dangling AGENTS.md symlink refused with exit 1"
+  [ -L "$AGENTS_SYM/AGENTS.md" ]; ck 0 "$?" "symlink preserved"
+  ck "$SCRATCH/absent_agents_md_target" "$(readlink "$AGENTS_SYM/AGENTS.md")" "symlink destination unchanged"
+  [ ! -e "$SCRATCH/absent_agents_md_target" ]; ck 0 "$?" "symlink target not created"
+else
+  echo "  SKIP [platform cannot create symlinks]"
+fi
+FLOW_PROJECT_ROOT="$AGENTS_DIR" bash "$RUN" rules agents-md --write unexpected >/dev/null 2>&1
 ck 2 "$?" "extra trailing argument exits 2"
 
 echo

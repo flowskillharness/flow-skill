@@ -1,5 +1,8 @@
 # Changelog
 
+## [Unreleased]
+- **Cross-harness AGENTS.md rules target:** Additive `flow rules agents-md` previews or safely writes a root `AGENTS.md` instruction file establishing Flow build discipline, stage sequence, and honest evidence verification. Existing files and symlinks are strictly refused; no live harness activation claimed.
+
 ## [0.34.8] - 2026-10-22
 - **Terminal retro guidance:** Completed flows direct the host to the terminal retro step rather than implying another build stage.
 - **Project Agent Skills:** Additive Codex/Gemini project discovery recognizes `.agents/skills/flow`; `flow rules agent-skills` previews or safely writes a rules pointer only when the canonical project Flow bundle is installed. This does not claim live Codex/Gemini activation or expand npm installer project scope.
