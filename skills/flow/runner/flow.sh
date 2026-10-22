@@ -6578,12 +6578,12 @@ cmd_rules() {
   local target="${1:-list}"
   local opt_write=0
   if [ "$#" -gt 2 ]; then
-    echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+    echo "usage: flow rules [list|agent-skills|agents-md|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
     exit 2
   elif [ "${2:-}" = "--write" ]; then
     opt_write=1
   elif [ -n "${2:-}" ]; then
-    echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+    echo "usage: flow rules [list|agent-skills|agents-md|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
     exit 2
   fi
 
@@ -6591,6 +6591,7 @@ cmd_rules() {
     list)
       echo "flow rules - available harness templates:"
       echo "  agent-skills -> .agents/skills/flow/SKILL.md (Codex/Gemini)"
+      echo "  agents-md    -> AGENTS.md"
       echo "  cursor      -> .cursor/rules/flow.mdc"
       echo "  windsurf    -> .windsurf/rules/flow.md"
       echo "  roo         -> .roomodes"
@@ -6623,6 +6624,47 @@ Read [the canonical skill](../../../skills/flow/SKILL.md) (`skills/flow/SKILL.md
 Set `<skill-dir>` to that canonical bundle directory (`skills/flow`). From the project root, invoke `bash <skill-dir>/runner/flow.sh <command>` using the hosting agent or operator; Flow does not own the runtime.
 Follow the canonical skill dispatch, active card allowed files, gates, and evidence requirements. Keep Claude discovery in its separate `.claude/skills` path.'
       local dest=".agents/skills/flow/SKILL.md"
+      ;;
+    agents-md)
+      # Instruction generation must not create run-state beside the requested file.
+      FLOW_LOG_DISABLE=1
+      local tpl='# Flow Discipline Instructions (AGENTS.md)
+
+This repository is governed by Flow gated build discipline.
+
+## Stage Flow
+
+Advance through explicit, evidence-backed stages:
+Idea→Research→Scope→PRD→ADR→Contract→Cards→Build→Review→Verify→Retro
+
+- Never skip stages without explicit, recorded debt.
+- Do not modify application code while planning artifacts in `flow/` are in progress.
+- Kill at any gate is a valid, honored outcome: stop and record the kill honestly when an idea or plan fails its gate challenge.
+
+## Honest Gates & Verification
+
+- Exit code is ground truth: a gate passes only when its check returns exit code 0.
+- Never fake evidence or claim passes without verified command output.
+- Record real terminal output, exit codes, and diffs under `## Evidence`.
+
+## Card Execution
+
+Implementation tasks are tracked in atomic markdown cards (`cards/C-NNN.md`):
+- **Allowed files:** Confine modifications strictly to the active card'\''s `## Allowed files` section. Never touch unlisted files.
+- **Verify:** Run the exact verification commands declared in `## Verify`.
+- Validate card completion with `bash skills/flow/runner/flow.sh check C-NNN`.
+
+## Ground Truth Runner Commands
+
+The Flow runner is the mechanical authority. Run from the repository root:
+- POSIX / Bash: `bash skills/flow/runner/flow.sh <command>`
+- Windows shells: `runner/flow.cmd <command>` (or `skills\flow\runner\flow.cmd <command>`)
+
+Core commands:
+- `bash skills/flow/runner/flow.sh status` — inspect active stage, in-flight cards, and blockers.
+- `bash skills/flow/runner/flow.sh next` — evaluate current gate and unlock the next stage.
+- `bash skills/flow/runner/flow.sh check C-NNN` — validate card criteria and verify evidence.'
+      local dest="AGENTS.md"
       ;;
     cursor)
       local tpl='---
@@ -6726,7 +6768,7 @@ This repository enforces Flow discipline:
       ;;
     *)
       echo "unknown harness: $target" >&2
-      echo "usage: flow rules [list|agent-skills|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
+      echo "usage: flow rules [list|agent-skills|agents-md|cursor|windsurf|roo|cline|aider|openhands|copilot] [--write]" >&2
       exit 2
       ;;
   esac
