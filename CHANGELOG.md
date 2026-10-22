@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- **Brownfield planning gate:** `/flow next` refuses to unlock stage 00 while an existing `flow/00-inspect.md` is not clean, including when an assessment skip was recorded. Clean assessments and greenfield projects without an assessment can still start planning.
 
 ## [0.34.9] - 2026-10-22
 - **Actionable doctor diagnostics:** Known missing environment dependencies and install homes include static platform-specific remedy advice in human output and an optional JSON `remedy` field, without changing check outcomes or executing installers.

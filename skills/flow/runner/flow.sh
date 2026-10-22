@@ -1400,15 +1400,14 @@ cmd_next() {
     fi
   fi
   local idx; idx="$(current_stage_idx)"
-  if ! inspect_gate_clean; then
-      echo "FAIL: brownfield assessment gate for flow/00-inspect.md is not clean."
-      scan_gate "$FLOW_DIR/00-inspect.md"
-      FLOW_LOG_STAGE_TO="00-inspect"
-      FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
-      echo "Fix the above, then run '/flow assess' again. (Kill at a gate is also valid.)"
-      return 1
-  fi
   if [ "$idx" -lt 0 ]; then
+    if [ -f "$FLOW_DIR/00-inspect.md" ] && ! scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1; then
+      echo "FAIL: brownfield assessment gate is not clean (flow/00-inspect.md)."
+      scan_gate "$FLOW_DIR/00-inspect.md"
+      echo
+      echo "Fix the above and re-run '/flow assess' before proceeding to planning with '/flow next'."
+      return 1
+    fi
     mkdir -p "$FLOW_DIR"
     cp "$TEMPLATE_DIR/00-idea.md" "$FLOW_DIR/00-idea.md"
     seed_law_files
@@ -1422,6 +1421,14 @@ cmd_next() {
     fi
     echo "Fill it in, check its gate boxes, then run '/flow next'."
     return 0
+  fi
+  if ! inspect_gate_clean; then
+      echo "FAIL: brownfield assessment gate for flow/00-inspect.md is not clean."
+      scan_gate "$FLOW_DIR/00-inspect.md"
+      FLOW_LOG_STAGE_TO="00-inspect"
+      FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/00-inspect.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
+      echo "Fix the above, then run '/flow assess' again. (Kill at a gate is also valid.)"
+      return 1
   fi
   local cur; cur="$(stage_name_at "$idx")"
   if ! scan_gate "$FLOW_DIR/$cur.md" >/dev/null 2>&1; then
