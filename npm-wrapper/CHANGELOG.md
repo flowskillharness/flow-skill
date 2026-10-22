@@ -2,6 +2,10 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.7.16] - 2026-10-22 — ships skill v0.34.9 (stable / latest)
+- **Bundled skill:** Includes additive `flow rules agents-md` safe preview/write targeting and static doctor remedy hints in human and JSON diagnostics; existing-file/symlink refusal and diagnostic outcomes remain unchanged.
+- **Compatibility:** Backwards-compatible patch with synchronized dual-axis metadata; no installer scope or security/service-rights expansion. Release preparation only, not a publication receipt.
+
 ## [0.7.15] - 2026-10-22 — ships skill v0.34.8 (stable / latest)
 - **Bundled skill:** Includes terminal retro guidance and additive Codex/Gemini project Agent Skills discovery/rules targeting, with the canonical project-bundle prerequisite; no claim of live Codex/Gemini activation or expanded npm installer project scope.
 - **Release guidance:** Includes aligned release preparation/preflight guidance and synchronized dual-axis metadata. Backwards-compatible; no security or service-rights expansion. Release preparation only, not a publication receipt.
