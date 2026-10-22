@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- test(assess): add regression coverage for brownfield assessment gate and debt-skip in flow next.
 
 ## [0.34.9] - 2026-10-22
 - **Actionable doctor diagnostics:** Known missing environment dependencies and install homes include static platform-specific remedy advice in human output and an optional JSON `remedy` field, without changing check outcomes or executing installers.
