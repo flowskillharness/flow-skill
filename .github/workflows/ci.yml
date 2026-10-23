@@ -227,7 +227,7 @@ jobs:
 
   # Phase 2 initial set + Phase 3 pack-rehearsal + Phase 7 keyless replay.
   all-checks-passed:
-    needs: [bash-suite, no-python-degradation, test, pack-rehearsal, eval-replay]
+    needs: [bash-suite, python-required-refusal, test, pack-rehearsal, eval-replay]
     # bash-suite is the whole matrix: any failed/cancelled shard blocks this verdict.
     if: always()
     runs-on: ubuntu-latest
