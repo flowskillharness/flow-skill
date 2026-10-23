@@ -78,6 +78,12 @@ ck 1 "$rc" "enter on unknown branch exits 1"
 clean
 
 echo "F) git absent -> add/remove exit 1, read verbs exit 0 (graceful degrade)"
+# Git for Windows reconstructs native lookup paths; skip only the synthetic
+# Git-absent case, not workspace behavior with the platform's installed Git.
+case "$(uname -s 2>/dev/null):${RUNNER_OS:-}" in
+  MINGW*|MSYS*|CYGWIN*|*:Windows_NT|*:Windows)
+    echo '  SKIP [no-git simulation unavailable on Git for Windows; Git Bash reconstructs system PATH]' ;;
+  *)
 newsb
 # Core utility shim PATH minus Git. Probe in a fresh Bash (not this shell):
 # Git Bash startup/executable lookup can expose git.exe despite a parent PATH.
@@ -129,6 +135,8 @@ case "$out" in
   *) ck 0 1 "missing-Git probe must actually start before testing workspace" ;;
 esac
 rm -rf "$fakebin"; clean
+    ;;
+esac
 
 echo "G) remove: dirty tree refused VERBATIM; --force removes + tombstones (C-003)"
 newsb

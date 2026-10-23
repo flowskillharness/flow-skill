@@ -230,6 +230,12 @@ no "$out_redact" "eyJhbGciOiJIUzI1NiJ9" "raw JWT header does not appear in stdou
 clean
 
 echo "N) resume --card in non-git directory degrades gracefully to 'Not captured in this session'"
+# Git for Windows reconstructs native lookup paths; shim PATH cannot establish
+# the Git-absent precondition reliably. Only this synthetic case is unavailable.
+case "$(uname -s 2>/dev/null):${RUNNER_OS:-}" in
+  MINGW*|MSYS*|CYGWIN*|*:Windows_NT|*:Windows)
+    echo '  SKIP [no-git simulation unavailable on Git for Windows; Git Bash reconstructs system PATH]' ;;
+  *)
 newsb
 clean_stage 00-idea
 printf '# C-003 — nongit\nstatus: todo\ndeps: none\n## Scope\nlocal task\n## Allowed files\nlocal/\n## Verify\n- [ ] true\n## Evidence\n(empty)\n' > "$SB/cards/C-003.md"
@@ -279,6 +285,8 @@ case "$out_nongit" in
 esac
 rm -rf "$fakebin"
 clean
+    ;;
+esac
 
 echo
 echo "RESULT: $pass passed, $fail failed"
