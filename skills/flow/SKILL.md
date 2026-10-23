@@ -76,7 +76,7 @@ below-floor, or nonworking interpreters refuse progression; a nonempty
 `FLOW_HARNESS_DISABLE` also refuses product operations. Help and `doctor` remain available
 for diagnosis. The graph executor owns ordering; the mechanical runner remains the gate
 verdict authority. This contract is not shipped until implementation, migration/rollback,
-review and CI acceptance are complete; see [the v1 migration guide](../../docs/migration-v1.md).
+review and CI acceptance are complete; see the [v1 migration guide](https://github.com/manhquydev/flow-skill/blob/master/docs/migration-v1.md).
 
 `<skill-dir>` is the install home (`~/.claude/skills/flow`, `~/.codex/skills/flow`,
 `~/.agents/skills/flow`, Antigravity `~/.gemini/antigravity-cli/skills/flow` (CLI) /

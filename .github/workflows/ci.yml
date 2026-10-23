@@ -96,20 +96,20 @@ jobs:
           out="$(run_no_python next 2>&1)" || rc=$?
           test "$rc" -ne 0 || { echo "FAIL: next succeeded without Python"; exit 1; }
           printf '%s' "$out" | grep -qi 'python' || { echo "FAIL: refusal omits Python prerequisite"; exit 1; }
-          test ! -e "$SB/flow/00-idea.md" || { echo "FAIL: refusal created planning state"; exit 1; }
+          test ! -e "$SB/flow" && test ! -e "$SB/.flow" || { echo "FAIL: no-Python refusal wrote project state"; exit 1; }
           help="$(run_no_python --help 2>&1)"
           printf '%s' "$help" | grep -q 'usage: bash flow.sh' || { echo "FAIL: help unavailable without Python"; exit 1; }
-          py="$(command -v python3 || command -v python)"
-          test -n "$py" || { echo "FAIL: CI diagnostic interpreter missing"; exit 1; }
-          TOOLBIN="$(dirname "$py")"
-          diag="$( (cd "$SB" && env -i PATH="$TOOLBIN:$SHIM" HOME="$SB" bash "$R" doctor 2>&1) || true )"
-          printf '%s' "$diag" | grep -qi 'python' || { echo "FAIL: doctor does not diagnose Python"; exit 1; }
+          diag_rc=0
+          diag="$(run_no_python doctor 2>&1)" || diag_rc=$?
+          test "$diag_rc" -le 1 || { echo "FAIL: doctor did not reach its diagnostic path (rc=$diag_rc)"; exit 1; }
+          printf '%s' "$diag" | grep -qi 'python' || { echo "FAIL: doctor does not diagnose the missing Python prerequisite"; exit 1; }
+          SB_DISABLED="$(mktemp -d)"
           rc=0
-          disabled="$( (cd "$SB" && FLOW_HARNESS_DISABLE=1 bash "$R" next 2>&1) )" || rc=$?
+          disabled="$( (cd "$SB_DISABLED" && FLOW_HARNESS_DISABLE=1 bash "$R" next 2>&1) )" || rc=$?
           test "$rc" -ne 0 || { echo "FAIL: FLOW_HARNESS_DISABLE allowed product operation"; exit 1; }
           printf '%s' "$disabled" | grep -q 'migration-v1.md' || { echo "FAIL: disable refusal omits migration guide"; exit 1; }
-          test ! -e "$SB/flow/00-idea.md" || { echo "FAIL: disabled refusal created planning state"; exit 1; }
-          echo "OK: no-python and explicit-disable refuse before writes; help and doctor remain diagnostic"
+          test ! -e "$SB_DISABLED/flow" && test ! -e "$SB_DISABLED/.flow" || { echo "FAIL: FLOW_HARNESS_DISABLE refusal wrote project or durable state"; exit 1; }
+          echo "OK: no-python and explicit-disable refuse before project/durable writes; help and doctor remain diagnostic"
         shell: bash
 
   test:

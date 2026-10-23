@@ -70,4 +70,4 @@ and `FLOW_HARNESS_DISABLE` a product-operation refusal. This is a breaking chang
 unreleased until implementation, independent review, exact-head CI, migration/rollback evidence,
 and installed-package acceptance pass. The skill product and npm installer remain separate
 version axes; an npm installer pin restores bytes only through the installer CLI and does not
-by itself reverse a migrated database. See [`migration-v1.md`](../../../docs/migration-v1.md).
+by itself reverse a migrated database. See the [v1 migration guide](https://github.com/manhquydev/flow-skill/blob/master/docs/migration-v1.md).
