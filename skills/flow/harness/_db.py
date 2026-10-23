@@ -328,13 +328,14 @@ def _fsync_directory_windows(dir_path):
 
 
     GENERIC_READ = 0x80000000
+    GENERIC_WRITE = 0x40000000
     FILE_SHARE_READ_WRITE = 0x3
     OPEN_EXISTING = 3
     FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 
     handle = CreateFileW(
         dir_path,
-        GENERIC_READ,
+        GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ_WRITE,
         None,
         OPEN_EXISTING,
@@ -391,7 +392,7 @@ def _backup_before_migration(con):
             con.backup(backup)
         # SQLite has closed its destination; sync the actual bytes before making
         # the snapshot visible. Directory sync below makes publication durable.
-        with open(staging, "rb") as snapshot:
+        with open(staging, "rb+") as snapshot:
             os.fsync(snapshot.fileno())
         # A hard link publishes without replacement, even if another process has
         # already created the destination. Both files live on the same filesystem.

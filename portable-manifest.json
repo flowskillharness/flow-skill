@@ -10,7 +10,7 @@
   "runner_windows": "skills/flow/runner/flow.cmd (PowerShell/cmd/Codex launcher -> Git Bash; avoids WSL path failures)",
   "runtime": {
     "bash": "required (gate runner; Git Bash on Windows)",
-    "python": "optional (durable harness layer; stdlib sqlite3, no pip install)",
+    "python": "required (durable harness layer + graph ordering; stdlib sqlite3, no pip install)",
     "cargo": "not required (FLOW_HARNESS_BACKEND=rust seam is frozen + compat-guarded; refuses flow-lineage DBs)"
   },
   "install": {

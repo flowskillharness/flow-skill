@@ -338,7 +338,7 @@ try:
     assert windll_loader_calls == [("kernel32", True)]
     assert mock_k32.CloseHandle.argtypes == [wintypes.HANDLE]
     assert mock_k32.CloseHandle.restype == wintypes.BOOL
-    assert calls == [("create_file", "/mock/dir", 0x80000000, 0x3, 3, 0x02000000)]
+    assert calls == [("create_file", "/mock/dir", 0xC0000000, 0x3, 3, 0x02000000)]
     assert fsync_calls == [88] and close_calls == [88]
     assert closed == []  # CloseHandle handled by os.close(fd)
     print("windows fsync flags, use_last_error loader and lifecycle verified")
