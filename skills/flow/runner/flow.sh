@@ -743,8 +743,8 @@ _graph_record() { # card-id (empty for card-less spikes), node, typed flags
   local card="$1" node="$2"; shift 2
   [ -n "$card" ] || return 0
   _graph_on || return 0
-  local eid; eid="$(_graph_exec_id --no-create 2>/dev/null)" || return 0
-  [ -n "$eid" ] || return 0
+  local eid; eid="$(_graph_exec_id)" || return 1
+  [ -n "$eid" ] || return 1
   local next_rc=0
   _graph_next_node "$eid" --ns "card:$card" >/dev/null || next_rc=$?
   [ "$next_rc" -eq 0 ] || [ "$next_rc" -eq 3 ] || return 1
@@ -2308,6 +2308,13 @@ cmd_skip() {
   _graph_planning_check || { echo "FAIL: graph unavailable; skip not recorded." >&2; return 1; }
   mkdir -p "$FLOW_DIR"
   stage_skipped "$stage" || printf '%s\n' "$stage" >> "$SKIPPED_FILE"
+  # Only ladder stages hand scaffolding to the graph consumer; the brownfield
+  # 00-inspect transition records the skip and leaves 'next' as the user's move.
+  local known_ladder=0; for s in $STAGES; do [ "$s" = "$stage" ] && known_ladder=1; done
+  if [ "$known_ladder" -eq 0 ]; then
+    echo "PASS: stage $stage debt-skipped (logged). planning_complete now tolerates it."
+    return 0
+  fi
   echo "Stage $stage debt-skipped (logged). planning_complete now tolerates it."
   # The graph, not the skipped stage's integer index, chooses any scaffold.
   cmd_next
