@@ -97,15 +97,31 @@ for b in python3 python; do
   [ -n "$f" ] || continue
   [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
 done
-if PATH="$fakebin" "$BASH" -c 'hash -r; command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1'; then
-  echo "  SKIP [git-absent workspace] (nested Bash still resolves git/git.exe)"
-else
-  out="$(PATH="$fakebin" "$BASH" "$RUN" workspace add x 2>&1)"; rc=$?
-  ck 1 "$rc" "add exit 1 without git"
-  has "$out" "git not found" "add explains git missing"
-  out="$(PATH="$fakebin" "$BASH" "$RUN" workspace list 2>&1)"; rc=$?
-  ck 0 "$rc" "list exit 0 without git (read verb degrades)"
-fi
+# Probe and dispatch in one fresh shell, so Windows startup cannot change PATH
+# between detection and the actual runner invocation. Require an absence marker.
+no_git_workspace() {
+  PATH="$fakebin" "$BASH" -c '
+    runner="$1"; shift
+    hash -r
+    if command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1; then
+      printf "FLOW_TEST_GIT_PRESENT\n"; exit 77
+    fi
+    printf "FLOW_TEST_GIT_ABSENT\n"
+    . "$runner"
+  ' _ "$RUN" workspace "$@" 2>&1
+}
+out="$(no_git_workspace add x)"; rc=$?
+case "$out" in
+  FLOW_TEST_GIT_PRESENT*)
+    echo "  SKIP [git-absent workspace] (nested Bash still resolves git/git.exe)" ;;
+  FLOW_TEST_GIT_ABSENT*)
+    ck 1 "$rc" "add exit 1 without git"
+    has "$out" "git not found" "add explains git missing"
+    out="$(no_git_workspace list)"; rc=$?
+    has "$out" "FLOW_TEST_GIT_ABSENT" "list runs with verified Git absence"
+    ck 0 "$rc" "list exit 0 without git (read verb degrades)" ;;
+  *) ck 0 1 "missing-Git probe must actually start before testing workspace" ;;
+esac
 rm -rf "$fakebin"; clean
 
 echo "G) remove: dirty tree refused VERBATIM; --force removes + tombstones (C-003)"

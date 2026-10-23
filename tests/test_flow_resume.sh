@@ -251,14 +251,26 @@ for b in python3 python; do
   [ -n "$f" ] || continue
   [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
 done
-if PATH="$fakebin" "$BASH" -c 'hash -r; command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1'; then
-  echo "  SKIP [git-absent resume] (nested Bash still resolves git/git.exe)"
-else
-  out_nongit="$(PATH="$fakebin" "$BASH" "$RUN" resume --card C-003 2>&1)"; rc_nongit=$?
-  ck 0 "$rc_nongit" "resume --card without working git exits 0"
-  has "$out_nongit" "flow resume card: C-003" "card header rendered"
-  has "$out_nongit" "Not captured in this session" "git status reports Not captured in this session"
-fi
+# Probe and dispatch in the SAME fresh shell. Re-launching Bash after the probe
+# can reconstruct a different Windows PATH; a failed launcher is not Git absence.
+out_nongit="$(PATH="$fakebin" "$BASH" -c '
+  runner="$1"; shift
+  hash -r
+  if command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1; then
+    printf "FLOW_TEST_GIT_PRESENT\n"; exit 77
+  fi
+  printf "FLOW_TEST_GIT_ABSENT\n"
+  . "$runner"
+' _ "$RUN" resume --card C-003 2>&1)"; rc_nongit=$?
+case "$out_nongit" in
+  FLOW_TEST_GIT_PRESENT*)
+    echo "  SKIP [git-absent resume] (nested Bash still resolves git/git.exe)" ;;
+  FLOW_TEST_GIT_ABSENT*)
+    ck 0 "$rc_nongit" "resume --card without working git exits 0"
+    has "$out_nongit" "flow resume card: C-003" "card header rendered"
+    has "$out_nongit" "Not captured in this session" "git status reports Not captured in this session" ;;
+  *) ck 0 1 "missing-Git probe must actually start before testing resume" ;;
+esac
 rm -rf "$fakebin"
 clean
 
