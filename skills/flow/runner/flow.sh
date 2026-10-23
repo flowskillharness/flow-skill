@@ -713,6 +713,10 @@ _graph_next_node() { # eid -> node, or rc3 ONLY for a non-paused exhausted walk
 }
 
 _graph_planning_check() { # read existing session only; diagnostics must not mint one
+  # Read-only diagnostics (status/resume/ready) degrade without the durable layer:
+  # a missing harness file means the graph advisory is unavailable, not a fatal
+  # startup condition. Writing operations still refuse via their own paths.
+  harness_available || return 0
   local eid node rc=0
   eid="$(harness_capture_checked graph session --kind planning --no-create 2>/dev/null)" || rc=$?
   [ "$rc" -eq 3 ] && return 0
@@ -724,6 +728,9 @@ _graph_planning_check() { # read existing session only; diagnostics must not min
 }
 
 _graph_auto_check() { # read existing shipping session; no implicit execution mint
+  # Same read-only degradation as _graph_planning_check: diagnostics proceed
+  # without the durable layer; writers refuse elsewhere.
+  harness_available || return 0
   local eid rc=0
   eid="$(_graph_exec_id --no-create 2>/dev/null)" || rc=$?
   [ "$rc" -eq 3 ] && return 0
