@@ -27,21 +27,36 @@ newsb() {
 }
 clean() { rm -rf "$SB" 2>/dev/null; unset FLOW_PROJECT_ROOT FLOW_EVAL_MANIFEST FLOW_EVAL_UNBOUNDED FLOW_EVAL_FORCE_DARWIN FLOW_EVAL_REPLAY_DIR FLOW_EVAL_ISOLATED_CWD; }
 
-# PATH dir with /usr/bin+/bin minus timeout/gtimeout (H / darwin-sim cases).
-make_notimeoutbin() {
-  local dest d f b
+# Build an isolated Unix tool PATH, hiding only the tool under simulation.
+# Python may live in the Windows hosted toolcache, outside /usr/bin and /bin.
+# Forward to its original executable rather than relocating it (DLLs/stdlib must
+# remain beside the interpreter); never append its directory and leak hidden tools.
+make_fixturebin() {
+  local dest d f b p resolved
   dest="$(mktemp -d)"
   for d in /usr/bin /bin; do
     [ -d "$d" ] || continue
     for f in "$d"/*; do
       [ -e "$f" ] || continue
       b="$(basename "$f")"
-      case "$b" in timeout|timeout.exe|gtimeout|gtimeout.exe) continue ;; esac
+      case "$1:$b" in
+        noclaude:claude|noclaude:claude.exe|noclaude:claude.cmd) continue ;;
+        notimeout:timeout|notimeout:timeout.exe|notimeout:gtimeout|notimeout:gtimeout.exe) continue ;;
+      esac
       [ -e "$dest/$b" ] || ln -s "$f" "$dest/$b" 2>/dev/null || cp "$f" "$dest/$b" 2>/dev/null
     done
   done
+  for p in python3 python; do
+    resolved="$(command -v "$p" 2>/dev/null)" || continue
+    [ -f "$resolved" ] || continue
+    # Remove a Unix-tool symlink before writing, so its target stays untouched.
+    rm -f "$dest/$p"
+    printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$resolved" > "$dest/$p"
+    chmod +x "$dest/$p"
+  done
   printf '%s' "$dest"
 }
+make_notimeoutbin() { make_fixturebin notimeout; }
 
 MOCKBIN="$(mktemp -d)"
 # $1 = the fixture-call verdict behavior ONLY - --version and the FLOWPONG probe are handled
@@ -95,16 +110,7 @@ rm -rf "$CB"
 # ---------- B) skip path: claude absent from PATH ----------
 echo "B) claude absent -> skip, exit 0, zero calls"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -660,16 +666,7 @@ clean
 
 echo "R-B) --stage routing skips cleanly with zero calls when claude is absent"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -756,16 +753,7 @@ clean
 # ---------- CV) converge modality: repo-state gap-detection judge (mocked engine) ----------
 echo "CV-0) --stage converge skips cleanly with zero calls when claude is absent"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -882,16 +870,7 @@ newsb
 rdir="$SB/replay"
 write_synth_replay "$rdir" "TESTREPLAYNONCE" "$grsha" "fcda" "PASS" 1
 export FLOW_EVAL_REPLAY_DIR="$rdir"
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent-replay] (cannot hide claude on this platform)"
 else
