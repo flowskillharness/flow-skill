@@ -399,11 +399,11 @@ exit 0
 SH
 chmod +x "$shim/python3" "$shim/python"
 fallback_log="$OUT/preflight-python-fallback.out"
+fallback_rc=0
 PATH="$shim:$fixture/bin:/usr/bin:/bin" NPM_CALLS="$OUT/npm-fallback.calls" \
-  bash "$fixture/scripts/release-preflight.sh" >"$fallback_log" 2>&1
-ck 0 $? "supported python fallback preflight exits successfully"
-grep -Fq "OK: python 3.7 at $shim/python" "$fallback_log" && ck 0 0 "below-floor python3 skipped in favor of python 3.7" || ck 0 1 "below-floor python3 skipped in favor of python 3.7"
-grep -q 'PREFLIGHT PASS' "$fallback_log" && ck 0 0 "supported fallback reaches preflight pass" || ck 0 1 "supported fallback reaches preflight pass"
+  bash "$fixture/scripts/release-preflight.sh" >"$fallback_log" 2>&1 || fallback_rc=$?
+grep -Fq "OK: python 3.7 at $shim/python" "$fallback_log" && ck 0 0 "below-floor python3 skipped in favor of python 3.7" || { ck 0 1 "below-floor python3 skipped in favor of python 3.7"; cat "$fallback_log"; }
+grep -q 'PREFLIGHT PASS' "$fallback_log" && ck 0 0 "supported fallback reaches preflight pass" || { ck 0 1 "supported fallback reaches preflight pass"; cat "$fallback_log"; }
 echo "I) current operator docs prohibit obsolete authorization paths"
 for doc in docs/system-architecture.md npm-wrapper/RELEASE_CHECKLIST.md; do
   source="$HERE/../$doc"
