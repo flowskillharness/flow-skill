@@ -392,7 +392,7 @@ try:
     _db._fsync_directory_windows = lambda d: win_sync_dirs.append(d)
     _db.os.name = "nt"
     _db.migrate(c)
-    assert len(win_sync_dirs) == 1 and win_sync_dirs[0] == sys.argv[2]
+    assert len(win_sync_dirs) == 1 and os.path.samefile(win_sync_dirs[0], sys.argv[2])
     print("backup before migration routes to windows fsync when nt")
 
     # 6. Windows fsync failure blocks DDL and version bump
