@@ -1,17 +1,18 @@
 # Migration guide — flow v1 (graph executor)
 
-**Status: not released.** This guide describes the breaking changes a future `v1.0.0`
-will carry, written while the implementation is fresh. The current release still runs
-with the graph executor **off by default** and still degrades gracefully without python.
+**Status: not released.** This guide describes the breaking behavior required before a future
+Flow v1 stable release. Until implementation and acceptance evidence are merged, the
+current published version remains the applicable contract; this file alone does not change it.
 
 ## What changes at v1
 
 ### 1. Python becomes required
 
-The durable layer and the graph executor are python (stdlib only — no third-party
-packages, ever). Today a project without python still runs the mechanical engine; at v1
-the executor becomes the ordering authority, so a missing interpreter is a hard stop
-rather than a silent downgrade.
+The durable layer and graph executor use Python's standard library only; no third-party
+packages are required. At v1, Python is required for Flow product operations because the
+graph executor owns ordering. Missing or too-old Python is an actionable refusal, never a
+silent fallback to the legacy stage ladder. `flow doctor` remains available to diagnose
+the missing prerequisite.
 
 - **Measured floor: Python 3.7.** Not asserted — measured: the harness uses
   `subprocess.run(capture_output=…, text=…)` (3.7+) and nothing newer (no walrus, no
@@ -22,10 +23,10 @@ rather than a silent downgrade.
 
 ### 2. `FLOW_HARNESS_DISABLE` stops being an escape hatch
 
-It currently disables all durable writes while the engine keeps running. Once the
-executor owns ordering, "run but do not record" is a split-brain state, so the variable
-becomes a startup error naming this guide. If you set it in a shell profile or CI, unset
-it before upgrading.
+`FLOW_HARNESS_DISABLE` is not supported for product operations in v1. The runner refuses
+startup and points to this guide rather than running without durable ordering/checkpoints.
+Remove the variable from shell profiles and CI before upgrading. Help and doctor remain
+available so the operator can identify the problem.
 
 ### 3. Paused executions and topology upgrades
 
@@ -45,9 +46,19 @@ hash. Finish or fork in-flight runs before upgrading if you care about their jou
 
 ## Rollback
 
-Pin the previous major (`npm i -g @manhquy/flow-skill@0.x`, or check out the prior skill
-tag). The schema is additive — a downgraded install ignores the graph tables, and no
-existing row is modified — so a rollback loses executor journals but nothing else.
+The installer package version and bundled skill version are separate. To reinstall a prior
+published pair, invoke the installer with the exact npm package pin that shipped that skill,
+for example `npx @manhquy/flow-skill@0.7.16 --yes`; `npm install` alone does not copy or
+replace installed skill files. Restart/reload the agent and run `flow doctor` to verify the
+installed bundle. Confirm the release record for the exact package-to-skill mapping before
+choosing a pin; do not infer that npm `0.x` is a skill version.
+
+The v1 release must publish and test its database backup and restore procedure before
+promotion. Schema additions alone do not prove rollback safety. Back up SQLite consistently
+(including WAL state), retain the backup, stop active Flow workers before restoring, and
+verify the restored database and project files. Do not overwrite newer user data blindly.
+If a tested migration-specific restore is required, follow the exact released guide rather
+than assuming reinstalling old installer bytes reverses database changes.
 
 ## Durable-state locations
 

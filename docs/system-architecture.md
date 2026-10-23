@@ -22,7 +22,7 @@ Harness qualification SOP ("Support Thật" mandate): [`harness-qualification-pr
 |  stage/card lifecycle, gate checks ([FILL]/box/evidence),     |
 |  debt ledger, design check, harness passthrough               |
 +---------------------------------------------------------------+
-              | reads/writes (best-effort, graceful degrade)
+              | durable reads/writes and graph ordering (required for v1 product progression)
               v
 +---------------------------------------------------------------+
 |  Durable layer  -  harness/flow_harness.py  (Python+sqlite3, flow-owned) |
@@ -67,7 +67,10 @@ On-disk artifacts (in the project being built):
 0. Entering a project mid-cycle with no prior context this session? `/flow resume` first —
    read-only session-story brief (last session, in-flight + dwell, gate state, one `NEXT ->`
    line) composed entirely from existing state (events log, `.inflight` registry, gate scan).
-1. `/flow next` walks stages 00->05; each gate = mechanical (flow.sh) + semantic (gate-rules.md).
+1. `/flow next` checks the current gate and asks the graph executor for the next topology
+   node under the v1 contract; `flow.sh` remains the gate-verdict authority and refuses to
+   advance when graph state is unavailable, paused, inconsistent, or untrusted. The
+   current skip rules and 05-contract refusal remain unchanged.
    Unresolved product decisions live as `- [ ]` bullets under `## Open decisions` (Scope/PRD/
    Contract) — the same box scanner blocks `next`; `/flow clarify` lists them and
    `references/clarify.md` is the bounded write-back ritual (advisory, never a `next` gate).

@@ -41,7 +41,7 @@ required.
 
 ## Install
 
-**Requirement:** [Node.js](https://nodejs.org/) **≥ 22.14**.
+**Requirements:** [Node.js](https://nodejs.org/) **≥ 22.14** for installation; Flow v1 product operations require Python **≥ 3.7** (stdlib only). This is a pre-release target until the v1 implementation passes its acceptance gates.
 
 ```bash
 npx @manhquy/flow-skill@latest

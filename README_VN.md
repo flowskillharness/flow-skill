@@ -40,7 +40,7 @@ stage tiến. Kill tại một cổng là kết quả hợp lệ, được tôn 
 
 ## Cài đặt
 
-**Yêu cầu:** [Node.js](https://nodejs.org/) **≥ 22.14**.
+**Yêu cầu:** [Node.js](https://nodejs.org/) **≥ 22.14** để cài đặt; thao tác sản phẩm Flow v1 yêu cầu Python **≥ 3.7** (chỉ thư viện chuẩn). Đây là yêu cầu mục tiêu trước phát hành cho đến khi triển khai v1 vượt qua các cổng nghiệm thu.
 
 ```bash
 npx @manhquy/flow-skill@latest

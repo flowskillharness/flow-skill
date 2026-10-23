@@ -366,8 +366,44 @@ for version in 2.0.0 2.1.0-next.1; do
   grep -Eq 'WARN:.*(rc|latest|promot|tag push)|matches dist-tag rc' "$log" && ck 0 1 "$channel has no legacy channel warning" || ck 0 0 "$channel has no legacy channel warning"
   grep -Fq 'PREFLIGHT PASS — next: bash scripts/release.sh --dry-run; then bash scripts/release.sh --yes only after owner-authorized gates' "$log" && ck 0 0 "$channel canonical next step" || ck 0 1 "$channel canonical next step"
   ck 'view @manhquy/flow-skill dist-tags --json' "$(cat "$OUT/npm-$channel.calls")" "$channel only reads registry through fake npm"
+
 done
 
+echo "H2) preflight skips below-floor python3 and accepts supported python fallback"
+shim="$OUT/python-fallback-bin"
+mkdir -p "$shim"
+cat > "$shim/python3" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "-c" ]; then
+  case "$2" in
+    *sys.version_info*) exit 1 ;;
+  esac
+fi
+exit 1
+SH
+cat > "$shim/python" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "-c" ]; then
+  case "$2" in
+    *'sys.version_info[:2] >= (3,7)'*) exit 0 ;;
+    *'print("%d.%d"%sys.version_info[:2])'*) echo 3.7; exit 0 ;;
+  esac
+elif [ "${1:-}" = "--version" ]; then
+  echo 'Python 3.7.0'; exit 0
+elif [ "${1:-}" = "-m" ] && [ "${2:-}" = "py_compile" ]; then
+  exit 0
+elif [[ "$*" == *"flow_harness.py graph lint"* ]]; then
+  exit 0
+fi
+exit 0
+SH
+chmod +x "$shim/python3" "$shim/python"
+fallback_log="$OUT/preflight-python-fallback.out"
+PATH="$shim:$fixture/bin:/usr/bin:/bin" NPM_CALLS="$OUT/npm-fallback.calls" \
+  bash "$fixture/scripts/release-preflight.sh" >"$fallback_log" 2>&1
+ck 0 $? "supported python fallback preflight exits successfully"
+grep -Fq "OK: python 3.7 at $shim/python" "$fallback_log" && ck 0 0 "below-floor python3 skipped in favor of python 3.7" || ck 0 1 "below-floor python3 skipped in favor of python 3.7"
+grep -q 'PREFLIGHT PASS' "$fallback_log" && ck 0 0 "supported fallback reaches preflight pass" || ck 0 1 "supported fallback reaches preflight pass"
 echo "I) current operator docs prohibit obsolete authorization paths"
 for doc in docs/system-architecture.md npm-wrapper/RELEASE_CHECKLIST.md; do
   source="$HERE/../$doc"

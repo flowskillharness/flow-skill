@@ -75,40 +75,41 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         shell: pwsh
 
-  # The engine must still gate a project when the durable layer is unavailable. This job
-  # is the executable proof of that promise (README/system-architecture both claim it),
-  # and it is what a future python-mandatory release would have to consciously replace.
-  no-python-degradation:
+  # V1 replaces the former no-python degradation promise with fail-closed refusal.
+  # Product operations cannot advance when Python is unavailable or explicitly disabled;
+  # help/doctor remain usable so the operator can diagnose and fix the environment.
+  python-required-refusal:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: flow.sh gates a project with NO python on PATH
+      - name: Product operation refuses without Python; help and doctor diagnose
         run: |
           set -e
           R="$GITHUB_WORKSPACE/skills/flow/runner/flow.sh"
           SB="$(mktemp -d)"; SHIM="$(mktemp -d)"
-          # Real absence, not just the opt-out flag: FLOW_HARNESS_DISABLE returns before
-          # _python() is ever called, so it exercises none of the interpreter probes.
           for t in bash sh env cat cp mv rm mkdir sed awk grep date tr head tail sort ls dirname basename find printf uname wc cut comm mktemp touch git timeout; do
             p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$SHIM/$t" || true
           done
-          run() { ( cd "$SB" && env -i PATH="$SHIM" HOME="$SB" bash "$R" "$@" ); }
-          run next
-          test -f "$SB/flow/00-idea.md" || { echo "FAIL: stage 00 not scaffolded"; exit 1; }
-          # Advance past 00 so the durable hook WOULD fire — otherwise the db assertion is
-          # vacuous (stage 00 never mints one even with the harness fully available).
-          sed -i 's/- \[ \]/- [x]/g' "$SB/flow/00-idea.md"
-          # No heredoc: inside a YAML block scalar the terminator would carry the block
-          # indent and never match column 0, so the shell would swallow the rest of the job.
-          python3 -c 'import pathlib,re,sys; f=pathlib.Path(sys.argv[1],"flow","00-idea.md"); f.write_text(re.sub(r"\[FILL.*?\]","filled",f.read_text(),flags=re.S))' "$SB"
-          run next
-          test -f "$SB/flow/01-research.md" || { echo "FAIL: gate did not advance without python"; exit 1; }
-          test ! -f "$SB/.flow/harness.db" || { echo "FAIL: db minted with no interpreter"; exit 1; }
-          run status >/dev/null
-          out="$(run doctor 2>&1 || true)"
-          printf '%s' "$out" | grep -qi "python" || { echo "FAIL: doctor hides the missing interpreter"; exit 1; }
-          echo "OK: engine scaffolds+gates+diagnoses with no python on PATH"
+          run_no_python() { ( cd "$SB" && env -i PATH="$SHIM" HOME="$SB" bash "$R" "$@" ); }
+          rc=0
+          out="$(run_no_python next 2>&1)" || rc=$?
+          test "$rc" -ne 0 || { echo "FAIL: next succeeded without Python"; exit 1; }
+          printf '%s' "$out" | grep -qi 'python' || { echo "FAIL: refusal omits Python prerequisite"; exit 1; }
+          test ! -e "$SB/flow/00-idea.md" || { echo "FAIL: refusal created planning state"; exit 1; }
+          help="$(run_no_python --help 2>&1)"
+          printf '%s' "$help" | grep -q 'usage: bash flow.sh' || { echo "FAIL: help unavailable without Python"; exit 1; }
+          py="$(command -v python3 || command -v python)"
+          test -n "$py" || { echo "FAIL: CI diagnostic interpreter missing"; exit 1; }
+          TOOLBIN="$(dirname "$py")"
+          diag="$( (cd "$SB" && env -i PATH="$TOOLBIN:$SHIM" HOME="$SB" bash "$R" doctor 2>&1) || true )"
+          printf '%s' "$diag" | grep -qi 'python' || { echo "FAIL: doctor does not diagnose Python"; exit 1; }
+          rc=0
+          disabled="$( (cd "$SB" && FLOW_HARNESS_DISABLE=1 bash "$R" next 2>&1) )" || rc=$?
+          test "$rc" -ne 0 || { echo "FAIL: FLOW_HARNESS_DISABLE allowed product operation"; exit 1; }
+          printf '%s' "$disabled" | grep -q 'migration-v1.md' || { echo "FAIL: disable refusal omits migration guide"; exit 1; }
+          test ! -e "$SB/flow/00-idea.md" || { echo "FAIL: disabled refusal created planning state"; exit 1; }
+          echo "OK: no-python and explicit-disable refuse before writes; help and doctor remain diagnostic"
         shell: bash
 
   test:
