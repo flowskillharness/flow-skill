@@ -1582,7 +1582,7 @@ cmd_next() {
       scan_gate "$FLOW_DIR/$s.md"
       FLOW_LOG_STAGE_TO="$s"
       FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/$s.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/$s.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
-      echo "Fix the above, then run '/flow next' again."
+      echo "Fix the above, then run '/flow next' again. (Kill at a gate is also valid.)"
       return 1
     fi
   done
