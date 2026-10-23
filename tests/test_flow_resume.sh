@@ -245,15 +245,21 @@ for d in /usr/bin /bin; do
     [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
   done
 done
-# Python is required by v1 and may live outside the core bin dirs on Windows.
+# Native Windows Python needs its install directory/DLL context. Do not copy or
+# symlink an external interpreter into fakebin; retain its original PATH entry.
+no_git_path="$fakebin"
 for b in python3 python; do
   f="$(command -v "$b" 2>/dev/null || true)"
   [ -n "$f" ] || continue
-  [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
+  d="$(dirname "$f")"
+  case "$d" in
+    /bin|/usr/bin) : ;; # already supplied by the core utility shim
+    *) no_git_path="$no_git_path:$d" ;;
+  esac
 done
 # Probe and dispatch in the SAME fresh shell. Re-launching Bash after the probe
 # can reconstruct a different Windows PATH; a failed launcher is not Git absence.
-out_nongit="$(PATH="$fakebin" "$BASH" -c '
+out_nongit="$(PATH="$no_git_path" "$BASH" -c '
   runner="$1"; shift
   hash -r
   if command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1; then
