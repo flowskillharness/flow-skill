@@ -400,7 +400,7 @@ SH
 chmod +x "$shim/python3" "$shim/python"
 fallback_log="$OUT/preflight-python-fallback.out"
 fallback_rc=0
-PATH="$shim:$fixture/bin:/usr/bin:/bin" NPM_CALLS="$OUT/npm-fallback.calls" \
+PATH="$shim:$fixture/bin:$PATH" NPM_CALLS="$OUT/npm-fallback.calls" \
   bash "$fixture/scripts/release-preflight.sh" >"$fallback_log" 2>&1 || fallback_rc=$?
 grep -Fq "OK: python 3.7 at $shim/python" "$fallback_log" && ck 0 0 "below-floor python3 skipped in favor of python 3.7" || { ck 0 1 "below-floor python3 skipped in favor of python 3.7"; cat "$fallback_log"; }
 grep -q 'PREFLIGHT PASS' "$fallback_log" && ck 0 0 "supported fallback reaches preflight pass" || { ck 0 1 "supported fallback reaches preflight pass"; cat "$fallback_log"; }
