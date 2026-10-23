@@ -70,7 +70,7 @@ printf '# C-002 — next\nstatus: todo\ndeps: C-1\n## Scope\nb\n## Allowed files
 has "$(bash "$RUN" ready)" "BUILDABLE C-002" "short dep id C-1 resolves to done C-001"
 out="$(bash "$RUN" status)"
 has "$out" "NEXT -> start next card: '/flow card start C-NNN'" "remaining todo card still recommends card start"
-FLOW_HARNESS_DISABLE=1 bash "$RUN" card start C-002 >/dev/null; ck 0 $? "start remaining card"
+bash "$RUN" card start C-002 >/dev/null; ck 0 $? "start remaining card"
 out="$(bash "$RUN" status)"
 has "$out" "NEXT -> continue C-002 (in flight" "in-progress card still recommends continuation"
 has "$out" "NEXT_VERB=card-start" "in-progress card keeps advisory card-start"
@@ -90,7 +90,7 @@ read -r next_prefix next_verb next_args <<< "$next_command"
 ck /flow "$next_prefix" "displayed action is a Flow command"
 ck retro "$next_verb" "displayed action uses supported retro verb"
 ck "" "$next_args" "displayed action needs no missing arguments"
-action_out="$(FLOW_HARNESS_DISABLE=1 bash "$RUN" "$next_verb" 2>&1)"; rc=$?
+action_out="$(bash "$RUN" "$next_verb" 2>&1)"; rc=$?
 ck 0 "$rc" "executing displayed terminal action succeeds"
 has "$action_out" "answer these 3" "terminal action supplies useful retrospective questions"
 has "$action_out" "append ONE honest line to RETRO.md" "terminal action explains the operator's next step"
@@ -199,11 +199,16 @@ rm -f "$IT/src/manifest-hashes.json"
 out="$(bash "$RUNX" doctor 2>&1)"; rc=$?
 has "$out" "bundled tree integrity: dev checkout (install receipt not present) - skipped" "receipt absent -> skip line"
 ck 0 $rc "receipt absent -> doctor exit 0"
-# (e) hash generation deterministic: sync.mjs run twice => byte-identical manifest
-cp "$HERE/../portable-manifest.json" "$IT/pm.before"
-node "$HERE/../npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1
-node "$HERE/../npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1
-if cmp -s "$IT/pm.before" "$HERE/../portable-manifest.json"; then
+# (e) real sync twice in an isolated layout => byte-identical regenerated manifest.
+# Never regenerate the working checkout's tracked manifest from a test.
+mkdir -p "$IT/sync/npm-wrapper/scripts" "$IT/sync/skills"
+cp "$HERE/../npm-wrapper/scripts/sync.mjs" "$IT/sync/npm-wrapper/scripts/sync.mjs"
+cp "$HERE/../portable-manifest.json" "$IT/sync/portable-manifest.json"
+cp -R "$HERE/../skills/flow" "$IT/sync/skills/flow"
+node "$IT/sync/npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1; ck 0 $? "isolated first sync succeeds"
+cp "$IT/sync/portable-manifest.json" "$IT/pm.before"
+node "$IT/sync/npm-wrapper/scripts/sync.mjs" >/dev/null 2>&1; ck 0 $? "isolated second sync succeeds"
+if cmp -s "$IT/pm.before" "$IT/sync/portable-manifest.json"; then
   echo "  ok   [hash regeneration deterministic (byte-stable manifest)]"; pass=$((pass+1))
 else
   echo "  FAIL [hash regeneration not byte-stable]"; fail=$((fail+1))

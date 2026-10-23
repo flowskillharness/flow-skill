@@ -25,7 +25,8 @@ _portable_timeout() { # $1 = seconds, rest = command
 newsb() {
   SB="$(mktemp -d)"
   mkdir -p "$SB/flow" "$SB/cards"
-  export FLOW_PROJECT_ROOT="$SB" FLOW_HARNESS_DISABLE=1 FLOW_LOG_DISABLE=1
+  export FLOW_PROJECT_ROOT="$SB" FLOW_LOG_DISABLE=1
+  unset FLOW_HARNESS_DISABLE
 }
 
 clean() { rm -rf "$SB" 2>/dev/null; unset FLOW_PROJECT_ROOT FLOW_SESSION_ID; }

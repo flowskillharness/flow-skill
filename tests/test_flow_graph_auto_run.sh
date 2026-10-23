@@ -2,7 +2,7 @@
 # Shipping consumer (Phase 4): card-DAG compile against the REAL card format, deps parity
 # with /flow ready, overlap serialization, dep-cycle rejection, the recording contract on
 # the verbs auto-run already calls, executor-computed merge proof, worktree event ingest,
-# and flag-off byte-parity. Requires python + git.
+# and mandatory default recording. Requires python + git.
 # Run: bash tests/test_flow_graph_auto_run.sh
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -124,28 +124,47 @@ EOF
 )"
 ck "1" "$U" "worktree telemetry ingested under its lifecycle key before the tree was removed"
 
-echo "F) doctor is execution-aware; flag off is byte-identical"
+echo "E2) required checkpoint failure cannot report successful card/workspace boundaries"
+card C-010 todo none "src/failure.ts"
+FAILED_CHECK="$(FLOW_GRAPH_FAILPOINT=before-commit bash "$RUN" check C-010 2>&1)"; rc=$?
+ck 1 "$rc" "real card-review checkpoint failure propagates"
+no "$FAILED_CHECK" 'PASS: C-010' "failed card-review emits no card PASS"
+FAILED_ADD="$(FLOW_GRAPH_FAILPOINT=before-commit bash "$RUN" workspace add card/C-010 --card C-010 2>&1)"; rc=$?
+ck 1 "$rc" "real workspace dispatch checkpoint failure propagates"
+no "$FAILED_ADD" 'PASS: created worktree' "failed dispatch emits no workspace PASS"
+FAILED_REMOVE="$(FLOW_GRAPH_FAILPOINT=before-commit bash "$RUN" workspace remove card/C-010 --force 2>&1)"; rc=$?
+ck 1 "$rc" "real workspace teardown checkpoint failure propagates"
+no "$FAILED_REMOVE" 'PASS: removed worktree' "failed teardown checkpoint emits no workspace PASS"
+has "$FAILED_REMOVE" 'worktree removed but required graph checkpoint failed' "partial teardown is reported honestly"
+
+echo "F) doctor is execution-aware; default recording refuses paused execution"
 FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph record --execution "$EID" --ns card:C-004 \
   --node card-review --interrupt --security-class --prompt halt >/dev/null 2>&1
 DOC="$(bash "$RUN" workspace doctor 2>&1)"
 has "$DOC" "OPEN interrupt" "doctor warns about the worktree backing a paused execution"
 unset FLOW_GRAPH_EXECUTOR
 D_OFF="$(bash "$RUN" workspace doctor 2>&1)"
-no "$D_OFF" "OPEN interrupt" "flag off: doctor output unchanged"
+has "$D_OFF" "OPEN interrupt" "default doctor still reports the paused execution"
+for verb in status resume ready; do
+  PAUSED_VIEW="$(bash "$RUN" "$verb" --json 2>&1)"; paused_rc=$?
+  ck 1 "$paused_rc" "$verb cannot advertise readiness while shipping execution is paused"
+done
 B4="$("$PY" - "$SB/.flow/harness.db" "$EID" <<'EOF'
 import sqlite3,sys
 c=sqlite3.connect(sys.argv[1])
 print(c.execute("SELECT COUNT(*) FROM graph_checkpoint WHERE execution_id=?",(sys.argv[2],)).fetchone()[0])
 EOF
 )"
-bash "$RUN" check C-002 >/dev/null 2>&1
+PAUSED_CHECK="$(bash "$RUN" check C-002 2>&1)"; paused_rc=$?
+ck 1 "$paused_rc" "default check refuses a paused graph execution"
+no "$PAUSED_CHECK" "PASS: C-002" "paused checkpoint cannot claim a successful card boundary"
 A4="$("$PY" - "$SB/.flow/harness.db" "$EID" <<'EOF'
 import sqlite3,sys
 c=sqlite3.connect(sys.argv[1])
 print(c.execute("SELECT COUNT(*) FROM graph_checkpoint WHERE execution_id=?",(sys.argv[2],)).fetchone()[0])
 EOF
 )"
-ck "$B4" "$A4" "flag off: check records NOTHING into the journal"
+ck "$B4" "$A4" "paused check records NOTHING into the journal"
 
 cd /; rm -rf "$SB"
 echo

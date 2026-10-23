@@ -146,8 +146,10 @@ ck "" "$es" "usage --summary silent on no data"
 rm -rf "$SE"
 rc="$(bash "$RUN" recall 2>&1)"
 has "$rc" "USAGE (mechanical log)" "recall surfaces the usage block"
-rd="$(FLOW_HARNESS_DISABLE=1 bash "$RUN" recall 2>&1)"
-no  "$rd" "USAGE (mechanical log)" "recall omits usage block when harness disabled"
+rd="$(FLOW_HARNESS_DISABLE=1 bash "$RUN" recall 2>&1)"; rd_rc=$?
+ck 1 "$rd_rc" "recall refuses startup when required harness disabled"
+has "$rd" "Unset it; see docs/migration-v1.md" "disabled readback reports recovery guidance"
+no "$rd" "USAGE (mechanical log)" "refused recall does not claim usage readback"
 gr="$("$PY" - "$SB/.flow/events.jsonl" <<'PY'
 import json,sys
 print(next((o.get("gate_fail_reason") or "" for o in (json.loads(l) for l in open(sys.argv[1]) if l.strip()) if o.get("gate_pass") is False), ""))
@@ -562,9 +564,9 @@ PY="$(command -v python3 || command -v python)"
 SB22A="$HERE/.p1_22a_$$"; rm -rf "$SB22A"; mkdir -p "$SB22A/cards" "$SB22A/home"
 export FLOW_PROJECT_ROOT="$SB22A"; export HOME="$SB22A/home"; export USERPROFILE="$SB22A/home"
 printf '# C-001 — scaffold\nstatus: todo\ndeps: none\n## Scope\none thing\n## Allowed files\ninfra/\n## Verify (run these before done)\n- [x] curl 200\n## Done-evidence (world-state proof)\nurl\n## Evidence (paste actual proof when done)\n$ curl https://x/healthz -> {"ok":true}\n' > "$SB22A/cards/C-001.md"
-FLOW_HARNESS_DISABLE=1 bash "$RUN" card start C-001 >/dev/null 2>&1
+bash "$RUN" card start C-001 >/dev/null 2>&1
 sleep 1
-FLOW_HARNESS_DISABLE=1 bash "$RUN" card done C-001 >/dev/null 2>&1
+bash "$RUN" card done C-001 >/dev/null 2>&1
 gstart="$(grep '"args":"start C-001"' "$HOME/.claude/flow/usage.jsonl" 2>/dev/null)"
 has "$gstart" '"card":"C-001"' "22a: compact global 'card start' row carries card=C-001"
 has "$gstart" '"args":"start C-001"' "22a: compact global 'card start' row carries bounded args"
@@ -575,7 +577,7 @@ rm -rf "$SB22A"
 
 # 22b: non-card commands still emit the constant "card":"","args":"" key shape (never omitted).
 SB22B="$HERE/.p1_22b_$$"; rm -rf "$SB22B"; mkdir -p "$SB22B/home"
-FLOW_PROJECT_ROOT="$SB22B" HOME="$SB22B/home" USERPROFILE="$SB22B/home" FLOW_HARNESS_DISABLE=1 bash "$RUN" status >/dev/null 2>&1
+FLOW_PROJECT_ROOT="$SB22B" HOME="$SB22B/home" USERPROFILE="$SB22B/home" bash "$RUN" status >/dev/null 2>&1
 gstatus="$(cat "$SB22B/home/.claude/flow/usage.jsonl" 2>/dev/null)"
 has "$gstatus" '"card":"","args":""' "22b: non-card command emits empty card/args (constant key shape)"
 rm -rf "$SB22B"
