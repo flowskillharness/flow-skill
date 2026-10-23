@@ -79,9 +79,8 @@ clean
 
 echo "F) git absent -> add/remove exit 1, read verbs exit 0 (graceful degrade)"
 newsb
-# Symlink farm of the core bin dirs MINUS git, so flow.sh's coreutils run but 'command -v git' fails.
-# Bounded to /usr/bin + /bin (fast + present on all 3 OSes); git lives there on Linux/macOS so it is
-# explicitly excluded, and lives elsewhere on Git Bash so it is absent regardless.
+# Core utility shim PATH minus Git. Probe in a fresh Bash (not this shell):
+# Git Bash startup/executable lookup can expose git.exe despite a parent PATH.
 fakebin="$(mktemp -d)"
 for d in /usr/bin /bin; do
   [ -d "$d" ] || continue
@@ -92,13 +91,19 @@ for d in /usr/bin /bin; do
     [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
   done
 done
-if PATH="$fakebin" command -v git >/dev/null 2>&1; then
-  echo "  skip [git-absent] (platform still resolves git; cannot hide it here)"
+# Python is required by v1 and may live outside the core bin dirs on Windows.
+for b in python3 python; do
+  f="$(command -v "$b" 2>/dev/null || true)"
+  [ -n "$f" ] || continue
+  [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
+done
+if PATH="$fakebin" "$BASH" -c 'hash -r; command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1'; then
+  echo "  SKIP [git-absent workspace] (nested Bash still resolves git/git.exe)"
 else
-  out="$(PATH="$fakebin" bash "$RUN" workspace add x 2>&1)"; rc=$?
+  out="$(PATH="$fakebin" "$BASH" "$RUN" workspace add x 2>&1)"; rc=$?
   ck 1 "$rc" "add exit 1 without git"
   has "$out" "git not found" "add explains git missing"
-  out="$(PATH="$fakebin" bash "$RUN" workspace list 2>&1)"; rc=$?
+  out="$(PATH="$fakebin" "$BASH" "$RUN" workspace list 2>&1)"; rc=$?
   ck 0 "$rc" "list exit 0 without git (read verb degrades)"
 fi
 rm -rf "$fakebin"; clean

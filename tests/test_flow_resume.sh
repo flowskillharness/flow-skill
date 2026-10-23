@@ -233,11 +233,33 @@ echo "N) resume --card in non-git directory degrades gracefully to 'Not captured
 newsb
 clean_stage 00-idea
 printf '# C-003 — nongit\nstatus: todo\ndeps: none\n## Scope\nlocal task\n## Allowed files\nlocal/\n## Verify\n- [ ] true\n## Evidence\n(empty)\n' > "$SB/cards/C-003.md"
-# Force git check to fail by masking PATH or git inside subshell
-out_nongit="$(PATH="/bin:/usr/bin" bash -c 'git() { return 1; }; export -f git; bash "'"$RUN"'" resume --card C-003' 2>&1)"; rc_nongit=$?
-ck 0 "$rc_nongit" "resume --card without working git exits 0"
-has "$out_nongit" "flow resume card: C-003" "card header rendered"
-has "$out_nongit" "Not captured in this session" "git status reports Not captured in this session"
+# Keep real utilities/interpreters but exclude Git. Probe in a fresh Bash, just
+# like the runner: Git Bash may reconstruct PATH or resolve git.exe on startup.
+fakebin="$(mktemp -d)"
+for d in /usr/bin /bin; do
+  [ -d "$d" ] || continue
+  for f in "$d"/*; do
+    [ -e "$f" ] || continue
+    b="$(basename "$f")"
+    case "$b" in git|git.exe) continue ;; esac
+    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
+  done
+done
+# Python is required by v1 and may live outside the core bin dirs on Windows.
+for b in python3 python; do
+  f="$(command -v "$b" 2>/dev/null || true)"
+  [ -n "$f" ] || continue
+  [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
+done
+if PATH="$fakebin" "$BASH" -c 'hash -r; command -v git >/dev/null 2>&1 || command -v git.exe >/dev/null 2>&1'; then
+  echo "  SKIP [git-absent resume] (nested Bash still resolves git/git.exe)"
+else
+  out_nongit="$(PATH="$fakebin" "$BASH" "$RUN" resume --card C-003 2>&1)"; rc_nongit=$?
+  ck 0 "$rc_nongit" "resume --card without working git exits 0"
+  has "$out_nongit" "flow resume card: C-003" "card header rendered"
+  has "$out_nongit" "Not captured in this session" "git status reports Not captured in this session"
+fi
+rm -rf "$fakebin"
 clean
 
 echo
