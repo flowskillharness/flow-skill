@@ -18,6 +18,9 @@ has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pas
 no() { if printf '%s' "$1" | grep -q "$2"; then echo "  FAIL [$3] unexpected /$2/"; fail=$((fail+1)); else echo "  ok   [$3]"; pass=$((pass+1)); fi; }
 
 SB="$(mktemp -d)"; cd "$SB" || exit 1
+# All runner and direct harness calls must share this sandbox, even when the
+# invoking host has already selected a different Flow project.
+export FLOW_PROJECT_ROOT="$SB"
 git init -q .
 mkdir -p flow cards
 for s in 00-idea 01-research 02-scope 03-prd 04-adr 05-contract; do printf '# %s\nok\n' "$s" > "flow/$s.md"; done
@@ -35,7 +38,9 @@ OUT="$(FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph cards)"
 ck 0 $? "graph cards exits 0"
 DM="$("$PY" -c "import json,sys;print(' '.join(json.loads(sys.argv[1])['deps_met']))" "$OUT")"
 RDY="$("$PY" -c "import json,sys;print(' '.join(json.loads(sys.argv[1])['ready']))" "$OUT")"
-LEG="$(bash "$RUN" ready 2>/dev/null | grep -oE 'BUILDABLE +C-[0-9]+' | grep -oE 'C-[0-9]+' | sort -u | tr '\n' ' ')"
+READY_OUT="$(bash "$RUN" ready 2>&1)"; ready_rc=$?
+ck 0 "$ready_rc" "runner ready succeeds on the same sandbox as graph cards"
+LEG="$(printf '%s\n' "$READY_OUT" | grep -oE 'BUILDABLE +C-[0-9]+' | grep -oE 'C-[0-9]+' | sort -u | tr '\n' ' ')"
 LEG="$(printf '%s' "$LEG" | sed 's/ $//')"
 ck "C-002 C-004" "$DM" "deps-met set matches legacy BUILDABLE (deps-only semantics)"
 ck "$LEG" "$DM" "deps parity with /flow ready output on the same fixtures"
@@ -70,7 +75,8 @@ git -c user.email=t@t -c user.name=t commit -qm base --allow-empty
 OUT_ADD="$(bash "$RUN" workspace add card/C-002 --card C-002 2>&1)"
 has "$OUT_ADD" "PASS: created worktree" "workspace add succeeded"
 no  "$OUT_ADD" "FLOW_PROJECT_ROOT" "enter block does NOT export FLOW_PROJECT_ROOT (root hijack)"
-EID="$(FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph session)"
+EID="$(FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph session --no-create)"; session_rc=$?
+ck 0 "$session_rc" "dispatch already created the auto_run execution (no test-side mint)"
 [ -n "$EID" ]; ck 0 $? "an auto_run execution was created on first record"
 bash "$RUN" check C-002 >/dev/null 2>&1
 ST="$(FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph status --execution "$EID")"
@@ -140,6 +146,7 @@ has "$FAILED_REMOVE" 'worktree removed but required graph checkpoint failed' "pa
 echo "F) doctor is execution-aware; default recording refuses paused execution"
 FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph record --execution "$EID" --ns card:C-004 \
   --node card-review --interrupt --security-class --prompt halt >/dev/null 2>&1
+ck 3 "$?" "interrupt checkpoint actually pauses the selected shipping execution"
 DOC="$(bash "$RUN" workspace doctor 2>&1)"
 has "$DOC" "OPEN interrupt" "doctor warns about the worktree backing a paused execution"
 unset FLOW_GRAPH_EXECUTOR

@@ -40,9 +40,31 @@
 - `bash tests/test_flow_graph_planning_parity.sh`: **167 passed, 0 failed** (51.79s).
 - `bash tests/test_flow_graph_auto_run.sh`: **37 passed, 0 failed** (15.50s).
 - `bash tests/test_flow_graph_parallel_cards.sh` & `test_flow_graph_crash_resume.sh`: **35 passed, 0 failed** & **8 passed, 0 failed** (22.28s).
-- 18 test suite caller migrated (harden, supervisor, attestations, auto_attestation_enforcement, auto_done_path, card_lifecycle, card_risk, coherence_kb, constitution, converge, done_evidence, gate_capture, midtier_scanners, open_decisions, parallel_auto, recall, slice_quality): tất cả đều đạt PASS khi chạy tuần tự. Riêng `test_flow_usage_log.sh` có một số test cũ kiểm tra rollup từ dark database thời điểm chưa migrate, không ảnh hưởng tới gate runner.
+- Đính chính evidence cũ: chuỗi caller suites có lỗi output capture; không có căn cứ tuyên bố toàn bộ18 suite PASS. `test_flow_usage_log.sh` từng thất bại thật trong linked checkout: sandbox nằm dưới `tests/` được DB resolver ánh xạ sang main-root tương ứng, còn JSONL vẫn ở worktree. Không được coi các lỗi đó là vô hại hay “dark DB”; parent giữ ownership kiểm chứng tích hợp.
 - Cú pháp runner: `bash -n skills/flow/runner/flow.sh` exit 0 sạch.
 
 ## 5. Tình trạng tiến trình
 - Mọi tiến trình chạy nền đã kết thúc hoàn toàn (pgrep kiểm tra không còn tiến trình nào thuộc về test suite).
 - Sẵn sàng bàn giao cho parent review tích hợp.
+
+## 6. Round 3 — cô lập root của graph auto-run suite
+
+Baseline parent xác nhận: `30b2a57e24a977082b5130dbdac8d6e77936392f` (amended round-3; không phải SHA249dac7 trước amend). Checkout sạch trước khi sửa. Không sửa runner/harness Python/lock semantics trong round này.
+
+### Nguyên nhân có bằng chứng
+
+`test_flow_graph_auto_run.sh` tạo `$SB` rồi `cd` vào đó, nhưng không export `FLOW_PROJECT_ROOT`. Direct harness calls dùng explicit `FLOW_PROJECT_ROOT="$SB"`, còn các lệnh `bash "$RUN" ...` kế thừa root đã export từ host. Theo root resolver của runner, explicit root thắng CWD. Vì vậy hai nửa suite có thể dùng hai project khác nhau: ready không thấy fixture cards, workspace ghi/khóa root khác, checkpoints không nằm trong DB được query, và interrupt đặt ở `$SB` không được status/resume của root khác quan sát. Stale-lock reclaim note là hệ quả khác-root, không phải bằng chứng lock implementation sai.
+
+Trên baseline này, trace `bash -x tests/test_flow_graph_auto_run.sh` với môi trường không có root override cho **37/0** (`artifact://5382`): ready đúng `C-002 C-004`, dispatch mint đúng journal và `_graph_auto_check` thực sự gọi `_graph_next_node`, status/resume/ready đều rc1 khi paused. Helper rc3 của `graph session --no-create` là không có live session; khác với rc3 của `graph next`. Không đổi refusal hay completion semantics, không có bằng chứng cần sửa lane-B fork-id.
+
+### Sửa đúng owning surface
+
+- Export `FLOW_PROJECT_ROOT="$SB"` ngay sau khi tạo sandbox, để mọi runner/direct harness call dùng chung root dù caller đã chọn một project khác.
+- Thay pipeline che rc của `ready` bằng capture output+exit riêng và assert rc0 trước so sánh deps; không đổi expected deps.
+- Test query execution dùng `graph session --no-create` để xác nhận dispatch đã mint, không để test tự mint rồi che lỗi product.
+- Assert interrupt record rc3 thực sự xảy ra trước các assertions paused refusal; không bỏ/đổi expected rc1.
+
+### Evidence cuối round
+
+`env FLOW_PROJECT_ROOT=/tmp/flow-round3-EXY57o bash tests/test_flow_graph_auto_run.sh && bash tests/test_flow_graph_auto_run.sh` hoàn tất, cả inherited-root và normal environment đều **40 passed, 0 failed**,30.87s. Output final do job `bg_5` trả về đầy đủ. Mọi graph/gate/refusal assertions cũ giữ nguyên, thêm3 prerequisite assertions. Đây là test SQLite/Git thật, offline; không paid/live Claude call. Chỉ test và report đổi nên không regenerate manifest/runner.
+
