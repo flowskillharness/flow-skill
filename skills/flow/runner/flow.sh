@@ -4108,7 +4108,7 @@ _ws_print_enter() { # branch wt vendor port
   case "$vendor" in codex) echo "  export CODEX_HOME=\"$wt/.codex\"   # isolate Codex history/config per worktree" ;; esac
   echo "  export PORT=\$(( $baseport + $port ))   # = $(( baseport + port )) (per-worktree; avoids dev-server clash)"
   case "$vendor" in
-    claude)      echo "  # launch in this dir: claude    (or from the main repo: claude --worktree $branch)" ;;
+    claude)      echo "  # launch in this dir: claude" ;;
     codex)       echo "  # launch in this dir: codex \"<task>\"" ;;
     antigravity) echo "  # open this dir as an Antigravity workspace/Project, assign one agent" ;;
     *)           echo "  # launch your agent with this dir as its working directory" ;;

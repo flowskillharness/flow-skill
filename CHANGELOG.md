@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- fix(workspace): stop suggesting Claude --worktree alternative after Flow already creates the worktree (P2, independently reviewed).
 - test(assess): add regression coverage for brownfield assessment gate and debt-skip in flow next.
 
 ## [0.34.9] - 2026-10-22

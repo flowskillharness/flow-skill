@@ -8,8 +8,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
-has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
-no()  { if printf '%s' "$1" | grep -q "$2"; then echo "  FAIL [$3] (unexpected: $2)"; fail=$((fail+1)); else echo "  ok   [$3]"; pass=$((pass+1)); fi; }
+has() { if printf '%s' "$1" | grep -q -- "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
+no()  { if printf '%s' "$1" | grep -q -- "$2"; then echo "  FAIL [$3] (unexpected: $2)"; fail=$((fail+1)); else echo "  ok   [$3]"; pass=$((pass+1)); fi; }
 
 # A real git repo with one commit (worktree add needs a HEAD). FLOW_SESSION_ID makes the lock strong.
 newsb() {
@@ -272,6 +272,18 @@ has "$out_oor" "FLOW_WORKSPACE_BASEPORT=70000 out of range (1..65535)" "out of r
 out_max="$(FLOW_WORKSPACE_BASEPORT=65535 bash "$RUN" workspace port C-001 2>&1)"; rc_max=$?
 ck 0 "$rc_max" "BASEPORT=65535 offset 0 exit 0"
 has "$out_max" "C-001 -> port 65535" "port 65535 assigned"
+clean
+
+echo "L) vendor claude: add and enter omit --worktree alternative (P2)"
+newsb
+out_add="$(bash "$RUN" workspace add feat-claude --vendor claude 2>&1)"; rc_add=$?
+ck 0 "$rc_add" "claude add exit 0"
+has "$out_add" "# launch in this dir: claude" "claude add prints dir launch hint"
+no "$out_add" "--worktree" "claude add omits --worktree alternative"
+out_enter="$(bash "$RUN" workspace enter feat-claude 2>&1)"; rc_enter=$?
+ck 0 "$rc_enter" "claude enter exit 0"
+has "$out_enter" "# launch in this dir: claude" "claude enter prints dir launch hint"
+no "$out_enter" "--worktree" "claude enter omits --worktree alternative"
 clean
 
 echo
