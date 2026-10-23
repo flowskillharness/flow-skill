@@ -712,11 +712,26 @@ _graph_next_node() { # eid -> node, or rc3 ONLY for a non-paused exhausted walk
   printf '%s' "$node"
 }
 
+_graph_db_exists() {
+  # CLI --no-create means no execution row, not no SQLite connection. Resolve
+  # linked-worktree/override ownership without opening or migrating the database.
+  PYTHONDONTWRITEBYTECODE=1 FLOW_PROJECT_ROOT="$ROOT" "$(_python)" - "$SCRIPT_DIR/../harness" <<'PY'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+import _db
+sys.exit(0 if os.path.isfile(_db.default_db_path()) else 3)
+PY
+}
+
 _graph_planning_check() { # read existing session only; diagnostics must not mint one
   # Read-only diagnostics (status/resume/ready) degrade without the durable layer:
   # a missing harness file means the graph advisory is unavailable, not a fatal
   # startup condition. Writing operations still refuse via their own paths.
   harness_available || return 0
+  local db_rc=0
+  _graph_db_exists || db_rc=$?
+  [ "$db_rc" -eq 3 ] && return 0
+  [ "$db_rc" -eq 0 ] || return 1
   local eid node rc=0
   eid="$(harness_capture_checked graph session --kind planning --no-create 2>/dev/null)" || rc=$?
   [ "$rc" -eq 3 ] && return 0
@@ -731,6 +746,10 @@ _graph_auto_check() { # read existing shipping session; no implicit execution mi
   # Same read-only degradation as _graph_planning_check: diagnostics proceed
   # without the durable layer; writers refuse elsewhere.
   harness_available || return 0
+  local db_rc=0
+  _graph_db_exists || db_rc=$?
+  [ "$db_rc" -eq 3 ] && return 0
+  [ "$db_rc" -eq 0 ] || return 1
   local eid rc=0
   eid="$(_graph_exec_id --no-create 2>/dev/null)" || rc=$?
   [ "$rc" -eq 3 ] && return 0
@@ -1577,6 +1596,9 @@ cmd_next() {
       fi
       echo "PASS: stage ${cur:-05-contract} gate clean. Planning is COMPLETE."
       echo "All planning stages passed (or were debt-skipped). Run '/flow card' to create build cards."
+      if prd_declares_fr; then
+        echo "  tip: the PRD declares FR ids - run '/flow consistency' to check FR->card->contract coverage before building."
+      fi
       return 0
     fi
     [ "$rc" -eq 0 ] || return 1
@@ -1609,7 +1631,11 @@ cmd_next() {
       if [ "$idx" -lt 0 ]; then
         seed_law_files
         _ensure_cycle
-        echo "PASS: unlocked stage ${stage%%-*} -> flow/$stage.md"
+        if [ -n "${FLOW_ROOT_ADOPTED:-}" ]; then
+          echo "PASS: unlocked stage ${stage%%-*} -> $FLOW_DIR/$stage.md"
+        else
+          echo "PASS: unlocked stage ${stage%%-*} -> flow/$stage.md"
+        fi
       else
         nidx=0; for s in $STAGES; do [ "$s" = "$stage" ] && break; nidx=$((nidx + 1)); done
         echo "PASS: stage $cur gate clean -> unlocked stage $nidx (flow/$stage.md)"

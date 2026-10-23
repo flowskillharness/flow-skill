@@ -9,6 +9,12 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 HARN="$HERE/../skills/flow/harness/flow_harness.py"
+# Keep drive-local fixtures but give them their own Git root. Otherwise fixtures
+# below a linked checkout resolve their DB into the main checkout, away from JSONL.
+FIXTURE_ROOT="$(mktemp -d "$HERE/.usage-fixtures.XXXXXX")"
+git init -q "$FIXTURE_ROOT" || exit 1
+trap 'rm -rf "$FIXTURE_ROOT"' EXIT
+HERE="$FIXTURE_ROOT"
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
@@ -475,7 +481,7 @@ else echo "  FAIL [19e: legacy COALESCE by command name failed]"; fail=$((fail+1
 
 # 19f: _ensure_cycle logging is unchanged — grep proves no intent-gate was added
 ec_grep=0
-grep -n '_ensure_cycle' "$HERE/../skills/flow/runner/flow.sh" | grep -qiE '(if|&&|\|\|).*(read.only|build|intent|diag)' && ec_grep=1 || ec_grep=0
+grep -n '_ensure_cycle' "$RUN" | grep -qiE '(if|&&|\|\|).*(read.only|build|intent|diag)' && ec_grep=1 || ec_grep=0
 if [ "$ec_grep" -eq 0 ]; then echo "  ok   [19f: _ensure_cycle has no intent-gate (FR2 intact)]"; pass=$((pass+1));
 else echo "  FAIL [19f: _ensure_cycle appears to have an intent-gate added — FR2 violated]"; fail=$((fail+1)); fi
 
@@ -547,7 +553,7 @@ has "$bo" "[2 build cycles]" "21b: --builds-only shows the filtered build-cycle 
 rm -rf "$SB21"
 
 # 21c: display_count is not a dead variable — grep finds a real read use (the print statement)
-dc_grep="$(grep -n 'display_count' "$HERE/../skills/flow/harness/flow_harness.py" || true)"
+dc_grep="$(grep -n 'display_count' "$HARN" || true)"
 # display_count must appear in a print/f-string (wired), not just assignments
 if printf '%s' "$dc_grep" | grep -q 'print\|f".*display_count\|f'"'"'.*display_count'; then
   echo "  ok   [21c: display_count is wired (found in a print expression)]"; pass=$((pass+1))

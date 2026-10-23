@@ -68,3 +68,26 @@ Trên baseline này, trace `bash -x tests/test_flow_graph_auto_run.sh` với mô
 
 `env FLOW_PROJECT_ROOT=/tmp/flow-round3-EXY57o bash tests/test_flow_graph_auto_run.sh && bash tests/test_flow_graph_auto_run.sh` hoàn tất, cả inherited-root và normal environment đều **40 passed, 0 failed**,30.87s. Output final do job `bg_5` trả về đầy đủ. Mọi graph/gate/refusal assertions cũ giữ nguyên, thêm3 prerequisite assertions. Đây là test SQLite/Git thật, offline; không paid/live Claude call. Chỉ test và report đổi nên không regenerate manifest/runner.
 
+
+## 7. Round 6 — bốn regression khi chạy trong linked checkout
+
+Baseline sạch `562ec09f47c000dd62854ef635081f994d61d551`; cùng lease `V1-RUNNER-261023`. Không sửa STOP functions, adapter hay harness Python. Không bỏ assertions hoặc đổi refusal expectations.
+
+1. **Usage95 assertions:** `_log_on_exit` vẫn ghi JSONL ở `$ROOT/.flow/events.jsonl`; harness `_events_path` đọc thư mục sở hữu DB từ resolver. Các fixture cũ nằm dưới `tests/` trong linked checkout nên DB được ánh xạ sang main checkout tương ứng, còn JSONL không dịch chuyển. Đây là lỗi isolation của suite, không phải mất EXIT telemetry. Thêm một nested Git repository tạm làm fixture base (vẫn drive-local cho Windows), giữ nguyên toàn bộ95 assertions, và sửa hai source-content checks dùng `$RUN`/`$HARN` thay vì base fixture. Không sửa telemetry policy; không trỏ hay xóa main-root state của người dùng.
+2. **Consistency nudge:** khôi phục `prd_declares_fr` và dòng `FR->card->contract` tại graph-complete exit của `cmd_next`.
+3. **Monorepo path:** khôi phục nhánh `FLOW_ROOT_ADOPTED` cho stage bootstrap PASS, dùng `$FLOW_DIR/$stage.md` khi root được adopt; greenfield bình thường vẫn giữ path tương đối.
+4. **Host-hook no-side-effect:** startup `status` gọi `graph session --no-create`, nhưng CLI luôn `_db.connect()` trước dispatch nên có thể tạo DB/`.flow` dù không mint execution. Thêm `_graph_db_exists` dùng chính resolver `_db.default_db_path()` chỉ đọc, cấm bytecode writes; chỉ skip session query khi DB thực sự chưa tồn tại (rc3 riêng). DB đã tồn tại vẫn chạy toàn bộ status/pause/topology checks, resolver failure vẫn nonzero. Không dùng `FLOW_LOG_DISABLE` để bỏ checkpoint checks; không đổi guard filesystem của hook test.
+
+### Kết quả quan sát round 6
+
+Chạy tuần tự từ assigned checkout với `env -u FLOW_PROJECT_ROOT bash <suite>`:
+- `test_flow_usage_log.sh`: **95 passed, 0 failed** (trước sửa parent quan sát68/27).
+- `test_flow_consistency.sh`: **71 passed, 0 failed**.
+- `test_flow_monorepo_root.sh`: **155 passed, 0 failed**.
+- `test_flow_host_hooks.sh`: **167 passed, 0 failed**, gồm filesystem byte/entry guard và không có telemetry trên hook path.
+- Chuỗi bốn suite hoàn tất73.30s, job `bg_13` đã settled; SQLite/Git thật và offline fixtures, không paid Claude.
+
+Canonical `node npm-wrapper/scripts/sync.mjs` đã chạy cho runner mới (`53840f50…`), không hand-edit manifest. Full integrated/cross-OS evidence vẫn thuộc parent.
+
+Chuỗi preservation `env -u FLOW_PROJECT_ROOT bash <suite>` hoàn tất152.43s (job `bg_14`): runner **158/0**, rules **99/0**, assess **134/0**, graph_auto_run **40/0**, graph_planning_parity **167/0**. Đặc biệt startup refusal không tạo telemetry, pause/topology refusal và first-record mint đều vẫn xanh. Không có job/service còn pending trong round này.
+
