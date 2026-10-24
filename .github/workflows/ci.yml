@@ -26,7 +26,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            shard: full
+            shard: 1/3
+          - os: ubuntu-latest
+            shard: 2/3
+          - os: ubuntu-latest
+            shard: 3/3
           - os: macos-latest
             shard: full
           - os: windows-latest
@@ -36,10 +40,10 @@ jobs:
           - os: windows-latest
             shard: 3/3
     runs-on: ${{ matrix.os }}
-    # Windows now partitions the current manifest across three isolated runners.
-    # Keep its serial-era 80m headroom until real shard timings are available.
+    # Ubuntu and Windows partition the C-sorted manifest across three isolated runners.
+    # Local Linux shards measured under 9m; retain Ubuntu 15m and Windows' 80m headroom.
     # macOS measured 14m51s suite (TOTAL wall_s=891) plus post-job cleanup, exceeding 15m;
-    # macOS gets 25m headroom. Ubuntu (~8m) stays at 15m.
+    # macOS keeps 25m headroom.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || (matrix.os == 'macos-latest' && 25 || 15) }}
     steps:
       - uses: actions/checkout@v7
