@@ -8,6 +8,7 @@ HDIR="$HERE/../skills/flow/harness"
 H="$HDIR/flow_harness.py"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 . "$HERE/fixture_path_lib.sh"
+unset FLOW_GRAPH_EXECUTOR
 PY="$(command -v python3 || command -v python)"
 if [ -z "$PY" ]; then echo "SKIP: python not found"; exit 0; fi
 pass=0; fail=0
@@ -94,7 +95,7 @@ cd "$SB" 2>/dev/null || cd /
 
 echo "C) executor mode records planning boundaries in the planning lane"
 SB="$(mktemp -d)"; cd "$SB" || exit 1
-export FLOW_GRAPH_EXECUTOR=1
+unset FLOW_GRAPH_EXECUTOR
 bash "$RUN" next >/dev/null 2>&1
 for i in 1 2; do
   fill_stages "$SB"
@@ -173,6 +174,10 @@ for verb in status resume ready assess card check gate mode project-type skip wo
   ck 1 "$rc" "nonempty disable refuses product verb $verb"
   has "$REFUSED" 'FLOW_HARNESS_DISABLE is no longer supported' "$verb refusal occurs before argument parsing or product writes"
 done
+OPT_OUT="$(FLOW_GRAPH_EXECUTOR=0 bash "$RUN" next 2>&1)"; rc=$?
+ck 1 "$rc" "explicit graph opt-out refuses product operations"
+has "$OPT_OUT" 'docs/migration-v1.md' "graph opt-out refusal points to migration guide"
+ck no "$([ -d flow ] && echo yes || echo no)" "graph opt-out cannot scaffold"
 cd /; rm -rf "$SB"
 
 echo "E) required checkpoint, pause and topology failures never scaffold"
@@ -205,6 +210,13 @@ MISMATCH="$(bash "$RUN" next 2>&1)"; rc=$?
 ck 1 "$rc" "real topology hash mismatch refuses progression"
 has "$MISMATCH" 'hash mismatch' "topology refusal retains recovery guidance"
 ck no "$([ -f flow/01-research.md ] && echo yes || echo no)" "mismatch cannot scaffold successor"
+has "$MISMATCH" 'force-retopology' "runner surfaces explicit topology recovery flag"
+RECOVER="$(bash "$RUN" next --force-retopology 2>&1)"; rc=$?
+ck 0 "$rc" "runner forwards explicit force-retopology and advances"
+ck yes "$([ -f flow/01-research.md ] && echo yes || echo no)" "explicit topology recovery scaffolds graph successor"
+PINNED="$(FLOW_PROJECT_ROOT="$SB" "$PY" "$H" graph status --execution "$PEID")"
+REPINNED="$(printf '%s' "$PINNED" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["execution"]["topology_hash"] != "outdated")')"
+ck True "$REPINNED" "runner recovery re-pins the execution topology"
 cd /; rm -rf "$SB"
 
 echo "F) real shipped-topology mapping, not legacy integer successor, determines ordering"

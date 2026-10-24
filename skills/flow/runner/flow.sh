@@ -1549,6 +1549,14 @@ cmd_resume() {
 }
 
 cmd_next() {
+  local force_retopology=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --force-retopology) force_retopology=1 ;;
+      *) echo "FAIL: unknown next argument '$1'; use '/flow next [--force-retopology]'." >&2; return 2 ;;
+    esac
+    shift
+  done
   lock_acquire next || return 1
   # v0.28: warning-only stage semantic receipt guidance (never hard-blocks next)
   if _att_git_ok 2>/dev/null; then
@@ -1591,7 +1599,12 @@ cmd_next() {
   done
   eid="$(_graph_planning_id)" || { echo "FAIL: required planning graph session failed; no progression." >&2; return 1; }
   while :; do
-    rc=0; node="$(_graph_next_node "$eid")" || rc=$?
+    rc=0
+    if [ "$force_retopology" -eq 1 ]; then
+      node="$(_graph_next_node "$eid" --force-retopology)" || rc=$?
+    else
+      node="$(_graph_next_node "$eid")" || rc=$?
+    fi
     if [ "$rc" -eq 3 ]; then
       if ! planning_complete; then
         echo "FAIL: graph has no successor but planning gates are incomplete; reconcile the execution before progressing." >&2
@@ -7244,7 +7257,7 @@ case "$cmd" in -h|--help|help|doctor) ;; *) trap '_log_on_exit' EXIT ;; esac
 case "$cmd" in
   status|"")      cmd_status "$@" ;;
   resume)         cmd_resume "$@" ;;
-  next)           cmd_next ;;
+  next)           cmd_next "$@" ;;
   assess)         cmd_assess ;;
   card)           cmd_card "$@" ;;
   check)          cmd_check "${1:-}" ;;
