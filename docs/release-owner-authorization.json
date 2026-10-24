@@ -2,7 +2,13 @@
   "schema_version": 1,
   "authorized_by": "owner",
   "decision": "Owner-locked v1 outcome contract authorizes the v1.0.0 breaking axes: Python 3 required for product operations, graph executor owns /flow next ordering, FLOW_HARNESS_DISABLE startup refusal; existing gates, card/skip behavior, stdlib constraints, Eval STOP bodies and ADR identity are preserved.",
-  "decision_record": "plans/261023-1233-omp-v1-readiness/v1-outcome-contract.md",
+  "decision_record": "docs/release-owner-decision-v1.md",
+  "authorized_versions": {
+    "npm": "0.8.0",
+    "skill": "1.0.0"
+  },
+  "compatibility": "breaking",
+  "security_rights_expanded": false,
   "acceptance_evidence": [
     "https://github.com/manhquydev/flow-skill/pull/87",
     "https://github.com/manhquydev/flow-skill/pull/88",

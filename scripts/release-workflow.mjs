@@ -95,8 +95,17 @@ export function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 
     let auth = null;
     try { auth = JSON.parse(readFileSync(join(repoRoot, 'docs/release-owner-authorization.json'), 'utf8')); } catch { auth = null; }
     const evidence = auth && Array.isArray(auth.acceptance_evidence) ? auth.acceptance_evidence : [];
-    if (!auth || auth.schema_version !== 1 || auth.authorized_by !== 'owner' || typeof auth.decision !== 'string' || !auth.decision.trim() || evidence.length === 0 || !evidence.every(entry => typeof entry === 'string' && entry.trim())) {
-      throw new Error('breaking or security-rights-expanding release requires a committed owner decision record (docs/release-owner-authorization.json)');
+    let recordOk = false;
+    try { readFileSync(join(repoRoot, auth && auth.decision_record), 'utf8'); recordOk = typeof (auth && auth.decision_record) === 'string'; } catch { recordOk = false; }
+    const axes = auth && auth.authorized_versions;
+    const axesOk = !!axes && typeof axes === 'object' && !Array.isArray(axes)
+      && axes.npm === version
+      && (intent.skill_version === null || axes.skill === intent.skill_version);
+    if (!auth || auth.schema_version !== 1 || auth.authorized_by !== 'owner' || typeof auth.decision !== 'string' || !auth.decision.trim()
+      || evidence.length === 0 || !evidence.every(entry => typeof entry === 'string' && entry.trim())
+      || auth.compatibility !== intent.compatibility || auth.security_rights_expanded !== intent.security_rights_expanded
+      || !recordOk || !axesOk) {
+      throw new Error('breaking or security-rights-expanding release requires a committed owner decision record bound to this exact release (docs/release-owner-authorization.json)');
     }
   }
   const list = gh(`repos/${REPO}/actions/workflows/${CI_WORKFLOW_ID}/runs?head_sha=${sha}&branch=master&event=push&per_page=100`);

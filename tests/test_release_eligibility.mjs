@@ -235,7 +235,7 @@ test('breaking release intent requires a committed owner decision record and pro
   const repository = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
   const run = { id: 88, workflow_id: RELEASE_CONSTANTS.ciWorkflowId, path: RELEASE_CONSTANTS.ciWorkflowPath, head_sha: sha, head_branch: 'master', event: 'push', run_attempt: 2, status: 'completed', conclusion: 'success' };
   const breakingIntent = JSON.stringify({ schema_version: 1, intent: true, npm_version: version, skill_version: null, channel: 'latest', compatibility: 'breaking', security_rights_expanded: false });
-  const validAuth = JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'v1 breaking axes authorized', acceptance_evidence: ['https://github.com/manhquydev/flow-skill/pull/87'] });
+  const validAuth = JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'v1 breaking axes authorized', decision_record: 'docs/release-owner-decision-v1.md', authorized_versions: { npm: version, skill: null }, compatibility: 'breaking', security_rights_expanded: false, acceptance_evidence: ['https://github.com/manhquydev/flow-skill/pull/87'] });
   const makeIo = authBody => ({
     gh: path => {
       if (path.endsWith('/git/ref/heads/master')) return { object: { sha } };
@@ -251,6 +251,7 @@ test('breaking release intent requires a committed owner decision record and pro
       const normalized = String(path).replaceAll('\\', '/');
       if (normalized.endsWith('docs/release-intent.json')) return breakingIntent;
       if (normalized.endsWith('docs/release-owner-authorization.json')) { if (authBody === null) throw new Error('ENOENT'); return authBody; }
+      if (normalized.endsWith('docs/release-owner-decision-v1.md')) return '# Accepted v1 outcome contract';
       assert.fail(`unexpected read ${path}`);
     },
     npmView: (_spec, fields) => fields[0] === 'dist-tags' ? { present: true, value: { latest: '0.7.11' } } : { present: false, error: 'E404' },
@@ -260,6 +261,23 @@ test('breaking release intent requires a committed owner decision record and pro
   for (const bad of [JSON.stringify({ schema_version: 1, authorized_by: 'controller', decision: 'self', acceptance_evidence: ['x'] }), JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: '', acceptance_evidence: ['x'] }), JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'ok', acceptance_evidence: [] }), JSON.stringify({ schema_version: 2, authorized_by: 'owner', decision: 'ok', acceptance_evidence: ['x'] }), 'not-json']) {
     assert.throws(() => checkRequest(request, makeIo(bad)), /owner decision record/);
   }
+  const scoped = base => JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'ok', decision_record: 'docs/release-owner-decision-v1.md', authorized_versions: { npm: version, skill: null }, compatibility: 'breaking', security_rights_expanded: false, acceptance_evidence: ['x'], ...base });
+  const wrong = (authPatch, intentPatch) => {
+    const io = makeIo(scoped(authPatch || {}));
+    if (intentPatch) {
+      const intent = JSON.parse(breakingIntent); Object.assign(intent, intentPatch);
+      if (intentPatch.skill_version) io.skillVersion = () => intentPatch.skill_version;
+      const original = io.readFileSync;
+      io.readFileSync = path => String(path).replaceAll('\\', '/').endsWith('docs/release-intent.json') ? JSON.stringify(intent) : original(path);
+    }
+    assert.throws(() => checkRequest(request, io), /owner decision record/);
+  };
+  wrong({ authorized_versions: { npm: '0.9.0', skill: null } });
+  wrong({ authorized_versions: { npm: version, skill: null } }, { skill_version: '9.9.9' });
+  wrong({}, { security_rights_expanded: true });
+  wrong({ compatibility: 'backwards-compatible' });
+  wrong({ decision_record: 'docs/missing-record.md' });
+  assert.equal(checkRequest(request, makeIo(scoped({ authorized_versions: { npm: version, skill: '0.25.0' } }))).decision, 'publish');
   assert.equal(checkRequest(request, makeIo(validAuth)).decision, 'publish');
 });
 
