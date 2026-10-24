@@ -448,6 +448,7 @@ _python() {
 _runtime_required() {
   if [ -n "${FLOW_HARNESS_DISABLE:-}" ]; then
     echo "FAIL: FLOW_HARNESS_DISABLE is no longer supported. Unset it; see docs/migration-v1.md." >&2
+    echo "Install if needed: apt install python3 / brew install python / python.org (Windows). Run 'flow doctor'." >&2
     return 1
   fi
   if [ -n "${FLOW_GRAPH_EXECUTOR:-}" ] && [ "$FLOW_GRAPH_EXECUTOR" != 1 ]; then
@@ -456,7 +457,9 @@ _runtime_required() {
   fi
   local py; py="$(_python)"
   if [ -z "$py" ]; then
-    echo "FAIL: Flow requires a working Python >=3.7 with stdlib sqlite3. Install Python, put python3 or python on PATH, and replace old/Store-stub launchers; run '/flow doctor'." >&2
+    echo "FAIL: Flow requires working Python >=3.7 with stdlib sqlite3 (python3 or python on PATH)." >&2
+    echo "Install: apt install python3 / brew install python / python.org (Windows)." >&2
+    echo "See docs/migration-v1.md and run 'flow doctor'; replace old or Store-stub launchers." >&2
     return 1
   fi
   if [ ! -f "$HARNESS_PY" ]; then
