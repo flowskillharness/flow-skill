@@ -100,7 +100,7 @@ export function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 
     const axes = auth && auth.authorized_versions;
     const axesOk = !!axes && typeof axes === 'object' && !Array.isArray(axes)
       && axes.npm === version
-      && (intent.skill_version === null || axes.skill === intent.skill_version);
+      && axes.skill === intent.skill_version;
     if (!auth || auth.schema_version !== 1 || auth.authorized_by !== 'owner' || typeof auth.decision !== 'string' || !auth.decision.trim()
       || evidence.length === 0 || !evidence.every(entry => typeof entry === 'string' && entry.trim())
       || auth.compatibility !== intent.compatibility || auth.security_rights_expanded !== intent.security_rights_expanded

@@ -277,7 +277,7 @@ test('breaking release intent requires a committed owner decision record and pro
   wrong({}, { security_rights_expanded: true });
   wrong({ compatibility: 'backwards-compatible' });
   wrong({ decision_record: 'docs/missing-record.md' });
-  assert.equal(checkRequest(request, makeIo(scoped({ authorized_versions: { npm: version, skill: '0.25.0' } }))).decision, 'publish');
+  wrong({ authorized_versions: { npm: version, skill: '0.25.0' } });
   assert.equal(checkRequest(request, makeIo(validAuth)).decision, 'publish');
 });
 
