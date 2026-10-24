@@ -1054,4 +1054,4 @@ A pre-tag adversarial review fixed two MED issues: cross-platform ephemeral-path
 normalization (Windows `C:\` vs `/c/`, and macOS trailing-slash `$TMPDIR` — the latter
 caught by CI on macOS, fixed in `_norm_path`) and `_json_str` now strips all control
 characters. CI green on macOS · Ubuntu · Windows.
-(plan in `flow-telemetry-v011/`, research in `plans/260620-flow-telemetry-assessment/`).
+(plan in `plans/reports/historical-runs/v011-flow-telemetry/`, research in `plans/260620-flow-telemetry-assessment/`).
