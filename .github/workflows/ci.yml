@@ -43,7 +43,9 @@ jobs:
     # Ubuntu and Windows partition the C-sorted manifest across three isolated runners.
     # Local Linux shards measured under 9m; retain Ubuntu 15m and Windows' 80m headroom.
     # macOS measured 14m51s suite (TOTAL wall_s=891) plus post-job cleanup, exceeding 15m;
-    # macOS keeps 25m headroom.
+    # raised to 30m: run 40069912151 killed macos-full at 25m18s mid-suite with steady
+    # progress while the identical tree passed master 40063546827 in 22m44s (variance).
+    # macOS keeps 30m headroom against that variance.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || (matrix.os == 'macos-latest' && 30 || 15) }}
     steps:
       - uses: actions/checkout@v7

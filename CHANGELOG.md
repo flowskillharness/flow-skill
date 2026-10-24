@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ## [1.0.0] - 2026-10-24 — breaking release, owner-approved v1 contract
-- **BREAKING `skills/flow`:** Python 3 is required at startup; `flow` refuses with complete install guidance when absent. Python floor, gates, skip/card behavior, stdlib constraint, and ADR identity preserved; runner Eval STOP bodies untouched.
+- **BREAKING `skills/flow`:** Python 3 is required for product operations; `flow` refuses them with complete install guidance when Python is absent (help/`doctor` remain usable). Python floor, gates, skip/card behavior, stdlib constraint, and ADR identity preserved; runner Eval STOP bodies untouched.
 - **BREAKING ordering:** the graph executor owns `/flow next` ordering and recovery pinning; a Windows-eval root cause was fixed and the runner hash re-pinned (`4dcd127`).
 - **BREAKING flag:** `FLOW_HARNESS_DISABLE` refuses product operations instead of silently degrading.
 - fix(workspace): stop suggesting the Claude `--worktree` alternative after Flow already creates a worktree (PR #84).
