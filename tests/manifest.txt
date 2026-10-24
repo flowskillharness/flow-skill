@@ -3,6 +3,7 @@
 # do not encode the list in run_all.sh.
 test_flow_runner.sh
 test_flow_doctor.sh
+test_flow_v1_runtime_required.sh
 test_flow_harness.sh
 test_flow_scenarios.sh
 test_flow_project_types.sh

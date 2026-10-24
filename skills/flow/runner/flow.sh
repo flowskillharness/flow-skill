@@ -448,6 +448,7 @@ _python() {
 _runtime_required() {
   if [ -n "${FLOW_HARNESS_DISABLE:-}" ]; then
     echo "FAIL: FLOW_HARNESS_DISABLE is no longer supported. Unset it; see docs/migration-v1.md." >&2
+    echo "Install if needed: apt install python3 / brew install python / python.org (Windows). Run 'flow doctor'." >&2
     return 1
   fi
   if [ -n "${FLOW_GRAPH_EXECUTOR:-}" ] && [ "$FLOW_GRAPH_EXECUTOR" != 1 ]; then
@@ -456,7 +457,9 @@ _runtime_required() {
   fi
   local py; py="$(_python)"
   if [ -z "$py" ]; then
-    echo "FAIL: Flow requires a working Python >=3.7 with stdlib sqlite3. Install Python, put python3 or python on PATH, and replace old/Store-stub launchers; run '/flow doctor'." >&2
+    echo "FAIL: Flow requires working Python >=3.7 with stdlib sqlite3 (python3 or python on PATH)." >&2
+    echo "Install: apt install python3 / brew install python / python.org (Windows)." >&2
+    echo "See docs/migration-v1.md and run 'flow doctor'; replace old or Store-stub launchers." >&2
     return 1
   fi
   if [ ! -f "$HARNESS_PY" ]; then
@@ -1546,6 +1549,14 @@ cmd_resume() {
 }
 
 cmd_next() {
+  local force_retopology=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --force-retopology) force_retopology=1 ;;
+      *) echo "FAIL: unknown next argument '$1'; use '/flow next [--force-retopology]'." >&2; return 2 ;;
+    esac
+    shift
+  done
   lock_acquire next || return 1
   # v0.28: warning-only stage semantic receipt guidance (never hard-blocks next)
   if _att_git_ok 2>/dev/null; then
@@ -1588,7 +1599,12 @@ cmd_next() {
   done
   eid="$(_graph_planning_id)" || { echo "FAIL: required planning graph session failed; no progression." >&2; return 1; }
   while :; do
-    rc=0; node="$(_graph_next_node "$eid")" || rc=$?
+    rc=0
+    if [ "$force_retopology" -eq 1 ]; then
+      node="$(_graph_next_node "$eid" --force-retopology)" || rc=$?
+    else
+      node="$(_graph_next_node "$eid")" || rc=$?
+    fi
     if [ "$rc" -eq 3 ]; then
       if ! planning_complete; then
         echo "FAIL: graph has no successor but planning gates are incomplete; reconcile the execution before progressing." >&2
@@ -7241,7 +7257,7 @@ case "$cmd" in -h|--help|help|doctor) ;; *) trap '_log_on_exit' EXIT ;; esac
 case "$cmd" in
   status|"")      cmd_status "$@" ;;
   resume)         cmd_resume "$@" ;;
-  next)           cmd_next ;;
+  next)           cmd_next "$@" ;;
   assess)         cmd_assess ;;
   card)           cmd_card "$@" ;;
   check)          cmd_check "${1:-}" ;;
