@@ -248,8 +248,9 @@ test('breaking release intent requires a committed owner decision record and pro
     git: args => { assert.deepEqual(args, ['rev-parse', 'HEAD']); return sha; },
     pkg: () => ({ name: RELEASE_CONSTANTS.package, version }), skillVersion: () => '0.25.0', changelogHeading: () => true,
     readFileSync: path => {
-      if (path.endsWith('docs/release-intent.json')) return breakingIntent;
-      if (path.endsWith('docs/release-owner-authorization.json')) { if (authBody === null) throw new Error('ENOENT'); return authBody; }
+      const normalized = String(path).replaceAll('\\', '/');
+      if (normalized.endsWith('docs/release-intent.json')) return breakingIntent;
+      if (normalized.endsWith('docs/release-owner-authorization.json')) { if (authBody === null) throw new Error('ENOENT'); return authBody; }
       assert.fail(`unexpected read ${path}`);
     },
     npmView: (_spec, fields) => fields[0] === 'dist-tags' ? { present: true, value: { latest: '0.7.11' } } : { present: false, error: 'E404' },
