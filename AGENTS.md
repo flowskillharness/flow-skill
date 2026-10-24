@@ -39,7 +39,7 @@ Point; do not copy. If a fact already has a home, link it.
   (gitignored). Parity is tarball `--compare`, not `git diff` of that tree.
 - `tests/` — bash suites listed in `tests/manifest.txt`; run via `bash tests/run_all.sh`
 - `docs/` — architecture, quality-metrics, release-process, journals, `adr/`
-- `website/` — owned by `feat/flow-website`. **Never edit it on this branch.**
+- `website/` — retired from repository; maintained in standalone successor repository `manhquydev/flowskill-website`.
 
 ## Homeless standing orders
 
