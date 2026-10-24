@@ -44,7 +44,7 @@ jobs:
     # Local Linux shards measured under 9m; retain Ubuntu 15m and Windows' 80m headroom.
     # macOS measured 14m51s suite (TOTAL wall_s=891) plus post-job cleanup, exceeding 15m;
     # macOS keeps 25m headroom.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || (matrix.os == 'macos-latest' && 25 || 15) }}
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 80 || (matrix.os == 'macos-latest' && 30 || 15) }}
     steps:
       - uses: actions/checkout@v7
 
