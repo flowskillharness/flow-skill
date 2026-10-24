@@ -91,7 +91,23 @@ export function checkRequest({ mode, sha, version, phase = mode === 'publish' ? 
   }
   if (intent.npm_version !== version || (intent.skill_version !== null && intent.skill_version !== skill) || !['backwards-compatible', 'breaking'].includes(intent.compatibility) || typeof intent.security_rights_expanded !== 'boolean' || intent.channel !== (parseSemver(version).prerelease ? 'next' : 'latest')) throw new Error('release intent metadata does not match this exact commit/version');
   if (!changelogHeading('npm-wrapper/CHANGELOG.md', version) || (intent.skill_version !== null && !changelogHeading('CHANGELOG.md', intent.skill_version))) throw new Error('release intent requires exact changelog headings for each selected version axis');
-  if (intent.compatibility === 'breaking' || intent.security_rights_expanded) throw new Error('breaking or security-rights-expanding release requires a separate owner decision');
+  if (intent.compatibility === 'breaking' || intent.security_rights_expanded) {
+    let auth = null;
+    try { auth = JSON.parse(readFileSync(join(repoRoot, 'docs/release-owner-authorization.json'), 'utf8')); } catch { auth = null; }
+    const evidence = auth && Array.isArray(auth.acceptance_evidence) ? auth.acceptance_evidence : [];
+    let recordOk = false;
+    try { readFileSync(join(repoRoot, auth && auth.decision_record), 'utf8'); recordOk = typeof (auth && auth.decision_record) === 'string'; } catch { recordOk = false; }
+    const axes = auth && auth.authorized_versions;
+    const axesOk = !!axes && typeof axes === 'object' && !Array.isArray(axes)
+      && axes.npm === version
+      && axes.skill === intent.skill_version;
+    if (!auth || auth.schema_version !== 1 || auth.authorized_by !== 'owner' || typeof auth.decision !== 'string' || !auth.decision.trim()
+      || evidence.length === 0 || !evidence.every(entry => typeof entry === 'string' && entry.trim())
+      || auth.compatibility !== intent.compatibility || auth.security_rights_expanded !== intent.security_rights_expanded
+      || !recordOk || !axesOk) {
+      throw new Error('breaking or security-rights-expanding release requires a committed owner decision record bound to this exact release (docs/release-owner-authorization.json)');
+    }
+  }
   const list = gh(`repos/${REPO}/actions/workflows/${CI_WORKFLOW_ID}/runs?head_sha=${sha}&branch=master&event=push&per_page=100`);
   if (!Array.isArray(list.workflow_runs) || list.workflow_runs.length < list.total_count) throw new Error('CI workflow run list incomplete or paginated');
   const run = selectAuthoritativeRun(list.workflow_runs, sha);

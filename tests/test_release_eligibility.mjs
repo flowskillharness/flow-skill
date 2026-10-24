@@ -225,6 +225,62 @@ test('workflow publish snapshot forwards the observed prepublish registry state'
   assert.throws(() => checkRequest({ ...request, prepublishRegistry: { state: 'unknown' } }, io), /release refused/);
 });
 
+test('breaking release intent requires a committed owner decision record and proceeds with a valid one', t => {
+  const oldEnv = { ...process.env };
+  t.after(() => { process.env = oldEnv; });
+  Object.assign(process.env, { GITHUB_REF: 'refs/heads/master', ACTOR_ID: '7', EXPECTED_ACTOR_ID: '7', FLOW_AUTOPUBLISH_ENABLED: 'true', DISPATCH_ID: '12345678-1234-1234-1234-123456789abc' });
+  delete process.env.GITHUB_OUTPUT;
+  const sha = 'a'.repeat(40); const version = '0.8.0';
+  process.env.GITHUB_SHA = sha;
+  const repository = process.env.GITHUB_REPOSITORY || RELEASE_CONSTANTS.repository;
+  const run = { id: 88, workflow_id: RELEASE_CONSTANTS.ciWorkflowId, path: RELEASE_CONSTANTS.ciWorkflowPath, head_sha: sha, head_branch: 'master', event: 'push', run_attempt: 2, status: 'completed', conclusion: 'success' };
+  const breakingIntent = JSON.stringify({ schema_version: 1, intent: true, npm_version: version, skill_version: null, channel: 'latest', compatibility: 'breaking', security_rights_expanded: false });
+  const validAuth = JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'v1 breaking axes authorized', decision_record: 'docs/release-owner-decision-v1.md', authorized_versions: { npm: version, skill: null }, compatibility: 'breaking', security_rights_expanded: false, acceptance_evidence: ['https://github.com/manhquydev/flow-skill/pull/87'] });
+  const makeIo = authBody => ({
+    gh: path => {
+      if (path.endsWith('/git/ref/heads/master')) return { object: { sha } };
+      if (path.includes('/pulls?')) return [{ merged_at: 'today', merge_commit_sha: sha, base: { ref: 'master', repo: { full_name: repository } } }];
+      if (path.includes('/runs?')) return { total_count: 1, workflow_runs: [run] };
+      if (path.includes('/jobs?')) return { total_count: 1, jobs: [{ name: 'all-checks-passed', run_id: 88, run_attempt: 2, status: 'completed', conclusion: 'success' }] };
+      if (path.endsWith('/runs/88')) return run;
+      assert.fail(`unexpected API ${path}`);
+    },
+    git: args => { assert.deepEqual(args, ['rev-parse', 'HEAD']); return sha; },
+    pkg: () => ({ name: RELEASE_CONSTANTS.package, version }), skillVersion: () => '0.25.0', changelogHeading: () => true,
+    readFileSync: path => {
+      const normalized = String(path).replaceAll('\\', '/');
+      if (normalized.endsWith('docs/release-intent.json')) return breakingIntent;
+      if (normalized.endsWith('docs/release-owner-authorization.json')) { if (authBody === null) throw new Error('ENOENT'); return authBody; }
+      if (normalized.endsWith('docs/release-owner-decision-v1.md')) return '# Accepted v1 outcome contract';
+      assert.fail(`unexpected read ${path}`);
+    },
+    npmView: (_spec, fields) => fields[0] === 'dist-tags' ? { present: true, value: { latest: '0.7.11' } } : { present: false, error: 'E404' },
+  });
+  const request = { mode: 'publish', phase: 'publish', sha, version, publisherRunId: 9001, publisherRunAttempt: 2, artifact: { integrity: 'sha512-test', commit: sha, workflowRunId: 9001, workflowRunAttempt: 2 }, prepublishMasterSha: sha, prepublishRegistry: { state: 'absent', error: 'E404', channelVersion: '0.7.11' } };
+  assert.throws(() => checkRequest(request, makeIo(null)), /owner decision record/);
+  for (const bad of [JSON.stringify({ schema_version: 1, authorized_by: 'controller', decision: 'self', acceptance_evidence: ['x'] }), JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: '', acceptance_evidence: ['x'] }), JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'ok', acceptance_evidence: [] }), JSON.stringify({ schema_version: 2, authorized_by: 'owner', decision: 'ok', acceptance_evidence: ['x'] }), 'not-json']) {
+    assert.throws(() => checkRequest(request, makeIo(bad)), /owner decision record/);
+  }
+  const scoped = base => JSON.stringify({ schema_version: 1, authorized_by: 'owner', decision: 'ok', decision_record: 'docs/release-owner-decision-v1.md', authorized_versions: { npm: version, skill: null }, compatibility: 'breaking', security_rights_expanded: false, acceptance_evidence: ['x'], ...base });
+  const wrong = (authPatch, intentPatch) => {
+    const io = makeIo(scoped(authPatch || {}));
+    if (intentPatch) {
+      const intent = JSON.parse(breakingIntent); Object.assign(intent, intentPatch);
+      if (intentPatch.skill_version) io.skillVersion = () => intentPatch.skill_version;
+      const original = io.readFileSync;
+      io.readFileSync = path => String(path).replaceAll('\\', '/').endsWith('docs/release-intent.json') ? JSON.stringify(intent) : original(path);
+    }
+    assert.throws(() => checkRequest(request, io), /owner decision record/);
+  };
+  wrong({ authorized_versions: { npm: '0.9.0', skill: null } });
+  wrong({ authorized_versions: { npm: version, skill: null } }, { skill_version: '9.9.9' });
+  wrong({}, { security_rights_expanded: true });
+  wrong({ compatibility: 'backwards-compatible' });
+  wrong({ decision_record: 'docs/missing-record.md' });
+  wrong({ authorized_versions: { npm: version, skill: '0.25.0' } });
+  assert.equal(checkRequest(request, makeIo(validAuth)).decision, 'publish');
+});
+
 test('default registry adapter pins public npm and preserves exact E404 semantics', () => {
   let captured;
   assert.deepEqual(npmView('@manhquy/flow-skill', ['dist-tags'], (command, args, options) => {

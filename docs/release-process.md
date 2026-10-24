@@ -10,7 +10,7 @@ Canonical runbook for shipping future versions. Release policy: [`docs/adr/0002-
 | Skill mirrors | `.claude-plugin/plugin.json`, `portable-manifest.json` | Same skill change | `/flow coherence` enforces parity |
 | npm installer | `npm-wrapper/package.json` | Installer CLI/targets/sync/release behavior changes | `npx @manhquy/flow-skill@latest` or exact version; prerelease `@next` |
 
-`flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision.
+`flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision recorded in `docs/release-owner-authorization.json` (`authorized_by: "owner"` plus decision and acceptance evidence); the release gate fails closed without that committed record.
 
 ## Flow v1 breaking release gate
 
@@ -38,7 +38,7 @@ Publisher dispatch defaults to `dry-run`. Live mode requires `FLOW_AUTOPUBLISH_E
 | Job | Typical duration | Timeout budget |
 |---|---|---|
 | bash-suite ubuntu | ~8 min | 15m |
-| bash-suite macOS | ~11–15 min (measured 14m51s suite + post-job need, previous ~11–13m typical) | **25m** |
+| bash-suite macOS | ~11–15 min typical suite; PR88 run 40069912151 killed at 25m18s mid-suite with steady progress (67 suites passed; graph parity 94s on macOS) while the identical tree passed master run 40063546827 in 22m44s — marginal headroom, budget raised with that evidence | **30m** |
 | bash-suite Windows | Serial baseline ~54–60 min; three-shard timings not yet measured | **80m / shard** |
 | npm-wrapper matrix | ~15–40s / cell | 10m |
 

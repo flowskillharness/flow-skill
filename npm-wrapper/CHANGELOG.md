@@ -2,6 +2,10 @@
 
 All notable changes to `@manhquy/flow-skill`. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
+## [0.8.0] - 2026-10-24 — skill v1.0.0 (breaking / pending publication)
+- **Bundled skill:** prepared for the v1.0.0 breaking release: Python 3 required for product operations, graph executor owns `/flow next` ordering, `FLOW_HARNESS_DISABLE` refuses product operations. Installer CLI surface is unchanged; the version bump carries the bundled skill content. See root `CHANGELOG.md` 1.0.0 and `docs/migration-v1.md`.
+- Rollback: reinstalling this package does not undo database changes; restore only from a named verified pre-migration backup.
+
 ## [0.7.16] - 2026-10-22 — ships skill v0.34.9 (stable / latest)
 - **Bundled skill:** Includes additive `flow rules agents-md` safe preview/write targeting and static doctor remedy hints in human and JSON diagnostics; existing-file/symlink refusal and diagnostic outcomes remain unchanged.
 - **Compatibility:** Backwards-compatible patch with synchronized dual-axis metadata; no installer scope or security/service-rights expansion. Release preparation only, not a publication receipt.
