@@ -8,6 +8,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 EVAL_DIR="$HERE/../skills/flow/eval"
+. "$HERE/fixture_path_lib.sh"
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
@@ -28,11 +29,10 @@ newsb() {
 clean() { rm -rf "$SB" 2>/dev/null; unset FLOW_PROJECT_ROOT FLOW_EVAL_MANIFEST FLOW_EVAL_UNBOUNDED FLOW_EVAL_FORCE_DARWIN FLOW_EVAL_REPLAY_DIR FLOW_EVAL_ISOLATED_CWD; }
 
 # Build an isolated Unix tool PATH, hiding only the tool under simulation.
-# Python may live in the Windows hosted toolcache, outside /usr/bin and /bin.
-# Forward to its original executable rather than relocating it (DLLs/stdlib must
-# remain beside the interpreter); never append its directory and leak hidden tools.
+# Python lives outside Git Bash's Unix directories and must remain launchable
+# by both Bash and the native subprocess-based harness timeout fallback.
 make_fixturebin() {
-  local dest d f b p resolved
+  local dest d f b
   dest="$(mktemp -d)"
   for d in /usr/bin /bin; do
     [ -d "$d" ] || continue
@@ -46,14 +46,8 @@ make_fixturebin() {
       [ -e "$dest/$b" ] || ln -s "$f" "$dest/$b" 2>/dev/null || cp "$f" "$dest/$b" 2>/dev/null
     done
   done
-  for p in python3 python; do
-    resolved="$(command -v "$p" 2>/dev/null)" || continue
-    [ -f "$resolved" ] || continue
-    # Remove a Unix-tool symlink before writing, so its target stays untouched.
-    rm -f "$dest/$p"
-    printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$resolved" > "$dest/$p"
-    chmod +x "$dest/$p"
-  done
+  fixture_add_python "$dest" python3 || return 1
+  fixture_add_python "$dest" python || return 1
   printf '%s' "$dest"
 }
 make_notimeoutbin() { make_fixturebin notimeout; }

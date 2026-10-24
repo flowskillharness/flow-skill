@@ -7,6 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 HDIR="$HERE/../skills/flow/harness"
 H="$HDIR/flow_harness.py"
 RUN="$HERE/../skills/flow/runner/flow.sh"
+. "$HERE/fixture_path_lib.sh"
 PY="$(command -v python3 || command -v python)"
 if [ -z "$PY" ]; then echo "SKIP: python not found"; exit 0; fi
 pass=0; fail=0
@@ -275,8 +276,8 @@ echo "H) interpreter floor, stubs, Python-only fallback and diagnostic survival"
 SB="$(mktemp -d)"; mkdir "$SB/bin" "$SB/project"
 # A controlled PATH retains shell utilities but deliberately excludes both Python names.
 for tool in bash dirname pwd tr uname hostname date git head tail sed grep awk mkdir cat wc sort cut rm sleep timeout env; do
-  loc="$(command -v "$tool" 2>/dev/null || true)"
-  [ -n "$loc" ] && ln -s "$loc" "$SB/bin/$tool"
+  loc="$(type -P "$tool" 2>/dev/null || true)"
+  [ -n "$loc" ] && fixture_forward_tool "$SB/bin" "$tool" "$loc"
 done
 cd "$SB/project" || exit 1
 for mode in missing old stub; do
@@ -294,7 +295,7 @@ for mode in missing old stub; do
 done
 ck no "$([ -d .flow ] && echo yes || echo no)" "refused runtime and diagnostics do not write telemetry"
 ck no "$([ -d flow ] && echo yes || echo no)" "refused runtime and diagnostics do not create locks"
-ln -s "$PY" "$SB/bin/python"
+fixture_add_python "$SB/bin" python "$PY"
 FALLBACK="$(PATH="$SB/bin" FLOW_LIB_ONLY=1 bash -c '. "$1"; _python' _ "$RUN")"; rc=$?
 ck 0 "$rc" "broken python3 does not mask working python"
 ck "$SB/bin/python" "$FALLBACK" "working python-only interpreter selected"
