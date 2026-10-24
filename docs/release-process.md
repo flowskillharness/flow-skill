@@ -10,7 +10,7 @@ Canonical runbook for shipping future versions. Release policy: [`docs/adr/0002-
 | Skill mirrors | `.claude-plugin/plugin.json`, `portable-manifest.json` | Same skill change | `/flow coherence` enforces parity |
 | npm installer | `npm-wrapper/package.json` | Installer CLI/targets/sync/release behavior changes | `npx @manhquy/flow-skill@latest` or exact version; prerelease `@next` |
 
-`flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision.
+`flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision recorded in `docs/release-owner-authorization.json` (`authorized_by: "owner"` plus decision and acceptance evidence); the release gate fails closed without that committed record.
 
 ## Flow v1 breaking release gate
 
