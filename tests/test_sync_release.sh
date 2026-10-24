@@ -253,7 +253,10 @@ before_tree_hash="$(portable_hash "$tmp/r")"
 before_head="$(git -C "$tmp/r" rev-parse HEAD)"
 before_tags="$(git -C "$tmp/r" tag -l)"
 
-node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --dry-run >/tmp/sync_h.out 2>&1
+# PYTHONDONTWRITEBYTECODE: the v1 runner imports its python harness during
+# preflight, which would drop __pycache__ into the clone; that interpreter
+# artifact is not a sync-release mutation and must not fail the hash guard.
+PYTHONDONTWRITEBYTECODE=1 node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --dry-run >/tmp/sync_h.out 2>&1
 ck 0 $? "--ship --dry-run exits 0"
 grep -q "DRY-RUN SUCCESS" /tmp/sync_h.out && ck 0 0 "reports DRY-RUN SUCCESS" || ck 0 1 "reports DRY-RUN SUCCESS"
 
@@ -268,7 +271,7 @@ after_tree_hash="$(portable_hash "$tmp/r")"
 # coherence (tables, i18n HEAD-blob hashes) stays green.
 yes "# budget breach" | head -700 >> "$tmp/r/README.md"
 after_edit_tree_hash="$(portable_hash "$tmp/r")"
-node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --dry-run >/tmp/sync_i.out 2>&1
+PYTHONDONTWRITEBYTECODE=1 node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --ship --dry-run >/tmp/sync_i.out 2>&1
 ck 1 $? "dry-run fails on battery failure"
 after_i_tree_hash="$(portable_hash "$tmp/r")"
 [ "$after_edit_tree_hash" = "$after_i_tree_hash" ] && ck 0 0 "tree hash unchanged on failure" || ck 0 1 "tree hash changed on failure"

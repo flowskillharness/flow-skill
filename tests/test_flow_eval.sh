@@ -8,6 +8,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RUN="$HERE/../skills/flow/runner/flow.sh"
 EVAL_DIR="$HERE/../skills/flow/eval"
+. "$HERE/fixture_path_lib.sh"
 pass=0; fail=0
 ck()  { if [ "$1" = "$2" ]; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] expected '$1' got '$2'"; fail=$((fail+1)); fi; }
 has() { if printf '%s' "$1" | grep -q "$2"; then echo "  ok   [$3]"; pass=$((pass+1)); else echo "  FAIL [$3] (missing: $2)"; fail=$((fail+1)); fi; }
@@ -27,8 +28,10 @@ newsb() {
 }
 clean() { rm -rf "$SB" 2>/dev/null; unset FLOW_PROJECT_ROOT FLOW_EVAL_MANIFEST FLOW_EVAL_UNBOUNDED FLOW_EVAL_FORCE_DARWIN FLOW_EVAL_REPLAY_DIR FLOW_EVAL_ISOLATED_CWD; }
 
-# PATH dir with /usr/bin+/bin minus timeout/gtimeout (H / darwin-sim cases).
-make_notimeoutbin() {
+# Build an isolated Unix tool PATH, hiding only the tool under simulation.
+# Python lives outside Git Bash's Unix directories and must remain launchable
+# by both Bash and the native subprocess-based harness timeout fallback.
+make_fixturebin() {
   local dest d f b
   dest="$(mktemp -d)"
   for d in /usr/bin /bin; do
@@ -36,12 +39,18 @@ make_notimeoutbin() {
     for f in "$d"/*; do
       [ -e "$f" ] || continue
       b="$(basename "$f")"
-      case "$b" in timeout|timeout.exe|gtimeout|gtimeout.exe) continue ;; esac
+      case "$1:$b" in
+        noclaude:claude|noclaude:claude.exe|noclaude:claude.cmd) continue ;;
+        notimeout:timeout|notimeout:timeout.exe|notimeout:gtimeout|notimeout:gtimeout.exe) continue ;;
+      esac
       [ -e "$dest/$b" ] || ln -s "$f" "$dest/$b" 2>/dev/null || cp "$f" "$dest/$b" 2>/dev/null
     done
   done
+  fixture_add_python "$dest" python3 || return 1
+  fixture_add_python "$dest" python || return 1
   printf '%s' "$dest"
 }
+make_notimeoutbin() { make_fixturebin notimeout; }
 
 MOCKBIN="$(mktemp -d)"
 # $1 = the fixture-call verdict behavior ONLY - --version and the FLOWPONG probe are handled
@@ -95,16 +104,7 @@ rm -rf "$CB"
 # ---------- B) skip path: claude absent from PATH ----------
 echo "B) claude absent -> skip, exit 0, zero calls"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -660,16 +660,7 @@ clean
 
 echo "R-B) --stage routing skips cleanly with zero calls when claude is absent"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -756,16 +747,7 @@ clean
 # ---------- CV) converge modality: repo-state gap-detection judge (mocked engine) ----------
 echo "CV-0) --stage converge skips cleanly with zero calls when claude is absent"
 newsb
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent] (platform still resolves claude outside /usr/bin,/bin; cannot hide it here)"
 else
@@ -882,16 +864,7 @@ newsb
 rdir="$SB/replay"
 write_synth_replay "$rdir" "TESTREPLAYNONCE" "$grsha" "fcda" "PASS" 1
 export FLOW_EVAL_REPLAY_DIR="$rdir"
-fakebin="$(mktemp -d)"
-for d in /usr/bin /bin; do
-  [ -d "$d" ] || continue
-  for f in "$d"/*; do
-    [ -e "$f" ] || continue
-    b="$(basename "$f")"
-    case "$b" in claude|claude.exe|claude.cmd) continue ;; esac
-    [ -e "$fakebin/$b" ] || ln -s "$f" "$fakebin/$b" 2>/dev/null || cp "$f" "$fakebin/$b" 2>/dev/null
-  done
-done
+fakebin="$(make_fixturebin noclaude)"
 if PATH="$fakebin" command -v claude >/dev/null 2>&1; then
   echo "  skip [claude-absent-replay] (cannot hide claude on this platform)"
 else

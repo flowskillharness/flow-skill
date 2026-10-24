@@ -434,16 +434,39 @@ _scan_midtier() { # $1=file; prints [x] lines; return 1 if any hit
 }
 
 _python() {
-  # prefer python3, and only accept an interpreter that is actually Python 3.x (the harness +
-  # repo_map.py are py3-only — a py2 `python` must NOT be selected or it fails silently).
-  # Returns 0 + prints path when a valid interpreter is found; returns 1 (no output) when none.
-  local p
+  # Probe execution, not --version (Windows Store launchers can be stubs). Keep
+  # searching when python3 is old/broken but python is a usable interpreter.
+  local p probe
   for p in python3 python; do
-    if command -v "$p" >/dev/null 2>&1 && "$p" -c 'import sys; sys.exit(0 if sys.version_info[0]>=3 else 1)' >/dev/null 2>&1; then
-      command -v "$p"; return 0
-    fi
+    command -v "$p" >/dev/null 2>&1 || continue
+    probe="$("$p" -c 'import sys, sqlite3; print("flow-python-ok" if sys.version_info >= (3, 7) else "unsupported")' 2>/dev/null | tr -d '\r\n')" || continue
+    if [ "$probe" = "flow-python-ok" ]; then command -v "$p"; return 0; fi
   done
   return 1
+}
+
+_runtime_required() {
+  if [ -n "${FLOW_HARNESS_DISABLE:-}" ]; then
+    echo "FAIL: FLOW_HARNESS_DISABLE is no longer supported. Unset it; see docs/migration-v1.md." >&2
+    return 1
+  fi
+  if [ -n "${FLOW_GRAPH_EXECUTOR:-}" ] && [ "$FLOW_GRAPH_EXECUTOR" != 1 ]; then
+    echo "FAIL: graph ordering is required. Unset FLOW_GRAPH_EXECUTOR (or set 1); see docs/migration-v1.md." >&2
+    return 1
+  fi
+  local py; py="$(_python)"
+  if [ -z "$py" ]; then
+    echo "FAIL: Flow requires a working Python >=3.7 with stdlib sqlite3. Install Python, put python3 or python on PATH, and replace old/Store-stub launchers; run '/flow doctor'." >&2
+    return 1
+  fi
+  if [ ! -f "$HARNESS_PY" ]; then
+    echo "FAIL: required harness missing at $HARNESS_PY. Reinstall Flow; see docs/migration-v1.md." >&2
+    return 1
+  fi
+  _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$HARNESS_PY" --help >/dev/null 2>&1 || {
+    echo "FAIL: required harness cannot start with $py. Reinstall Flow and run '/flow doctor'; see docs/migration-v1.md." >&2
+    return 1
+  }
 }
 
 # Durable write honesty (plan trust-align D5/D8):
@@ -506,30 +529,64 @@ harness_call_checked() {
   _harness_run "$@"
 }
 
-# Wrap a command in a wall-clock bound when `timeout` exists (GNU coreutils / Git Bash);
-# a missing timeout degrades to running unbounded, exactly as before.
-_with_timeout() { # $1 = seconds, rest = command
+# Required harness calls are bounded on every supported host. Python's stdlib
+# supplies the fallback when GNU timeout/gtimeout is not installed (e.g. macOS).
+_with_timeout() { # seconds, argv (never a shell command string)
   local secs="$1"; shift
-  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"; else "$@"; fi
+  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"; return $?; fi
+  if command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@"; return $?; fi
+  local py; py="$(_python)"; [ -n "$py" ] || return 4
+  "$py" -c 'import os, signal, subprocess, sys
+secs = float(sys.argv[1])
+cmd = sys.argv[2:]
+fn = getattr(os, "setsid", None) or getattr(os, "setpgrp", None)
+p = subprocess.Popen(cmd, preexec_fn=fn)
+try:
+    p.wait(timeout=secs)
+    sys.exit(p.returncode)
+except subprocess.TimeoutExpired:
+    try:
+        if hasattr(os, "killpg") and hasattr(os, "getpgid"):
+            os.killpg(p.pid, signal.SIGKILL)
+        else:
+            p.kill()
+    except Exception:
+        try:
+            p.kill()
+        except Exception:
+            pass
+    try:
+        p.wait(timeout=5)
+    except Exception:
+        pass
+    sys.exit(124)
+' "$secs" "$@"
+  return $?
 }
 
 harness_capture_checked() {
   # VALUE-carrying variant for graph verbs: emits harness stdout and returns the
-  # real exit code, via _harness_run --emit-stdout so the availability triad,
-  # stderr redaction, and rc plumbing live in ONE place. Fail-closed contract:
-  # 0=value, 3=no-next/paused, 4=harness unavailable (DISABLE / file / python
-  # missing - the soft rc-0 ambiguity _harness_run keeps for durable writes is
-  # exactly what value calls must NOT inherit), 1/2=failure.
-  # No consumers yet; cmd_next delegates through this when FLOW_GRAPH_EXECUTOR lands.
+  # Real exit contract: 0=value, 3=no-next/paused, 4=unavailable, 1/2=failure.
+  # Unlike best-effort telemetry this must never fabricate success.
   [ -n "${FLOW_HARNESS_DISABLE:-}" ] && return 4
   [ -f "$HARNESS_PY" ] || return 4
   local py; py="$(_python)"; [ -n "$py" ] || return 4
-  # 20s: generous for a contended BEGIN IMMEDIATE (busy_timeout is 5s) yet bounded.
-  # rc 124 = timed out -> treated as "harness unavailable" by callers, never a hang.
-  local rc=0
-  _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" env FLOW_PROJECT_ROOT="$ROOT" \
-    "$(_python)" "$HARNESS_PY" "$@" || rc=$?
-  [ "$rc" = "124" ] && { printf 'flow-harness: call timed out (%ss)\n' "${FLOW_HARNESS_TIMEOUT:-20}" >&2; return 4; }
+  local errf out rc=0
+  errf="$(mktemp 2>/dev/null || echo "$ROOT/.flow/.harness-cap-err.$$")"
+  out="$(_with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" env FLOW_PROJECT_ROOT="$ROOT" \
+    "$py" "$HARNESS_PY" "$@" 2>"$errf")" || rc=$?
+  if [ "$rc" = "124" ]; then
+    printf 'flow-harness: call timed out (%ss)\n' "${FLOW_HARNESS_TIMEOUT:-20}" >&2
+    rm -f "$errf" 2>/dev/null || true
+    return 4
+  fi
+  if [ -s "$errf" ]; then
+    cat "$errf" >&2
+  fi
+  rm -f "$errf" 2>/dev/null || true
+  if [ -n "$out" ]; then
+    printf '%s\n' "$out" | sed 's/\r$//'
+  fi
   return "$rc"
 }
 
@@ -557,63 +614,162 @@ harness_emit() { # run a harness subcommand and ECHO its stdout (best-effort; no
   FLOW_PROJECT_ROOT="$ROOT" "$(_python)" "$HARNESS_PY" "$@" 2>/dev/null || true
 }
 
-# ---------- graph-executor recording contract (dark until FLOW_GRAPH_EXECUTOR=1) ----------
-# The auto-run loop is agent-driven prose (auto-run.md), so boundaries are recorded by
-# instrumenting verbs the agent ALREADY calls: workspace add -> card-dispatch,
-# check -> card-build/review evidence, card done -> card-verify-live, workspace remove ->
-# merge proof (executor-computed) + worktree telemetry ingest. Everything here is
-# best-effort: a recording failure must never break the mechanical engine.
-_graph_on() { [ "${FLOW_GRAPH_EXECUTOR:-}" = "1" ] && harness_available; }
+# ---------- required graph ordering/checkpoint contract ----------
+# Graph computes ordering only. scan_gate owns verdicts; the host owns execution.
+# Usage/event rollups remain best-effort and are not ordering checkpoints.
+_graph_on() { harness_available; }
 
 # Execution IDENTITY must live beside the DB, and the DB path is the harness's own
 # decision (worktree translation, monorepo sub-projects, --separate-git-dir). Re-deriving
 # it here with a shell heuristic drifted on exactly those shapes and re-split the journal,
 # so ASK the resolver instead of guessing: `graph root` prints dirname(default_db_path()).
 _graph_exec_id() { # [--no-create] -> echo the project's running auto_run execution id
-  # The whole selection is ONE atomic harness call: the DB row IS the pin, and SQLite's
-  # write transaction is the arbitration point. A bash pin file needed a claim dir,
-  # corpse recovery, TOCTOU-free reclaim AND a liveness check to approximate this - and
-  # each of those was a defect (stolen claims forked the journal; an existence-only
-  # check adopted abandoned executions and blackholed every later record).
   _graph_on || return 1
-  local id
+  local id raw
   if [ "${1:-}" = "--no-create" ]; then
-    id="$(harness_capture_checked graph session --no-create 2>/dev/null | tr -d '\r\n')" || return 1
+    raw="$(harness_capture_checked graph session --no-create)" || return $?
   else
-    id="$(harness_capture_checked graph session 2>/dev/null | tr -d '\r\n')" || return 1
+    raw="$(harness_capture_checked graph session)" || return $?
   fi
-  [ -n "$id" ] || return 1
+  id="$(printf '%s' "$raw" | sed 's/\r$//' | tr -d '\n')"
+  case "$id" in
+    *[!0-9a-fA-F]*|"") echo "FAIL: invalid execution token from harness." >&2; return 1 ;;
+  esac
+  [ "${#id}" -eq 22 ] || { echo "FAIL: execution id length mismatch." >&2; return 1; }
   printf '%s' "$id"
 }
 
 _graph_planning_id() { # echo the planning execution id (kind=planning, ns='')
   _graph_on || return 1
-  local id
-  id="$(harness_capture_checked graph session --kind planning 2>/dev/null | tr -d '\r\n')" || return 1
-  [ -n "$id" ] || return 1
+  local id raw
+  raw="$(harness_capture_checked graph session --kind planning)" || return $?
+  id="$(printf '%s' "$raw" | sed 's/\r$//' | tr -d '\n')"
+  case "$id" in
+    *[!0-9a-fA-F]*|"") echo "FAIL: invalid execution token from harness." >&2; return 1 ;;
+  esac
+  [ "${#id}" -eq 22 ] || { echo "FAIL: execution id length mismatch." >&2; return 1; }
   printf '%s' "$id"
 }
 
-_graph_stage_record() { # $1 = stage just passed -> record the planning boundary (ns='')
-  _graph_on || return 0
-  local stage="$1" eid
-  eid="$(_graph_planning_id)" || return 0
-  local node="stage-${stage%%-*}"          # 03-prd -> stage-03 (topology node id)
-  harness_capture_checked graph record --execution "$eid" --ns "" --node "$node" \
-    --gate-exit 0 --gate-cmd "gate $stage" >/dev/null 2>&1 || true
-  return 0
+_graph_stage_for_node() {
+  # Read the trusted install's mapping; graph next has already verified its pin.
+  "$(_python)" - "$SCRIPT_DIR/../references/flow-topology.json" "$1" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    spec = json.load(f)["nodes"].get(sys.argv[2], {})
+stage = spec.get("stage", "")
+if spec.get("type") != "gate_check" or stage not in (
+        "00-idea", "01-research", "02-scope", "03-prd", "04-adr", "05-contract"):
+    sys.exit("flow-graph: unexpected planning node " + repr(sys.argv[2]))
+print(stage)
+PY
 }
 
-_graph_record() { # $1=card-id (REQUIRED for card-scoped nodes) $2=node ; rest passed through
-  _graph_on || return 0
+_graph_stage_preds_for_node() {
+  # Topological predecessors mapped to stage names
+  "$(_python)" - "$SCRIPT_DIR/../references/flow-topology.json" "$1" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    topo = json.load(f)
+preds = {}
+for e in topo.get("edges", []):
+    preds.setdefault(e.get("to"), []).append(e.get("from"))
+res = set()
+frontier = [sys.argv[2]]
+while frontier:
+    curr = frontier.pop(0)
+    for p in preds.get(curr, []):
+        if p not in res:
+            res.add(p)
+            frontier.append(p)
+nodes = topo.get("nodes", {})
+stages = [nodes[n]["stage"] for n in sorted(res) if "stage" in nodes.get(n, {})]
+print(" ".join(stages))
+PY
+}
+
+_graph_next_node() { # eid -> node, or rc3 ONLY for a non-paused exhausted walk
+  local node rc=0 status raw
+  raw="$(harness_capture_checked graph next --execution "$1" "${@:2}")" || rc=$?
+  node="$(printf '%s' "$raw" | sed 's/\r$//' | tr -d '\n')"
+  if [ "$rc" -eq 3 ]; then
+    status="$(harness_capture_checked graph status --execution "$1")" || return 1
+    printf '%s' "$status" | "$(_python)" -c 'import json,sys; s=json.load(sys.stdin); sys.exit(0 if s["execution"]["status"] == "running" and not s["open_interrupts"] else 1)' || {
+      echo "FAIL: graph execution is paused, interrupted, failed, abandoned, or terminal; resolve it explicitly with '/flow harness graph resume'." >&2
+      return 1
+    }
+    [ -z "$node" ] || return 1
+    return 3
+  fi
+  if [ "$rc" -ne 0 ] || [ -z "$node" ]; then
+    echo "FAIL: required graph next failed (rc=$rc); no progression." >&2
+    return 1
+  fi
+  case "$node" in
+    stage-[0-9][0-9]|card-*) : ;;
+    *) echo "FAIL: unexpected graph node format '$node'." >&2; return 1 ;;
+  esac
+  printf '%s' "$node"
+}
+
+_graph_db_exists() {
+  # CLI --no-create means no execution row, not no SQLite connection. Resolve
+  # linked-worktree/override ownership without opening or migrating the database.
+  PYTHONDONTWRITEBYTECODE=1 FLOW_PROJECT_ROOT="$ROOT" "$(_python)" - "$SCRIPT_DIR/../harness" <<'PY'
+import os, sys
+sys.path.insert(0, sys.argv[1])
+import _db
+sys.exit(0 if os.path.isfile(_db.default_db_path()) else 3)
+PY
+}
+
+_graph_planning_check() { # read existing session only; diagnostics must not mint one
+  # Read-only diagnostics (status/resume/ready) degrade without the durable layer:
+  # a missing harness file means the graph advisory is unavailable, not a fatal
+  # startup condition. Writing operations still refuse via their own paths.
+  harness_available || return 0
+  local db_rc=0
+  _graph_db_exists || db_rc=$?
+  [ "$db_rc" -eq 3 ] && return 0
+  [ "$db_rc" -eq 0 ] || return 1
+  local eid node rc=0
+  eid="$(harness_capture_checked graph session --kind planning --no-create 2>/dev/null)" || rc=$?
+  [ "$rc" -eq 3 ] && return 0
+  [ "$rc" -eq 0 ] && [ -n "$eid" ] || return 1
+  rc=0; node="$(_graph_next_node "$eid")" || rc=$?
+  [ "$rc" -eq 3 ] && return 0
+  [ "$rc" -eq 0 ] || return 1
+  _graph_stage_for_node "$node" >/dev/null
+}
+
+_graph_auto_check() { # read existing shipping session; no implicit execution mint
+  # Same read-only degradation as _graph_planning_check: diagnostics proceed
+  # without the durable layer; writers refuse elsewhere.
+  harness_available || return 0
+  local db_rc=0
+  _graph_db_exists || db_rc=$?
+  [ "$db_rc" -eq 3 ] && return 0
+  [ "$db_rc" -eq 0 ] || return 1
+  local eid rc=0
+  eid="$(_graph_exec_id --no-create 2>/dev/null)" || rc=$?
+  [ "$rc" -eq 3 ] && return 0
+  [ "$rc" -eq 0 ] && [ -n "$eid" ] || return 1
+  rc=0; _graph_next_node "$eid" >/dev/null || rc=$?
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 3 ]
+}
+
+_graph_record() { # card-id (empty for card-less spikes), node, typed flags
   local card="$1" node="$2"; shift 2
-  # A card-scoped node with no card would land in the ROOT (stage) namespace and derail
-  # the planning walk - workspace add/remove are legitimately card-less for spikes.
   [ -n "$card" ] || return 0
-  local eid; eid="$(_graph_exec_id)" || return 0
-  harness_capture_checked graph record --execution "$eid" --ns "card:$card" --node "$node" "$@" \
-    >/dev/null 2>&1 || true
-  return 0
+  _graph_on || return 0
+  local eid; eid="$(_graph_exec_id)" || return 1
+  [ -n "$eid" ] || return 1
+  local next_rc=0
+  _graph_next_node "$eid" --ns "card:$card" >/dev/null || next_rc=$?
+  [ "$next_rc" -eq 0 ] || [ "$next_rc" -eq 3 ] || return 1
+  harness_capture_checked graph record --execution "$eid" --ns "card:$card" --node "$node" "$@" >/dev/null || {
+    echo "FAIL: required graph checkpoint failed; boundary is not complete." >&2; return 1;
+  }
 }
 
 cmd_harness() {
@@ -663,6 +819,7 @@ card_status() { # $1 = file
 }
 
 stage_skipped() { # $1 = stage name; 0 = yes (operator debt-skipped it)
+  [ "$1" = "05-contract" ] && return 1
   [ -f "$SKIPPED_FILE" ] && grep -qxF "$1" "$SKIPPED_FILE" 2>/dev/null
 }
 
@@ -673,16 +830,18 @@ inspect_gate_clean() {
     scan_gate "$FLOW_DIR/00-inspect.md" >/dev/null 2>&1
 }
 
-planning_complete() { # 0 = yes: each stage is clean, OR debt-skipped (a skipped stage may have no file)
+planning_complete() { # 0 = yes: each stage is clean, OR legitimately debt-skipped
   local s
   inspect_gate_clean || return 1
   for s in $STAGES; do
-    if [ ! -f "$FLOW_DIR/$s.md" ]; then
-      stage_skipped "$s" || return 1
+    if stage_skipped "$s"; then
       continue
     fi
+    if [ ! -f "$FLOW_DIR/$s.md" ]; then
+      return 1
+    fi
     if ! scan_gate "$FLOW_DIR/$s.md" >/dev/null 2>&1; then
-      stage_skipped "$s" || return 1
+      return 1
     fi
   done
   return 0
@@ -1004,8 +1163,12 @@ _gate_state_brief() { # $1 = current_stage_idx (caller already computed it), $2 
       echo "  gate: BLOCKED - run '/flow assess' to complete/recheck the brownfield assessment"
     elif scan_gate "$FLOW_DIR/$cur.md" >/dev/null 2>&1; then
       if [ "$idx" -ge "$LAST_STAGE_IDX" ]; then
-        echo "  gate: PASS - planning complete. '/flow card' is unlocked."
-        prd_declares_fr && echo "        tip: '/flow consistency' checks FR->card->contract coverage."
+        if planning_complete; then
+          echo "  gate: PASS - planning complete. '/flow card' is unlocked."
+          prd_declares_fr && echo "        tip: '/flow consistency' checks FR->card->contract coverage."
+        else
+          echo "  gate: PASS for $cur, but an earlier stage is still BLOCKED; '/flow card' stays locked."
+        fi
       else
         echo "  gate: PASS - run '/flow next' to unlock the next stage."
       fi
@@ -1408,88 +1571,87 @@ cmd_next() {
       echo "Fix the above, then run '/flow assess' again. (Kill at a gate is also valid.)"
       return 1
   fi
-  if [ "$idx" -lt 0 ]; then
-    mkdir -p "$FLOW_DIR"
-    cp "$TEMPLATE_DIR/00-idea.md" "$FLOW_DIR/00-idea.md"
-    seed_law_files
-    # Cycle id (idempotent): reuse one already stamped by a prior assess so assess->plan is ONE cycle.
-    _ensure_cycle
-    FLOW_LOG_STAGE_TO="00-idea"
-    if [ -n "${FLOW_ROOT_ADOPTED:-}" ]; then
-      echo "PASS: unlocked stage 00 -> $FLOW_DIR/00-idea.md"
-    else
-      echo "PASS: unlocked stage 00 -> flow/00-idea.md"
+  local eid node stage cur="" rc=0 visited=" " s nidx=0 preds p
+  # Recheck all materialized gates: a previously checkpointed stage may have been
+  # edited since it passed. Never journal completion over an earlier blocked gate.
+  for s in $STAGES; do
+    stage_skipped "$s" && continue
+    [ -f "$FLOW_DIR/$s.md" ] || continue
+    if ! scan_gate "$FLOW_DIR/$s.md" >/dev/null 2>&1; then
+      echo "FAIL: gate for stage $s is not clean; an earlier stage is still BLOCKED if later files exist."
+      scan_gate "$FLOW_DIR/$s.md"
+      FLOW_LOG_STAGE_TO="$s"
+      FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/$s.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/$s.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
+      echo "Fix the above, then run '/flow next' again. (Kill at a gate is also valid.)"
+      return 1
     fi
-    echo "Fill it in, check its gate boxes, then run '/flow next'."
-    return 0
-  fi
-  local cur; cur="$(stage_name_at "$idx")"
-  if ! scan_gate "$FLOW_DIR/$cur.md" >/dev/null 2>&1; then
-    echo "FAIL: gate for stage $cur is not clean."
-    scan_gate "$FLOW_DIR/$cur.md"
-    # attribute the failing event to THIS stage (so usage top-fail-stage + propose can see it)
-    # and record WHICH checks failed, so a chronically-failing stage is diagnosable.
-    FLOW_LOG_STAGE_TO="$cur"
-    FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$FLOW_DIR/$cur.md" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$FLOW_DIR/$cur.md" 2>/dev/null || echo 0),midtier:${_MIDTIER_FAILS:-0}"
-    echo
-    echo "Fix the above, then run '/flow next' again. (Kill at a gate is also valid.)"
-    return 1
-  fi
-  if [ "$idx" -ge "$LAST_STAGE_IDX" ]; then
-    FLOW_LOG_STAGE_FROM="$cur"
-    if planning_complete; then
-      # Record ONLY when the plan actually advanced. stage-05 is the terminal planning
-      # node, so recording it while an earlier stage is still blocked would make
-      # `graph next` answer "complete" for a project flow.sh itself calls BLOCKED.
-      _graph_stage_record "$cur"
-      echo "PASS: stage $cur gate clean. Planning is COMPLETE."
+  done
+  eid="$(_graph_planning_id)" || { echo "FAIL: required planning graph session failed; no progression." >&2; return 1; }
+  while :; do
+    rc=0; node="$(_graph_next_node "$eid")" || rc=$?
+    if [ "$rc" -eq 3 ]; then
+      if ! planning_complete; then
+        echo "FAIL: graph has no successor but planning gates are incomplete; reconcile the execution before progressing." >&2
+        return 1
+      fi
+      echo "PASS: stage ${cur:-05-contract} gate clean. Planning is COMPLETE."
       echo "All planning stages passed (or were debt-skipped). Run '/flow card' to create build cards."
       if prd_declares_fr; then
         echo "  tip: the PRD declares FR ids - run '/flow consistency' to check FR->card->contract coverage before building."
       fi
-    else
-      echo "PASS: stage $cur gate clean - but an earlier stage is still BLOCKED (and not debt-skipped)."
-      echo "Run '/flow' to see which. If it is a legitimate, debt-recorded skip, use"
-      echo "'/flow skip <stage> --reason ...'. '/flow card' stays blocked until then."
+      return 0
     fi
-    return 0
-  fi
-  local nxt; nxt="$(stage_name_at "$((idx + 1))")"
-  # Walk PAST every debt-skipped successor instead of stopping on one: cmd_skip already
-  # recorded the accepted exposure, so re-creating its file would resurrect a stage the
-  # DEBT line says is knowingly missing - but simply refusing to scaffold would wedge the
-  # project forever when the skipped stage's own successor is also absent (a failed
-  # scaffold in cmd_skip, or an operator deleting the file). Advance to the first stage
-  # that is neither present nor skipped; if that runs off the end, planning is complete.
-  local nidx=$((idx + 1)) skipped_over=""
-  while [ "$nidx" -le "$LAST_STAGE_IDX" ] && stage_skipped "$nxt"; do
-    skipped_over="$skipped_over $nxt"
-    nidx=$((nidx + 1))
-    [ "$nidx" -gt "$LAST_STAGE_IDX" ] && break
-    nxt="$(stage_name_at "$nidx")"
+    [ "$rc" -eq 0 ] || return 1
+    stage="$(_graph_stage_for_node "$node")" || return 1
+    case "$visited" in *" $node "*) echo "FAIL: graph repeated planning node $node; no progression." >&2; return 1 ;; esac
+    visited="$visited$node "
+    # Graph ordering owns stage trust: verify that every topological predecessor
+    # is either clean or legitimately debt-skipped before scaffolding or checkpointing.
+    preds="$(_graph_stage_preds_for_node "$node")" || return 1
+    for p in $preds; do
+      if stage_skipped "$p"; then
+        continue
+      fi
+      if [ ! -f "$FLOW_DIR/$p.md" ]; then
+        echo "FAIL: cannot advance to $stage; predecessor stage $p is missing (must exist or be debt-skipped)." >&2
+        return 1
+      fi
+      if ! scan_gate "$FLOW_DIR/$p.md" >/dev/null 2>&1; then
+        echo "FAIL: cannot advance to $stage; predecessor stage $p gate is not clean." >&2
+        scan_gate "$FLOW_DIR/$p.md"
+        return 1
+      fi
+    done
+    if [ ! -f "$FLOW_DIR/$stage.md" ]; then
+      # Only a verified graph successor can authorize a new artifact. No integer
+      # successor ladder and no execution of topology-provided commands.
+      mkdir -p "$FLOW_DIR" || return 1
+      cp "$TEMPLATE_DIR/$stage.md" "$FLOW_DIR/$stage.md" || return 1
+      FLOW_LOG_STAGE_FROM="$cur"; FLOW_LOG_STAGE_TO="$stage"
+      if [ "$idx" -lt 0 ]; then
+        seed_law_files
+        _ensure_cycle
+        if [ -n "${FLOW_ROOT_ADOPTED:-}" ]; then
+          echo "PASS: unlocked stage ${stage%%-*} -> $FLOW_DIR/$stage.md"
+        else
+          echo "PASS: unlocked stage ${stage%%-*} -> flow/$stage.md"
+        fi
+      else
+        nidx=0; for s in $STAGES; do [ "$s" = "$stage" ] && break; nidx=$((nidx + 1)); done
+        echo "PASS: stage $cur gate clean -> unlocked stage $nidx (flow/$stage.md)"
+      fi
+      echo "Fill it in, check its gate boxes, then run '/flow next'."
+      return 0
+    fi
+    # Existing files were checked above and are never overwritten. Record ONLY
+    # the executor-selected boundary, and require success before asking it again.
+    harness_capture_checked graph record --execution "$eid" --ns "" --node "$node" \
+      --gate-exit 0 --gate-cmd "gate $stage" >/dev/null || {
+      echo "FAIL: required planning checkpoint failed; no progression." >&2; return 1;
+    }
+    cur="$stage"; FLOW_LOG_STAGE_FROM="$cur"
+    gate_durable_hook "$cur"
   done
-  if [ "$nidx" -gt "$LAST_STAGE_IDX" ]; then
-    echo "PASS: stage $cur gate clean. Remaining stages are debt-skipped ($(printf '%s' "${skipped_over# }"))."
-    if planning_complete; then
-      _graph_stage_record "$cur"
-      echo "Planning is COMPLETE. Run '/flow card' to create build cards."
-    else
-      echo "An earlier stage is still BLOCKED (and not debt-skipped) - run '/flow' to see which."
-    fi
-    return 0
-  fi
-  if [ -f "$FLOW_DIR/$nxt.md" ]; then
-    echo "PASS: stage $cur gate clean. Stage $nidx ($nxt.md) already exists - not overwritten."
-    _graph_stage_record "$cur"
-    return 0
-  fi
-  cp "$TEMPLATE_DIR/$nxt.md" "$FLOW_DIR/$nxt.md"
-  FLOW_LOG_STAGE_FROM="$cur"; FLOW_LOG_STAGE_TO="$nxt"
-  echo "PASS: stage $cur gate clean -> unlocked stage $nidx (flow/$nxt.md)"
-  gate_durable_hook "$cur"
-  _graph_stage_record "$cur"
-  echo "  tip: '/flow recall' surfaces prior debt/retro/friction before you fill this stage."
-  return 0
 }
 
 # ---- card lifecycle: operator-marked start + CLI-owned done (legible-lifecycle layer) ----
@@ -1562,7 +1724,7 @@ _next_action() {
   for s in $STAGES; do
     if [ ! -f "$FLOW_DIR/$s.md" ]; then
       stage_skipped "$s" && continue
-      break
+      blocked="$s"; break
     fi
     if ! scan_gate "$FLOW_DIR/$s.md" >/dev/null 2>&1; then
       stage_skipped "$s" && continue
@@ -1782,25 +1944,29 @@ cmd_card_done() { # CLI-owned flip to done, gated by the SAME done-rules as '/fl
     echo "FAIL: could not write status for $id"
     return 1
   fi
-  if cmd_check "$id"; then            # cmd_check enforces evidence/verify AND records the durable done-trace
+  if cmd_check --withhold-pass "$id"; then
+    if ! _graph_record "$id" card-verify-live --gate-exit 0 --card-status done; then
+      trap - INT TERM
+      [ "$enforce" = "1" ] && { _att_lock_release "$lname2"; _att_lock_release "$lname"; _att_auto_lock_release; }
+      _set_card_status "$file" todo
+      _harness_or_fail story update --id "$id" --status in_progress >/dev/null 2>&1 || true
+      return 1
+    fi
     trap - INT TERM
     [ "$enforce" = "1" ] && { _att_lock_release "$lname2"; _att_lock_release "$lname"; _att_auto_lock_release; }
     _inflight_clear "$id"
-    # card-verify-live: the done boundary is the EVIDENCE gate passing, not the merge
-    # (merge != shipped) - dependents unblock on card status, matching cmd_ready.
-    # The nested cmd_check already recorded card-review; this advances past it.
-    _graph_record "$id" card-verify-live --gate-exit 0 --card-status done
+    echo "PASS: $id is valid (status: done)."
     return 0
   fi
   trap - INT TERM
   [ "$enforce" = "1" ] && { _att_lock_release "$lname2"; _att_lock_release "$lname"; _att_auto_lock_release; }
   # Always force todo on gate fail (even if orig was hollow done) — never leave hollow done.
   _set_card_status "$file" todo
+  _harness_or_fail story update --id "$id" --status in_progress >/dev/null 2>&1 || true
   echo
   echo "REVERTED: $id left at status 'todo' — the done-gate above must pass first."
   return 1
 }
-
 cmd_card() {
   case "${1:-}" in
     start) shift 2>/dev/null || true; cmd_card_start "${1:-}"; return $? ;;
@@ -1967,6 +2133,11 @@ _card_done_evidence_ok() { # $1=card file
 }
 
 cmd_check() {
+  local withhold_pass=0
+  if [ "${1:-}" = "--withhold-pass" ]; then
+    withhold_pass=1
+    shift
+  fi
   local arg="${1:-}"
   if [ -z "$arg" ]; then echo "usage: /flow check C-NNN"; return 1; fi
   local file; file="$(resolve_card_file "$arg")"
@@ -2053,11 +2224,10 @@ cmd_check() {
   fi
 
   if [ "$found" -eq 0 ]; then
-    echo "PASS: $id is valid (status: $st)."
     # card-review boundary: the gate verdict IS the evidence the executor records
     # (green here is what unblocks card-merge in the topology).
     # Typed flags, never a bash-built JSON literal: $st is free text from the card file.
-    _graph_record "$id" card-review --gate-exit 0 --gate-cmd "check $id" --card-status "$st"
+    _graph_record "$id" card-review --gate-exit 0 --gate-cmd "check $id" --card-status "$st" || return 1
     case "$st" in
       todo) _harness_or_fail story update --id "$id" --status in_progress || return 1 ;;
       done)
@@ -2077,6 +2247,7 @@ cmd_check() {
                   --actions "check $id gate PASS" --files-changed "cards/$id.md" --friction none)"
             [ -n "$tr" ] && printf '%s\n' "$tr" | grep -iE 'tier|to reach' | sed 's/^/  harness: /' ;;
     esac
+    [ "$withhold_pass" -eq 0 ] && echo "PASS: $id is valid (status: $st)."
     return 0
   fi
   FLOW_LAST_GATE_FAIL="fill:$(grep -c '\[FILL' "$file" 2>/dev/null || echo 0),unchecked:$(grep -cE '^[[:space:]]*- \[ \]' "$file" 2>/dev/null || echo 0)"
@@ -2160,17 +2331,19 @@ cmd_skip() {
     echo "  /flow debt add \"skip $stage\" \"<the exposure>\" \"<close-before condition>\""
     return 1
   fi
+  _graph_planning_check || { echo "FAIL: graph unavailable; skip not recorded." >&2; return 1; }
   mkdir -p "$FLOW_DIR"
   stage_skipped "$stage" || printf '%s\n' "$stage" >> "$SKIPPED_FILE"
-  local i=0 found=-1; for s in $STAGES; do [ "$s" = "$stage" ] && found=$i; i=$((i + 1)); done
-  if [ "$found" -ge 0 ] && [ "$found" -lt "$LAST_STAGE_IDX" ]; then
-    local nxt; nxt="$(stage_name_at "$((found + 1))")"
-    [ -f "$FLOW_DIR/$nxt.md" ] || cp "$TEMPLATE_DIR/$nxt.md" "$FLOW_DIR/$nxt.md"
-    echo "PASS: stage $stage debt-skipped (logged) -> $nxt available. planning_complete now tolerates it."
-  else
+  # Only ladder stages hand scaffolding to the graph consumer; the brownfield
+  # 00-inspect transition records the skip and leaves 'next' as the user's move.
+  local known_ladder=0; for s in $STAGES; do [ "$s" = "$stage" ] && known_ladder=1; done
+  if [ "$known_ladder" -eq 0 ]; then
     echo "PASS: stage $stage debt-skipped (logged). planning_complete now tolerates it."
+    return 0
   fi
-  return 0
+  echo "Stage $stage debt-skipped (logged). planning_complete now tolerates it."
+  # The graph, not the skipped stage's integer index, chooses any scaffold.
+  cmd_next
 }
 
 _gate_json_finding() {
@@ -3406,7 +3579,7 @@ doctor_remedy_for() {
     timeout:Darwin) printf '%s\n' 'brew install coreutils (provides gtimeout)' ;;
     grep_p:Darwin) printf '%s\n' 'brew install grep' ;;
     install_homes:*) printf '%s\n' 'install via npx @manhquy/flow-skill@latest --yes (or flow rules agent-skills for project scope)' ;;
-    python:*) printf '%s\n' 'install Python 3.8+ (python.org or brew install python)' ;;
+    python:*) printf '%s\n' 'install working Python >=3.7 with stdlib sqlite3 (python.org or brew install python); replace old/Store-stub launchers' ;;
     sqlite3:Darwin) printf '%s\n' 'brew install sqlite' ;;
     sqlite3:*) printf '%s\n' 'install sqlite3 via your package manager' ;;
   esac
@@ -3529,7 +3702,7 @@ cmd_doctor() {
       if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
         "$py" "$helper" format-error "$err_msg"
       else
-        echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+        echo "flow doctor: working Python >=3.7 unavailable (--json requires Python); install it and retry" >&2
       fi
     else
       echo "flow doctor: $err_msg" >&2
@@ -3544,7 +3717,7 @@ cmd_doctor() {
         "$py" "$helper" list-json
         return $?
       else
-        echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+        echo "flow doctor: working Python >=3.7 unavailable (--json requires Python); install it and retry" >&2
         return 1
       fi
     else
@@ -3565,7 +3738,7 @@ cmd_doctor() {
   # If --json requested without python, fail explicitly with unsupported interpreter
   if [ "$opt_json" -eq 1 ]; then
     if [ -z "$py" ] || ! "$py" --version >/dev/null 2>&1 || [ ! -f "$helper" ]; then
-      echo "flow doctor: python interpreter unavailable (--json doctor report requires python 3.8+)" >&2
+      echo "flow doctor: working Python >=3.7 unavailable (--json requires Python); install it and retry" >&2
       return 1
     fi
   fi
@@ -3631,8 +3804,9 @@ cmd_doctor() {
       [ "$opt_json" -eq 0 ] && echo "  python:    $py_v ($py)  -> durable layer ENABLED"
       _record "python" "runtime" "ok" "$py_v ($py) -> durable layer ENABLED"
     else
-      [ "$opt_json" -eq 0 ] && echo "  python:    not found  -> durable layer DISABLED (gate engine still works fully)"
-      _record "python" "runtime" "warn" "not found -> durable layer DISABLED"
+      [ "$opt_json" -eq 0 ] && echo "  python:    working Python >=3.7 with sqlite3 not found -> product operations REFUSED"
+      _record "python" "runtime" "fail" "working Python >=3.7 with sqlite3 not found; product operations refused"
+      ok=0
     fi
   fi
 
@@ -3699,12 +3873,14 @@ cmd_doctor() {
 
   # 9. harness
   if _run_check "harness"; then
-    if [ -f "$HARNESS_PY" ]; then
-      [ "$opt_json" -eq 0 ] && echo "  harness:   present ($HARNESS_PY)"
-      _record "harness" "assets" "ok" "present ($HARNESS_PY)"
+    if [ -n "$py" ] && [ -f "$HARNESS_PY" ] && [ -z "${FLOW_HARNESS_DISABLE:-}" ] && \
+        _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$HARNESS_PY" --help >/dev/null 2>&1; then
+      [ "$opt_json" -eq 0 ] && echo "  harness:   usable ($HARNESS_PY)"
+      _record "harness" "assets" "ok" "usable ($HARNESS_PY)"
     else
-      [ "$opt_json" -eq 0 ] && echo "  harness:   absent (durable layer off)"
-      _record "harness" "assets" "warn" "absent (durable layer off)"
+      [ "$opt_json" -eq 0 ] && echo "  harness:   missing, disabled or unable to start -> product operations REFUSED; unset FLOW_HARNESS_DISABLE / reinstall; see docs/migration-v1.md"
+      _record "harness" "assets" "fail" "missing, disabled or unable to start; unset FLOW_HARNESS_DISABLE / reinstall; see docs/migration-v1.md"
+      ok=0
     fi
   fi
 
@@ -3739,7 +3915,7 @@ cmd_doctor() {
       if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
         v_out="$("$py" "$helper" verify-receipt "$SCRIPT_DIR/.." "$mf" 2>/dev/null || echo "FAIL:execution error during integrity verification")"
       else
-        v_out="FAIL:python 3.8+ interpreter unavailable for receipt verification"
+        v_out="FAIL:working Python >=3.7 interpreter unavailable for receipt verification"
       fi
 
       case "$v_out" in
@@ -3796,7 +3972,7 @@ cmd_doctor() {
     if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
       bj_out="$("$py" "$helper" verify-bounded-json "$ROOT" 2>/dev/null || echo "FAIL:execution error during bounded-json verification")"
     else
-      bj_out="FAIL:python 3.8+ interpreter unavailable for bounded-json verification"
+      bj_out="FAIL:working Python >=3.7 unavailable for bounded-json verification"
     fi
 
     case "$bj_out" in
@@ -3830,7 +4006,7 @@ cmd_doctor() {
     if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
       pg_out="$("$py" "$helper" verify-privacy-guard "$ROOT" 2>/dev/null || echo "FAIL:execution error during privacy guard check")"
     else
-      pg_out="FAIL:python 3.8+ interpreter unavailable for privacy guard check"
+      pg_out="FAIL:working Python >=3.7 unavailable for privacy guard check"
     fi
 
     case "$pg_out" in
@@ -3869,7 +4045,7 @@ cmd_doctor() {
     if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
       sb_out="$("$py" "$helper" verify-scout-bounds "$ROOT" 2>/dev/null || echo "FAIL:execution error during scout bounds check")"
     else
-      sb_out="FAIL:python 3.8+ interpreter unavailable for scout bounds check"
+      sb_out="FAIL:working Python >=3.7 unavailable for scout bounds check"
     fi
 
     case "$sb_out" in
@@ -4159,11 +4335,11 @@ _ws_add() {
       base="$(basename "$ef")"; cp "$ef" "$wt/$base" 2>/dev/null && echo "  copied $base -> worktree (copy, never symlink)"
     done
   fi
-  echo "PASS: created worktree for '$branch' (vendor ${vendor:-?}, port-offset $port) -> $wt"
   # card-dispatch boundary. NOTE: no FLOW_PROJECT_ROOT export in the enter block — the DB
   # resolver already maps a linked worktree to the main DB (_db.default_db_path), and
   # exporting the project root would hijack CARDS_DIR/locks/DEBT for every call in there.
-  _graph_record "$card" card-dispatch --branch "$branch" --worktree "$wt" --vendor "$vendor"
+  _graph_record "$card" card-dispatch --branch "$branch" --worktree "$wt" --vendor "$vendor" || return 1
+  echo "PASS: created worktree for '$branch' (vendor ${vendor:-?}, port-offset $port) -> $wt"
   _ws_print_enter "$branch" "$wt" "$vendor" "$port"
   echo "  (tracked in .flow/workspaces.jsonl; see 'workspace list' / 'workspace doctor')"
   return 0
@@ -4297,12 +4473,14 @@ _ws_remove() {
   fi
   # The executor computes the ancestry itself - this verb has no merge knowledge (it only
   # removes a tree) - and records card-abandon when the branch was never merged.
-  _graph_record "$_gcard" card-merge --merge --branch "$branch"
+  local graph_rc=0
+  _graph_record "$_gcard" card-merge --merge --branch "$branch" || graph_rc=1
   # tombstone ONLY on clean success (git is truth; a failed remove changed nothing)
   local vendor card port
   vendor="$(_ws_get "$rec" vendor)"; card="$(_ws_get "$rec" card_id)"; port="$(_ws_get_num "$rec" port_offset)"
   _ws_record_append "$wt" "$branch" "${vendor:--}" "$(_session_id)" "$card" "" "" "${port:-0}" removed \
     || echo "WARNING: worktree removed but tombstone append failed (doctor will show it as an orphan tree-free branch)."
+  [ "$graph_rc" -eq 0 ] || { echo "FAIL: worktree removed but required graph checkpoint failed; reconcile before progression." >&2; return 1; }
   git -C "$ROOT" worktree prune 2>/dev/null || true
   echo "PASS: removed worktree for '$branch' ($wt) and pruned stale metadata."
   return 0
@@ -7033,8 +7211,33 @@ if [ "$cmd" = "attest" ]; then
   case "$_att_subj" in --*) _att_subj="" ;; esac
   FLOW_LOG_ARGS="${_att_sub}${_att_subj:+ ${_att_subj}}"
 fi
+# Refuse before locks, cycle/state writes or EXIT logging. Help/doctor remain
+# available as diagnostics and never emit usage telemetry on failed startup.
+case "$cmd" in
+  -h|--help|help|doctor) ;;
+  workspace)
+    _runtime_required || exit 1
+    case "${1:-}" in
+      doctor|list) ;;
+      *) _graph_planning_check && _graph_auto_check || exit 1 ;;
+    esac
+    ;;
+  auto)
+    _runtime_required || exit 1
+    case " $* " in
+      *" stop "*) ;;
+      *) _graph_planning_check && _graph_auto_check || exit 1 ;;
+    esac
+    ;;
+  *)
+    _runtime_required || exit 1
+    case "$cmd" in
+      status|resume|ready|card|check) _graph_planning_check && _graph_auto_check || exit 1 ;;
+    esac
+    ;;
+esac
 FLOW_LOG_START="$(_now)"
-trap '_log_on_exit' EXIT
+case "$cmd" in -h|--help|help|doctor) ;; *) trap '_log_on_exit' EXIT ;; esac
 case "$cmd" in
   status|"")      cmd_status "$@" ;;
   resume)         cmd_resume "$@" ;;

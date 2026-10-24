@@ -104,7 +104,7 @@ cmd_out="$(
   FLOW_PROJECT_ROOT="$AIDER_TEST_DIR" eval "$test_cmd" 2>&1
 )"
 [ ! -f "$MARKER" ]; ck 0 "$?" "hostile injection did NOT execute (marker file not created)"
-has "$cmd_out" "flow status" "safely fell back to running status on hostile inflight content"
+has "$cmd_out" "required harness missing" "hostile inflight content safely refused (v1: runtime required, injection not executed)"
 
 echo "E) rules cursor --write creates .cursor/rules/flow.mdc on disk"
 (

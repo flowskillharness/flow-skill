@@ -12,6 +12,19 @@ Canonical runbook for shipping future versions. Release policy: [`docs/adr/0002-
 
 `flow-skill` reports both npm package and bundled skill version. Each release PR updates the intended axes, changelogs, synchronized docs, and release intent. `skill_version: null` explicitly selects npm-only installer publication and must not recreate a prior skill tag/Release; a non-null skill version selects both npm and skill axes. Loop ticks without a version/changelog change do not publish. Breaking compatibility or expanding security/service rights needs a separate owner decision.
 
+## Flow v1 breaking release gate
+
+The owner-approved v1 contract is not satisfied by a version-number change or a default-flag
+flip alone. Before stable skill 1.0, the graph executor must actually own `/flow next`
+ordering, Python must be required at the measured floor, and `FLOW_HARNESS_DISABLE` must
+refuse product operations without weakening any gate. Require independent review, current
+exact-head cross-OS CI, docs/package coherence, and verified migration plus rollback evidence.
+The migration path must create and retain a SQLite-consistent pre-migration backup before DDL
+for an existing populated DB, refuse on backup failure, preserve linked-worktree DB ownership,
+and prove restore/readback. Any rollback must wait until writers are settled, preserve the
+newer database separately, and restore only from a named verified backup; reinstalling an old
+npm package alone does not undo database changes. No stable 1.0 promotion until all gates pass.
+
 ## Automatic release path
 
 A reviewed release-preparation PR merges to `master`; exact-master CI passes; OMP invokes `bash scripts/release.sh --yes`. The canonical script dispatches `.github/workflows/publish-npm-wrapper.yml` using `workflow_dispatch` with exact master SHA/version and unique dispatch UUID. The publisher independently verifies the caller correlation, current master, latest authoritative CI run and `all-checks-passed` job, merged PR base/repository, release intent and selected version axes, SemVer/channel monotonicity, and registry state; only explicit E404 proves absence. The live publish job remains default-off behind `FLOW_AUTOPUBLISH_ENABLED=true`, master-only `npm-publish`, eligibility success and publish-only OIDC. No tag-push trigger exists. The publisher packs once, retains the package artifact before publish and verified audit/SLSA receipts before smoke. The client re-downloads and re-verifies that exact run artifact, registry version/SRI/current dist-tag, npm signatures, Sigstore source identity and full installer smoke before creating/pushing selected tags; a skill tag/Release is created only when `skill_version` is non-null. Inactive release intent is a no-op. Same-owner dispatch is trusted as an accepted policy; actor ID/UUID are correlation, while server-side release gates are the enforcement boundary.

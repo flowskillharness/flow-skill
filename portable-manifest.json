@@ -10,7 +10,7 @@
   "runner_windows": "skills/flow/runner/flow.cmd (PowerShell/cmd/Codex launcher -> Git Bash; avoids WSL path failures)",
   "runtime": {
     "bash": "required (gate runner; Git Bash on Windows)",
-    "python": "optional (durable harness layer; stdlib sqlite3, no pip install)",
+    "python": "required (durable harness layer + graph ordering; stdlib sqlite3, no pip install)",
     "cargo": "not required (FLOW_HARNESS_BACKEND=rust seam is frozen + compat-guarded; refuses flow-lineage DBs)"
   },
   "install": {
@@ -85,6 +85,6 @@
     "principles": "research-report-agent-orchestration-2026.md"
   },
   "hashes": {
-    "skills/flow/runner/flow.sh": "0e571aecec4814e4401dd0378760924b5e30c78a9879d8e6620659716aa370c0"
+    "skills/flow/runner/flow.sh": "edccc5f090c3cf728fb1a0ae490236e97a1537a996bdd75e36a6ad068be6011d"
   }
 }

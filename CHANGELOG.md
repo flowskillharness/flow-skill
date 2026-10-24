@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- **Flow v1 target (not released):** Python is required, the graph executor owns `/flow next` ordering, and `FLOW_HARNESS_DISABLE` refuses product operations. Preserve gate/skip/card/ADR contracts; do not claim shipped until implementation and rollback acceptance pass.
 - fix(workspace): stop suggesting Claude --worktree alternative after Flow already creates the worktree (P2, independently reviewed).
 - test(assess): add regression coverage for brownfield assessment gate and debt-skip in flow next.
 

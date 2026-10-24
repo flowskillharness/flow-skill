@@ -70,6 +70,14 @@ Bare `bash` on Windows/Codex is usually WSL and cannot read `C:/` paths. Always
 `runner/flow.cmd` from a Windows shell; it locates Git Bash. Call `flow.sh` directly
 only when `bash` is Git Bash.
 
+**Flow v1 runtime requirement (pre-release target):** product operations require Python
+3.7 or newer (standard library only), resolved as `python3` then `python`. Missing,
+below-floor, or nonworking interpreters refuse progression; a nonempty
+`FLOW_HARNESS_DISABLE` also refuses product operations. Help and `doctor` remain available
+for diagnosis. The graph executor owns ordering; the mechanical runner remains the gate
+verdict authority. This contract is not shipped until implementation, migration/rollback,
+review and CI acceptance are complete; see the [v1 migration guide](https://github.com/manhquydev/flow-skill/blob/master/docs/migration-v1.md).
+
 `<skill-dir>` is the install home (`~/.claude/skills/flow`, `~/.codex/skills/flow`,
 `~/.agents/skills/flow`, Antigravity `~/.gemini/antigravity-cli/skills/flow` (CLI) /
 `~/.gemini/config/skills/flow` (IDE), or project `.claude/skills/flow`). Override with
