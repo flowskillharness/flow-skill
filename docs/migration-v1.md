@@ -1,8 +1,10 @@
 # Migration guide — flow v1 (graph executor)
 
-**Status: not released.** This guide describes the breaking behavior required before a future
-Flow v1 stable release. Until implementation and acceptance evidence are merged, the
-current published version remains the applicable contract; this file alone does not change it.
+**Status: shipped in 1.0.0 (2026-10-24), pending publication.** The breaking behavior below is
+implemented and CI-proven on master (`48d6d87`, PR #87 CI `40059003951` 16/16, post-merge
+`40063546827` green). Until the 1.0.0 publication receipt exists, the last published pair
+remains the applicable contract for installers; this file alone does not change installed
+behavior.
 
 ## What changes at v1
 

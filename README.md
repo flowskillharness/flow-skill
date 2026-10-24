@@ -26,8 +26,8 @@ required.
 
 | | |
 |---|---|
-| **Skill product** | Release target **v0.34.9** (not a publication receipt) |
-| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) — release target **0.7.16**, intended channel `latest` (not a publication receipt) |
+| **Skill product** | Release target **v1.0.0** (not a publication receipt) |
+| **npm installer** | [`@manhquy/flow-skill`](https://www.npmjs.com/package/@manhquy/flow-skill) — release target **0.8.0**, intended channel `latest` (not a publication receipt) |
 | **Website** | **[flowskill.io.vn](https://flowskill.io.vn)** |
 | **Tests / CI** | [`tests/manifest.txt`](tests/manifest.txt) · Ubuntu · macOS · Windows |
 | **License** | MIT |

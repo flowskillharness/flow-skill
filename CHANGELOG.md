@@ -1,9 +1,16 @@
 # Changelog
 
 ## [Unreleased]
-- **Flow v1 target (not released):** Python is required, the graph executor owns `/flow next` ordering, and `FLOW_HARNESS_DISABLE` refuses product operations. Preserve gate/skip/card/ADR contracts; do not claim shipped until implementation and rollback acceptance pass.
-- fix(workspace): stop suggesting Claude --worktree alternative after Flow already creates the worktree (P2, independently reviewed).
-- test(assess): add regression coverage for brownfield assessment gate and debt-skip in flow next.
+
+## [1.0.0] - 2026-10-24 — breaking release, owner-approved v1 contract
+- **BREAKING `skills/flow`:** Python 3 is required at startup; `flow` refuses with complete install guidance when absent. Python floor, gates, skip/card behavior, stdlib constraint, and ADR identity preserved; runner Eval STOP bodies untouched.
+- **BREAKING ordering:** the graph executor owns `/flow next` ordering and recovery pinning; a Windows-eval root cause was fixed and the runner hash re-pinned (`4dcd127`).
+- **BREAKING flag:** `FLOW_HARNESS_DISABLE` refuses product operations instead of silently degrading.
+- fix(workspace): stop suggesting the Claude `--worktree` alternative after Flow already creates a worktree (PR #84).
+- Windows CI: bash-suite runs as three shards (`FLOW_SUITE_SHARD=1/3..3/3`) with per-shard budgets; Ubuntu timeout diagnosis landed fail-fast cancelled-run detection with 14 watcher regressions; `tests/test_flow_eval.sh` Windows fixtures fixed.
+- Tests: new suites `test_flow_v1_runtime_required` (every primary verb refuses with install guidance), graph parity/executor/lint/auto-run, manifest-runner coverage; `tests/manifest.txt` registry updated.
+- Migration + rollback: `docs/migration-v1.md`; pre-migration SQLite backup/refusal/restore verified by `V1RollbackVerifier` on candidate `db0328cdd`; database changes are not undone by reinstalling an old npm package.
+- Acceptance evidence: PR #87 CI `40059003951` 16/16 green including `all-checks-passed`; post-merge master CI `40063546827` green.
 
 ## [0.34.9] - 2026-10-22
 - **Actionable doctor diagnostics:** Known missing environment dependencies and install homes include static platform-specific remedy advice in human output and an optional JSON `remedy` field, without changing check outcomes or executing installers.
