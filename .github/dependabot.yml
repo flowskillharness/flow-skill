@@ -22,5 +22,3 @@ updates:
     groups:
       installer-minor-patch:
         update-types: ["minor", "patch"]
-# Website version updates are deferred until its branch policy is reconciled.
-# See docs/github-maintenance.vi.md and CONTRIBUTING.md.

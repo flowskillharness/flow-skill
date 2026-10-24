@@ -29,7 +29,7 @@ Cấu hình gốc là [dependabot.yml](../.github/dependabot.yml): kiểm tra np
 
 Xem changelog của dependency, diff lockfile và CI trước khi merge. Với npm installer, tham khảo kiểm tra trong AGENTS.md. Không bật merge tự động hàng loạt cho mọi PR của bot.
 
-`website/` chưa được thêm vào lịch cập nhật phiên bản: CONTRIBUTING.md dành nó cho `feat/flow-website`, nhưng nhánh đó không tồn tại trên remote lúc thiết lập. Cần thống nhất chính sách branch trước khi thêm mục `/website`. Dependency graph và cảnh báo bảo mật vẫn bao phủ manifest được GitHub nhận diện trên nhánh mặc định; PR bảo mật chạm website cần được kiểm tra theo chính sách đó.
+`website/` đã được chuyển sang repository độc lập `manhquydev/flowskill-website` (phục vụ production tại `flowskill.io.vn`). Kho lưu trữ này không còn theo dõi mã nguồn website hay nhận cảnh báo bảo mật từ manifest của website.
 
 ## Quản lý công việc và phát hành
 
