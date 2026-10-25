@@ -151,6 +151,34 @@ Latest assessment wins: valid semantic `fail` and terminal live red replace
 older `pass`. Pre-spawn live attempt marker is fail-closed until dead-owner
 recovery or Must-ask `flow attest recover C-NNN --mark-failed`.
 
+### Receipt chain (tamper-evident ledger)
+
+Receipts detect staleness, not silent edits: unsigned files are forgeable
+by a filesystem owner. The chain raises that bar without changing
+receipt schema v1.
+
+Ledger `<main-state-root>/.flow/attestations/chain.log`, one line per
+minted receipt, appended by the mint path:
+
+```text
+v1 <seq> <prev_link> <link> <receipt_hash> <kind> <subject_type> <subject_id> <timestamp>
+```
+
+`receipt_hash` is `git hash-object` of the receipt bytes just written;
+`link` is `git hash-object --stdin` of the newline-joined fields above
+except `seq` and `link`. Genesis `prev` is 40 zeroes; each `prev` is the
+previous `link`. Append failure never fails a mint: it warns loudly.
+
+`flow attest verify-chain` exits 0 with `OK <n> entries`, else non-zero:
+`BROKEN` (ledger edited, reordered, wrong seq), `MISMATCH <path>`
+(receipt changed after its last chained mint), `MISSING <path>` (receipt
+deleted, entry remains), `NO-LEDGER` / `EMPTY` (no chain yet; exit 2).
+
+Limit: the chain detects silent edits, deletions and reordering. It does
+NOT stop an attacker who consistently rewrites ledger plus receipts and
+holds no external copy — copy `chain.log` elsewhere. Tamper-evidence,
+not identity.
+
 ### Scalar grammar
 
 - `actor` / `engine` / `activated_by`:
