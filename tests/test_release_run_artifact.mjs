@@ -76,6 +76,16 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
   validReport.verified[0].attestationBundles[1].bundle.dsseEnvelope.payload = Buffer.from(JSON.stringify(validStatement)).toString('base64');
   writeFileSync(join(dir, 'npm-audit-verified.json'), JSON.stringify(validReport));
   let skillVersion = '0.25.0'; let releaseTag = 'v0.25.0'; let tagSha = sha;
+  const skillObject = 'b'.repeat(40); const skillTree = 'd'.repeat(40);
+  let skillFailure = null; let skillReads = 0;
+  const skillCommands = [];
+  const expectedSkillCommands = [
+    ['ls-remote', '--tags', 'origin', 'refs/tags/v0.25.0'],
+    ['fetch', '--no-tags', '--no-write-fetch-head', 'origin', 'refs/tags/v0.25.0'],
+    ['ls-remote', '--tags', 'origin', 'refs/tags/v0.25.0'],
+    ['rev-parse', '--verify', `${skillObject}^{commit}:skills`],
+    ['rev-parse', '--verify', `${sha}:skills`],
+  ];
   const checkedTags = []; const releaseCalls = []; const npmCalls = []; const attestationCalls = [];
   const io = {
     readFileSync,
@@ -85,11 +95,29 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
         assert.equal(args[1], `${sha}:docs/release-intent.json`);
         return JSON.stringify({ schema_version: 1, intent: true, npm_version: version, skill_version: skillVersion });
       }
-      if (args[0] === 'rev-parse') { checkedTags.push(args[1]); return tagSha; }
-      assert.equal(args[0], 'ls-remote');
-      return `${'b'.repeat(40)}\t${args[3]}\n${tagSha}\t${args[4]}`;
+      if (args[0] === 'rev-parse' && args[1] !== '--verify') { checkedTags.push(args[1]); return tagSha; }
+      if (args[0] === 'ls-remote' && args.length === 5) {
+        return `${skillObject}\t${args[3]}\n${tagSha}\t${args[4]}`;
+      }
+      skillCommands.push(args);
+      assert.deepEqual(args, expectedSkillCommands[skillCommands.length - 1]);
+      if (args[0] === 'ls-remote') {
+        skillReads++;
+        if (skillFailure === 'missing') return '';
+        return `${skillFailure === 'moved' && skillReads === 2 ? 'c'.repeat(40) : skillObject}\t${args[3]}`;
+      }
+      if (args[0] === 'fetch') {
+        if (skillFailure === 'fetch') throw new Error('fixture fetch unavailable');
+        return '';
+      }
+      if (skillFailure === 'unavailable') throw new Error('fixture tree unavailable');
+      return skillFailure === 'different' && args[2] === `${sha}:skills` ? 'e'.repeat(40) : skillTree;
     },
-    gh: path => { releaseCalls.push(path); return { tag_name: releaseTag, target_commitish: 'master' }; },
+    gh: path => {
+      assert.deepEqual(skillCommands, expectedSkillCommands, 'stable origin ref, fetch and equal retained subtree must be verified before accepting branch release hint');
+      releaseCalls.push(path);
+      return { tag_name: releaseTag, target_commitish: 'master' };
+    },
     npmView: (spec, fields) => { npmCalls.push({ spec, fields }); return { present: true, value: fields[0] === 'version' ? version : fields[0] === 'dist.integrity' ? metadata.integrity : { latest: version } }; },
     verifyWithGhAttestation: options => { attestationCalls.push(options); assert.equal(options.sourceSha, sha); return []; },
   };
@@ -105,12 +133,27 @@ test('recovery reads intent and manifest at retained SHA and accepts branch rele
     owner: 'manhquydev', repository: 'flow-skill', workflow: '.github/workflows/publish-npm-wrapper.yml',
     sourceRef: 'refs/heads/master', sourceSha: sha,
   });
-  assert.deepEqual(checkedTags, [`npm@${version}^{commit}`, 'v0.25.0^{commit}']);
+  assert.deepEqual(checkedTags, [`npm@${version}^{commit}`]);
+  assert.deepEqual(skillCommands, expectedSkillCommands);
   assert.equal(releaseCalls.length, 1);
   releaseTag = 'v9.9.9';
+  skillCommands.length = 0; skillReads = 0;
   assert.throws(() => reconcile(dir, dir, sha, 777, 2, io), /Release tag does not match/);
   releaseTag = 'v0.25.0'; tagSha = 'c'.repeat(40);
   assert.throws(() => reconcile(dir, dir, sha, 777, 2, io), /does not resolve exactly/);
+  tagSha = sha;
+  for (const [failure, message] of [
+    ['missing', /remote skill tag unavailable/],
+    ['fetch', /fixture fetch unavailable/],
+    ['moved', /remote skill tag moved/],
+    ['unavailable', /fixture tree unavailable/],
+    ['different', /subtree differs/],
+  ]) {
+    skillFailure = failure; skillReads = 0; skillCommands.length = 0; releaseCalls.length = 0;
+    assert.throws(() => reconcile(dir, dir, sha, 777, 2, io), message);
+    assert.equal(releaseCalls.length, 0, `${failure} must refuse before reading branch release hints`);
+  }
+  skillFailure = null;
   tagSha = sha; skillVersion = null; checkedTags.length = 0; releaseCalls.length = 0;
   reconcile(dir, dir, sha, 777, 2, io);
   assert.deepEqual(checkedTags, [`npm@${version}^{commit}`]);
