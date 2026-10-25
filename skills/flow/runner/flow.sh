@@ -7221,7 +7221,7 @@ if [ "$cmd" = "attest" ]; then
   _att_sub="${1:-}"
   _att_subj=""
   case "$_att_sub" in
-    semantic|live-verify|status|recover|verify-chain) _att_subj="${2:-}" ;;
+    semantic|live-verify|status|recover) _att_subj="${2:-}" ;;
   esac
   # strip flag-like tokens from subject slot
   case "$_att_subj" in --*) _att_subj="" ;; esac
