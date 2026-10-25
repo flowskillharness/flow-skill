@@ -4,6 +4,6 @@
   "npm_version": "1.0.0",
   "skill_version": "1.0.0",
   "channel": "latest",
-  "compatibility": "backwards-compatible",
+  "compatibility": "breaking",
   "security_rights_expanded": false
 }

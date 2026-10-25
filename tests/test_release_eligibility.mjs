@@ -197,7 +197,10 @@ test('new intent requires matching present versions; legacy null remains readabl
   snapshot.release.skillChangelog = false;
   assert.equal(evaluateRelease(snapshot).reason, 'invalid-unified-release-intent');
   snapshot.phase = 'reconcile';
-  assert.notEqual(evaluateRelease(snapshot).reason, 'invalid-unified-release-intent');
+  snapshot.artifact = { integrity: 'sha512-test' };
+  snapshot.reconciliation = { verified: true, expectedSha: 'abc123' };
+  snapshot.registry = { state: 'present', integrity: 'sha512-test', channel: 'latest', tagTarget: 'abc123', releaseTarget: 'abc123', provenance: { repository: 'owner/repo', workflowPath: '.github/workflows/publish-npm-wrapper.yml', commit: 'abc123', integrity: 'sha512-test' } };
+  assert.equal(evaluateRelease(snapshot).decision, 'already-published-exact-match');
   snapshot.release.skillVersion = '9.9.9';
   assert.equal(evaluateRelease(snapshot).reason, 'invalid-unified-release-intent');
 });

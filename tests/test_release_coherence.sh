@@ -372,6 +372,13 @@ for version in 2.0.0 2.1.0-next.1; do
   ck 'view @manhquy/flow-skill dist-tags --json' "$(cat "$OUT/npm-$channel.calls")" "$channel only reads registry through fake npm"
 
 done
+printf '{"version":"9.9.9"}\n' > "$fixture/npm-wrapper/package.json"
+inequality_rc=0
+PATH="$fixture/bin:$PATH" NPM_CALLS="$OUT/npm-inequality.calls" \
+  bash "$fixture/scripts/release-preflight.sh" > "$OUT/preflight-inequality.out" 2>&1 || inequality_rc=$?
+ck 1 "$inequality_rc" "preflight refuses unequal skill and npm versions"
+grep -Fq 'must share one SemVer' "$OUT/preflight-inequality.out" && ck 0 0 "preflight explains one-SemVer refusal" || ck 0 1 "preflight explains one-SemVer refusal"
+printf '{"version":"%s"}\n' "$version" > "$fixture/npm-wrapper/package.json"
 
 echo "H2) preflight skips below-floor python3 and accepts supported python fallback"
 shim="$OUT/python-fallback-bin"

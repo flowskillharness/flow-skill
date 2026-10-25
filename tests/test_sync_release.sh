@@ -65,6 +65,17 @@ node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --check >/tmp/sync_c.out 2>&
 ck 1 $? "drift fails --check"
 grep -q "FAIL: Release coherence check failed" /tmp/sync_c.out && ck 0 0 "reports failure message" || ck 0 1 "reports failure message"
 grep -q "ROW MISMATCH" /tmp/sync_c.out && ck 0 0 "detects row mismatch" || ck 0 1 "detects row mismatch"
+node --input-type=module - "$(winpath "$tmp/r")" <<'NODE'
+import { readFileSync, writeFileSync } from 'node:fs';
+const root = process.argv[2];
+const p = `${root}/npm-wrapper/package.json`;
+const manifest = JSON.parse(readFileSync(p, 'utf8')); manifest.version = '1.2.3junk';
+writeFileSync(p, JSON.stringify(manifest));
+writeFileSync(`${root}/skills/flow/SKILL.md`, 'version: "1.2.3junk"\n');
+NODE
+node "$(winpath "$tmp/r/scripts/sync-release.mjs")" --check >/tmp/sync_invalid.out 2>&1
+ck 1 $? "identical invalid SemVer refuses --check"
+grep -E 'Unified version \(npm_v === skill_v\).*FAIL' /tmp/sync_invalid.out && ck 0 0 "unified check rejects identical junk" || ck 0 1 "unified check rejects identical junk"
 rm -rf "$tmp"
 
 echo "D) missing README file fails --check with exit 1"
@@ -202,13 +213,18 @@ import { appendFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 const [modulePath, cwd, tag] = process.argv.slice(2);
 const { verifyExistingSkillTag } = await import(pathToFileURL(modulePath));
+const releaseCalls = [];
+const releaseGh = args => { releaseCalls.push(args); return JSON.stringify({ tagName: tag }); };
 assert.equal(verifyExistingSkillTag(tag, cwd).ok, false, 'offline fails closed');
 const origin = `${cwd}-origin.git`;
 execFileSync('git', ['init', '--bare', '-q', origin]);
 execFileSync('git', ['remote', 'add', 'origin', origin], { cwd });
 assert.equal(verifyExistingSkillTag(tag, cwd).ok, false, 'remote missing fails closed');
 execFileSync('git', ['push', '-q', 'origin', `refs/tags/${tag}`], { cwd });
-const same = verifyExistingSkillTag(tag, cwd);
+assert.equal(verifyExistingSkillTag(tag, cwd, () => { throw new Error('release missing or offline'); }).ok, false, 'release missing refuses before dispatch');
+assert.equal(verifyExistingSkillTag(tag, cwd, () => JSON.stringify({ tagName: 'v-wrong' })).ok, false, 'release tag mismatch refuses');
+const same = verifyExistingSkillTag(tag, cwd, releaseGh);
+assert.deepEqual(releaseCalls, [['release', 'view', tag, '--json', 'tagName']]);
 assert.equal(same.ok, true);
 assert.match(same.reason, /skipping skill tag creation/);
 appendFileSync(`${cwd}/skills/flow/SKILL.md`, '\nfixture changed subtree\n');
@@ -218,7 +234,7 @@ assert.equal(verifyExistingSkillTag(tag, cwd).ok, false);
 execFileSync('git', ['tag', 'v-remote-different'], { cwd });
 execFileSync('git', ['push', '-q', 'origin', 'refs/tags/v-remote-different'], { cwd });
 assert.equal(verifyExistingSkillTag('v-missing', cwd).ok, false);
-execFileSync('git', ['revert', '--no-edit', 'HEAD'], { cwd, env: { ...process.env, GIT_COMMITTER_NAME: 'test', GIT_COMMITTER_EMAIL: 'test@test' } });
+execFileSync('git', ['revert', '--no-edit', 'HEAD'], { cwd, env: { ...process.env, GIT_AUTHOR_NAME: 'test', GIT_AUTHOR_EMAIL: 'test@test', GIT_COMMITTER_NAME: 'test', GIT_COMMITTER_EMAIL: 'test@test' } });
 assert.equal(verifyExistingSkillTag('v-remote-different', cwd).ok, false, 'remote different subtree fails closed despite matching old local tag');
 NODE
 ck 0 $? "skill tag reuse skips identical subtree and fails closed on changed or unavailable subtree"

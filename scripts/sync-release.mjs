@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { publisherRunIdFromDispatch, publisherWatchArgs, publisherWatchTimeoutError, verifyPublisherJobs } from './release-dispatch-response.mjs';
 import { PUBLIC_NPM_REGISTRY, readNpmRegistryJson, verifyPostPublishFinalization, verifyRunArtifact, verifyRegistryChannel } from './release-run-artifact.mjs';
 import { assertGhAttestationCapability } from './verify-attestation-with-gh.mjs';
+import { parseSemver } from '../npm-wrapper/scripts/semver.mjs';
 const __dirname = dirname(realpathSync(fileURLToPath(import.meta.url)));
 const repoRoot = resolve(__dirname, '..');
 
@@ -136,7 +137,7 @@ function runChecks() {
   });
 
   // 5. Unified version (npm_v === skill_v)
-  const unifiedVersion = Boolean(skill_v && npm_v && skill_v === npm_v);
+  const unifiedVersion = Boolean(parseSemver(skill_v) && parseSemver(npm_v) && skill_v === npm_v);
   results.push({
     surface: 'Unified version (npm_v === skill_v)',
     expected: 'npm_v === skill_v',
@@ -414,7 +415,7 @@ function gitTagExists(tagName) {
   }
 }
 
-export function verifyExistingSkillTag(tagName, cwd = repoRoot) {
+export function verifyExistingSkillTag(tagName, cwd = repoRoot, runGh = execGh) {
   try {
     const tree = (ref) => execFileSync('git', ['rev-parse', '--verify', `${ref}:skills`], {
       cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
@@ -428,11 +429,17 @@ export function verifyExistingSkillTag(tagName, cwd = repoRoot) {
     if (confirmed[0] !== remote[0] || confirmed[1] !== ref) throw new Error('remote skill tag moved');
     const tagTree = tree(`${remote[0]}^{commit}`);
     const headTree = tree('HEAD');
-    if (tagTree && tagTree === headTree) return { ok: true, reason: `Existing skill tag ${tagName} has identical skills/ subtree ${headTree}; skipping skill tag creation.` };
+    if (tagTree && tagTree === headTree) {
+      const release = JSON.parse(runGh(['release', 'view', tagName, '--json', 'tagName'], {
+        cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      }));
+      if (release.tagName !== tagName) throw new Error('GitHub Release tag does not match');
+      return { ok: true, reason: `Existing remote skill tag ${tagName} and GitHub Release verified with identical skills/ subtree ${headTree}; skipping skill tag creation.` };
+    }
   } catch {
     // Missing tag objects or subtree hashes cannot authorize reuse.
   }
-  return { ok: false, reason: `Skill tag ${tagName} differs from HEAD or its skills/ subtree hash is unavailable; bump to the next common version.` };
+  return { ok: false, reason: `Skill tag ${tagName} differs from HEAD, its remote subtree is unavailable, or its matching GitHub Release could not be verified; bump to the next common version or restore verified release evidence.` };
 }
 
 function printReleaseInstructions(skill_v, npm_v) {

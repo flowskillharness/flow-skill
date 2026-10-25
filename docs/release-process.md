@@ -57,12 +57,13 @@ bash scripts/release.sh --yes
 ```
 
 `--yes` requires clean working tree, local `master == origin/master`, unified-version coherence/changelog entries, zero sync drift, i18n integrity, unused npm tags, exact-HEAD authoritative CI, and read-only verification battery. It dispatches with a unique request UUID through the workflow-dispatch REST endpoint using `return_run_details=true`, validates the returned repository-bound `workflow_run_id` and watches that exact run. A missing or invalid receipt fails closed; never redispatch blindly. Re-verify workflow identity, exact SHA, attempt, eligibility and live publish jobs, then registry integrity/provenance/install smoke. Only then create/push the npm tag and a new skill tag/Release, or preserve an existing identical-subtree skill tag/Release as described below.
+Skill tag and GitHub Release steps apply only when `skill_version` is non-null; legacy retained releases with null skip those steps.
 
 When checking whether the skill-axis GitHub Release is absent, `scripts/sync-release.mjs` recognizes only `gh release view`'s exact `release not found` diagnostic (with one optional terminal LF or CRLF); every other lookup error fails closed and must not trigger release creation. Never infer absence from a generic HTTP 404 or a broad `not found` substring.
 
 Stable releases publish to `latest`; prereleases to `next`. Stable versions are never downgraded. A prerelease does not automatically move `latest` backward or promote itself to `latest`.
 
-An existing skill tag is acceptable only when `git rev-parse <tag>:skills` equals `git rev-parse HEAD:skills`. Ship checks this both before promotion and at tagging, skips creation of that immutable skill tag and its existing Release, and logs why. Different or unavailable subtree hashes require the next common bump. Existing npm tags remain a refusal; no tag is moved or recreated.
+An existing skill tag requires a VERIFIED REMOTE origin ref: origin reachable, tag present and unmoved across fetch, and its `skills/` tree equal to HEAD in addition to the local `git rev-parse <tag>:skills` comparison. Its GitHub Release must be successfully verified with matching tag name before dispatch. Ship repeats verification at tagging and preserves the immutable tag/Release. Offline or moved refs refuse; missing or different remote content requires the next common version bump. Existing npm tags remain a refusal; no tag is moved or recreated.
 
 
 ## Artifact and post-publish verification
