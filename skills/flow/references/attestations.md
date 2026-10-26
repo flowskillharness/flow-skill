@@ -148,8 +148,8 @@ Parser rules:
 
 Atomic write: temp in destination dir → `chmod 600` best-effort → rename.
 Latest assessment wins: valid semantic `fail` and terminal live red replace
-older `pass`. Pre-spawn live attempt marker is fail-closed until dead-owner
-recovery or Must-ask recover `--mark-failed`.
+older `pass`. Pre-spawn marker is fail-closed until dead-owner Must-ask
+recovery: `flow attest recover C-NNN --mark-failed`.
 
 ### Receipt chain (tamper-evident ledger)
 
