@@ -153,31 +153,31 @@ recovery: `flow attest recover C-NNN --mark-failed`.
 
 ### Receipt chain (tamper-evident ledger)
 
-Receipts detect staleness, not silent edits: unsigned files are forgeable.
+Unsigned receipts detect staleness, not silent edits.
 The chain raises that bar, receipt schema v1 unchanged.
 
-Ledger `<main-state-root>/.flow/attestations/chain.log`: one line per
-minted receipt, appended at mint:
+Ledger `<main-state-root>/.flow/attestations/chain.log`: one line per mint:
 
 ```text
 v1 <seq> <prev_link> <link> <receipt_hash> <kind> <subject_type> <subject_id> <timestamp>
 ```
 
-`receipt_hash` is `git hash-object` of the receipt bytes just written;
+`receipt_hash` is `git hash-object --no-filters` of the raw receipt bytes,
+so clean filters and CRLF conversion never mask an edit;
 `link` is `git hash-object --stdin` of the newline-terminated fields above
 except `seq` and `link`. Genesis `prev` is 40 zeroes; each later `prev` is
 the previous `link`. Append failure warns, never fails a mint.
 
 `flow attest verify-chain` exits 0 with `OK <n> entries`, else non-zero:
 `BROKEN` (edited, reordered, wrong seq), `MISMATCH <path>` (receipt
-changed after mint), `MISSING <path>` (receipt deleted), `UNTRACKED
-<path>` (receipt has no ledger entry), `NO-LEDGER` / `EMPTY` (no chain;
+changed after mint), `MISSING <path>` (deleted), `UNTRACKED
+<path>` (no ledger entry), `NO-LEDGER` / `EMPTY` (no chain;
 exit 2).
 
 Limit: the chain detects silent edits and reordering; deletions escape
 detection when no later entry remains and the receipt is gone too (whole
-`chain.log` reports only `NO-LEDGER`). It does NOT stop an attacker who
-consistently rewrites ledger plus receipts and holds no external copy —
+`chain.log` reports only `NO-LEDGER`). It does NOT stop an attacker
+rewriting ledger plus receipts who holds no external copy —
 copy `chain.log` elsewhere. Tamper-evidence, not identity.
 
 ### Scalar grammar

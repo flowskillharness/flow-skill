@@ -691,7 +691,9 @@ revision_oracle_fingerprint: ${_ATT_W_revision_oracle_fingerprint}
 # Ledger: $(_att_dir)/chain.log, one line per minted receipt:
 #   v1 <seq> <prev_link> <link> <receipt_hash> <kind> <subject_type> <subject_id> <timestamp>
 # link = git hash-object --stdin of "prev_link\nreceipt_hash\nkind\nsubject_type\nsubject_id\ntimestamp".
-# receipt_hash = git hash-object of the receipt file bytes just written.
+# receipt_hash = git hash-object --no-filters of the raw receipt file bytes:
+# filter-immune, so .gitattributes clean filters and CRLF normalization
+# cannot mask an edit (--stdin link hashes take no path, apply no filters).
 # Genesis prev_link is 40 zeroes. Chain verify (flow attest verify-chain)
 # recomputes every link and compares each path's latest entry against the
 # current receipt file, and reports receipts with no ledger entry.
@@ -708,7 +710,7 @@ _att_chain_append() { # $1 dest receipt path — returns 1 on failure; caller wa
   ledger="$(_att_chain_path)"
   kind="$_ATT_W_kind"; st="$_ATT_W_subject_type"; sid="$_ATT_W_subject_id"
   ts="$_ATT_W_timestamp"
-  rh="$(git hash-object "$dest" 2>/dev/null || true)"
+  rh="$(git hash-object --no-filters "$dest" 2>/dev/null || true)"
   [ -n "$rh" ] || return 1
   _att_lock_acquire "chain" || return 1
   seq=1; prev="0000000000000000000000000000000000000000"
@@ -772,7 +774,7 @@ _att_chain_verify() { # exit 0 OK, 1 BROKEN/MISMATCH/MISSING/UNTRACKED, 2 NO-LED
     rh="${5:-}"; kind="${6:-}"; st="${7:-}"; sid="${8:-}"
     path="$(_att_receipt_path "$kind" "$st" "$sid" 2>/dev/null || true)"
     if [ ! -f "$path" ]; then echo "chain: MISSING $path (ledger entry exists, receipt deleted)"; mismatch=1; break; fi
-    cur="$(git hash-object "$path" 2>/dev/null || true)"
+    cur="$(git hash-object --no-filters "$path" 2>/dev/null || true)"
     if [ "$cur" != "$rh" ]; then echo "chain: MISMATCH $path (receipt changed after last chained mint)"; mismatch=1; break; fi
   done < "$tmpf"
   if [ "$mismatch" -eq 0 ]; then

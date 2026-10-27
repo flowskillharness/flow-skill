@@ -214,6 +214,34 @@ has "$(cat "$events")" 'verify-chain' "verify-chain verb logged"
 if grep -q "marker-chain-xyz" "$events"; then echo "  FAIL [verify-chain arg not logged]"; fail=$((fail+1)); else echo "  ok   [verify-chain arg not logged]"; pass=$((pass+1)); fi
 rm -rf "$SB"
 
+echo "R) git-filter malleability: filtered hash must not mask a byte flip"
+setup_repo
+# Fail-verdict owner: the mint still writes the receipt and chains it.
+cat > "$SB/bin/semantic_owner.sh" <<'EOS'
+#!/usr/bin/env bash
+set -u
+fp=""; while [ $# -gt 0 ]; do case "$1" in --subject-fingerprint) shift; fp="${1:-}";; esac; shift 2>/dev/null || true; done
+printf 'schema: flow-semantic-result/v1\nsubject_fingerprint: %s\nverdict: fail\ncritical_count: 1\nhigh_count: 0\nevidence_ref: none\n' "$fp"
+EOS
+chmod +x "$SB/bin/semantic_owner.sh"
+# Clean filter active at mint time, as a committed .gitattributes would set it.
+# Fixture files must be committed before the mint (the owner must be committed).
+printf '*.receipt filter=verdict\n' > "$SB/.gitattributes"
+git -C "$SB" config filter.verdict.clean "sed 's/verdict: fail/verdict: pass/'"
+git -C "$SB" config filter.verdict.smudge "cat"
+git -C "$SB" add -A && git -C "$SB" commit -qm attrs
+(cd "$SB" && bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt >/dev/null 2>&1)
+rcpt="$SB/.flow/attestations/semantic_gate/stage-05-contract.receipt"
+[ -f "$rcpt" ]; ck 0 $? "fail-verdict receipt minted"
+ledger="$SB/.flow/attestations/chain.log"
+[ -f "$ledger" ]; ck 0 $? "fail-verdict ledger exists"
+sed 's/verdict: fail/verdict: pass/' "$rcpt" > "$rcpt.tmp" && mv "$rcpt.tmp" "$rcpt"
+out="$(cd "$SB" && bash "$RUN" attest verify-chain 2>&1)"; rc=$?
+[ "$rc" -ne 0 ]; ck 0 $? "verify nonzero on filter-masked byte flip"
+has "$out" 'MISMATCH' "filter-masked flip mismatch message"
+if grep -q 'hash-object --no-filters' "$HERE/../skills/flow/runner/attestations.sh"; then echo "  ok   [chain hashes use --no-filters]"; pass=$((pass+1)); else echo "  FAIL [chain hashes use --no-filters]"; fail=$((fail+1)); fi
+rm -rf "$SB"
+
 echo "P) command-dispatch attest row lists verify-chain"
 if grep -qF 'attest semantic\|live-verify\|status\|recover\|verify-chain' "$HERE/../skills/flow/references/command-dispatch.md"; then echo "  ok   [dispatch lists verify-chain]"; pass=$((pass+1)); else echo "  FAIL [dispatch lists verify-chain]"; fail=$((fail+1)); fi
 
@@ -222,6 +250,7 @@ doc="$HERE/../skills/flow/references/attestations.md"
 has "$(cat "$doc")" 'newline-terminated' "doc trailing newline"
 has "$(cat "$doc")" 'UNTRACKED' "doc untracked status"
 has "$(cat "$doc")" 'deletions escape' "doc deletion gap"
+has "$(cat "$doc")" 'no-filters' "doc filter-immune hashing"
 
 echo "RESULT pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]
