@@ -85,6 +85,21 @@ LOCK_DIR="$ROOT/flow/.lock.d"   # atomic claim dir (W5 guard); winner then write
 LOCK_CLAIM="$ROOT/flow/.lock.claim" # atomic set -C / O_EXCL claim guard
 HARNESS_PY="$SCRIPT_DIR/../harness/flow_harness.py"
 
+# Native-invocation path for the harness script (PR93 root cause, evidence-verified):
+# MSYS/Git Bash skip automatic POSIX->Windows argument conversion for arguments
+# containing shell metacharacters (e.g. scratch layouts with " [x]+(y)&"), so native
+# Windows python receives a literal /tmp/... path it cannot open (rc=2, isfile=False)
+# while identical plain-name layouts convert and pass. Convert explicitly at native
+# invocation sites when a converter exists; POSIX checks/display keep $HARNESS_PY.
+_native_path() { # <posix-or-native path> -> Windows-native form for native consumers
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1" 2>/dev/null || printf '%s' "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+_harness_native() { _native_path "$HARNESS_PY"; }
+
 # Attestations library (risk, receipts, auto policy) — optional-soft: missing file is fatal for v0.28+.
 # shellcheck source=attestations.sh
 . "$SCRIPT_DIR/attestations.sh"
@@ -466,7 +481,7 @@ _runtime_required() {
     echo "FAIL: required harness missing at $HARNESS_PY. Reinstall Flow; see docs/migration-v1.md." >&2
     return 1
   fi
-  _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$HARNESS_PY" --help >/dev/null 2>&1 || {
+  _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$(_harness_native)" --help >/dev/null 2>&1 || {
     echo "FAIL: required harness cannot start with $py. Reinstall Flow and run '/flow doctor'; see docs/migration-v1.md." >&2
     return 1
   }
@@ -492,7 +507,7 @@ _harness_run() {
   errf="$(mktemp 2>/dev/null || echo "$ROOT/.flow/.harness-err.$$")"
   mkdir -p "$ROOT/.flow" 2>/dev/null || true
   # capture rc without flipping the caller's set -e state
-  out="$(FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" "$@" 2>"$errf")" || rc=$?
+  out="$(FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" "$@" 2>"$errf")" || rc=$?
   _HARNESS_LAST_RC=$rc
   [ "$_emit" = 1 ] && [ -n "$out" ] && printf '%s\n' "$out"
   if [ "$_emit" = 1 ] && [ "$rc" -eq 3 ]; then rm -f "$errf" 2>/dev/null || true; return "$rc"; fi
@@ -536,8 +551,36 @@ harness_call_checked() {
 # supplies the fallback when GNU timeout/gtimeout is not installed (e.g. macOS).
 _with_timeout() { # seconds, argv (never a shell command string)
   local secs="$1"; shift
-  if command -v timeout >/dev/null 2>&1; then timeout "$secs" "$@"; return $?; fi
+  # On MSYS/Windows, bare `timeout` resolves to System32 timeout.exe (wait-N-seconds
+  # semantics); accept it only when it is GNU coreutils timeout.
+  if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then timeout "$secs" "$@"; return $?; fi
   if command -v gtimeout >/dev/null 2>&1; then gtimeout "$secs" "$@"; return $?; fi
+  # The Python fallback below runs outside the MSYS path-translation layer: Windows
+  # Python cannot exec or open `/c/...` argv. Convert existing POSIX-absolute argv.
+  if command -v cygpath >/dev/null 2>&1; then
+    _wt_argv=()
+    for _wt_arg in "$@"; do
+      case "$_wt_arg" in
+        /*)
+          _wt_target=""
+          if [ -e "$_wt_arg" ]; then _wt_target="$_wt_arg"
+          elif [ -e "$_wt_arg.exe" ]; then _wt_target="$_wt_arg.exe"
+          fi
+          if [ -n "$_wt_target" ]; then
+            _wt_converted="$(cygpath -w "$_wt_target" 2>/dev/null)" || _wt_converted=""
+            if [ -n "$_wt_converted" ]; then
+              _wt_argv+=("$_wt_converted")
+            else
+              _wt_argv+=("$_wt_arg")
+            fi
+          else
+            _wt_argv+=("$_wt_arg")
+          fi ;;
+        *) _wt_argv+=("$_wt_arg") ;;
+      esac
+    done
+    set -- "${_wt_argv[@]}"
+  fi
   local py; py="$(_python)"; [ -n "$py" ] || return 4
   "$py" -c 'import os, signal, subprocess, sys
 secs = float(sys.argv[1])
@@ -577,7 +620,7 @@ harness_capture_checked() {
   local errf out rc=0
   errf="$(mktemp 2>/dev/null || echo "$ROOT/.flow/.harness-cap-err.$$")"
   out="$(_with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" env FLOW_PROJECT_ROOT="$ROOT" \
-    "$py" "$HARNESS_PY" "$@" 2>"$errf")" || rc=$?
+    "$py" "$(_harness_native)" "$@" 2>"$errf")" || rc=$?
   if [ "$rc" = "124" ]; then
     printf 'flow-harness: call timed out (%ss)\n' "${FLOW_HARNESS_TIMEOUT:-20}" >&2
     rm -f "$errf" 2>/dev/null || true
@@ -614,7 +657,7 @@ harness_available() { # 0 = durable layer usable (python + harness present, not 
 
 harness_emit() { # run a harness subcommand and ECHO its stdout (best-effort; nothing if unavailable)
   harness_available || return 0
-  FLOW_PROJECT_ROOT="$ROOT" "$(_python)" "$HARNESS_PY" "$@" 2>/dev/null || true
+  FLOW_PROJECT_ROOT="$ROOT" "$(_python)" "$(_harness_native)" "$@" 2>/dev/null || true
 }
 
 # ---------- required graph ordering/checkpoint contract ----------
@@ -656,7 +699,7 @@ _graph_planning_id() { # echo the planning execution id (kind=planning, ns='')
 
 _graph_stage_for_node() {
   # Read the trusted install's mapping; graph next has already verified its pin.
-  "$(_python)" - "$SCRIPT_DIR/../references/flow-topology.json" "$1" <<'PY'
+  "$(_python)" - "$(_native_path "$SCRIPT_DIR/../references/flow-topology.json")" "$1" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     spec = json.load(f)["nodes"].get(sys.argv[2], {})
@@ -670,7 +713,7 @@ PY
 
 _graph_stage_preds_for_node() {
   # Topological predecessors mapped to stage names
-  "$(_python)" - "$SCRIPT_DIR/../references/flow-topology.json" "$1" <<'PY'
+  "$(_python)" - "$(_native_path "$SCRIPT_DIR/../references/flow-topology.json")" "$1" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     topo = json.load(f)
@@ -718,7 +761,7 @@ _graph_next_node() { # eid -> node, or rc3 ONLY for a non-paused exhausted walk
 _graph_db_exists() {
   # CLI --no-create means no execution row, not no SQLite connection. Resolve
   # linked-worktree/override ownership without opening or migrating the database.
-  PYTHONDONTWRITEBYTECODE=1 FLOW_PROJECT_ROOT="$ROOT" "$(_python)" - "$SCRIPT_DIR/../harness" <<'PY'
+  PYTHONDONTWRITEBYTECODE=1 FLOW_PROJECT_ROOT="$ROOT" "$(_python)" - "$(_native_path "$SCRIPT_DIR/../harness")" <<'PY'
 import os, sys
 sys.path.insert(0, sys.argv[1])
 import _db
@@ -784,7 +827,7 @@ cmd_harness() {
     echo "FAIL: a working python was not found - durable layer needs python (stdlib sqlite3)."
     return 1
   fi
-  FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" "$@"
+  FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" "$@"
 }
 
 seed_law_files() {
@@ -1399,7 +1442,7 @@ cmd_resume() {
       local decisions=""
       if harness_available; then
         local py; py="$(_python)"
-        decisions="$(FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" decision query --story "$resume_card" 2>/dev/null || true)"
+        decisions="$(FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" decision query --story "$resume_card" 2>/dev/null || true)"
       fi
       if [ -n "$decisions" ]; then
         printf '%s\n' "$decisions" | sed 's/^/  /'
@@ -3253,10 +3296,10 @@ assess_scan() {
   # ranked surfaces: highest-leverage code first (symbols referenced most widely). Optional helper
   # (stdlib reference-count ranker); degrades to a note if python/helper absent - the flat scan stands.
   echo "ranked surfaces (most-referenced first - inspect these before planning):"
-  rmap="${HARNESS_PY%/*}/repo_map.py"
+  rmap="$(dirname "$(_harness_native)")/repo_map.py"
   py="$(_python)"
   if [ -n "$py" ] && [ -f "$rmap" ]; then
-    rout="$("$py" "$rmap" "$ROOT" 10 2>/dev/null)"
+    rout="$("$py" "$rmap" "$(_native_path "$ROOT")" 10 2>/dev/null)"
     if [ -n "$rout" ]; then printf '%s\n' "$rout" | sed 's/^/  /'
     else echo "  (no rankable source symbols found)"; fi
   else
@@ -3572,7 +3615,7 @@ cmd_promote() {
         return 0
       fi
       local py; py="$(_python)"
-      FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" promote-suggest
+      FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" promote-suggest
       return $?
       ;;
     *)
@@ -3608,7 +3651,7 @@ cmd_doctor() {
   local opt_check=""
   local has_check=0
   local err_msg=""
-  local helper="$SCRIPT_DIR/doctor_helper.py"
+  local helper; helper="$(_native_path "$SCRIPT_DIR/doctor_helper.py")"
   local py; py="$(_python)"
 
   # Pre-scan arguments for --json so any error emits valid JSON if requested
@@ -3890,7 +3933,7 @@ cmd_doctor() {
   # 9. harness
   if _run_check "harness"; then
     if [ -n "$py" ] && [ -f "$HARNESS_PY" ] && [ -z "${FLOW_HARNESS_DISABLE:-}" ] && \
-        _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$HARNESS_PY" --help >/dev/null 2>&1; then
+        _with_timeout "${FLOW_HARNESS_TIMEOUT:-20}" "$py" "$(_harness_native)" --help >/dev/null 2>&1; then
       [ "$opt_json" -eq 0 ] && echo "  harness:   usable ($HARNESS_PY)"
       _record "harness" "assets" "ok" "usable ($HARNESS_PY)"
     else
@@ -3902,7 +3945,7 @@ cmd_doctor() {
 
   # 10. timeout
   if _run_check "timeout"; then
-    if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
+    if (command -v timeout >/dev/null 2>&1 && (timeout --version >/dev/null 2>&1 || timeout -s TERM 1 true >/dev/null 2>&1)) || command -v gtimeout >/dev/null 2>&1; then
       [ "$opt_json" -eq 0 ] && echo "  timeout:   full (timeout|gtimeout present)"
       _record "timeout" "tools" "ok" "full (timeout|gtimeout present)"
     else
@@ -3929,7 +3972,7 @@ cmd_doctor() {
     else
       local v_out=""
       if [ -n "$py" ] && "$py" --version >/dev/null 2>&1 && [ -f "$helper" ]; then
-        v_out="$("$py" "$helper" verify-receipt "$SCRIPT_DIR/.." "$mf" 2>/dev/null || echo "FAIL:execution error during integrity verification")"
+        v_out="$("$py" "$helper" verify-receipt "$(_native_path "$SCRIPT_DIR/..")" "$(_native_path "$mf")" 2>/dev/null || echo "FAIL:execution error during integrity verification")"
       else
         v_out="FAIL:working Python >=3.7 interpreter unavailable for receipt verification"
       fi
@@ -6866,18 +6909,18 @@ Idea→Research→Scope→PRD→ADR→Contract→Cards→Build→Review→Verify
 Implementation tasks are tracked in atomic markdown cards (`cards/C-NNN.md`):
 - **Allowed files:** Confine modifications strictly to the active card'\''s `## Allowed files` section. Never touch unlisted files.
 - **Verify:** Run the exact verification commands declared in `## Verify`.
-- Validate card completion with `bash skills/flow/runner/flow.sh check C-NNN`.
+- Validate card completion with `@FLOW_RUNNER@ check C-NNN`.
 
 ## Ground Truth Runner Commands
 
 The Flow runner is the mechanical authority. Run from the repository root:
-- POSIX / Bash: `bash skills/flow/runner/flow.sh <command>`
-- Windows shells: `runner/flow.cmd <command>` (or `skills\flow\runner\flow.cmd <command>`)
+- POSIX / Bash: `@FLOW_RUNNER@ <command>`
+- Windows shells: use Git Bash with the same runner command; WSL path mapping is not verified.
 
 Core commands:
-- `bash skills/flow/runner/flow.sh status` — inspect active stage, in-flight cards, and blockers.
-- `bash skills/flow/runner/flow.sh next` — evaluate current gate and unlock the next stage.
-- `bash skills/flow/runner/flow.sh check C-NNN` — validate card criteria and verify evidence.'
+- `@FLOW_RUNNER@ status` — inspect active stage, in-flight cards, and blockers.
+- `@FLOW_RUNNER@ next` — evaluate current gate and unlock the next stage.
+- `@FLOW_RUNNER@ check C-NNN` — validate card criteria and verify evidence.'
       local dest="AGENTS.md"
       ;;
     cursor)
@@ -6893,8 +6936,8 @@ You are operating inside a repository managed by Flow (`/flow`).
 Flow turns coding agents into evidence-gated, kill-honest build processes.
 
 ## Rules of Engagement
-1. **Never edit files without an active card.** Check in-flight cards via `bash skills/flow/runner/flow.sh status`.
-2. **Always inspect gates before coding.** Run `bash skills/flow/runner/flow.sh next` or `bash skills/flow/runner/flow.sh check C-NNN`.
+1. **Never edit files without an active card.** Check in-flight cards via `@FLOW_RUNNER@ status`.
+2. **Always inspect gates before coding.** Run `@FLOW_RUNNER@ next` or `@FLOW_RUNNER@ check C-NNN`.
 3. **Respect Allowed Files.** Only modify files explicitly listed in the active card'\''s `## Allowed files` section.
 4. **Never fake verify proof.** Paste real terminal output, exit codes, and URLs into `## Evidence`.'
       local dest=".cursor/rules/flow.mdc"
@@ -6904,12 +6947,12 @@ Flow turns coding agents into evidence-gated, kill-honest build processes.
 
 Cascade must respect Flow repository gates and evidence requirements.
 
-1. **Orientation**: Before modifying code, run `bash skills/flow/runner/flow.sh resume` to inspect recent session transitions and active cards.
-2. **Stage Progression**: Planning advances through stages (`00-idea` through `05-contract`). Do not advance without passing gates (`bash skills/flow/runner/flow.sh next`).
+1. **Orientation**: Before modifying code, run `@FLOW_RUNNER@ resume` to inspect recent session transitions and active cards.
+2. **Stage Progression**: Planning advances through stages (`00-idea` through `05-contract`). Do not advance without passing gates (`@FLOW_RUNNER@ next`).
 3. **Card Execution**: When implementing a card (`cards/C-NNN.md`):
    - Confine changes to `## Allowed files`.
    - Run verify commands listed in `## Verify`.
-   - Verify card passage with `bash skills/flow/runner/flow.sh check C-NNN`.
+   - Verify card passage with `@FLOW_RUNNER@ check C-NNN`.
 4. **Clean Exit**: Do not claim work is complete until `flow check` returns exit code 0.'
       local dest=".windsurf/rules/flow.md"
       ;;
@@ -6923,7 +6966,7 @@ Cascade must respect Flow repository gates and evidence requirements.
       "groups": [
         "read",
         ["edit", { "fileRegex": "^(cards/.*|src/.*|tests/.*|flow/.*)$", "description": "Flow and source directories" }],
-        ["command", { "commandRegex": "^bash skills/flow/runner/flow\\.sh.*", "description": "Flow runner execution" }]
+        ["command", { "commandRegex": "@FLOW_COMMAND_REGEX@", "description": "Flow runner execution" }]
       ]
     }
   ]
@@ -6933,18 +6976,18 @@ Cascade must respect Flow repository gates and evidence requirements.
     cline)
       local tpl='# Flow Discipline Rules for Cline
 
-1. Before starting tasks, execute `bash skills/flow/runner/flow.sh status` to identify the active stage and card.
+1. Before starting tasks, execute `@FLOW_RUNNER@ status` to identify the active stage and card.
 2. If planning is in progress, do not modify application code. Complete stage artifacts in `flow/` first.
 3. If building a card:
    - Read `cards/C-NNN.md`.
    - Strictly honor `## Allowed files`.
-   - Execute verification tests with `bash skills/flow/runner/flow.sh check C-NNN`.
+   - Execute verification tests with `@FLOW_RUNNER@ check C-NNN`.
 4. Never mark a card done without real, verified command output in `## Evidence`.'
       local dest=".clinerules"
       ;;
     aider)
       local tpl='# Aider configuration for Flow discipline layer
-test-cmd: "bash -c '\''cid=$(tr -d \" \\r\\n\" < cards/.inflight 2>/dev/null); if [[ \"$cid\" =~ ^C-[0-9]+$ ]]; then bash skills/flow/runner/flow.sh check \"$cid\"; else bash skills/flow/runner/flow.sh status; fi'\''"
+test-cmd: "@FLOW_AIDER_COMMAND@"
 auto-test: true'
       local dest=".aider.conf.yml"
       ;;
@@ -6960,13 +7003,13 @@ triggers:
 
 # Flow Microagent for OpenHands
 
-When working on this repository, execute all Flow commands using the project-local script inside the container:
-`bash skills/flow/runner/flow.sh <command>`
+When working on this repository, execute all Flow commands from the project root using the resolved runner inside the container:
+`@FLOW_RUNNER@ <command>`
 
 Key commands:
-- `bash skills/flow/runner/flow.sh status` — inspect current stage and in-flight cards.
-- `bash skills/flow/runner/flow.sh next` — advance planning stage.
-- `bash skills/flow/runner/flow.sh check C-NNN` — verify card criteria and gates.'
+- `@FLOW_RUNNER@ status` — inspect current stage and in-flight cards.
+- `@FLOW_RUNNER@ next` — advance planning stage.
+- `@FLOW_RUNNER@ check C-NNN` — verify card criteria and gates.'
       local dest=".openhands/microagents/flow.md"
       ;;
     copilot)
@@ -6977,7 +7020,7 @@ This repository enforces Flow discipline:
 - Units of work are tracked as atomic markdown cards in `cards/C-NNN.md`.
 - Never modify files outside a card'\''s declared `## Allowed files`.
 - Verification requires reproducible commands documented under `## Verify`.
-- Mechanical ground truth is `bash skills/flow/runner/flow.sh check C-NNN`.'
+- Mechanical ground truth is `@FLOW_RUNNER@ check C-NNN`.'
       local dest=".github/copilot-instructions.md"
       ;;
     *)
@@ -6986,6 +7029,81 @@ This repository enforces Flow discipline:
       exit 2
       ;;
   esac
+
+  if [ "$target" != "agent-skills" ]; then
+    # Preserve portable source-repo commands; installed projects use this install.
+    local runner_path='skills/flow/runner/flow.sh' runner_cmd
+    if [ ! -f "$ROOT/$runner_path" ]; then
+      runner_path="$SCRIPT_DIR/flow.sh"
+      # Git Bash/MSYS emits POSIX-form paths ("/tmp/x"); consumers outside bash
+      # (editors, Python os.path) need the Windows-native form. cygpath -m is
+      # canonical; pwd -W is the Git Bash builtin fallback; plain pwd degrades loudly.
+      case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*)
+          local win_script_dir=''
+          if command -v cygpath >/dev/null 2>&1; then
+            win_script_dir="$(cygpath -m "$SCRIPT_DIR" 2>/dev/null)" || win_script_dir=''
+          fi
+          if [ -n "$win_script_dir" ]; then
+            runner_path="$win_script_dir/flow.sh"
+          else
+            local msys_pwd
+            msys_pwd="$(cd "$SCRIPT_DIR" && pwd -W 2>/dev/null)" || msys_pwd=''
+            if [ -z "$msys_pwd" ]; then
+              echo "WARN: cannot convert install path to Windows form (cygpath missing, pwd -W unsupported); emitting POSIX path" >&2
+              msys_pwd="$SCRIPT_DIR"
+            fi
+            runner_path="$msys_pwd/flow.sh"
+          fi
+          ;;
+      esac
+    fi
+    printf -v runner_cmd 'bash %q' "$runner_path"
+    local token='@FLOW_RUNNER@' replacement="$runner_cmd" rendered=''
+    case "$target" in
+      roo)
+        local command_regex
+        command_regex="$(printf '%s' "$runner_cmd" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+        command_regex="$(_json_str "^${command_regex}.*")"
+        token='@FLOW_COMMAND_REGEX@'
+        replacement="$command_regex"
+        ;;
+      aider)
+        local aider_program aider_command
+        printf -v aider_program '%s%s%s%s%s' \
+          'cid=$(tr -d " \r\n" < cards/.inflight 2>/dev/null); if [[ "$cid" =~ ^C-[0-9]+$ ]]; then ' \
+          "$runner_cmd" ' check "$cid"; else ' "$runner_cmd" ' status; fi'
+        # The command runs through TWO bash parse layers (host shell -> inner bash -c).
+        # printf %q on the outer layer is not portable: some bashes emit backslash form,
+        # whose quote removal strips the inner layer's path escapes (PR93: unquoted "("
+        # in metacharacter install paths -> syntax error). A single-quoted wrapper is
+        # deterministic: quote removal restores the program verbatim for the inner shell.
+        # Escape each single quote as '\'' via a literal-concatenation loop: the inline
+        # ${aider_program//\'/\'\\\'\'} substitution has different quote-removal under
+        # Bash 3.2 and emitted malformed bytes (PR93 macOS: shlex "No closing quotation",
+        # bash -n rc=2). Same quoted-pattern construct as the template loop below.
+        local aider_escaped="" aider_rest="$aider_program"
+        local flow_sq="'" flow_bslq="'\\''"
+        while [[ "$aider_rest" == *"$flow_sq"* ]]; do
+          aider_escaped="${aider_escaped}${aider_rest%%"$flow_sq"*}${flow_bslq}"
+          aider_rest="${aider_rest#*"$flow_sq"}"
+        done
+        aider_escaped="${aider_escaped}${aider_rest}"
+        aider_command="bash -c '${aider_escaped}'"
+        aider_command="$(_json_str "$aider_command")"
+        token='@FLOW_AIDER_COMMAND@'
+        replacement="$aider_command"
+        ;;
+      *) ;;
+    esac
+    # Literal replacement: Bash 3.2 retains quotes inside ${v//p/"$r"},
+    # while newer Bash can interpret an unquoted replacement's ampersands.
+    while [[ "$tpl" == *"$token"* ]]; do
+      rendered="${rendered}${tpl%%"$token"*}${replacement}"
+      tpl="${tpl#*"$token"}"
+    done
+    tpl="${rendered}${tpl}"
+  fi
 
   if [ "$opt_write" -eq 1 ]; then
     local parent; parent="$(dirname "$ROOT/$dest")"
@@ -7195,15 +7313,15 @@ cmd_usage() {
   local py; py="$(_python)"
   if [ "${1:-}" = "--prune" ]; then          # flow usage --prune [--keep N] [--global]
     shift
-    FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" prune "$@"
+    FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" prune "$@"
     return 0
   fi
   # forward --global to the rollup step too, else `usage --global` queries a src that was
   # never ingested into the usage_event mirror and falsely reports "no events".
   local rollup_global=""
   case " $* " in *" --global "*) rollup_global="--global" ;; esac
-  FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" rollup $rollup_global >/dev/null 2>&1 || true
-  FLOW_PROJECT_ROOT="$ROOT" "$py" "$HARNESS_PY" usage "$@"
+  FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" rollup $rollup_global >/dev/null 2>&1 || true
+  FLOW_PROJECT_ROOT="$ROOT" "$py" "$(_harness_native)" usage "$@"
   return 0
 }
 
