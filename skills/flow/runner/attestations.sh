@@ -762,7 +762,7 @@ _att_chain_verify() { # exit 0 OK, 1 BROKEN/MISMATCH/MISSING/UNTRACKED, 2 NO-LED
   # Latest entry per receipt path must match the current file bytes.
   # (Temp file, not a pipeline, so the mismatch flag survives in this shell.)
   local tmpf mismatch=0
-  tmpf="$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/.att-chain.$$")"
+  tmpf="$(mktemp "${TMPDIR:-/tmp}/.att-chain.XXXXXX" 2>/dev/null || echo "${TMPDIR:-/tmp}/.att-chain.$$")"
   if ! awk '{k=$6"/"$7"/"$8; last[k]=$0} END {for (k in last) print last[k]}' "$ledger" > "$tmpf" 2>/dev/null; then
     echo "chain: BROKEN (cannot build latest-entry index)"
     rm -f "$tmpf" 2>/dev/null || true
@@ -781,7 +781,7 @@ _att_chain_verify() { # exit 0 OK, 1 BROKEN/MISMATCH/MISSING/UNTRACKED, 2 NO-LED
     # Receipts with no ledger entry are invisible to the pass above: enumerate
     # receipt files and require a ledger entry for each.
     local keysf untracked=0 rf rkind rname rst rsid rkey
-    keysf="$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/.att-chain-keys.$$")"
+    keysf="$(mktemp "${TMPDIR:-/tmp}/.att-chain-keys.XXXXXX" 2>/dev/null || echo "${TMPDIR:-/tmp}/.att-chain-keys.$$")"
     if ! awk '{print $6"/"$7"/"$8}' "$tmpf" > "$keysf" 2>/dev/null; then
       echo "chain: BROKEN (cannot build ledger key index)"
       rm -f "$tmpf" "$keysf" 2>/dev/null || true

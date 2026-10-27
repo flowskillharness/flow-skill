@@ -2,10 +2,10 @@
 
 Canonical owner for **card risk**, **attestation receipts**, **subject
 fingerprints**, and **auto-active policy state**. Other docs link here; do not
-duplicate full schemas.
+duplicate schemas.
 
 Fingerprints detect **staleness** of a reviewed/verified subject. They do **not**
-authenticate a human or model. Actor/engine labels and unsigned receipt files
+authenticate a human or model. Actor/engine labels and unsigned receipts
 are forgeable by a filesystem/repository owner. This layer is workflow integrity,
 not a hostile-host or cryptographic identity boundary.
 
@@ -91,7 +91,7 @@ evidence_ref: none|repo:<relative-path>
 
 `pass` requires both counts zero. `override` is never producer output.
 
-Live revision oracle stdout: exactly one full repository-format OID equal to the
+Live revision oracle stdout: exactly one full repository-format OID matching the
 requested deployed revision.
 
 ## Receipt schema (`flow-attestation/v1`)
@@ -154,7 +154,7 @@ recovery: `flow attest recover C-NNN --mark-failed`.
 ### Receipt chain (tamper-evident ledger)
 
 Unsigned receipts detect staleness, not silent edits.
-The chain raises that bar, receipt schema v1 unchanged.
+The chain raises that bar, schema v1 unchanged.
 
 Ledger `<main-state-root>/.flow/attestations/chain.log`: one line per mint:
 
@@ -162,10 +162,10 @@ Ledger `<main-state-root>/.flow/attestations/chain.log`: one line per mint:
 v1 <seq> <prev_link> <link> <receipt_hash> <kind> <subject_type> <subject_id> <timestamp>
 ```
 
-`receipt_hash` is `git hash-object --no-filters` of the raw receipt bytes,
-so clean filters and CRLF conversion never mask an edit;
+`receipt_hash` is `git hash-object --no-filters` of receipt bytes,
+so clean filters and CRLF never mask an edit;
 `link` is `git hash-object --stdin` of the newline-terminated fields above
-except `seq` and `link`. Genesis `prev` is 40 zeroes; each later `prev` is
+except `seq` and `link`. Genesis `prev` is 40 zeroes; later `prev` is
 the previous `link`. Append failure warns, never fails a mint.
 
 `flow attest verify-chain` exits 0 with `OK <n> entries`, else non-zero:
@@ -175,9 +175,9 @@ changed after mint), `MISSING <path>` (deleted), `UNTRACKED
 exit 2).
 
 Limit: the chain detects silent edits and reordering; deletions escape
-detection when no later entry remains and the receipt is gone too (whole
+detection when no later entry and receipt remain (whole
 `chain.log` reports only `NO-LEDGER`). It does NOT stop an attacker
-rewriting ledger plus receipts who holds no external copy —
+rewriting ledger plus receipts without an external copy —
 copy `chain.log` elsewhere. Tamper-evidence, not identity.
 
 ### Scalar grammar
@@ -250,7 +250,7 @@ risk_fingerprint: git-<sha1|sha256>:<object-id>
 contract_fingerprint: git-<sha1|sha256>:<object-id>
 ```
 
-Activation (`flow auto`) requires, atomically after full preflight:
+Activation (`flow auto`) requires, atomically after preflight:
 
 - Git repo; main worktree on attached integration branch (linked/detached refuse)
 - Reliable process-group supervisor capability (else refuse live auto)
@@ -312,7 +312,7 @@ streaming stdout/stderr independent + combined caps, TERM → grace → KILL →
 Capability probe: if reliable process-group supervisor unavailable, live
 verification and auto activation fail closed (never unbounded fallback).
 
-Usage/event logs for attestation record only subcommand, subject ID, result
+Usage/event logs record only subcommand, subject ID, result
 class, duration bucket — never argv after `--`, raw output, or secrets.
 
 ## Locks
@@ -327,10 +327,10 @@ Hard consumers hold locks from validation through irreversible side effects
 
 - Manual/teach/work without auto state: warnings only; pre-v0.28 exit codes.
 - Planning `next` never hard-enforced in v0.28.
-- Bash + Git floor; Python/SQLite optional and never required to parse receipts.
+- Bash + Git floor; Python/SQLite optional, never required to parse receipts.
 - Harness `risk_lane` remains separate advisory taxonomy (no silent sync).
 
 ## Rollback
 
-`flow auto stop`, then revert enforcement. Receipt files under `.flow/` are
+`flow auto stop`, then revert enforcement. Receipts under `.flow/` are
 run-state; remove for audit loss only — does not corrupt cards/DB.

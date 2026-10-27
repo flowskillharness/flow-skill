@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- fix(attest): `_att_chain_verify` temp files (latest-entry index and ledger key index) now call `mktemp` with an explicit `${TMPDIR:-/tmp}/.att-chain*` template, so BSD `mktemp` honors `TMPDIR` on macOS and a broken/absent `TMPDIR` still fails closed (`BROKEN`, never a false pass); `skills/flow/references/attestations.md` trimmed to 1578 words within its 1580-word doc budget with cited semantics preserved.
 - feat(attest): tamper-evident receipt chain ledger (`chain.log` sidecar, one line per minted receipt) and `flow attest verify-chain` (`OK`/`BROKEN`/`MISMATCH`/`MISSING`/`UNTRACKED`/`NO-LEDGER`); chain hashes are filter-immune (`git hash-object --no-filters` on raw receipt bytes), so clean filters and CRLF conversion cannot mask an edit. Receipt schema v1 unchanged; the chain stays warning-only, never gate authority.
 - fix(doctor): verify `timeout --version` or `-s` capability in doctor timeout check; avoid falsely reporting Windows System32 timeout as full GNU timeout.
 - fix(runner): convert project ROOT to Windows-native paths on MSYS for the native Python ranking invocation (`assess_scan`), and the install root plus manifest path for receipt verification (`verify-receipt`). Runner Eval STOP bodies (`_with_timeout` and `_eval_engine_run`) remain strictly untouched.
