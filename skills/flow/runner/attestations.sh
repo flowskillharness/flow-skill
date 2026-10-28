@@ -1501,7 +1501,7 @@ _att_enforce_card() {
 cmd_attest() {
   case "$ROOT" in
     /*) : ;;
-    *) ROOT="$(cd "$ROOT" 2>/dev/null && pwd)" || { echo "chain: BROKEN (cannot resolve project root)"; return 1; } ;;
+    *) ROOT="$(CDPATH= cd "$ROOT" 2>/dev/null && pwd)" || { echo "chain: BROKEN (cannot resolve project root)"; return 1; } ;;
   esac
   local sub="${1:-}"; shift 2>/dev/null || true
   case "$sub" in

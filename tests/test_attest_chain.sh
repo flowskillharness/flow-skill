@@ -280,7 +280,7 @@ setup_repo
 REL_PARENT="$(mktemp -d)"
 mv "$SB" "$REL_PARENT/"
 SB="$REL_PARENT/$(basename "$SB")"
-out_mint="$(cd "$REL_PARENT" && FLOW_PROJECT_ROOT="$(basename "$SB")" bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt 2>&1)"; rc_mint=$?
+out_mint="$(cd "$REL_PARENT" && export CDPATH=. && FLOW_PROJECT_ROOT="$(basename "$SB")" bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt 2>&1)"; rc_mint=$?
 ck 0 "$rc_mint" "relative ROOT semantic mint returns 0"
 ledger="$SB/.flow/attestations/chain.log"
 [ -f "$ledger" ]; ck 0 $? "relative ROOT chain.log exists"
@@ -289,6 +289,7 @@ ck 0 "$rc_verify" "relative ROOT verify-chain returns 0"
 has "$out_verify" 'chain: OK 1 entries' "relative ROOT verify-chain reported OK 1"
 rm -rf "$SB" "$REL_PARENT"
 unset FLOW_PROJECT_ROOT
+unset CDPATH
 
 echo "P) command-dispatch attest row lists verify-chain"
 if grep -qF 'attest semantic\|live-verify\|status\|recover\|verify-chain' "$HERE/../skills/flow/references/command-dispatch.md"; then echo "  ok   [dispatch lists verify-chain]"; pass=$((pass+1)); else echo "  FAIL [dispatch lists verify-chain]"; fail=$((fail+1)); fi
