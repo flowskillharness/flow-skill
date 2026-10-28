@@ -242,6 +242,19 @@ has "$out" 'MISMATCH' "filter-masked flip mismatch message"
 if grep -q 'hash-object --no-filters' "$HERE/../skills/flow/runner/attestations.sh"; then echo "  ok   [chain hashes use --no-filters]"; pass=$((pass+1)); else echo "  FAIL [chain hashes use --no-filters]"; fail=$((fail+1)); fi
 rm -rf "$SB"
 
+echo "S) chain append and verify succeed when cwd is not a git repository"
+setup_repo
+NON_GIT_DIR="$(mktemp -d 2>/dev/null || echo "/tmp/non-git-s.$$")"
+out_mint="$(cd "$NON_GIT_DIR" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt 2>&1)"; rc_mint=$?
+ck 0 "$rc_mint" "semantic mint from non-git cwd returns 0"
+ledger="$SB/.flow/attestations/chain.log"
+[ -f "$ledger" ]; ck 0 $? "chain.log exists after mint from non-git cwd"
+out_verify="$(cd "$NON_GIT_DIR" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" attest verify-chain 2>&1)"; rc_verify=$?
+ck 0 "$rc_verify" "verify-chain from non-git cwd returns 0"
+has "$out_verify" 'chain: OK 1 entries' "verify-chain reported OK 1 from non-git cwd"
+rm -rf "$SB" "$NON_GIT_DIR"
+unset FLOW_PROJECT_ROOT
+
 echo "P) command-dispatch attest row lists verify-chain"
 if grep -qF 'attest semantic\|live-verify\|status\|recover\|verify-chain' "$HERE/../skills/flow/references/command-dispatch.md"; then echo "  ok   [dispatch lists verify-chain]"; pass=$((pass+1)); else echo "  FAIL [dispatch lists verify-chain]"; fail=$((fail+1)); fi
 

@@ -710,7 +710,7 @@ _att_chain_append() { # $1 dest receipt path — returns 1 on failure; caller wa
   ledger="$(_att_chain_path)"
   kind="$_ATT_W_kind"; st="$_ATT_W_subject_type"; sid="$_ATT_W_subject_id"
   ts="$_ATT_W_timestamp"
-  rh="$(git hash-object --no-filters "$dest" 2>/dev/null || true)"
+  rh="$(git -C "$ROOT" hash-object --no-filters "$dest" 2>/dev/null || true)"
   [ -n "$rh" ] || return 1
   _att_lock_acquire "chain" || return 1
   seq=1; prev="0000000000000000000000000000000000000000"
@@ -727,7 +727,7 @@ _att_chain_append() { # $1 dest receipt path — returns 1 on failure; caller wa
     fi
   fi
   payload="$(printf '%s\n%s\n%s\n%s\n%s\n%s' "$prev" "$rh" "$kind" "$st" "$sid" "$ts")"
-  link="$(printf '%s\n' "$payload" | git hash-object --stdin 2>/dev/null || true)"
+  link="$(printf '%s\n' "$payload" | git -C "$ROOT" hash-object --stdin 2>/dev/null || true)"
   if [ -z "$link" ]; then _att_lock_release "chain"; return 1; fi
   if ! printf 'v1 %s %s %s %s %s %s %s %s\n' "$seq" "$prev" "$link" "$rh" "$kind" "$st" "$sid" "$ts" >> "$ledger" 2>/dev/null; then
     _att_lock_release "chain"; return 1
@@ -754,7 +754,7 @@ _att_chain_verify() { # exit 0 OK, 1 BROKEN/MISMATCH/MISSING/UNTRACKED, 2 NO-LED
     [ "$seq" = "$n" ] || { echo "chain: BROKEN at line $n (seq $seq, expected $n)"; bad=1; break; }
     [ "$prev_f" = "$prev" ] || { echo "chain: BROKEN at line $n (prev link mismatch)"; bad=1; break; }
     payload="$(printf '%s\n%s\n%s\n%s\n%s\n%s' "$prev_f" "$rh" "$kind" "$st" "$sid" "$ts")"
-    expect="$(printf '%s\n' "$payload" | git hash-object --stdin 2>/dev/null || true)"
+    expect="$(printf '%s\n' "$payload" | git -C "$ROOT" hash-object --stdin 2>/dev/null || true)"
     [ "$expect" = "$link" ] || { echo "chain: BROKEN at line $n (link mismatch)"; bad=1; break; }
     prev="$link"
   done < "$ledger"
@@ -774,7 +774,7 @@ _att_chain_verify() { # exit 0 OK, 1 BROKEN/MISMATCH/MISSING/UNTRACKED, 2 NO-LED
     rh="${5:-}"; kind="${6:-}"; st="${7:-}"; sid="${8:-}"
     path="$(_att_receipt_path "$kind" "$st" "$sid" 2>/dev/null || true)"
     if [ ! -f "$path" ]; then echo "chain: MISSING $path (ledger entry exists, receipt deleted)"; mismatch=1; break; fi
-    cur="$(git hash-object --no-filters "$path" 2>/dev/null || true)"
+    cur="$(git -C "$ROOT" hash-object --no-filters "$path" 2>/dev/null || true)"
     if [ "$cur" != "$rh" ]; then echo "chain: MISMATCH $path (receipt changed after last chained mint)"; mismatch=1; break; fi
   done < "$tmpf"
   if [ "$mismatch" -eq 0 ]; then
