@@ -40,7 +40,7 @@ target_id: none
 command: repo:bin/semantic_owner.sh
 revision_oracle: none
 EOF
-  git -C "$SB" init -q
+  git -C "$SB" init -q --object-format="${1:-sha1}"
   git -C "$SB" config user.email "t@example.com"
   git -C "$SB" config user.name "T"
   git -C "$SB" add -A && git -C "$SB" commit -qm init
@@ -252,6 +252,24 @@ ledger="$SB/.flow/attestations/chain.log"
 out_verify="$(cd "$NON_GIT_DIR" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" attest verify-chain 2>&1)"; rc_verify=$?
 ck 0 "$rc_verify" "verify-chain from non-git cwd returns 0"
 has "$out_verify" 'chain: OK 1 entries' "verify-chain reported OK 1 from non-git cwd"
+rm -rf "$SB" "$NON_GIT_DIR"
+unset FLOW_PROJECT_ROOT
+
+echo "S2) chain hashes use SHA-256 ROOT format from a non-git cwd"
+setup_repo sha256
+NON_GIT_DIR="$(mktemp -d)"
+out_mint="$(cd "$NON_GIT_DIR" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt 2>&1)"; rc_mint=$?
+ck 0 "$rc_mint" "SHA-256 ROOT mint from non-git cwd returns 0"
+ledger="$SB/.flow/attestations/chain.log"
+[ -f "$ledger" ]; ck 0 $? "SHA-256 ROOT chain.log exists"
+out_verify="$(cd "$NON_GIT_DIR" && FLOW_PROJECT_ROOT="$SB" bash "$RUN" attest verify-chain 2>&1)"; rc_verify=$?
+ck 0 "$rc_verify" "SHA-256 ROOT verify-chain from non-git cwd returns 0"
+rcpt="$SB/.flow/attestations/semantic_gate/stage-05-contract.receipt"
+# Independent ROOT-context hash exposes repo-less hash-object's SHA-1 default.
+expected_hash="$(git -C "$SB" hash-object --no-filters "$rcpt")"
+ledger_hash="$(awk 'END {print $5}' "$ledger")"
+ck 64 "${#expected_hash}" "SHA-256 ROOT receipt hash is 64 hex characters"
+ck "$expected_hash" "$ledger_hash" "SHA-256 ROOT ledger receipt hash matches ROOT object format"
 rm -rf "$SB" "$NON_GIT_DIR"
 unset FLOW_PROJECT_ROOT
 
