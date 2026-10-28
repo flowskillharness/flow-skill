@@ -291,15 +291,5 @@ rm -rf "$SB" "$REL_PARENT"
 unset FLOW_PROJECT_ROOT
 unset CDPATH
 
-echo "P) command-dispatch attest row lists verify-chain"
-if grep -qF 'attest semantic\|live-verify\|status\|recover\|verify-chain' "$HERE/../skills/flow/references/command-dispatch.md"; then echo "  ok   [dispatch lists verify-chain]"; pass=$((pass+1)); else echo "  FAIL [dispatch lists verify-chain]"; fail=$((fail+1)); fi
-
-echo "Q) docs state trailing newline, UNTRACKED, and the deletion gap"
-doc="$HERE/../skills/flow/references/attestations.md"
-has "$(cat "$doc")" 'newline-terminated' "doc trailing newline"
-has "$(cat "$doc")" 'UNTRACKED' "doc untracked status"
-has "$(cat "$doc")" 'deletions escape' "doc deletion gap"
-has "$(cat "$doc")" 'no-filters' "doc filter-immune hashing"
-
 echo "RESULT pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]

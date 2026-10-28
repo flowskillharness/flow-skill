@@ -164,9 +164,9 @@ v1 <seq> <prev_link> <link> <receipt_hash> <kind> <subject_type> <subject_id> <t
 
 `receipt_hash` is `git hash-object --no-filters` of receipt bytes,
 so clean filters and CRLF never mask an edit;
-`link` is `git hash-object --stdin` of the newline-terminated fields above
-except `seq` and `link`. Genesis `prev` is 40 zeroes; later `prev` is
-the previous `link`. Append failure warns, never fails a mint.
+`link` hashes `prev_link`, `receipt_hash`, `kind`, `subject_type`,
+`subject_id`, `timestamp`, ordered, newline-separated, trailing newline,
+using `git hash-object --stdin`; `v1` is excluded. Genesis `prev`: 40 zeroes; later: previous `link`. Append failure warns, never fails a mint.
 
 `flow attest verify-chain` exits 0 with `OK <n> entries`, else non-zero:
 `BROKEN` (edited, reordered, wrong seq), `MISMATCH <path>` (receipt
