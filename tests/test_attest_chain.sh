@@ -235,11 +235,13 @@ rcpt="$SB/.flow/attestations/semantic_gate/stage-05-contract.receipt"
 [ -f "$rcpt" ]; ck 0 $? "fail-verdict receipt minted"
 ledger="$SB/.flow/attestations/chain.log"
 [ -f "$ledger" ]; ck 0 $? "fail-verdict ledger exists"
+out0="$(cd "$SB" && bash "$RUN" attest verify-chain 2>&1)"; rc0=$?
+[ "$rc0" -eq 0 ]; ck 0 $? "untampered fail-verdict receipt verifies OK"
+has "$out0" 'chain: OK 1 entries' "untampered chain reports OK 1"
 sed 's/verdict: fail/verdict: pass/' "$rcpt" > "$rcpt.tmp" && mv "$rcpt.tmp" "$rcpt"
 out="$(cd "$SB" && bash "$RUN" attest verify-chain 2>&1)"; rc=$?
 [ "$rc" -ne 0 ]; ck 0 $? "verify nonzero on filter-masked byte flip"
 has "$out" 'MISMATCH' "filter-masked flip mismatch message"
-if grep -q 'hash-object --no-filters' "$HERE/../skills/flow/runner/attestations.sh"; then echo "  ok   [chain hashes use --no-filters]"; pass=$((pass+1)); else echo "  FAIL [chain hashes use --no-filters]"; fail=$((fail+1)); fi
 rm -rf "$SB"
 
 echo "S) chain append and verify succeed when cwd is not a git repository"
@@ -271,6 +273,21 @@ ledger_hash="$(awk 'END {print $5}' "$ledger")"
 ck 64 "${#expected_hash}" "SHA-256 ROOT receipt hash is 64 hex characters"
 ck "$expected_hash" "$ledger_hash" "SHA-256 ROOT ledger receipt hash matches ROOT object format"
 rm -rf "$SB" "$NON_GIT_DIR"
+unset FLOW_PROJECT_ROOT
+
+echo "S3) chain append and verify succeed with relative FLOW_PROJECT_ROOT"
+setup_repo
+REL_PARENT="$(mktemp -d)"
+mv "$SB" "$REL_PARENT/"
+SB="$REL_PARENT/$(basename "$SB")"
+out_mint="$(cd "$REL_PARENT" && FLOW_PROJECT_ROOT="$(basename "$SB")" bash "$RUN" attest semantic --stage 05-contract --revision HEAD --owner bin/owner_semantic_stage.txt 2>&1)"; rc_mint=$?
+ck 0 "$rc_mint" "relative ROOT semantic mint returns 0"
+ledger="$SB/.flow/attestations/chain.log"
+[ -f "$ledger" ]; ck 0 $? "relative ROOT chain.log exists"
+out_verify="$(cd "$REL_PARENT" && FLOW_PROJECT_ROOT="$(basename "$SB")" bash "$RUN" attest verify-chain 2>&1)"; rc_verify=$?
+ck 0 "$rc_verify" "relative ROOT verify-chain returns 0"
+has "$out_verify" 'chain: OK 1 entries' "relative ROOT verify-chain reported OK 1"
+rm -rf "$SB" "$REL_PARENT"
 unset FLOW_PROJECT_ROOT
 
 echo "P) command-dispatch attest row lists verify-chain"
